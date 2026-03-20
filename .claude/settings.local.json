@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:albapay.com)",
+      "Bash(yes:*)",
+      "Bash(npm install:*)"
+    ]
+  }
+}
