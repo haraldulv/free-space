@@ -1,13 +1,15 @@
 "use client";
 
 import { Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, usePathname } from "next/navigation";
 import Navbar from "@/components/features/Navbar";
 import Footer from "@/components/features/Footer";
 import { ListingCategory, VehicleType } from "@/types";
 
 function MainLayoutInner({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const isSearchPage = pathname === "/search";
 
   const rawCategory = searchParams.get("category");
   const category =
@@ -33,8 +35,10 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         searchQuery={query}
         searchVehicle={vehicle}
       />
-      <main className="flex-1">{children}</main>
-      <Footer />
+      <main className={`flex-1 ${isSearchPage ? "flex flex-col overflow-hidden" : ""}`}>
+        {children}
+      </main>
+      {!isSearchPage && <Footer />}
     </>
   );
 }

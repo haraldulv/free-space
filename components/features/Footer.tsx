@@ -7,9 +7,10 @@ export default function Footer() {
       <Container className="py-12">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <Link href="/" className="flex items-center gap-2">
-              <span className="text-lg font-bold text-primary-600">
-                Free Space
+            <Link href="/">
+              <span className="text-xl text-neutral-900 lowercase">
+                <span className="font-extralight tracking-tighter">free</span>
+                <span className="font-bold italic tracking-tight">space</span>
               </span>
             </Link>
             <p className="mt-3 text-sm text-neutral-500">
