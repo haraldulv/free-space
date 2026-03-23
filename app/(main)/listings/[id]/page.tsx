@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { MapPin, Users } from "lucide-react";
-import { getListingById, mockListings } from "@/data/mock-listings";
+import { getListingById, getAllListingIds } from "@/lib/supabase/listings";
 import Container from "@/components/ui/Container";
 import Badge from "@/components/ui/Badge";
 import ImageGallery from "@/components/features/ImageGallery";
@@ -8,9 +8,7 @@ import AmenityList from "@/components/features/AmenityList";
 import HostCard from "@/components/features/HostCard";
 import BookingForm from "@/components/features/BookingForm";
 
-export function generateStaticParams() {
-  return mockListings.map((l) => ({ id: l.id }));
-}
+export const dynamic = "force-dynamic";
 
 export default async function ListingPage({
   params,
@@ -18,7 +16,7 @@ export default async function ListingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const listing = getListingById(id);
+  const listing = await getListingById(id);
   if (!listing) notFound();
 
   return (

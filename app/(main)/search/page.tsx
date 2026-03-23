@@ -1,6 +1,8 @@
-import { searchListings } from "@/data/mock-listings";
+import { searchListings } from "@/lib/supabase/listings";
 import { ListingCategory, VehicleType } from "@/types";
 import SearchResultsView from "@/components/features/search/SearchResultsView";
+
+export const dynamic = "force-dynamic";
 
 interface SearchPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -23,7 +25,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       ? (params.vehicle as VehicleType)
       : undefined;
 
-  const listings = searchListings({ query, category, vehicleType });
+  const listings = await searchListings({ query, category, vehicleType });
 
   return (
     <SearchResultsView

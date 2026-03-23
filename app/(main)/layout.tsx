@@ -1,15 +1,54 @@
 "use client";
 
-import { Suspense } from "react";
-import { useSearchParams, usePathname } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import Navbar from "@/components/features/Navbar";
 import Footer from "@/components/features/Footer";
+import { createClient } from "@/lib/supabase/client";
 import { ListingCategory, VehicleType } from "@/types";
 
 function MainLayoutInner({ children }: { children: React.ReactNode }) {
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const router = useRouter();
   const isSearchPage = pathname === "/search";
+
+  const [user, setUser] = useState<{ email: string; fullName?: string } | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+
+    // Get initial session
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUser({
+          email: data.user.email || "",
+          fullName: data.user.user_metadata?.full_name,
+        });
+      }
+    });
+
+    // Listen for auth changes (login/logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({
+          email: session.user.email || "",
+          fullName: session.user.user_metadata?.full_name,
+        });
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    setUser(null);
+    router.push("/");
+  };
 
   const rawCategory = searchParams.get("category");
   const category =
@@ -31,6 +70,8 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Navbar
+        user={user}
+        onSignOut={handleSignOut}
         selectedCategory={category}
         searchQuery={query}
         searchVehicle={vehicle}

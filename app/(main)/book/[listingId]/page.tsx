@@ -1,22 +1,64 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { differenceInDays } from "date-fns";
-import { getListingById } from "@/data/mock-listings";
+import { createClient } from "@/lib/supabase/client";
 import { saveBooking, generateBookingId } from "@/lib/utils/bookings";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingSummary from "@/components/features/BookingSummary";
 import { ShieldCheck } from "lucide-react";
+import type { Listing } from "@/types";
 
 export default function BookPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const [listing, setListing] = useState<Listing | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const listing = getListingById(params.listingId as string);
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("listings")
+      .select("*")
+      .eq("id", params.listingId as string)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setListing({
+            id: data.id,
+            title: data.title,
+            description: data.description,
+            category: data.category,
+            images: data.images,
+            location: { city: data.city, region: data.region, address: data.address, lat: data.lat, lng: data.lng },
+            price: data.price,
+            priceUnit: data.price_unit,
+            rating: data.rating,
+            reviewCount: data.review_count,
+            amenities: data.amenities,
+            host: { id: data.host_id || "unknown", name: data.host_name, avatar: data.host_avatar, responseRate: data.host_response_rate, responseTime: data.host_response_time, joinedYear: data.host_joined_year, listingsCount: data.host_listings_count },
+            maxVehicleLength: data.max_vehicle_length,
+            spots: data.spots,
+            tags: data.tags,
+          });
+        }
+        setLoading(false);
+      });
+  }, [params.listingId]);
+
   const checkIn = new Date(searchParams.get("checkIn") || "");
   const checkOut = new Date(searchParams.get("checkOut") || "");
+
+  if (loading) {
+    return (
+      <Container className="py-10">
+        <p className="text-neutral-500">Laster...</p>
+      </Container>
+    );
+  }
 
   if (!listing || isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
     router.push("/");

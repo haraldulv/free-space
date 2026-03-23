@@ -8,7 +8,10 @@ export default function AuthLayout({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-50 px-4">
       <Link href="/" className="mb-8">
-        <span className="text-2xl font-bold text-primary-600">Free Space</span>
+        <span className="text-2xl text-neutral-900 lowercase">
+          <span className="font-extralight tracking-tighter">free</span>
+          <span className="font-bold italic tracking-tight">space</span>
+        </span>
       </Link>
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm">
         {children}

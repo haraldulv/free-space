@@ -1,14 +1,14 @@
-import {
-  getPopularListings,
-  getFeaturedListings,
-  getAvailableTodayListings,
-} from "@/data/mock-listings";
+import { getListingsByTag } from "@/lib/supabase/listings";
 import ListingSection from "@/components/features/ListingSection";
 
-export default function HomePage() {
-  const popular = getPopularListings();
-  const featured = getFeaturedListings();
-  const availableToday = getAvailableTodayListings();
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const [popular, featured, availableToday] = await Promise.all([
+    getListingsByTag("popular"),
+    getListingsByTag("featured"),
+    getListingsByTag("available_today"),
+  ]);
 
   return (
     <div className="pb-8">
