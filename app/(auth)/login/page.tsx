@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { loginSchema } from "@/lib/utils/validation";
 import AuthForm from "@/components/features/AuthForm";
+import GoogleSignInButton from "@/components/features/GoogleSignInButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -27,44 +28,60 @@ export default function LoginPage() {
   };
 
   return (
-    <AuthForm
-      title="Velkommen tilbake"
-      subtitle="Logg inn på din Free Space-konto"
-      fields={[
-        {
-          name: "email",
-          label: "E-post",
-          type: "email",
-          placeholder: "deg@eksempel.no",
-          autoComplete: "email",
-        },
-        {
-          name: "password",
-          label: "Passord",
-          type: "password",
-          placeholder: "••••••••",
-          autoComplete: "current-password",
-        },
-      ]}
-      submitLabel="Logg inn"
-      onSubmit={handleLogin}
-      footer={
-        <>
-          <Link
-            href="/forgot-password"
-            className="text-primary-600 hover:text-primary-700"
-          >
-            Glemt passord?
-          </Link>
-          <span className="mx-2">&middot;</span>
-          <Link
-            href="/register"
-            className="text-primary-600 hover:text-primary-700"
-          >
-            Opprett konto
-          </Link>
-        </>
-      }
-    />
+    <div className="space-y-5">
+      <div className="text-center">
+        <h1 className="text-2xl font-bold text-neutral-900">Velkommen tilbake</h1>
+        <p className="mt-1 text-sm text-neutral-500">Logg inn på din Free Space-konto</p>
+      </div>
+
+      <GoogleSignInButton />
+
+      <div className="relative">
+        <div className="absolute inset-0 flex items-center">
+          <div className="w-full border-t border-neutral-200" />
+        </div>
+        <div className="relative flex justify-center text-sm">
+          <span className="bg-white px-3 text-neutral-400">eller</span>
+        </div>
+      </div>
+
+      <AuthForm
+        fields={[
+          {
+            name: "email",
+            label: "E-post",
+            type: "email",
+            placeholder: "deg@eksempel.no",
+            autoComplete: "email",
+          },
+          {
+            name: "password",
+            label: "Passord",
+            type: "password",
+            placeholder: "••••••••",
+            autoComplete: "current-password",
+          },
+        ]}
+        submitLabel="Logg inn"
+        onSubmit={handleLogin}
+        footer={
+          <>
+            <Link
+              href="/forgot-password"
+              className="text-primary-600 hover:text-primary-700"
+            >
+              Glemt passord?
+            </Link>
+            <span className="mx-2">&middot;</span>
+            <Link
+              href="/register"
+              className="text-primary-600 hover:text-primary-700"
+            >
+              Opprett konto
+            </Link>
+          </>
+        }
+      />
+    </div>
   );
 }

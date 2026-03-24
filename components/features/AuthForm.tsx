@@ -5,7 +5,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 
 interface AuthFormProps {
-  title: string;
+  title?: string;
   subtitle?: ReactNode;
   fields: {
     name: string;
