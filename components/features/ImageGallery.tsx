@@ -25,9 +25,13 @@ export default function ImageGallery({ images, alt }: ImageGalleryProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-4 sm:grid-rows-2">
+      <div className={`grid grid-cols-1 gap-2 ${images.length > 1 ? "sm:grid-cols-4 sm:grid-rows-2" : ""}`}>
         <div
-          className="relative aspect-[4/3] cursor-pointer overflow-hidden rounded-xl sm:col-span-2 sm:row-span-2 sm:aspect-auto sm:h-full"
+          className={`relative cursor-pointer overflow-hidden rounded-xl ${
+            images.length > 1
+              ? "aspect-[4/3] sm:col-span-2 sm:row-span-2 sm:aspect-auto sm:min-h-[300px]"
+              : "aspect-[21/9]"
+          }`}
           onClick={() => openLightbox(0)}
         >
           <Image

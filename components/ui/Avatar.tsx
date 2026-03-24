@@ -25,13 +25,19 @@ export default function Avatar({
     <div
       className={`relative overflow-hidden rounded-full bg-neutral-200 ${sizeClasses[size]} ${className}`}
     >
-      <Image
-        src={src}
-        alt={alt}
-        width={sizePx[size]}
-        height={sizePx[size]}
-        className="h-full w-full object-cover"
-      />
+      {src ? (
+        <Image
+          src={src}
+          alt={alt}
+          width={sizePx[size]}
+          height={sizePx[size]}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <div className="flex h-full w-full items-center justify-center text-neutral-400 text-xs font-medium">
+          {alt?.charAt(0)?.toUpperCase() || "?"}
+        </div>
+      )}
     </div>
   );
 }

@@ -39,7 +39,13 @@ export type Amenity =
   | "lake_access"
   | "mountain_view"
   | "pets_allowed"
-  | "waste_disposal";
+  | "waste_disposal"
+  | "handicap_accessible";
+
+export const AMENITIES_BY_CATEGORY: Record<ListingCategory, Amenity[]> = {
+  parking: ["ev_charging", "covered", "security_camera", "gated", "lighting", "handicap_accessible"],
+  camping: ["electricity", "water", "waste_disposal", "toilets", "showers", "wifi", "campfire", "lake_access", "mountain_view", "pets_allowed", "handicap_accessible"],
+};
 
 export interface Host {
   id: string;
@@ -73,6 +79,7 @@ export interface Listing {
   maxVehicleLength?: number;
   spots: number;
   tags?: ListingTag[];
+  instantBooking?: boolean;
 }
 
 export interface Booking {

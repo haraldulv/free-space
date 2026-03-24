@@ -71,7 +71,7 @@ export default function Navbar({
         {/* Right: Actions */}
         <div className="flex items-center gap-1 shrink-0">
           <Link
-            href="#"
+            href="/bli-utleier"
             className="hidden lg:block rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
           >
             Bli utleier
@@ -119,7 +119,7 @@ export default function Navbar({
                       Registrer deg
                     </Link>
                     <div className="my-1 border-t border-neutral-100" />
-                    <Link href="#" className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/bli-utleier" className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
                       Bli utleier
                     </Link>
                   </>

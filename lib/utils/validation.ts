@@ -35,3 +35,56 @@ export type LoginInput = z.infer<typeof loginSchema>;
 export type RegisterInput = z.infer<typeof registerSchema>;
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+// Listing form — per-step schemas
+export const listingStep1Schema = z.object({
+  category: z.enum(["parking", "camping"], { message: "Velg en kategori" }),
+});
+
+export const listingStep2Schema = z.object({
+  title: z.string().min(3, "Tittel må ha minst 3 tegn").max(100, "Maks 100 tegn"),
+  description: z.string().min(10, "Beskrivelse må ha minst 10 tegn").max(2000, "Maks 2000 tegn"),
+  spots: z.number().int().min(1, "Minst 1 plass").max(100),
+  maxVehicleLength: z.number().int().min(1).max(30).optional(),
+});
+
+export const listingStep3Schema = z.object({
+  address: z.string().min(3, "Skriv inn en adresse"),
+  city: z.string().min(1, "By er påkrevd"),
+  region: z.string().min(1, "Region er påkrevd"),
+  lat: z.number(),
+  lng: z.number(),
+});
+
+export const listingStep4Schema = z.object({
+  images: z.array(z.string().url()).min(1, "Last opp minst ett bilde").max(10, "Maks 10 bilder"),
+});
+
+export const listingStep5Schema = z.object({
+  amenities: z.array(z.string()),
+});
+
+export const listingStep6Schema = z.object({
+  price: z.number().int().min(1, "Pris må være minst 1 kr"),
+  priceUnit: z.enum(["time", "natt"]),
+  instantBooking: z.boolean(),
+});
+
+export const createListingSchema = listingStep1Schema
+  .merge(listingStep2Schema)
+  .merge(listingStep3Schema)
+  .merge(listingStep4Schema)
+  .merge(listingStep5Schema)
+  .merge(listingStep6Schema);
+
+export type CreateListingInput = z.infer<typeof createListingSchema>;
+
+export const listingStepSchemas = [
+  listingStep1Schema,
+  listingStep2Schema,
+  listingStep3Schema,
+  listingStep4Schema,
+  listingStep5Schema,
+  listingStep6Schema,
+  null, // review step — no validation
+];

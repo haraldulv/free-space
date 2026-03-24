@@ -13,25 +13,27 @@ import {
   PawPrint,
   Trash2,
   ShowerHead,
+  Accessibility,
 } from "lucide-react";
 import { Amenity } from "@/types";
 
-const amenityConfig: Record<Amenity, { label: string; icon: React.ElementType }> = {
-  ev_charging: { label: "EV Charging", icon: Zap },
-  covered: { label: "Covered", icon: Umbrella },
-  security_camera: { label: "Security Camera", icon: Camera },
-  gated: { label: "Gated Access", icon: Lock },
-  lighting: { label: "Lighting", icon: Lightbulb },
-  toilets: { label: "Toilets", icon: Bath },
-  showers: { label: "Showers", icon: ShowerHead },
-  electricity: { label: "Electricity", icon: Zap },
-  water: { label: "Water", icon: Droplets },
+export const amenityConfig: Record<Amenity, { label: string; icon: React.ElementType }> = {
+  ev_charging: { label: "Elbil-lading", icon: Zap },
+  covered: { label: "Under tak", icon: Umbrella },
+  security_camera: { label: "Overvåkingskamera", icon: Camera },
+  gated: { label: "Portadgang", icon: Lock },
+  lighting: { label: "Belysning", icon: Lightbulb },
+  toilets: { label: "Toalett", icon: Bath },
+  showers: { label: "Dusj", icon: ShowerHead },
+  electricity: { label: "Strøm (tilkobling)", icon: Zap },
+  water: { label: "Vanntilkobling", icon: Droplets },
   wifi: { label: "WiFi", icon: Wifi },
-  campfire: { label: "Campfire", icon: Flame },
-  lake_access: { label: "Lake/Fjord Access", icon: Waves },
-  mountain_view: { label: "Mountain View", icon: Mountain },
-  pets_allowed: { label: "Pets Allowed", icon: PawPrint },
-  waste_disposal: { label: "Waste Disposal", icon: Trash2 },
+  campfire: { label: "Bålplass", icon: Flame },
+  lake_access: { label: "Sjø-/innsjøtilgang", icon: Waves },
+  mountain_view: { label: "Fjellpanorama", icon: Mountain },
+  pets_allowed: { label: "Dyrevennlig", icon: PawPrint },
+  waste_disposal: { label: "Septiktømming", icon: Trash2 },
+  handicap_accessible: { label: "Tilgjengelig for rullestol", icon: Accessibility },
 };
 
 interface AmenityListProps {

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { Star, Zap } from "lucide-react";
 import { Listing } from "@/types";
 import ImageCarousel from "@/components/features/ImageCarousel";
 
@@ -67,12 +67,30 @@ export default function SearchListingCard({
           <p className="text-xs text-neutral-500 line-clamp-1">
             {listing.location.city}, {listing.location.region}
           </p>
-          <p className="mt-0.5 text-sm text-neutral-900">
-            <span className="font-semibold">{listing.price} kr</span>
-            <span className="font-normal text-neutral-500">
-              {" "}/ {listing.priceUnit === "time" ? "dag" : "natt"}
-            </span>
-          </p>
+          <div className="mt-1 flex items-center justify-between">
+            <p className="text-sm text-neutral-900">
+              <span className="font-semibold">{listing.price} kr</span>
+              <span className="font-normal text-neutral-500">
+                {" "}/ {listing.priceUnit === "time" ? "time" : "natt"}
+              </span>
+            </p>
+            <div className="flex items-center gap-1.5">
+              {listing.instantBooking && (
+                <span className="flex items-center text-[10px] font-semibold text-green-600" title="Direktebooking">
+                  <Zap className="h-3 w-3 fill-green-600" />
+                </span>
+              )}
+              {listing.spots > 1 && (
+                <span className="flex items-center gap-0.5 text-[10px] text-neutral-400" title={`${listing.spots} plasser`}>
+                  <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
+                    <circle cx="7" cy="17" r="2" /><path d="M9 17h6" /><circle cx="17" cy="17" r="2" />
+                  </svg>
+                  {listing.spots}
+                </span>
+              )}
+            </div>
+          </div>
         </div>
       </Link>
     </div>
