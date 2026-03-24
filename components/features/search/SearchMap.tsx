@@ -26,7 +26,7 @@ export type { MapBounds };
 
 export default function SearchMap(props: SearchMapProps) {
   return (
-    <div className="absolute inset-0 p-2 pl-0">
+    <div className="absolute inset-0 p-2 pl-0 pb-2">
       <div className="h-full w-full overflow-hidden rounded-xl">
         <SearchMapInner {...props} />
       </div>

@@ -23,24 +23,82 @@ interface SearchMapInnerProps {
   onBoundsChange: (bounds: MapBounds) => void;
 }
 
-function createPriceEl(price: number): HTMLButtonElement {
-  const el = document.createElement("button");
-  el.textContent = `${price} kr`;
-  el.style.cssText = `
-    border-radius: 9999px;
-    padding: 4px 10px;
-    font-size: 12px;
-    font-weight: 600;
-    font-family: var(--font-dm-sans), system-ui, sans-serif;
-    white-space: nowrap;
-    cursor: pointer;
-    border: 1px solid #d4d4d4;
-    background: #fff;
-    color: #171717;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-    transition: background 0.15s, color 0.15s, border-color 0.15s;
-  `;
-  return el;
+// Custom OverlayView for price pill markers
+class PriceMarkerOverlay extends google.maps.OverlayView {
+  private position: google.maps.LatLng;
+  private container: HTMLButtonElement;
+  private listing: Listing;
+
+  constructor(
+    map: google.maps.Map,
+    listing: Listing,
+    onHover: (id: string | null) => void,
+    onSelect: (id: string | null) => void,
+  ) {
+    super();
+    this.listing = listing;
+    this.position = new google.maps.LatLng(listing.location.lat, listing.location.lng);
+
+    const el = document.createElement("button");
+    el.textContent = `${listing.price} kr`;
+    el.style.cssText = `
+      border-radius: 9999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      font-family: var(--font-dm-sans), system-ui, sans-serif;
+      white-space: nowrap;
+      cursor: pointer;
+      border: 1px solid #d4d4d4;
+      background: #fff;
+      color: #171717;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+      position: absolute;
+      transform: translate(-50%, -50%);
+    `;
+
+    el.addEventListener("mouseenter", () => onHover(listing.id));
+    el.addEventListener("mouseleave", () => onHover(null));
+    el.addEventListener("click", (e) => {
+      e.stopPropagation();
+      onSelect(listing.id);
+    });
+
+    this.container = el;
+    this.setMap(map);
+  }
+
+  onAdd() {
+    const panes = this.getPanes();
+    panes?.overlayMouseTarget.appendChild(this.container);
+  }
+
+  draw() {
+    const projection = this.getProjection();
+    if (!projection) return;
+    const pos = projection.fromLatLngToDivPixel(this.position);
+    if (pos) {
+      this.container.style.left = `${pos.x}px`;
+      this.container.style.top = `${pos.y}px`;
+    }
+  }
+
+  onRemove() {
+    this.container.remove();
+  }
+
+  getElement() {
+    return this.container;
+  }
+
+  getId() {
+    return this.listing.id;
+  }
+
+  getPosition() {
+    return this.position;
+  }
 }
 
 export default function SearchMapInner({
@@ -53,9 +111,7 @@ export default function SearchMapInner({
 }: SearchMapInnerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<
-    Map<string, { marker: google.maps.marker.AdvancedMarkerElement; el: HTMLButtonElement }>
-  >(new Map());
+  const markersRef = useRef<Map<string, PriceMarkerOverlay>>(new Map());
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const listingIdsRef = useRef<string>("");
 
@@ -88,7 +144,6 @@ export default function SearchMapInner({
       }
 
       const { Map: GoogleMap } = await importLibrary("maps");
-      await importLibrary("marker");
 
       if (cancelled || !containerRef.current) return;
 
@@ -109,7 +164,6 @@ export default function SearchMapInner({
       const map = new GoogleMap(containerRef.current!, {
         center,
         zoom,
-        mapId: "free-space-map",
         disableDefaultUI: true,
         zoomControl: true,
         zoomControlOptions: {
@@ -117,6 +171,27 @@ export default function SearchMapInner({
         },
         gestureHandling: "greedy",
         clickableIcons: false,
+        styles: [
+          // Airbnb-inspired clean style — muted colors, minimal labels
+          { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
+          { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
+          { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+          { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
+          { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
+          { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
+          { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+          { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] },
+          { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
+          { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
+          { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
+          { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] },
+          { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
+          { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
+          { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] },
+          { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
+          { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9e7f5" }] },
+          { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
+        ],
       });
 
       map.addListener("idle", () => {
@@ -138,8 +213,7 @@ export default function SearchMapInner({
     return () => {
       cancelled = true;
       if (mapRef.current) {
-        // Clean up markers
-        markersRef.current.forEach(({ marker }) => (marker.map = null));
+        markersRef.current.forEach((overlay) => overlay.setMap(null));
         markersRef.current.clear();
         mapRef.current = null;
       }
@@ -166,26 +240,12 @@ export default function SearchMapInner({
     if (!map) return;
 
     // Remove old markers
-    markersRef.current.forEach(({ marker }) => (marker.map = null));
+    markersRef.current.forEach((overlay) => overlay.setMap(null));
     markersRef.current.clear();
 
     listings.forEach((listing) => {
-      const el = createPriceEl(listing.price);
-
-      el.addEventListener("mouseenter", () => onHover(listing.id));
-      el.addEventListener("mouseleave", () => onHover(null));
-      el.addEventListener("click", (e) => {
-        e.stopPropagation();
-        onSelect(listing.id);
-      });
-
-      const marker = new google.maps.marker.AdvancedMarkerElement({
-        map,
-        position: { lat: listing.location.lat, lng: listing.location.lng },
-        content: el,
-      });
-
-      markersRef.current.set(listing.id, { marker, el });
+      const overlay = new PriceMarkerOverlay(map, listing, onHover, onSelect);
+      markersRef.current.set(listing.id, overlay);
     });
 
     // Fly to new bounds if listings actually changed (new search)
@@ -202,11 +262,16 @@ export default function SearchMapInner({
 
   // Update marker styles on hover/select
   useEffect(() => {
-    markersRef.current.forEach(({ el }, id) => {
+    markersRef.current.forEach((overlay, id) => {
+      const el = overlay.getElement();
       const isActive = hoveredListingId === id || selectedListingId === id;
       el.style.background = isActive ? "#1a4fd6" : "#fff";
       el.style.color = isActive ? "#fff" : "#171717";
       el.style.borderColor = isActive ? "#1a4fd6" : "#d4d4d4";
+      el.style.transform = isActive
+        ? "translate(-50%, -50%) scale(1.08)"
+        : "translate(-50%, -50%)";
+      el.style.zIndex = isActive ? "10" : "1";
     });
   }, [hoveredListingId, selectedListingId]);
 
@@ -215,7 +280,6 @@ export default function SearchMapInner({
     const map = mapRef.current;
     if (!map) return;
 
-    // Remove existing info window
     if (infoWindowRef.current) {
       infoWindowRef.current.close();
       infoWindowRef.current = null;
@@ -233,14 +297,11 @@ export default function SearchMapInner({
               <p style="font-weight:600;font-size:13px;margin:0">${listing.price} kr / ${unit}</p>
             </div>
           `,
-          pixelOffset: new google.maps.Size(0, -10),
+          position: { lat: listing.location.lat, lng: listing.location.lng },
+          pixelOffset: new google.maps.Size(0, -15),
         });
 
-        const markerData = markersRef.current.get(listing.id);
-        if (markerData) {
-          infoWindow.open({ map, anchor: markerData.marker });
-        }
-
+        infoWindow.open(map);
         infoWindow.addListener("closeclick", () => onSelect(null));
         infoWindowRef.current = infoWindow;
       }
