@@ -22,9 +22,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="nb" className={`${dmSans.variable} h-full antialiased`}>
-      <head>
-        <link href="https://api.mapbox.com/mapbox-gl-js/v3.9.4/mapbox-gl.css" rel="stylesheet" />
-      </head>
+      <head />
       <body className="min-h-full flex flex-col font-sans">
         <PasswordGate>{children}</PasswordGate>
       </body>

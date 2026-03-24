@@ -1,11 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef } from "react";
-import mapboxgl from "mapbox-gl";
-import "mapbox-gl/dist/mapbox-gl.css";
+import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { Listing } from "@/types";
 
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+let loaderInitialized = false;
 
 export interface MapBounds {
   north: number;
@@ -52,22 +52,12 @@ export default function SearchMapInner({
   onBoundsChange,
 }: SearchMapInnerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<mapboxgl.Map | null>(null);
-  const markersRef = useRef<Map<string, { marker: mapboxgl.Marker; el: HTMLButtonElement }>>(new Map());
-  const popupRef = useRef<mapboxgl.Popup | null>(null);
-
-  // Resize map when container changes (fullscreen toggle)
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const observer = new ResizeObserver(() => {
-      if (mapRef.current) {
-        mapRef.current.resize();
-      }
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<
+    Map<string, { marker: google.maps.marker.AdvancedMarkerElement; el: HTMLButtonElement }>
+  >(new Map());
+  const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
+  const listingIdsRef = useRef<string>("");
 
   const reportBounds = useCallback(() => {
     const map = mapRef.current;
@@ -75,67 +65,100 @@ export default function SearchMapInner({
     const b = map.getBounds();
     if (!b) return;
     onBoundsChange({
-      north: b.getNorth(),
-      south: b.getSouth(),
-      east: b.getEast(),
-      west: b.getWest(),
+      north: b.getNorthEast().lat(),
+      south: b.getSouthWest().lat(),
+      east: b.getNorthEast().lng(),
+      west: b.getSouthWest().lng(),
     });
   }, [onBoundsChange]);
 
   // Initialize map
   useEffect(() => {
-    if (!containerRef.current || !MAPBOX_TOKEN) return;
+    if (!containerRef.current || !API_KEY) return;
 
-    mapboxgl.accessToken = MAPBOX_TOKEN;
+    let cancelled = false;
 
-    // Calculate initial bounds from listings so we skip the "whole Norway" flash
-    let initCenter: [number, number] = [14, 64.5];
-    let initZoom = 4;
-    if (listings.length > 0) {
-      const b = new mapboxgl.LngLatBounds();
-      listings.forEach((l) => b.extend([l.location.lng, l.location.lat]));
-      initCenter = [b.getCenter().lng, b.getCenter().lat];
-      // Rough zoom estimate based on bounds span
-      const latSpan = b.getNorth() - b.getSouth();
-      if (latSpan < 0.5) initZoom = 12;
-      else if (latSpan < 2) initZoom = 9;
-      else if (latSpan < 5) initZoom = 7;
-      else initZoom = 5;
+    async function initMap() {
+      if (!loaderInitialized) {
+        setOptions({
+          key: API_KEY,
+          v: "weekly",
+        });
+        loaderInitialized = true;
+      }
+
+      const { Map: GoogleMap } = await importLibrary("maps");
+      await importLibrary("marker");
+
+      if (cancelled || !containerRef.current) return;
+
+      // Calculate initial bounds
+      let center = { lat: 64.5, lng: 14 };
+      let zoom = 4;
+      if (listings.length > 0) {
+        const bounds = new google.maps.LatLngBounds();
+        listings.forEach((l) => bounds.extend({ lat: l.location.lat, lng: l.location.lng }));
+        center = { lat: bounds.getCenter().lat(), lng: bounds.getCenter().lng() };
+        const latSpan = bounds.getNorthEast().lat() - bounds.getSouthWest().lat();
+        if (latSpan < 0.5) zoom = 12;
+        else if (latSpan < 2) zoom = 9;
+        else if (latSpan < 5) zoom = 7;
+        else zoom = 5;
+      }
+
+      const map = new GoogleMap(containerRef.current!, {
+        center,
+        zoom,
+        mapId: "free-space-map",
+        disableDefaultUI: true,
+        zoomControl: true,
+        zoomControlOptions: {
+          position: google.maps.ControlPosition.RIGHT_BOTTOM,
+        },
+        gestureHandling: "greedy",
+        clickableIcons: false,
+      });
+
+      map.addListener("idle", () => {
+        reportBounds();
+      });
+
+      mapRef.current = map;
+
+      // Fit to listings after init
+      if (listings.length > 0) {
+        const bounds = new google.maps.LatLngBounds();
+        listings.forEach((l) => bounds.extend({ lat: l.location.lat, lng: l.location.lng }));
+        map.fitBounds(bounds, 50);
+      }
     }
 
-    const map = new mapboxgl.Map({
-      container: containerRef.current,
-      style: "mapbox://styles/mapbox/streets-v12",
-      center: initCenter,
-      zoom: initZoom,
-      attributionControl: true,
-    });
-
-    map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), "top-right");
-
-    map.on("load", () => {
-      // Fine-tune fit after load
-      if (listings.length > 0) {
-        const bounds = new mapboxgl.LngLatBounds();
-        listings.forEach((l) => bounds.extend([l.location.lng, l.location.lat]));
-        map.fitBounds(bounds, { padding: 50, maxZoom: 13, duration: 0 });
-      }
-      setTimeout(reportBounds, 150);
-    });
-
-    map.on("moveend", reportBounds);
-
-    mapRef.current = map;
+    initMap();
 
     return () => {
-      map.remove();
-      mapRef.current = null;
+      cancelled = true;
+      if (mapRef.current) {
+        // Clean up markers
+        markersRef.current.forEach(({ marker }) => (marker.map = null));
+        markersRef.current.clear();
+        mapRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Track listing IDs to detect when search results actually change
-  const listingIdsRef = useRef<string>("");
+  // Resize map when container changes (fullscreen toggle)
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      if (mapRef.current) {
+        google.maps.event.trigger(mapRef.current, "resize");
+      }
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   // Create markers and fit bounds when listings change
   useEffect(() => {
@@ -143,7 +166,7 @@ export default function SearchMapInner({
     if (!map) return;
 
     // Remove old markers
-    markersRef.current.forEach(({ marker }) => marker.remove());
+    markersRef.current.forEach(({ marker }) => (marker.map = null));
     markersRef.current.clear();
 
     listings.forEach((listing) => {
@@ -156,26 +179,28 @@ export default function SearchMapInner({
         onSelect(listing.id);
       });
 
-      const marker = new mapboxgl.Marker({ element: el, anchor: "center" })
-        .setLngLat([listing.location.lng, listing.location.lat])
-        .addTo(map);
+      const marker = new google.maps.marker.AdvancedMarkerElement({
+        map,
+        position: { lat: listing.location.lat, lng: listing.location.lng },
+        content: el,
+      });
 
       markersRef.current.set(listing.id, { marker, el });
     });
 
-    // Fly to new bounds if the listings actually changed (new search)
+    // Fly to new bounds if listings actually changed (new search)
     const newIds = listings.map((l) => l.id).sort().join(",");
     if (newIds !== listingIdsRef.current && listings.length > 0) {
       listingIdsRef.current = newIds;
-      const bounds = new mapboxgl.LngLatBounds();
-      listings.forEach((l) => bounds.extend([l.location.lng, l.location.lat]));
-      map.fitBounds(bounds, { padding: 50, maxZoom: 13, duration: 500 });
+      const bounds = new google.maps.LatLngBounds();
+      listings.forEach((l) => bounds.extend({ lat: l.location.lat, lng: l.location.lng }));
+      map.fitBounds(bounds, 50);
       setTimeout(reportBounds, 600);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listings]);
 
-  // Update marker styles on hover/select (without recreating)
+  // Update marker styles on hover/select
   useEffect(() => {
     markersRef.current.forEach(({ el }, id) => {
       const isActive = hoveredListingId === id || selectedListingId === id;
@@ -185,43 +210,48 @@ export default function SearchMapInner({
     });
   }, [hoveredListingId, selectedListingId]);
 
-  // Update popup on selection
+  // Update info window on selection
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
 
-    // Remove existing popup
-    if (popupRef.current) {
-      popupRef.current.remove();
-      popupRef.current = null;
+    // Remove existing info window
+    if (infoWindowRef.current) {
+      infoWindowRef.current.close();
+      infoWindowRef.current = null;
     }
 
     if (selectedListingId) {
       const listing = listings.find((l) => l.id === selectedListingId);
       if (listing) {
         const unit = listing.priceUnit === "time" ? "dag" : "natt";
-        const popup = new mapboxgl.Popup({ offset: 20, closeButton: false, closeOnClick: true })
-          .setLngLat([listing.location.lng, listing.location.lat])
-          .setHTML(`
-            <div style="min-width:160px;padding:12px;font-family:var(--font-dm-sans),system-ui,sans-serif">
+        const infoWindow = new google.maps.InfoWindow({
+          content: `
+            <div style="min-width:160px;padding:4px 0;font-family:var(--font-dm-sans),system-ui,sans-serif">
               <p style="font-weight:600;font-size:14px;margin:0 0 4px">${listing.title}</p>
               <p style="color:#737373;font-size:12px;margin:0 0 4px">${listing.location.city}, ${listing.location.region}</p>
               <p style="font-weight:600;font-size:13px;margin:0">${listing.price} kr / ${unit}</p>
             </div>
-          `)
-          .addTo(map);
+          `,
+          pixelOffset: new google.maps.Size(0, -10),
+        });
 
-        popup.on("close", () => onSelect(null));
-        popupRef.current = popup;
+        const markerData = markersRef.current.get(listing.id);
+        if (markerData) {
+          infoWindow.open({ map, anchor: markerData.marker });
+        }
+
+        infoWindow.addListener("closeclick", () => onSelect(null));
+        infoWindowRef.current = infoWindow;
       }
     }
   }, [selectedListingId, listings, onSelect]);
 
-  if (!MAPBOX_TOKEN) {
+  if (!API_KEY) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-neutral-100">
         <p className="text-sm text-neutral-500">
-          Mangler NEXT_PUBLIC_MAPBOX_TOKEN i .env.local
+          Mangler NEXT_PUBLIC_GOOGLE_MAPS_API_KEY i .env.local
         </p>
       </div>
     );
