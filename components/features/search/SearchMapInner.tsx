@@ -23,82 +23,94 @@ interface SearchMapInnerProps {
   onBoundsChange: (bounds: MapBounds) => void;
 }
 
-// Custom OverlayView for price pill markers
-class PriceMarkerOverlay extends google.maps.OverlayView {
-  private position: google.maps.LatLng;
-  private container: HTMLButtonElement;
-  private listing: Listing;
+interface PriceOverlay extends google.maps.OverlayView {
+  getElement(): HTMLButtonElement;
+  getId(): string;
+}
 
-  constructor(
-    map: google.maps.Map,
-    listing: Listing,
-    onHover: (id: string | null) => void,
-    onSelect: (id: string | null) => void,
-  ) {
-    super();
-    this.listing = listing;
-    this.position = new google.maps.LatLng(listing.location.lat, listing.location.lng);
+// Deferred class — google.maps must be loaded first
+let OverlayClass: new (
+  map: google.maps.Map,
+  listing: Listing,
+  onHover: (id: string | null) => void,
+  onSelect: (id: string | null) => void,
+) => PriceOverlay;
 
-    const el = document.createElement("button");
-    el.textContent = `${listing.price} kr`;
-    el.style.cssText = `
-      border-radius: 9999px;
-      padding: 4px 10px;
-      font-size: 12px;
-      font-weight: 600;
-      font-family: var(--font-dm-sans), system-ui, sans-serif;
-      white-space: nowrap;
-      cursor: pointer;
-      border: 1px solid #d4d4d4;
-      background: #fff;
-      color: #171717;
-      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-      transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
-      position: absolute;
-      transform: translate(-50%, -50%);
-    `;
+function ensureOverlayClass() {
+  if (OverlayClass) return;
 
-    el.addEventListener("mouseenter", () => onHover(listing.id));
-    el.addEventListener("mouseleave", () => onHover(null));
-    el.addEventListener("click", (e) => {
-      e.stopPropagation();
-      onSelect(listing.id);
-    });
+  OverlayClass = class extends google.maps.OverlayView {
+    private position: google.maps.LatLng;
+    private container: HTMLButtonElement;
+    private listing: Listing;
 
-    this.container = el;
-    this.setMap(map);
-  }
+    constructor(
+      map: google.maps.Map,
+      listing: Listing,
+      onHover: (id: string | null) => void,
+      onSelect: (id: string | null) => void,
+    ) {
+      super();
+      this.listing = listing;
+      this.position = new google.maps.LatLng(listing.location.lat, listing.location.lng);
 
-  onAdd() {
-    const panes = this.getPanes();
-    panes?.overlayMouseTarget.appendChild(this.container);
-  }
+      const el = document.createElement("button");
+      el.textContent = `${listing.price} kr`;
+      el.style.cssText = `
+        border-radius: 9999px;
+        padding: 6px 14px;
+        font-size: 14px;
+        font-weight: 700;
+        font-family: var(--font-dm-sans), system-ui, sans-serif;
+        white-space: nowrap;
+        cursor: pointer;
+        border: none;
+        background: #fff;
+        color: #171717;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.18), 0 0 0 3px rgba(255,255,255,0.6);
+        transition: background 0.15s, color 0.15s, transform 0.15s, box-shadow 0.15s;
+        position: absolute;
+        transform: translate(-50%, -50%);
+      `;
 
-  draw() {
-    const projection = this.getProjection();
-    if (!projection) return;
-    const pos = projection.fromLatLngToDivPixel(this.position);
-    if (pos) {
-      this.container.style.left = `${pos.x}px`;
-      this.container.style.top = `${pos.y}px`;
+      el.addEventListener("mouseenter", () => onHover(listing.id));
+      el.addEventListener("mouseleave", () => onHover(null));
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        onSelect(listing.id);
+      });
+
+      this.container = el;
+      this.setMap(map);
     }
-  }
 
-  onRemove() {
-    this.container.remove();
-  }
+    onAdd() {
+      const panes = this.getPanes();
+      panes?.overlayMouseTarget.appendChild(this.container);
+    }
 
-  getElement() {
-    return this.container;
-  }
+    draw() {
+      const projection = this.getProjection();
+      if (!projection) return;
+      const pos = projection.fromLatLngToDivPixel(this.position);
+      if (pos) {
+        this.container.style.left = `${pos.x}px`;
+        this.container.style.top = `${pos.y}px`;
+      }
+    }
 
-  getId() {
-    return this.listing.id;
-  }
+    onRemove() {
+      this.container.remove();
+    }
 
-  getPosition() {
-    return this.position;
-  }
+    getElement() {
+      return this.container;
+    }
+
+    getId() {
+      return this.listing.id;
+    }
+  } as unknown as typeof OverlayClass;
 }
 
 export default function SearchMapInner({
@@ -111,9 +123,10 @@ export default function SearchMapInner({
 }: SearchMapInnerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<Map<string, PriceMarkerOverlay>>(new Map());
+  const markersRef = useRef<Map<string, PriceOverlay>>(new Map());
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const listingIdsRef = useRef<string>("");
+  const readyRef = useRef(false);
 
   const reportBounds = useCallback(() => {
     const map = mapRef.current;
@@ -128,6 +141,19 @@ export default function SearchMapInner({
     });
   }, [onBoundsChange]);
 
+  const createMarkers = useCallback(
+    (map: google.maps.Map, items: Listing[]) => {
+      markersRef.current.forEach((overlay) => overlay.setMap(null));
+      markersRef.current.clear();
+
+      items.forEach((listing) => {
+        const overlay = new OverlayClass(map, listing, onHover, onSelect);
+        markersRef.current.set(listing.id, overlay);
+      });
+    },
+    [onHover, onSelect],
+  );
+
   // Initialize map
   useEffect(() => {
     if (!containerRef.current || !API_KEY) return;
@@ -136,10 +162,7 @@ export default function SearchMapInner({
 
     async function initMap() {
       if (!loaderInitialized) {
-        setOptions({
-          key: API_KEY,
-          v: "weekly",
-        });
+        setOptions({ key: API_KEY, v: "weekly" });
         loaderInitialized = true;
       }
 
@@ -147,7 +170,8 @@ export default function SearchMapInner({
 
       if (cancelled || !containerRef.current) return;
 
-      // Calculate initial bounds
+      ensureOverlayClass();
+
       let center = { lat: 64.5, lng: 14 };
       let zoom = 4;
       if (listings.length > 0) {
@@ -172,35 +196,27 @@ export default function SearchMapInner({
         gestureHandling: "greedy",
         clickableIcons: false,
         styles: [
-          // Airbnb-inspired clean style — muted colors, minimal labels
-          { elementType: "geometry", stylers: [{ color: "#f5f5f5" }] },
-          { elementType: "labels.icon", stylers: [{ visibility: "off" }] },
-          { elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-          { elementType: "labels.text.stroke", stylers: [{ color: "#f5f5f5" }] },
-          { featureType: "administrative.land_parcel", elementType: "labels.text.fill", stylers: [{ color: "#bdbdbd" }] },
-          { featureType: "poi", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
-          { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-          { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] },
-          { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
-          { featureType: "road", elementType: "geometry", stylers: [{ color: "#ffffff" }] },
-          { featureType: "road.arterial", elementType: "labels.text.fill", stylers: [{ color: "#757575" }] },
-          { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#dadada" }] },
-          { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#616161" }] },
-          { featureType: "road.local", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
-          { featureType: "transit.line", elementType: "geometry", stylers: [{ color: "#e5e5e5" }] },
-          { featureType: "transit.station", elementType: "geometry", stylers: [{ color: "#eeeeee" }] },
-          { featureType: "water", elementType: "geometry", stylers: [{ color: "#c9e7f5" }] },
-          { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
+          // Subtle, warm style — keep POIs and landmarks visible
+          { featureType: "poi.business", elementType: "labels.icon", stylers: [{ visibility: "on" }] },
+          { featureType: "poi.business", elementType: "labels.text.fill", stylers: [{ color: "#9e9e9e" }] },
+          { featureType: "road.highway", elementType: "geometry.fill", stylers: [{ color: "#f0e6d3" }] },
+          { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#e2d4bf" }] },
+          { featureType: "water", elementType: "geometry", stylers: [{ color: "#bde0f5" }] },
+          { featureType: "landscape.man_made", elementType: "geometry.fill", stylers: [{ color: "#f7f5f0" }] },
+          { featureType: "landscape.natural", elementType: "geometry.fill", stylers: [{ color: "#eef2e6" }] },
+          { featureType: "poi.park", elementType: "geometry.fill", stylers: [{ color: "#d4e8c4" }] },
         ],
       });
 
-      map.addListener("idle", () => {
-        reportBounds();
-      });
-
+      map.addListener("idle", reportBounds);
+      map.addListener("click", () => onSelect(null));
       mapRef.current = map;
+      readyRef.current = true;
 
-      // Fit to listings after init
+      // Create initial markers right away
+      createMarkers(map, listings);
+      listingIdsRef.current = listings.map((l) => l.id).sort().join(",");
+
       if (listings.length > 0) {
         const bounds = new google.maps.LatLngBounds();
         listings.forEach((l) => bounds.extend({ lat: l.location.lat, lng: l.location.lng }));
@@ -216,58 +232,53 @@ export default function SearchMapInner({
         markersRef.current.forEach((overlay) => overlay.setMap(null));
         markersRef.current.clear();
         mapRef.current = null;
+        readyRef.current = false;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Resize map when container changes (fullscreen toggle)
+  // Resize on container change
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     const observer = new ResizeObserver(() => {
-      if (mapRef.current) {
-        google.maps.event.trigger(mapRef.current, "resize");
-      }
+      if (mapRef.current) google.maps.event.trigger(mapRef.current, "resize");
     });
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
 
-  // Create markers and fit bounds when listings change
+  // Update markers when listings change (after initial load)
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
+    if (!map || !readyRef.current) return;
 
-    // Remove old markers
-    markersRef.current.forEach((overlay) => overlay.setMap(null));
-    markersRef.current.clear();
-
-    listings.forEach((listing) => {
-      const overlay = new PriceMarkerOverlay(map, listing, onHover, onSelect);
-      markersRef.current.set(listing.id, overlay);
-    });
-
-    // Fly to new bounds if listings actually changed (new search)
     const newIds = listings.map((l) => l.id).sort().join(",");
-    if (newIds !== listingIdsRef.current && listings.length > 0) {
-      listingIdsRef.current = newIds;
+    if (newIds === listingIdsRef.current) return;
+
+    createMarkers(map, listings);
+    listingIdsRef.current = newIds;
+
+    if (listings.length > 0) {
       const bounds = new google.maps.LatLngBounds();
       listings.forEach((l) => bounds.extend({ lat: l.location.lat, lng: l.location.lng }));
       map.fitBounds(bounds, 50);
       setTimeout(reportBounds, 600);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [listings]);
+  }, [listings, createMarkers]);
 
   // Update marker styles on hover/select
   useEffect(() => {
     markersRef.current.forEach((overlay, id) => {
       const el = overlay.getElement();
       const isActive = hoveredListingId === id || selectedListingId === id;
-      el.style.background = isActive ? "#1a4fd6" : "#fff";
+      el.style.background = isActive ? "#171717" : "#fff";
       el.style.color = isActive ? "#fff" : "#171717";
-      el.style.borderColor = isActive ? "#1a4fd6" : "#d4d4d4";
+      el.style.boxShadow = isActive
+        ? "0 4px 12px rgba(0,0,0,0.3), 0 0 0 3px rgba(23,23,23,0.15)"
+        : "0 2px 8px rgba(0,0,0,0.18), 0 0 0 3px rgba(255,255,255,0.6)";
       el.style.transform = isActive
         ? "translate(-50%, -50%) scale(1.08)"
         : "translate(-50%, -50%)";
@@ -275,7 +286,7 @@ export default function SearchMapInner({
     });
   }, [hoveredListingId, selectedListingId]);
 
-  // Update info window on selection
+  // Popup card on selection
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -289,16 +300,69 @@ export default function SearchMapInner({
       const listing = listings.find((l) => l.id === selectedListingId);
       if (listing) {
         const unit = listing.priceUnit === "time" ? "dag" : "natt";
-        const infoWindow = new google.maps.InfoWindow({
-          content: `
-            <div style="min-width:160px;padding:4px 0;font-family:var(--font-dm-sans),system-ui,sans-serif">
-              <p style="font-weight:600;font-size:14px;margin:0 0 4px">${listing.title}</p>
-              <p style="color:#737373;font-size:12px;margin:0 0 4px">${listing.location.city}, ${listing.location.region}</p>
-              <p style="font-weight:600;font-size:13px;margin:0">${listing.price} kr / ${unit}</p>
+        const images = listing.images || [];
+        let imgIndex = 0;
+
+        const card = document.createElement("div");
+        card.style.cssText = "width:280px;font-family:var(--font-dm-sans),system-ui,sans-serif;";
+        card.innerHTML = `
+          <a href="/listings/${listing.id}" style="text-decoration:none;color:inherit;display:block">
+            <div style="position:relative;width:100%;aspect-ratio:7/5;overflow:hidden;border-radius:12px 12px 0 0;background:#f5f5f5">
+              <img src="${images[0] || ""}" alt="${listing.title}" style="width:100%;height:100%;object-fit:cover;" />
+              ${images.length > 1 ? `
+                <button data-dir="prev" style="position:absolute;left:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.8);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:#525252">‹</button>
+                <button data-dir="next" style="position:absolute;right:6px;top:50%;transform:translateY(-50%);width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,0.8);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:#525252">›</button>
+                <div data-dots style="position:absolute;bottom:6px;left:50%;transform:translateX(-50%);display:flex;gap:3px"></div>
+              ` : ""}
             </div>
-          `,
+            <div style="padding:10px 12px 12px">
+              <div style="display:flex;justify-content:space-between;align-items:start;gap:4px">
+                <p style="font-weight:600;font-size:14px;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${listing.title}</p>
+                <span style="font-size:12px;color:#171717;white-space:nowrap;display:flex;align-items:center;gap:2px">★ ${listing.rating}</span>
+              </div>
+              <p style="color:#737373;font-size:12px;margin:2px 0 0">${listing.location.city}, ${listing.location.region}</p>
+              <p style="font-size:14px;margin:5px 0 0"><span style="font-weight:700">${listing.price} kr</span> <span style="color:#737373;font-weight:400">/ ${unit}</span></p>
+            </div>
+          </a>
+        `;
+
+        // Image carousel logic
+        if (images.length > 1) {
+          const img = card.querySelector("img") as HTMLImageElement;
+          const dotsContainer = card.querySelector("[data-dots]") as HTMLDivElement;
+
+          function renderDots() {
+            const count = Math.min(images.length, 5);
+            dotsContainer.innerHTML = "";
+            for (let i = 0; i < count; i++) {
+              const dot = document.createElement("span");
+              dot.style.cssText = `width:5px;height:5px;border-radius:50%;background:${i === imgIndex % count ? "#fff" : "rgba(255,255,255,0.5)"}`;
+              dotsContainer.appendChild(dot);
+            }
+          }
+          renderDots();
+
+          card.querySelector("[data-dir='prev']")?.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            imgIndex = imgIndex === 0 ? images.length - 1 : imgIndex - 1;
+            img.src = images[imgIndex];
+            renderDots();
+          });
+          card.querySelector("[data-dir='next']")?.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            imgIndex = imgIndex === images.length - 1 ? 0 : imgIndex + 1;
+            img.src = images[imgIndex];
+            renderDots();
+          });
+        }
+
+        const infoWindow = new google.maps.InfoWindow({
+          content: card,
           position: { lat: listing.location.lat, lng: listing.location.lng },
           pixelOffset: new google.maps.Size(0, -15),
+          maxWidth: 300,
         });
 
         infoWindow.open(map);

@@ -2,9 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { Star } from "lucide-react";
 import { Listing } from "@/types";
+import ImageCarousel from "@/components/features/ImageCarousel";
 
 interface SearchListingCardProps {
   listing: Listing;
@@ -45,18 +45,13 @@ export default function SearchListingCard({
             : "border-neutral-200 hover:border-neutral-300 hover:shadow-sm"
       }`}
     >
+      <div className="overflow-hidden rounded-t-lg">
+        <ImageCarousel
+          images={listing.images}
+          alt={listing.title}
+        />
+      </div>
       <Link href={`/listings/${listing.id}`} className="block">
-        <div className="overflow-hidden rounded-t-lg">
-          <div className="relative aspect-[7/5] overflow-hidden">
-            <Image
-              src={listing.images[0]}
-              alt={listing.title}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, (max-width: 1200px) 33vw, 25vw"
-            />
-          </div>
-        </div>
         <div className="px-2.5 py-2">
           <div className="flex items-start justify-between gap-1">
             <h3 className="text-sm font-medium text-neutral-900 line-clamp-1">

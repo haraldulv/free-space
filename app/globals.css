@@ -35,6 +35,15 @@ body {
   color: var(--color-foreground);
 }
 
+/* Hide scrollbar but keep scroll functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Glassmorphism navbar */
 .glass-navbar {
   background: rgba(255, 255, 255, 0.82);
@@ -101,11 +110,33 @@ body {
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
 }
 
-/* Google Maps info window override */
-.gm-style-iw-c {
+/* Google Maps info window — card popup */
+.gm-style .gm-style-iw-c {
   border-radius: 12px !important;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.12) !important;
+  padding: 0 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.14) !important;
+  max-height: none !important;
 }
-.gm-style-iw-d {
+.gm-style .gm-style-iw-c > div:first-child {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+.gm-style .gm-style-iw-d {
   overflow: hidden !important;
+  padding: 0 !important;
+  max-height: none !important;
+}
+.gm-style .gm-style-iw-tc {
+  display: none !important;
+}
+/* Hide close button on info window */
+.gm-style .gm-ui-hover-effect {
+  display: none !important;
+}
+/* Remove all inner spacing/chrome */
+.gm-style .gm-style-iw {
+  padding: 0 !important;
+}
+.gm-style .gm-style-iw-chr {
+  display: none !important;
 }

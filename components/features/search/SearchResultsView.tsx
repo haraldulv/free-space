@@ -46,7 +46,7 @@ export default function SearchResultsView({
     <div className="relative overflow-hidden" style={{ height: "calc(100dvh - 64px)" }}>
       {/* List panel */}
       <div
-        className={`absolute top-0 left-0 bottom-0 overflow-y-auto lg:w-1/2 ${
+        className={`absolute top-0 left-0 bottom-0 overflow-y-auto scrollbar-hide lg:w-1/2 ${
           mobileView === "map" || mapFullscreen ? "hidden lg:hidden" : "block lg:block right-0 lg:right-auto"
         }`}
       >
@@ -82,7 +82,7 @@ export default function SearchResultsView({
           {/* Fullscreen toggle — desktop */}
           <button
             onClick={() => setMapFullscreen(!mapFullscreen)}
-            className="absolute top-3 right-5 z-[1000] hidden lg:flex h-9 w-9 items-center justify-center rounded-lg bg-white shadow-md transition-colors hover:bg-neutral-100"
+            className="absolute top-5 right-5 z-[1000] hidden lg:flex h-9 w-9 items-center justify-center rounded-lg bg-white shadow-md transition-colors hover:bg-neutral-100"
             aria-label={mapFullscreen ? "Lukk fullskjerm" : "Fullskjerm kart"}
           >
             {mapFullscreen ? (
