@@ -88,6 +88,8 @@ export interface Listing {
   spots: number;
   tags?: ListingTag[];
   instantBooking?: boolean;
+  isActive?: boolean;
+  blockedDates?: string[];
 }
 
 export interface Booking {

@@ -10,17 +10,35 @@ export default function ListingFavoriteButton({ listingId }: { listingId: string
 
   useEffect(() => {
     const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      if (!user) { setLoaded(true); return; }
+
+    async function checkFavorite(userId: string) {
       const { data } = await supabase
         .from("favorites")
         .select("id")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("listing_id", listingId)
         .maybeSingle();
       setIsFavorited(!!data);
       setLoaded(true);
+    }
+
+    // Check immediately with current session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        checkFavorite(session.user.id);
+      } else {
+        setLoaded(true);
+      }
     });
+
+    // Also listen for auth state changes (session may arrive after hydration)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        checkFavorite(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [listingId]);
 
   if (!loaded) return null;

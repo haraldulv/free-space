@@ -6,7 +6,7 @@ import Link from "next/link";
 import { CalendarOff, Plus, Building2, Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getBookings } from "@/lib/utils/bookings";
-import { deleteListingAction } from "@/app/(main)/bli-utleier/actions";
+import { deleteListingAction, toggleListingActiveAction } from "@/app/(main)/bli-utleier/actions";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingCard from "@/components/features/BookingCard";
@@ -45,6 +45,8 @@ function rowToListing(row: Record<string, unknown>): Listing {
     spots: row.spots as number,
     tags: row.tags as Listing["tags"],
     instantBooking: row.instant_booking as boolean | undefined,
+    isActive: row.is_active as boolean | undefined,
+    blockedDates: row.blocked_dates as string[] | undefined,
   };
 }
 
@@ -103,10 +105,21 @@ export default function DashboardPage() {
     }
   };
 
+  const handleToggleActive = async (id: string, isActive: boolean) => {
+    const result = await toggleListingActiveAction(id, isActive);
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    setListings((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, isActive } : l))
+    );
+  };
+
   if (!loaded) return null;
 
   return (
-    <Container className="py-10">
+    <Container className="py-10 min-h-screen bg-neutral-50">
       {/* Tabs */}
       <div className="flex gap-1 border-b border-neutral-200">
         <button
@@ -254,6 +267,7 @@ export default function DashboardPage() {
                   key={listing.id}
                   listing={listing}
                   onDelete={handleDelete}
+                  onToggleActive={handleToggleActive}
                 />
               ))}
             </div>

@@ -57,13 +57,15 @@ function rowToListing(row: Record<string, unknown>): Listing {
     instantBooking: row.instant_booking as boolean | undefined,
     spotMarkers: row.spot_markers as SpotMarker[] | undefined,
     hideExactLocation: row.hide_exact_location as boolean | undefined,
+    isActive: row.is_active as boolean | undefined,
+    blockedDates: row.blocked_dates as string[] | undefined,
   };
 }
 
 export async function searchListings(filters: SearchFilters): Promise<Listing[]> {
   const supabase = await createClient();
 
-  let query = supabase.from("listings").select("*");
+  let query = supabase.from("listings").select("*").neq("is_active", false);
 
   if (filters.category) {
     query = query.eq("category", filters.category);
@@ -229,6 +231,30 @@ export async function updateListing(id: string, input: Partial<CreateListingData
   const { error } = await supabase
     .from("listings")
     .update(updateData)
+    .eq("id", id)
+    .eq("host_id", hostId);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function toggleListingActive(id: string, hostId: string, isActive: boolean): Promise<void> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("listings")
+    .update({ is_active: isActive })
+    .eq("id", id)
+    .eq("host_id", hostId);
+
+  if (error) throw new Error(error.message);
+}
+
+export async function updateBlockedDates(id: string, hostId: string, blockedDates: string[]): Promise<void> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("listings")
+    .update({ blocked_dates: blockedDates })
     .eq("id", id)
     .eq("host_id", hostId);
 

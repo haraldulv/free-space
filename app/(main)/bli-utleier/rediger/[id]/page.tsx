@@ -2,41 +2,43 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
+import { Loader2, FileText, MapPin, Image as ImageIcon, Sparkles, Banknote, CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import ListingFormWizard from "@/components/features/listing-form/ListingFormWizard";
-import { updateListingAction } from "../../actions";
+import { updateListingAction, updateBlockedDatesAction } from "../../actions";
+import BasicInfoStep from "@/components/features/listing-form/steps/BasicInfoStep";
+import LocationStep from "@/components/features/listing-form/steps/LocationStep";
+import ImageUploadStep from "@/components/features/listing-form/steps/ImageUploadStep";
+import AmenitiesStep from "@/components/features/listing-form/steps/AmenitiesStep";
+import PricingStep from "@/components/features/listing-form/steps/PricingStep";
+import AvailabilityEditor from "@/components/features/listing-form/AvailabilityEditor";
+import Button from "@/components/ui/Button";
 import type { CreateListingData } from "@/lib/supabase/listings";
-import type { Listing } from "@/types";
+import type { Listing, Amenity, SpotMarker } from "@/types";
 
-function listingToFormData(listing: Listing): Partial<CreateListingData> {
-  return {
-    category: listing.category,
-    title: listing.title,
-    description: listing.description,
-    spots: listing.spots,
-    maxVehicleLength: listing.maxVehicleLength,
-    address: listing.location.address,
-    city: listing.location.city,
-    region: listing.location.region,
-    lat: listing.location.lat,
-    lng: listing.location.lng,
-    images: listing.images,
-    amenities: listing.amenities,
-    price: listing.price,
-    priceUnit: listing.priceUnit,
-    instantBooking: listing.instantBooking || false,
-    spotMarkers: listing.spotMarkers || [],
-    hideExactLocation: listing.hideExactLocation || false,
-  };
-}
+const TABS = [
+  { id: "info", label: "Detaljer", icon: FileText },
+  { id: "location", label: "Lokasjon", icon: MapPin },
+  { id: "images", label: "Bilder", icon: ImageIcon },
+  { id: "amenities", label: "Fasiliteter", icon: Sparkles },
+  { id: "pricing", label: "Pris", icon: Banknote },
+  { id: "availability", label: "Tilgjengelighet", icon: CalendarDays },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
 
 export default function EditListingPage() {
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
   const [userId, setUserId] = useState<string | null>(null);
-  const [initialData, setInitialData] = useState<Partial<CreateListingData> | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [error, setError] = useState("");
+  const [tab, setTab] = useState<TabId>("info");
+
+  const [formData, setFormData] = useState<Partial<CreateListingData>>({});
+  const [blockedDates, setBlockedDates] = useState<string[]>([]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -54,37 +56,67 @@ export default function EditListingPage() {
         .single();
 
       if (!row || row.host_id !== user.id) {
-        router.push("/dashboard?tab=listings");
+        router.push("/dashboard?tab=annonser");
         return;
       }
 
-      const listing: Listing = {
-        id: row.id,
+      setFormData({
+        category: row.category,
         title: row.title,
         description: row.description,
-        category: row.category,
-        images: row.images,
-        location: { city: row.city, region: row.region, address: row.address, lat: row.lat, lng: row.lng },
-        price: row.price,
-        priceUnit: row.price_unit,
-        rating: row.rating,
-        reviewCount: row.review_count,
-        amenities: row.amenities,
-        host: { id: row.host_id, name: row.host_name, avatar: row.host_avatar, responseRate: row.host_response_rate, responseTime: row.host_response_time, joinedYear: row.host_joined_year, listingsCount: row.host_listings_count },
         spots: row.spots,
         maxVehicleLength: row.max_vehicle_length,
-        tags: row.tags,
-        instantBooking: row.instant_booking,
-        spotMarkers: row.spot_markers,
-        hideExactLocation: row.hide_exact_location,
-      };
-
-      setInitialData(listingToFormData(listing));
+        address: row.address,
+        city: row.city,
+        region: row.region,
+        lat: row.lat,
+        lng: row.lng,
+        images: row.images,
+        amenities: row.amenities,
+        price: row.price,
+        priceUnit: row.price_unit,
+        instantBooking: row.instant_booking || false,
+        spotMarkers: row.spot_markers || [],
+        hideExactLocation: row.hide_exact_location || false,
+      });
+      setBlockedDates(row.blocked_dates || []);
       setLoading(false);
     });
   }, [router, id]);
 
-  if (loading || !userId || !initialData) {
+  const updateField = (field: string, value: unknown) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    setSaved(false);
+  };
+
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    setError("");
+    setSaved(false);
+    try {
+      const result = await updateListingAction(id, formData as Partial<CreateListingData>);
+      if (result.error) {
+        setError(result.error);
+        setSaving(false);
+        return;
+      }
+      // Also save blocked dates
+      const datesResult = await updateBlockedDatesAction(id, blockedDates);
+      if (datesResult.error) {
+        setError(datesResult.error);
+        setSaving(false);
+        return;
+      }
+      setSaved(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Noe gikk galt");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading || !userId) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <p className="text-sm text-neutral-400">Laster annonse...</p>
@@ -92,16 +124,141 @@ export default function EditListingPage() {
     );
   }
 
+  const errors: Record<string, string> = {};
+
   return (
-    <ListingFormWizard
-      userId={userId}
-      mode="edit"
-      listingId={id}
-      initialData={initialData}
-      onSubmit={async (data) => {
-        const result = await updateListingAction(id, data);
-        if (result.error) throw new Error(result.error);
-      }}
-    />
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-neutral-900">Rediger annonse</h1>
+        <div className="flex items-center gap-3">
+          {saved && (
+            <span className="text-sm text-green-600 font-medium">Lagret!</span>
+          )}
+          <Button variant="ghost" onClick={() => router.push("/dashboard?tab=annonser")}>
+            Avbryt
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? (
+              <>
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                Lagrer...
+              </>
+            ) : (
+              "Lagre endringer"
+            )}
+          </Button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mb-6 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex gap-1 border-b border-neutral-200 mb-8 overflow-x-auto">
+        {TABS.map((t) => {
+          const Icon = t.icon;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`flex items-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors ${
+                tab === t.id
+                  ? "border-b-2 border-primary-600 text-primary-600"
+                  : "text-neutral-500 hover:text-neutral-700"
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              {t.label}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab content */}
+      <div className="max-w-2xl">
+        {tab === "info" && (
+          <BasicInfoStep
+            title={formData.title || ""}
+            description={formData.description || ""}
+            spots={formData.spots || 1}
+            maxVehicleLength={formData.maxVehicleLength}
+            category={formData.category}
+            onChange={updateField}
+            errors={errors}
+          />
+        )}
+
+        {tab === "location" && (
+          <LocationStep
+            address={formData.address || ""}
+            city={formData.city || ""}
+            region={formData.region || ""}
+            lat={formData.lat || 0}
+            lng={formData.lng || 0}
+            spotMarkers={(formData.spotMarkers || []) as SpotMarker[]}
+            hideExactLocation={formData.hideExactLocation || false}
+            spots={formData.spots || 1}
+            onChange={updateField}
+            errors={errors}
+          />
+        )}
+
+        {tab === "images" && (
+          <ImageUploadStep
+            images={formData.images || []}
+            userId={userId}
+            onChange={(imgs) => updateField("images", imgs)}
+            error={errors.images}
+          />
+        )}
+
+        {tab === "amenities" && formData.category && (
+          <AmenitiesStep
+            category={formData.category}
+            selected={(formData.amenities || []) as Amenity[]}
+            onChange={(amenities) => updateField("amenities", amenities)}
+          />
+        )}
+
+        {tab === "pricing" && (
+          <PricingStep
+            price={formData.price || 0}
+            priceUnit={formData.priceUnit || "time"}
+            instantBooking={formData.instantBooking || false}
+            onChange={updateField}
+            errors={errors}
+          />
+        )}
+
+        {tab === "availability" && (
+          <AvailabilityEditor
+            blockedDates={blockedDates}
+            onChange={(dates) => {
+              setBlockedDates(dates);
+              setSaved(false);
+            }}
+            saving={saving}
+          />
+        )}
+      </div>
+
+      {/* Bottom save bar */}
+      <div className="mt-10 flex items-center justify-end gap-3 border-t border-neutral-200 pt-6">
+        {saved && (
+          <span className="text-sm text-green-600 font-medium">Endringene er lagret</span>
+        )}
+        <Button onClick={handleSave} disabled={saving}>
+          {saving ? (
+            <>
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+              Lagrer...
+            </>
+          ) : (
+            "Lagre endringer"
+          )}
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -27,6 +27,9 @@ export default function BookingForm({ listing }: BookingFormProps) {
   const serviceFee = Math.round(subtotal * 0.1);
   const total = subtotal + serviceFee;
 
+  // Convert blocked date strings to Date objects for the calendar
+  const disabledDates = (listing.blockedDates || []).map((d) => new Date(d + "T00:00:00"));
+
   const handleBook = () => {
     if (!dateRange?.from || !dateRange?.to) {
       setShowCalendar(true);
@@ -74,7 +77,7 @@ export default function BookingForm({ listing }: BookingFormProps) {
         </button>
         {showCalendar && (
           <div className="mt-2">
-            <DatePicker selected={dateRange} onSelect={setDateRange} />
+            <DatePicker selected={dateRange} onSelect={setDateRange} disabled={disabledDates} />
           </div>
         )}
       </div>
