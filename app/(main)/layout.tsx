@@ -14,9 +14,19 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
   const isSearchPage = pathname === "/search";
 
   const [user, setUser] = useState<{ email: string; fullName?: string } | null>(null);
+  const [isHost, setIsHost] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
+
+    async function checkHost(userId: string) {
+      const { count } = await supabase
+        .from("listings")
+        .select("id", { count: "exact", head: true })
+        .eq("host_id", userId)
+        .limit(1);
+      setIsHost((count ?? 0) > 0);
+    }
 
     // Get initial session
     supabase.auth.getUser().then(({ data }) => {
@@ -25,6 +35,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
           email: data.user.email || "",
           fullName: data.user.user_metadata?.full_name,
         });
+        checkHost(data.user.id);
       }
     });
 
@@ -35,8 +46,10 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
           email: session.user.email || "",
           fullName: session.user.user_metadata?.full_name,
         });
+        checkHost(session.user.id);
       } else {
         setUser(null);
+        setIsHost(false);
       }
     });
 
@@ -71,6 +84,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
     <>
       <Navbar
         user={user}
+        isHost={isHost}
         onSignOut={handleSignOut}
         selectedCategory={category}
         searchQuery={query}

@@ -9,6 +9,7 @@ import { ListingCategory, VehicleType } from "@/types";
 
 interface NavbarProps {
   user?: { email: string; fullName?: string } | null;
+  isHost?: boolean;
   onSignOut?: () => void;
   selectedCategory?: ListingCategory;
   onCategoryChange?: (category?: ListingCategory) => void;
@@ -18,6 +19,7 @@ interface NavbarProps {
 
 export default function Navbar({
   user,
+  isHost,
   onSignOut,
   selectedCategory,
   onCategoryChange,
@@ -71,10 +73,10 @@ export default function Navbar({
         {/* Right: Actions */}
         <div className="flex items-center gap-1 shrink-0">
           <Link
-            href="/bli-utleier"
+            href={user && isHost ? "/dashboard?tab=annonser" : "/bli-utleier"}
             className="hidden lg:block rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
           >
-            Bli utleier
+            {user && isHost ? "Mine annonser" : "Bli utleier"}
           </Link>
 
           <button
@@ -105,6 +107,15 @@ export default function Navbar({
                     <Link href="/dashboard" className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
                       Mine bestillinger
                     </Link>
+                    {isHost ? (
+                      <Link href="/dashboard?tab=annonser" className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                        Mine annonser
+                      </Link>
+                    ) : (
+                      <Link href="/bli-utleier" className="block px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                        Bli utleier
+                      </Link>
+                    )}
                     <div className="my-1 border-t border-neutral-100" />
                     <button onClick={() => { setMenuOpen(false); onSignOut?.(); }} className="w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50">
                       Logg ut

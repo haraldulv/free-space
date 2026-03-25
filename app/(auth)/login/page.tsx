@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { loginSchema } from "@/lib/utils/validation";
@@ -9,6 +9,8 @@ import GoogleSignInButton from "@/components/features/GoogleSignInButton";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
   const supabase = createClient();
 
   const handleLogin = async (values: Record<string, string>) => {
@@ -23,7 +25,7 @@ export default function LoginPage() {
     });
 
     if (error) throw new Error(error.message);
-    router.push("/dashboard");
+    router.push(redirectTo);
     router.refresh();
   };
 
@@ -34,7 +36,7 @@ export default function LoginPage() {
         <p className="mt-1 text-sm text-neutral-500">Logg inn på din Free Space-konto</p>
       </div>
 
-      <GoogleSignInButton />
+      <GoogleSignInButton redirectTo={redirectTo} />
 
       <div className="relative">
         <div className="absolute inset-0 flex items-center">
@@ -74,7 +76,7 @@ export default function LoginPage() {
             </Link>
             <span className="mx-2">&middot;</span>
             <Link
-              href="/register"
+              href={`/register${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
               className="text-primary-600 hover:text-primary-700"
             >
               Opprett konto

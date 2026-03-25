@@ -50,7 +50,8 @@ function rowToListing(row: Record<string, unknown>): Listing {
 
 export default function DashboardPage() {
   const searchParams = useSearchParams();
-  const initialTab = searchParams.get("tab") === "listings" ? "listings" : "bookings";
+  const tabParam = searchParams.get("tab");
+  const initialTab = tabParam === "listings" || tabParam === "annonser" ? "listings" : "bookings";
   const [tab, setTab] = useState<"bookings" | "listings">(initialTab);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
