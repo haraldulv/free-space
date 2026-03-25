@@ -19,7 +19,6 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       : undefined;
   const vehicleType =
     params.vehicle === "car" ||
-    params.vehicle === "van" ||
     params.vehicle === "campervan" ||
     params.vehicle === "motorhome"
       ? (params.vehicle as VehicleType)

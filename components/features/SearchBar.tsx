@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Search, X, Car, Truck, Caravan, Bus, MapPin, Navigation } from "lucide-react";
+import { Search, X, Car, Caravan, Bus, MapPin } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import DatePicker from "@/components/ui/DatePicker";
@@ -26,10 +26,9 @@ interface PlaceSuggestion {
 }
 
 const vehicleOptions: { value: VehicleType; icon: React.ElementType }[] = [
-  { value: "car", icon: Car },
-  { value: "van", icon: Truck },
-  { value: "campervan", icon: Caravan },
   { value: "motorhome", icon: Bus },
+  { value: "campervan", icon: Caravan },
+  { value: "car", icon: Car },
 ];
 
 function formatLocalDate(d: Date): string {
@@ -45,7 +44,7 @@ export default function SearchBar({
   compact = false,
 }: SearchBarProps) {
   const [location, setLocation] = useState(initialQuery);
-  const [vehicle, setVehicle] = useState<VehicleType | undefined>(initialVehicle);
+  const [vehicle, setVehicle] = useState<VehicleType>(initialVehicle || "motorhome");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (initialCheckIn && initialCheckOut) {
       return { from: new Date(initialCheckIn + "T00:00:00"), to: new Date(initialCheckOut + "T00:00:00") };
@@ -140,7 +139,7 @@ export default function SearchBar({
   const handleSearch = () => {
     const params = new URLSearchParams();
     if (location.trim()) params.set("query", location.trim());
-    if (vehicle) params.set("vehicle", vehicle);
+    params.set("vehicle", vehicle);
     if (initialCategory) params.set("category", initialCategory);
     if (dateRange?.from) params.set("checkIn", formatLocalDate(dateRange.from));
     if (dateRange?.to) params.set("checkOut", formatLocalDate(dateRange.to));
@@ -157,7 +156,7 @@ export default function SearchBar({
       ? `${dateRange.from.toLocaleDateString("nb-NO", { day: "numeric", month: "short" })} – ${dateRange.to.toLocaleDateString("nb-NO", { day: "numeric", month: "short" })}`
       : undefined;
 
-  const vehicleLabel = vehicle ? vehicleLabels[vehicle] : undefined;
+  const vehicleLabel = vehicleLabels[vehicle];
 
   useEffect(() => {
     if (!expanded) return;
@@ -277,7 +276,7 @@ export default function SearchBar({
                     const Icon = opt.icon;
                     const sel = vehicle === opt.value;
                     return (
-                      <button key={opt.value} onClick={() => { setVehicle(sel ? undefined : opt.value); setActiveSegment(null); }} className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${sel ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-700 hover:bg-neutral-50"}`}>
+                      <button key={opt.value} onClick={() => { setVehicle(sel ? "motorhome" : opt.value); setActiveSegment(null); }} className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${sel ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-700 hover:bg-neutral-50"}`}>
                         <Icon className="h-5 w-5 shrink-0" />{vehicleLabels[opt.value]}
                       </button>
                     );
@@ -335,7 +334,7 @@ export default function SearchBar({
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Kjøretøy</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {vehicleOptions.map((opt) => { const Icon = opt.icon; const isSelected = vehicle === opt.value; return (<button key={opt.value} onClick={() => setVehicle(isSelected ? undefined : opt.value)} className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${isSelected ? "border-primary-600 bg-primary-50 text-primary-700 font-medium" : "border-neutral-200 text-neutral-700 hover:border-neutral-300"}`}><Icon className="h-4 w-4" />{vehicleLabels[opt.value]}</button>); })}
+                  {vehicleOptions.map((opt) => { const Icon = opt.icon; const isSelected = vehicle === opt.value; return (<button key={opt.value} onClick={() => setVehicle(isSelected ? "motorhome" : opt.value)} className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${isSelected ? "border-primary-600 bg-primary-50 text-primary-700 font-medium" : "border-neutral-200 text-neutral-700 hover:border-neutral-300"}`}><Icon className="h-4 w-4" />{vehicleLabels[opt.value]}</button>); })}
                 </div>
               </div>
               <button onClick={handleSearch} className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-700">
@@ -426,7 +425,7 @@ export default function SearchBar({
               return (
                 <button
                   key={opt.value}
-                  onClick={() => { setVehicle(isSelected ? undefined : opt.value); setActiveSegment(null); }}
+                  onClick={() => { setVehicle(isSelected ? "motorhome" : opt.value); setActiveSegment(null); }}
                   className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                     isSelected ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-700 hover:bg-neutral-50"
                   }`}
@@ -505,7 +504,7 @@ export default function SearchBar({
                   return (
                     <button
                       key={opt.value}
-                      onClick={() => setVehicle(isSelected ? undefined : opt.value)}
+                      onClick={() => setVehicle(isSelected ? "motorhome" : opt.value)}
                       className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
                         isSelected ? "border-primary-600 bg-primary-50 text-primary-700 font-medium" : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
                       }`}

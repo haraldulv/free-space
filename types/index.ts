@@ -2,20 +2,25 @@ export type ListingCategory = "parking" | "camping";
 
 export type ListingTag = "popular" | "featured" | "available_today";
 
-export type VehicleType = "car" | "van" | "campervan" | "motorhome";
+export type VehicleType = "car" | "campervan" | "motorhome";
 
 export const vehicleLabels: Record<VehicleType, string> = {
-  car: "Personbil",
-  van: "Varebil",
-  campervan: "Campingbil",
   motorhome: "Bobil",
+  campervan: "Campingbil",
+  car: "Personbil",
 };
 
 export const vehicleLengths: Record<VehicleType, number> = {
-  car: 4,
-  van: 6,
+  car: 5,
   campervan: 7,
   motorhome: 10,
+};
+
+/** Vehicle size hierarchy — a listing for motorhome fits all, campervan fits campervan+car, etc. */
+export const vehicleFitsIn: Record<VehicleType, VehicleType[]> = {
+  car: ["car", "campervan", "motorhome"],
+  campervan: ["campervan", "motorhome"],
+  motorhome: ["motorhome"],
 };
 
 export interface SearchFilters {
@@ -92,6 +97,7 @@ export interface Listing {
   maxVehicleLength?: number;
   spots: number;
   tags?: ListingTag[];
+  vehicleType?: VehicleType;
   instantBooking?: boolean;
   isActive?: boolean;
   blockedDates?: string[];

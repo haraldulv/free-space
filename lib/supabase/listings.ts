@@ -1,9 +1,10 @@
 import { createClient } from "./server";
-import type { Listing, SearchFilters, ListingCategory, Amenity, SpotMarker } from "@/types";
-import { vehicleLengths } from "@/types";
+import type { Listing, SearchFilters, ListingCategory, Amenity, SpotMarker, VehicleType } from "@/types";
+import { vehicleFitsIn } from "@/types";
 
 export interface CreateListingData {
   category: ListingCategory;
+  vehicleType: VehicleType;
   title: string;
   description: string;
   spots: number;
@@ -57,6 +58,7 @@ function rowToListing(row: Record<string, unknown>): Listing {
     instantBooking: row.instant_booking as boolean | undefined,
     spotMarkers: row.spot_markers as SpotMarker[] | undefined,
     hideExactLocation: row.hide_exact_location as boolean | undefined,
+    vehicleType: (row.vehicle_type as VehicleType) || "motorhome",
     isActive: row.is_active as boolean | undefined,
     blockedDates: row.blocked_dates as string[] | undefined,
   };
@@ -78,8 +80,8 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
   }
 
   if (filters.vehicleType) {
-    const length = vehicleLengths[filters.vehicleType];
-    query = query.or(`max_vehicle_length.is.null,max_vehicle_length.gte.${length}`);
+    const acceptedTypes = vehicleFitsIn[filters.vehicleType];
+    query = query.in("vehicle_type", acceptedTypes);
   }
 
   const { data, error } = await query.limit(500);
@@ -227,6 +229,7 @@ export async function createListing(input: CreateListingData, hostId: string): P
     title: input.title,
     description: input.description,
     category: input.category,
+    vehicle_type: input.vehicleType || "motorhome",
     city: input.city,
     region: input.region,
     address: input.address,
@@ -260,6 +263,7 @@ export async function updateListing(id: string, input: Partial<CreateListingData
   if (input.title !== undefined) updateData.title = input.title;
   if (input.description !== undefined) updateData.description = input.description;
   if (input.category !== undefined) updateData.category = input.category;
+  if (input.vehicleType !== undefined) updateData.vehicle_type = input.vehicleType;
   if (input.city !== undefined) updateData.city = input.city;
   if (input.region !== undefined) updateData.region = input.region;
   if (input.address !== undefined) updateData.address = input.address;

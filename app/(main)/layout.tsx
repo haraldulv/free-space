@@ -74,7 +74,6 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
   const rawVehicle = searchParams.get("vehicle");
   const vehicle =
     rawVehicle === "car" ||
-    rawVehicle === "van" ||
     rawVehicle === "campervan" ||
     rawVehicle === "motorhome"
       ? (rawVehicle as VehicleType)

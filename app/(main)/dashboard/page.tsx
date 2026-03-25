@@ -44,6 +44,7 @@ function rowToListing(row: Record<string, unknown>): Listing {
     maxVehicleLength: row.max_vehicle_length as number | undefined,
     spots: row.spots as number,
     tags: row.tags as Listing["tags"],
+    vehicleType: (row.vehicle_type as Listing["vehicleType"]) || "motorhome",
     instantBooking: row.instant_booking as boolean | undefined,
     isActive: row.is_active as boolean | undefined,
     blockedDates: row.blocked_dates as string[] | undefined,
