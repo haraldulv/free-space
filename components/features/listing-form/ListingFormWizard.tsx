@@ -104,8 +104,7 @@ export default function ListingFormWizard({
     setGlobalError("");
     try {
       await onSubmit(formData as CreateListingData);
-      router.push("/dashboard?tab=listings");
-      router.refresh();
+      window.location.href = "/dashboard?tab=annonser";
     } catch (err) {
       setGlobalError(err instanceof Error ? err.message : "Noe gikk galt");
       setSubmitting(false);
