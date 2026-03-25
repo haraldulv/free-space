@@ -27,8 +27,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   const checkIn = typeof params.checkIn === "string" ? params.checkIn : undefined;
   const checkOut = typeof params.checkOut === "string" ? params.checkOut : undefined;
+  const lat = typeof params.lat === "string" ? parseFloat(params.lat) : undefined;
+  const lng = typeof params.lng === "string" ? parseFloat(params.lng) : undefined;
 
-  const listings = await searchListings({ query, category, vehicleType, checkIn, checkOut });
+  const listings = await searchListings({ query, category, vehicleType, checkIn, checkOut, lat, lng });
 
   return (
     <SearchResultsView

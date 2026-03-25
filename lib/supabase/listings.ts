@@ -71,9 +71,10 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
     query = query.eq("category", filters.category);
   }
 
-  if (filters.query) {
+  // Only apply text filter if no coordinates (coordinates = place was selected)
+  if (filters.query && filters.lat === undefined) {
     const q = `%${filters.query}%`;
-    query = query.or(`title.ilike.${q},city.ilike.${q},region.ilike.${q}`);
+    query = query.or(`title.ilike.${q},city.ilike.${q},region.ilike.${q},address.ilike.${q}`);
   }
 
   if (filters.vehicleType) {
@@ -90,6 +91,16 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
 
   let listings = (data || []).map(rowToListing);
 
+  // Filter by distance if coordinates provided (default 20km radius)
+  if (filters.lat !== undefined && filters.lng !== undefined) {
+    const radius = filters.radiusKm ?? 20;
+    listings = listings
+      .map((l) => ({ listing: l, distance: haversineKm(filters.lat!, filters.lng!, l.location.lat, l.location.lng) }))
+      .filter((item) => item.distance <= radius)
+      .sort((a, b) => a.distance - b.distance)
+      .map((item) => item.listing);
+  }
+
   // Filter out listings with blocked dates overlapping the requested range
   if (filters.checkIn && filters.checkOut) {
     const requestedDates = getDateRange(filters.checkIn, filters.checkOut);
@@ -101,6 +112,18 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
   }
 
   return listings;
+}
+
+/** Calculate distance between two coordinates in km */
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 /** Generate array of date strings between start and end (inclusive) */

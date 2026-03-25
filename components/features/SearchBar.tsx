@@ -1,11 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
-import { Search, X, Car, Truck, Caravan, Bus, MapPin } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Search, X, Car, Truck, Caravan, Bus, MapPin, Navigation } from "lucide-react";
 import { DateRange } from "react-day-picker";
+import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import DatePicker from "@/components/ui/DatePicker";
-import { createClient } from "@/lib/supabase/client";
 import { VehicleType, vehicleLabels } from "@/types";
+
+const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
 interface SearchBarProps {
   initialQuery?: string;
@@ -14,6 +16,13 @@ interface SearchBarProps {
   initialCheckIn?: string;
   initialCheckOut?: string;
   compact?: boolean;
+}
+
+interface PlaceSuggestion {
+  placeId: string;
+  description: string;
+  mainText: string;
+  secondaryText: string;
 }
 
 const vehicleOptions: { value: VehicleType; icon: React.ElementType }[] = [
@@ -46,31 +55,77 @@ export default function SearchBar({
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
-  const [allPlaces, setAllPlaces] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
+  const [searchLat, setSearchLat] = useState<number | undefined>();
+  const [searchLng, setSearchLng] = useState<number | undefined>();
   const containerRef = useRef<HTMLDivElement>(null);
+  const autocompleteServiceRef = useRef<google.maps.places.AutocompleteService | null>(null);
+  const geocoderRef = useRef<google.maps.Geocoder | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  // Fetch distinct cities from listings
+  // Init Google Places
   useEffect(() => {
-    const supabase = createClient();
-    supabase
-      .from("listings")
-      .select("city, region")
-      .neq("is_active", false)
-      .then(({ data }) => {
-        if (!data) return;
-        const seen = new Set<string>();
-        const places: string[] = [];
-        for (const row of data) {
-          const key = `${row.city}|${row.region}`;
-          if (!seen.has(key)) {
-            seen.add(key);
-            places.push(`${row.city}, ${row.region}`);
-          }
-        }
-        places.sort((a, b) => a.localeCompare(b, "nb"));
-        setAllPlaces(places);
-      });
+    if (!API_KEY) return;
+    setOptions({ key: API_KEY, v: "weekly" });
+    importLibrary("places").then(() => {
+      autocompleteServiceRef.current = new google.maps.places.AutocompleteService();
+      geocoderRef.current = new google.maps.Geocoder();
+    });
   }, []);
+
+  // Fetch suggestions when location text changes
+  const fetchSuggestions = useCallback((input: string) => {
+    if (!input.trim() || !autocompleteServiceRef.current) {
+      setSuggestions([]);
+      return;
+    }
+    autocompleteServiceRef.current.getPlacePredictions(
+      {
+        input,
+        componentRestrictions: { country: "no" },
+        types: ["geocode"],
+      },
+      (predictions, status) => {
+        if (status === google.maps.places.PlacesServiceStatus.OK && predictions) {
+          setSuggestions(
+            predictions.slice(0, 6).map((p) => ({
+              placeId: p.place_id,
+              description: p.description,
+              mainText: p.structured_formatting.main_text,
+              secondaryText: p.structured_formatting.secondary_text || "",
+            }))
+          );
+        } else {
+          setSuggestions([]);
+        }
+      }
+    );
+  }, []);
+
+  const handleLocationChange = (value: string) => {
+    setLocation(value);
+    setSearchLat(undefined);
+    setSearchLng(undefined);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchSuggestions(value), 200);
+  };
+
+  const selectSuggestion = (suggestion: PlaceSuggestion) => {
+    setLocation(suggestion.mainText);
+    setSuggestions([]);
+    setActiveSegment("when");
+
+    // Geocode to get coordinates
+    if (geocoderRef.current) {
+      geocoderRef.current.geocode({ placeId: suggestion.placeId }, (results, status) => {
+        if (status === "OK" && results?.[0]?.geometry?.location) {
+          const loc = results[0].geometry.location;
+          setSearchLat(loc.lat());
+          setSearchLng(loc.lng());
+        }
+      });
+    }
+  };
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -89,6 +144,10 @@ export default function SearchBar({
     if (initialCategory) params.set("category", initialCategory);
     if (dateRange?.from) params.set("checkIn", formatLocalDate(dateRange.from));
     if (dateRange?.to) params.set("checkOut", formatLocalDate(dateRange.to));
+    if (searchLat !== undefined && searchLng !== undefined) {
+      params.set("lat", searchLat.toFixed(6));
+      params.set("lng", searchLng.toFixed(6));
+    }
     const qs = params.toString();
     window.location.href = qs ? `/search?${qs}` : "/search";
   };
@@ -100,14 +159,6 @@ export default function SearchBar({
 
   const vehicleLabel = vehicle ? vehicleLabels[vehicle] : undefined;
 
-  const suggestions = useMemo(() => {
-    if (activeSegment !== "where") return [];
-    const q = location.toLowerCase().trim();
-    if (!q) return allPlaces.slice(0, 8);
-    return allPlaces.filter((p) => p.toLowerCase().includes(q)).slice(0, 8);
-  }, [location, activeSegment, allPlaces]);
-
-  // Close expanded compact bar on click outside
   useEffect(() => {
     if (!expanded) return;
     function handleClose(e: MouseEvent) {
@@ -133,29 +184,36 @@ export default function SearchBar({
   };
 
   // Shared suggestion list renderer
-  const renderSuggestions = () => (
-    <div className="animate-slide-down absolute left-0 mt-2 z-50 w-80 rounded-xl border border-neutral-200 bg-white py-2 shadow-xl max-h-80 overflow-y-auto">
-      {suggestions.length > 0 ? (
-        suggestions.map((place) => (
-          <button
-            key={place}
-            onClick={() => {
-              setLocation(place.split(",")[0]);
-              setActiveSegment("when");
-            }}
-            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-          >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100">
-              <MapPin className="h-4 w-4 text-neutral-500" />
-            </div>
-            {place}
-          </button>
-        ))
-      ) : location.trim() ? (
-        <div className="px-4 py-3 text-sm text-neutral-400">Ingen treff for &ldquo;{location}&rdquo;</div>
-      ) : null}
-    </div>
-  );
+  const renderSuggestions = () => {
+    if (activeSegment !== "where") return null;
+    if (suggestions.length === 0 && !location.trim()) return null;
+
+    return (
+      <div className="animate-slide-down absolute left-0 mt-2 z-50 w-80 rounded-xl border border-neutral-200 bg-white py-2 shadow-xl max-h-80 overflow-y-auto">
+        {suggestions.length > 0 ? (
+          suggestions.map((s) => (
+            <button
+              key={s.placeId}
+              onClick={() => selectSuggestion(s)}
+              className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+            >
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100 shrink-0">
+                <MapPin className="h-4 w-4 text-neutral-500" />
+              </div>
+              <div className="min-w-0 text-left">
+                <div className="font-medium text-neutral-900 truncate">{s.mainText}</div>
+                {s.secondaryText && (
+                  <div className="text-xs text-neutral-400 truncate">{s.secondaryText}</div>
+                )}
+              </div>
+            </button>
+          ))
+        ) : location.trim() ? (
+          <div className="px-4 py-3 text-sm text-neutral-400">Søker...</div>
+        ) : null}
+      </div>
+    );
+  };
 
   if (compact) {
     return (
@@ -167,17 +225,11 @@ export default function SearchBar({
               onClick={() => { setExpanded(true); setActiveSegment("where"); }}
               className="compact-pill flex items-center gap-1 rounded-full border border-neutral-200 bg-white py-2 pl-5 pr-3 shadow-sm"
             >
-              <span className="text-sm font-medium text-neutral-900 truncate">
-                {summaryParts[0]}
-              </span>
+              <span className="text-sm font-medium text-neutral-900 truncate">{summaryParts[0]}</span>
               <span className="mx-1.5 h-5 w-px bg-neutral-200 shrink-0" />
-              <span className="text-sm text-neutral-500 truncate">
-                {summaryParts[1]}
-              </span>
+              <span className="text-sm text-neutral-500 truncate">{summaryParts[1]}</span>
               <span className="mx-1.5 h-5 w-px bg-neutral-200 shrink-0" />
-              <span className="text-sm text-neutral-500 truncate">
-                {summaryParts[2]}
-              </span>
+              <span className="text-sm text-neutral-500 truncate">{summaryParts[2]}</span>
               <div className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white">
                 <Search className="h-3.5 w-3.5" />
               </div>
@@ -190,7 +242,7 @@ export default function SearchBar({
                   onClick={() => setActiveSegment("where")}
                 >
                   <div className="text-xs font-semibold text-neutral-900">Hvor</div>
-                  <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} onKeyDown={handleKeyDown} onFocus={() => setActiveSegment("where")} placeholder="Søk etter sted" className="w-full bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none truncate" tabIndex={activeSegment === "where" ? 0 : -1} readOnly={activeSegment !== "where"} autoFocus />
+                  <input type="text" value={location} onChange={(e) => handleLocationChange(e.target.value)} onKeyDown={handleKeyDown} onFocus={() => setActiveSegment("where")} placeholder="Søk etter sted eller adresse" className="w-full bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none truncate" tabIndex={activeSegment === "where" ? 0 : -1} readOnly={activeSegment !== "where"} autoFocus />
                 </button>
                 {!activeSegment && <div className="h-8 w-px bg-neutral-200 shrink-0" />}
                 <button
@@ -213,7 +265,7 @@ export default function SearchBar({
                 </button>
               </div>
 
-              {activeSegment === "where" && renderSuggestions()}
+              {renderSuggestions()}
               {activeSegment === "when" && (
                 <div className="animate-slide-down absolute left-1/2 -translate-x-1/2 mt-2 z-50 rounded-xl border border-neutral-200 bg-white p-4 shadow-xl">
                   <DatePicker selected={dateRange} onSelect={setDateRange} />
@@ -243,9 +295,7 @@ export default function SearchBar({
         >
           <Search className="h-4 w-4 text-neutral-900 shrink-0" />
           <div className="text-left min-w-0">
-            <div className="text-sm font-medium text-neutral-900 truncate">
-              {location || "Hvor vil du?"}
-            </div>
+            <div className="text-sm font-medium text-neutral-900 truncate">{location || "Hvor vil du?"}</div>
             <div className="text-xs text-neutral-400 truncate">
               {[dateLabel, vehicleLabel].filter(Boolean).join(" · ") || "Sted · Dato · Kjøretøy"}
             </div>
@@ -256,16 +306,27 @@ export default function SearchBar({
         {mobileOpen && (
           <div className="fixed inset-0 z-[100] bg-white md:hidden">
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-              <button onClick={() => setMobileOpen(false)} className="rounded-full p-2 hover:bg-neutral-100" aria-label="Lukk">
-                <X className="h-5 w-5" />
-              </button>
+              <button onClick={() => setMobileOpen(false)} className="rounded-full p-2 hover:bg-neutral-100" aria-label="Lukk"><X className="h-5 w-5" /></button>
               <span className="text-sm font-semibold">Søk</span>
               <div className="w-9" />
             </div>
             <div className="space-y-4 p-4">
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Hvor</label>
-                <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} onKeyDown={handleKeyDown} placeholder="Søk etter sted" className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+                <input type="text" value={location} onChange={(e) => handleLocationChange(e.target.value)} onKeyDown={handleKeyDown} placeholder="Søk etter sted eller adresse" className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+                {suggestions.length > 0 && (
+                  <div className="mt-2 rounded-lg border border-neutral-200 bg-white py-1 max-h-48 overflow-y-auto">
+                    {suggestions.map((s) => (
+                      <button key={s.placeId} onClick={() => selectSuggestion(s)} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50">
+                        <MapPin className="h-4 w-4 text-neutral-400 shrink-0" />
+                        <div className="min-w-0 text-left">
+                          <div className="font-medium truncate">{s.mainText}</div>
+                          {s.secondaryText && <div className="text-xs text-neutral-400 truncate">{s.secondaryText}</div>}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Når</label>
@@ -292,14 +353,9 @@ export default function SearchBar({
       {/* Desktop pill search bar */}
       <div ref={containerRef} className="relative hidden md:block">
         <div className={`search-pill flex items-center rounded-full border shadow-sm ${activeSegment ? "bg-neutral-100 border-neutral-200" : "bg-white border-neutral-200"}`}>
-          {/* Hvor */}
           <button
             className={`flex-1 min-w-0 px-5 h-[54px] text-left rounded-full transition-all ${
-              activeSegment === "where"
-                ? "bg-white shadow-lg"
-                : activeSegment
-                  ? "hover:bg-neutral-200/50"
-                  : "hover:bg-neutral-50"
+              activeSegment === "where" ? "bg-white shadow-lg" : activeSegment ? "hover:bg-neutral-200/50" : "hover:bg-neutral-50"
             }`}
             onClick={() => setActiveSegment(activeSegment === "where" ? null : "where")}
           >
@@ -307,10 +363,10 @@ export default function SearchBar({
             <input
               type="text"
               value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              onChange={(e) => handleLocationChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={() => setActiveSegment("where")}
-              placeholder="Søk etter sted"
+              placeholder="Søk etter sted eller adresse"
               className="w-full bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none truncate"
               tabIndex={activeSegment === "where" ? 0 : -1}
               readOnly={activeSegment !== "where"}
@@ -319,14 +375,9 @@ export default function SearchBar({
 
           {!activeSegment && <div className="h-8 w-px bg-neutral-200 shrink-0" />}
 
-          {/* Når */}
           <button
             className={`flex-1 min-w-0 px-5 h-[54px] text-left rounded-full transition-all ${
-              activeSegment === "when"
-                ? "bg-white shadow-lg"
-                : activeSegment
-                  ? "hover:bg-neutral-200/50"
-                  : "hover:bg-neutral-50"
+              activeSegment === "when" ? "bg-white shadow-lg" : activeSegment ? "hover:bg-neutral-200/50" : "hover:bg-neutral-50"
             }`}
             onClick={() => setActiveSegment(activeSegment === "when" ? null : "when")}
           >
@@ -338,14 +389,9 @@ export default function SearchBar({
 
           {!activeSegment && <div className="h-8 w-px bg-neutral-200 shrink-0" />}
 
-          {/* Kjøretøy */}
           <button
             className={`flex-1 min-w-0 px-5 h-[54px] text-left rounded-full transition-all ${
-              activeSegment === "vehicle"
-                ? "bg-white shadow-lg"
-                : activeSegment
-                  ? "hover:bg-neutral-200/50"
-                  : "hover:bg-neutral-50"
+              activeSegment === "vehicle" ? "bg-white shadow-lg" : activeSegment ? "hover:bg-neutral-200/50" : "hover:bg-neutral-50"
             }`}
             onClick={() => setActiveSegment(activeSegment === "vehicle" ? null : "vehicle")}
           >
@@ -355,7 +401,6 @@ export default function SearchBar({
             </div>
           </button>
 
-          {/* Search button */}
           <button
             onClick={handleSearch}
             className="m-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95"
@@ -365,17 +410,14 @@ export default function SearchBar({
           </button>
         </div>
 
-        {/* Location suggestions */}
-        {activeSegment === "where" && renderSuggestions()}
+        {renderSuggestions()}
 
-        {/* Date picker */}
         {activeSegment === "when" && (
           <div className="animate-slide-down absolute left-1/2 -translate-x-1/2 mt-2 z-50 rounded-xl border border-neutral-200 bg-white p-4 shadow-xl">
             <DatePicker selected={dateRange} onSelect={setDateRange} />
           </div>
         )}
 
-        {/* Vehicle picker */}
         {activeSegment === "vehicle" && (
           <div className="animate-slide-down absolute right-12 mt-2 z-50 w-56 rounded-xl border border-neutral-200 bg-white py-2 shadow-xl">
             {vehicleOptions.map((opt) => {
@@ -384,14 +426,9 @@ export default function SearchBar({
               return (
                 <button
                   key={opt.value}
-                  onClick={() => {
-                    setVehicle(isSelected ? undefined : opt.value);
-                    setActiveSegment(null);
-                  }}
+                  onClick={() => { setVehicle(isSelected ? undefined : opt.value); setActiveSegment(null); }}
                   className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
-                    isSelected
-                      ? "bg-primary-50 text-primary-700 font-medium"
-                      : "text-neutral-700 hover:bg-neutral-50"
+                    isSelected ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-700 hover:bg-neutral-50"
                   }`}
                 >
                   <Icon className="h-5 w-5 shrink-0" />
@@ -410,9 +447,7 @@ export default function SearchBar({
       >
         <Search className="h-4 w-4 text-neutral-900 shrink-0" />
         <div className="text-left min-w-0">
-          <div className="text-sm font-medium text-neutral-900 truncate">
-            {location || "Hvor vil du?"}
-          </div>
+          <div className="text-sm font-medium text-neutral-900 truncate">{location || "Hvor vil du?"}</div>
           <div className="text-xs text-neutral-400 truncate">
             {[dateLabel, vehicleLabel].filter(Boolean).join(" · ") || "Sted · Dato · Kjøretøy"}
           </div>
@@ -423,11 +458,7 @@ export default function SearchBar({
       {mobileOpen && (
         <div className="fixed inset-0 z-[100] bg-white md:hidden">
           <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="rounded-full p-2 hover:bg-neutral-100"
-              aria-label="Lukk"
-            >
+            <button onClick={() => setMobileOpen(false)} className="rounded-full p-2 hover:bg-neutral-100" aria-label="Lukk">
               <X className="h-5 w-5" />
             </button>
             <span className="text-sm font-semibold">Søk</span>
@@ -440,11 +471,24 @@ export default function SearchBar({
               <input
                 type="text"
                 value={location}
-                onChange={(e) => setLocation(e.target.value)}
+                onChange={(e) => handleLocationChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Søk etter sted"
+                placeholder="Søk etter sted eller adresse"
                 className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
               />
+              {suggestions.length > 0 && (
+                <div className="mt-2 rounded-lg border border-neutral-200 bg-white py-1 max-h-48 overflow-y-auto">
+                  {suggestions.map((s) => (
+                    <button key={s.placeId} onClick={() => selectSuggestion(s)} className="flex w-full items-center gap-3 px-3 py-2 text-sm text-neutral-700 hover:bg-neutral-50">
+                      <MapPin className="h-4 w-4 text-neutral-400 shrink-0" />
+                      <div className="min-w-0 text-left">
+                        <div className="font-medium truncate">{s.mainText}</div>
+                        {s.secondaryText && <div className="text-xs text-neutral-400 truncate">{s.secondaryText}</div>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
 
             <div>
@@ -463,9 +507,7 @@ export default function SearchBar({
                       key={opt.value}
                       onClick={() => setVehicle(isSelected ? undefined : opt.value)}
                       className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
-                        isSelected
-                          ? "border-primary-600 bg-primary-50 text-primary-700 font-medium"
-                          : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
+                        isSelected ? "border-primary-600 bg-primary-50 text-primary-700 font-medium" : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
                       }`}
                     >
                       <Icon className="h-4 w-4" />
@@ -476,10 +518,7 @@ export default function SearchBar({
               </div>
             </div>
 
-            <button
-              onClick={handleSearch}
-              className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-700"
-            >
+            <button onClick={handleSearch} className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-700">
               <Search className="mr-2 inline-block h-4 w-4" />
               Søk
             </button>

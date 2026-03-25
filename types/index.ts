@@ -24,6 +24,9 @@ export interface SearchFilters {
   vehicleType?: VehicleType;
   checkIn?: string;
   checkOut?: string;
+  lat?: number;
+  lng?: number;
+  radiusKm?: number;
 }
 
 export type Amenity =
