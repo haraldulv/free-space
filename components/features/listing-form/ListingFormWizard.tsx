@@ -12,9 +12,10 @@ import ImageUploadStep from "./steps/ImageUploadStep";
 import AmenitiesStep from "./steps/AmenitiesStep";
 import PricingStep from "./steps/PricingStep";
 import ReviewStep from "./steps/ReviewStep";
+import AvailabilityEditor from "./AvailabilityEditor";
 import { listingStepSchemas } from "@/lib/utils/validation";
 import type { CreateListingData } from "@/lib/supabase/listings";
-import type { Amenity, ListingCategory } from "@/types";
+import type { Amenity, ListingCategory, VehicleType } from "@/types";
 
 interface ListingFormWizardProps {
   userId: string;
@@ -24,7 +25,7 @@ interface ListingFormWizardProps {
   onSubmit: (data: CreateListingData) => Promise<string | void>;
 }
 
-const TOTAL_STEPS = 7;
+const TOTAL_STEPS = 8;
 
 export default function ListingFormWizard({
   userId,
@@ -41,6 +42,7 @@ export default function ListingFormWizard({
 
   const [formData, setFormData] = useState<Partial<CreateListingData>>({
     category: undefined,
+    vehicleType: "motorhome",
     title: "",
     description: "",
     spots: 1,
@@ -57,6 +59,7 @@ export default function ListingFormWizard({
     instantBooking: false,
     spotMarkers: [],
     hideExactLocation: false,
+    blockedDates: [],
     ...initialData,
   });
 
@@ -123,12 +126,15 @@ export default function ListingFormWizard({
         {step === 0 && (
           <CategoryStep
             value={formData.category}
+            vehicleType={formData.vehicleType as VehicleType | undefined}
             onChange={(cat) => {
               updateField("category", cat);
               updateField("priceUnit", cat === "parking" ? "time" : "natt");
               updateField("amenities", []);
             }}
+            onVehicleChange={(vt) => updateField("vehicleType", vt)}
             error={errors.category}
+            vehicleError={errors.vehicleType}
           />
         )}
 
@@ -186,7 +192,14 @@ export default function ListingFormWizard({
           />
         )}
 
-        {step === 6 && <ReviewStep data={formData} />}
+        {step === 6 && (
+          <AvailabilityEditor
+            blockedDates={(formData.blockedDates || []) as string[]}
+            onChange={(dates) => updateField("blockedDates", dates)}
+          />
+        )}
+
+        {step === 7 && <ReviewStep data={formData} />}
       </div>
 
       {/* Navigation */}

@@ -21,6 +21,7 @@ export interface CreateListingData {
   instantBooking: boolean;
   spotMarkers?: SpotMarker[];
   hideExactLocation?: boolean;
+  blockedDates?: string[];
 }
 
 /** Convert a Supabase row to our Listing type */
@@ -244,6 +245,7 @@ export async function createListing(input: CreateListingData, hostId: string): P
     instant_booking: input.instantBooking,
     spot_markers: input.spotMarkers || [],
     hide_exact_location: input.hideExactLocation || false,
+    blocked_dates: input.blockedDates || [],
     host_name: profile?.full_name || "Anonym",
     host_avatar: profile?.avatar_url || "",
     host_response_rate: profile?.response_rate || 0,
@@ -278,6 +280,7 @@ export async function updateListing(id: string, input: Partial<CreateListingData
   if (input.instantBooking !== undefined) updateData.instant_booking = input.instantBooking;
   if (input.spotMarkers !== undefined) updateData.spot_markers = input.spotMarkers;
   if (input.hideExactLocation !== undefined) updateData.hide_exact_location = input.hideExactLocation;
+  if (input.blockedDates !== undefined) updateData.blocked_dates = input.blockedDates;
 
   const { error } = await supabase
     .from("listings")

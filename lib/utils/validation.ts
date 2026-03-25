@@ -39,6 +39,7 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
 // Listing form — per-step schemas
 export const listingStep1Schema = z.object({
   category: z.enum(["parking", "camping"], { message: "Velg en kategori" }),
+  vehicleType: z.enum(["car", "campervan", "motorhome"], { message: "Velg kjøretøystype" }),
 });
 
 export const listingStep2Schema = z.object({
@@ -70,12 +71,17 @@ export const listingStep6Schema = z.object({
   instantBooking: z.boolean(),
 });
 
+export const listingStep7Schema = z.object({
+  blockedDates: z.array(z.string()).optional(),
+});
+
 export const createListingSchema = listingStep1Schema
   .merge(listingStep2Schema)
   .merge(listingStep3Schema)
   .merge(listingStep4Schema)
   .merge(listingStep5Schema)
-  .merge(listingStep6Schema);
+  .merge(listingStep6Schema)
+  .merge(listingStep7Schema);
 
 export type CreateListingInput = z.infer<typeof createListingSchema>;
 
@@ -86,5 +92,6 @@ export const listingStepSchemas = [
   listingStep4Schema,
   listingStep5Schema,
   listingStep6Schema,
+  null, // availability step — no required validation
   null, // review step — no validation
 ];

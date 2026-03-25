@@ -62,6 +62,7 @@ export default function EditListingPage() {
 
       setFormData({
         category: row.category,
+        vehicleType: row.vehicle_type || "motorhome",
         title: row.title,
         description: row.description,
         spots: row.spots,

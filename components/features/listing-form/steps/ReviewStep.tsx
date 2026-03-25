@@ -1,14 +1,22 @@
 "use client";
 
 import Image from "next/image";
-import { Zap, MapPin } from "lucide-react";
+import { Zap, MapPin, Bus, Caravan, Car, CalendarX2 } from "lucide-react";
 import { amenityConfig } from "@/components/features/AmenityList";
-import type { Amenity, ListingCategory } from "@/types";
+import type { Amenity, ListingCategory, VehicleType } from "@/types";
+import { vehicleLabels } from "@/types";
 import Badge from "@/components/ui/Badge";
+
+const vehicleIcons: Record<VehicleType, React.ElementType> = {
+  motorhome: Bus,
+  campervan: Caravan,
+  car: Car,
+};
 
 interface ReviewStepProps {
   data: {
     category?: ListingCategory;
+    vehicleType?: VehicleType;
     title?: string;
     description?: string;
     spots?: number;
@@ -21,11 +29,13 @@ interface ReviewStepProps {
     price?: number;
     priceUnit?: "time" | "natt";
     instantBooking?: boolean;
+    blockedDates?: string[];
   };
 }
 
 export default function ReviewStep({ data }: ReviewStepProps) {
   const unit = data.priceUnit === "time" ? "time" : "natt";
+  const VIcon = data.vehicleType ? vehicleIcons[data.vehicleType] : Bus;
 
   return (
     <div className="space-y-6">
@@ -38,10 +48,16 @@ export default function ReviewStep({ data }: ReviewStepProps) {
         {/* Header */}
         <div className="flex items-start justify-between gap-3">
           <div>
-            <div className="flex items-center gap-2 mb-1">
+            <div className="flex items-center gap-2 mb-1 flex-wrap">
               <Badge variant="secondary">
                 {data.category === "parking" ? "Parkering" : "Camping / Bobil"}
               </Badge>
+              {data.vehicleType && (
+                <Badge variant="secondary">
+                  <VIcon className="mr-1 h-3 w-3" />
+                  {vehicleLabels[data.vehicleType]}
+                </Badge>
+              )}
               {data.instantBooking && (
                 <Badge variant="primary">
                   <Zap className="mr-1 h-3 w-3" />
@@ -99,6 +115,14 @@ export default function ReviewStep({ data }: ReviewStepProps) {
                 </span>
               );
             })}
+          </div>
+        )}
+
+        {/* Blocked dates */}
+        {data.blockedDates && data.blockedDates.length > 0 && (
+          <div className="flex items-center gap-2 text-sm text-neutral-500">
+            <CalendarX2 className="h-4 w-4 text-red-400" />
+            {data.blockedDates.length} {data.blockedDates.length === 1 ? "dato" : "datoer"} blokkert
           </div>
         )}
       </div>

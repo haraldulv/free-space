@@ -5,6 +5,7 @@ const STEP_LABELS = [
   "Bilder",
   "Fasiliteter",
   "Pris",
+  "Kalender",
   "Publiser",
 ];
 
