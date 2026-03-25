@@ -15,7 +15,7 @@ export default function HostListingCard({ listing, onDelete }: HostListingCardPr
   return (
     <div className="flex gap-4 rounded-xl border border-neutral-200 bg-white p-3 transition-shadow hover:shadow-sm">
       {/* Image */}
-      <div className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg">
+      <Link href={`/listings/${listing.id}`} className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg">
         {listing.images[0] ? (
           <Image
             src={listing.images[0]}
@@ -29,10 +29,10 @@ export default function HostListingCard({ listing, onDelete }: HostListingCardPr
             Ingen bilde
           </div>
         )}
-      </div>
+      </Link>
 
       {/* Info */}
-      <div className="flex flex-1 flex-col justify-between min-w-0">
+      <Link href={`/listings/${listing.id}`} className="flex flex-1 flex-col justify-between min-w-0">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-neutral-900 truncate">{listing.title}</h3>
@@ -56,7 +56,7 @@ export default function HostListingCard({ listing, onDelete }: HostListingCardPr
             {listing.spots} {listing.spots === 1 ? "plass" : "plasser"}
           </span>
         </div>
-      </div>
+      </Link>
 
       {/* Actions */}
       <div className="flex shrink-0 flex-col gap-1.5">
