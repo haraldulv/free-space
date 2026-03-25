@@ -55,6 +55,8 @@ export default function ListingFormWizard({
     price: 0,
     priceUnit: "time",
     instantBooking: false,
+    spotMarkers: [],
+    hideExactLocation: false,
     ...initialData,
   });
 
@@ -150,6 +152,9 @@ export default function ListingFormWizard({
             region={formData.region || ""}
             lat={formData.lat || 0}
             lng={formData.lng || 0}
+            spotMarkers={formData.spotMarkers || []}
+            hideExactLocation={formData.hideExactLocation || false}
+            spots={formData.spots || 1}
             onChange={updateField}
             errors={errors}
           />

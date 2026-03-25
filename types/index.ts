@@ -57,6 +57,12 @@ export interface Host {
   listingsCount: number;
 }
 
+export interface SpotMarker {
+  lat: number;
+  lng: number;
+  label?: string;
+}
+
 export interface Listing {
   id: string;
   title: string;
@@ -70,6 +76,8 @@ export interface Listing {
     lat: number;
     lng: number;
   };
+  spotMarkers?: SpotMarker[];
+  hideExactLocation?: boolean;
   price: number;
   priceUnit: "time" | "natt";
   rating: number;

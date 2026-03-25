@@ -8,6 +8,7 @@ import AmenityList from "@/components/features/AmenityList";
 import HostCard from "@/components/features/HostCard";
 import BookingForm from "@/components/features/BookingForm";
 import ListingFavoriteButton from "@/components/features/ListingFavoriteButton";
+import ListingMap from "@/components/features/ListingMap";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,29 @@ export default async function ListingPage({
               Fasiliteter
             </h2>
             <AmenityList amenities={listing.amenities} />
+          </div>
+
+          <div className="mt-6 border-t border-neutral-100 pt-6">
+            <h2 className="mb-4 text-lg font-semibold text-neutral-900">
+              {listing.hideExactLocation ? "Omtrentlig plassering" : "Plassering"}
+            </h2>
+            {!listing.hideExactLocation && (
+              <div className="mb-3 flex items-center gap-1 text-sm text-neutral-500">
+                <MapPin className="h-4 w-4" />
+                {listing.location.address}
+              </div>
+            )}
+            <ListingMap
+              lat={listing.location.lat}
+              lng={listing.location.lng}
+              spotMarkers={listing.spotMarkers}
+              hideExactLocation={listing.hideExactLocation}
+            />
+            {listing.hideExactLocation && (
+              <p className="mt-2 text-xs text-neutral-400">
+                Eksakt adresse deles etter bekreftet booking.
+              </p>
+            )}
           </div>
 
           <div className="mt-6 border-t border-neutral-100 pt-6">
