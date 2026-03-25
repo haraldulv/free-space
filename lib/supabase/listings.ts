@@ -109,7 +109,7 @@ function getDateRange(start: string, end: string): string[] {
   const current = new Date(start + "T00:00:00");
   const last = new Date(end + "T00:00:00");
   while (current <= last) {
-    dates.push(current.toISOString().split("T")[0]);
+    dates.push(`${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}-${String(current.getDate()).padStart(2, "0")}`);
     current.setDate(current.getDate() + 1);
   }
   return dates;

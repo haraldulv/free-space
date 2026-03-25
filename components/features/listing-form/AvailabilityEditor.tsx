@@ -18,7 +18,7 @@ export default function AvailabilityEditor({ blockedDates, onChange, saving }: A
   const blockedDateObjects = blockedDates.map((d) => new Date(d + "T00:00:00"));
 
   const handleDayClick = (day: Date) => {
-    const key = day.toISOString().split("T")[0];
+    const key = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
     const next = new Set(blocked);
     if (next.has(key)) {
       next.delete(key);
@@ -67,6 +67,7 @@ export default function AvailabilityEditor({ blockedDates, onChange, saving }: A
           onDayClick={handleDayClick}
           disabled={{ before: new Date() }}
           numberOfMonths={2}
+          weekStartsOn={1}
           modifiers={{ blocked: blockedDateObjects }}
           modifiersClassNames={{ blocked: "rdp-blocked" }}
         />

@@ -40,6 +40,7 @@ export default function DatePicker({
         onSelect={onSelect}
         disabled={[{ before: new Date() }, ...(disabled || [])]}
         numberOfMonths={numberOfMonths}
+        weekStartsOn={1}
       />
     </div>
   );
