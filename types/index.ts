@@ -22,6 +22,8 @@ export interface SearchFilters {
   query?: string;
   category?: ListingCategory;
   vehicleType?: VehicleType;
+  checkIn?: string;
+  checkOut?: string;
 }
 
 export type Amenity =

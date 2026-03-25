@@ -25,7 +25,10 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       ? (params.vehicle as VehicleType)
       : undefined;
 
-  const listings = await searchListings({ query, category, vehicleType });
+  const checkIn = typeof params.checkIn === "string" ? params.checkIn : undefined;
+  const checkOut = typeof params.checkOut === "string" ? params.checkOut : undefined;
+
+  const listings = await searchListings({ query, category, vehicleType, checkIn, checkOut });
 
   return (
     <SearchResultsView
@@ -33,6 +36,8 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       query={query}
       category={category}
       vehicleType={vehicleType}
+      checkIn={checkIn}
+      checkOut={checkOut}
     />
   );
 }

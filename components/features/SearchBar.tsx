@@ -11,6 +11,8 @@ interface SearchBarProps {
   initialQuery?: string;
   initialVehicle?: VehicleType;
   initialCategory?: string;
+  initialCheckIn?: string;
+  initialCheckOut?: string;
   compact?: boolean;
 }
 
@@ -25,12 +27,19 @@ export default function SearchBar({
   initialQuery = "",
   initialVehicle,
   initialCategory,
+  initialCheckIn,
+  initialCheckOut,
   compact = false,
 }: SearchBarProps) {
   const router = useRouter();
   const [location, setLocation] = useState(initialQuery);
   const [vehicle, setVehicle] = useState<VehicleType | undefined>(initialVehicle);
-  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    if (initialCheckIn && initialCheckOut) {
+      return { from: new Date(initialCheckIn), to: new Date(initialCheckOut) };
+    }
+    return undefined;
+  });
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
@@ -51,6 +60,8 @@ export default function SearchBar({
     if (location.trim()) params.set("query", location.trim());
     if (vehicle) params.set("vehicle", vehicle);
     if (initialCategory) params.set("category", initialCategory);
+    if (dateRange?.from) params.set("checkIn", dateRange.from.toISOString().split("T")[0]);
+    if (dateRange?.to) params.set("checkOut", dateRange.to.toISOString().split("T")[0]);
     const qs = params.toString();
     const url = qs ? `/search?${qs}` : "/";
     router.push(url);

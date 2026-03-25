@@ -26,6 +26,8 @@ interface NavbarProps {
   onCategoryChange?: (category?: ListingCategory) => void;
   searchQuery?: string;
   searchVehicle?: VehicleType;
+  searchCheckIn?: string;
+  searchCheckOut?: string;
 }
 
 export default function Navbar({
@@ -36,6 +38,8 @@ export default function Navbar({
   onCategoryChange,
   searchQuery,
   searchVehicle,
+  searchCheckIn,
+  searchCheckOut,
 }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -75,7 +79,7 @@ export default function Navbar({
         {/* Compact search bar — centered in row 1 on search page */}
         {isSearchPage && (
           <div className="flex-1 flex justify-center">
-            <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} compact />
+            <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} initialCheckIn={searchCheckIn} initialCheckOut={searchCheckOut} compact />
           </div>
         )}
 
@@ -170,7 +174,7 @@ export default function Navbar({
       {!isSearchPage && (
         <div className={`hidden md:flex justify-center pb-5 pt-2 ${padClass}`}>
           <div className="w-full max-w-2xl">
-            <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} />
+            <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} initialCheckIn={searchCheckIn} initialCheckOut={searchCheckOut} />
           </div>
         </div>
       )}
@@ -178,7 +182,7 @@ export default function Navbar({
       {/* Mobile search bar — only on non-search pages */}
       {!isSearchPage && (
         <div className={`pb-3 md:hidden ${padClass}`}>
-          <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} />
+          <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} initialCheckIn={searchCheckIn} initialCheckOut={searchCheckOut} />
         </div>
       )}
     </header>

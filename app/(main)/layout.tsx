@@ -80,6 +80,9 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
       ? (rawVehicle as VehicleType)
       : undefined;
 
+  const checkIn = searchParams.get("checkIn") || undefined;
+  const checkOut = searchParams.get("checkOut") || undefined;
+
   return (
     <>
       <Navbar
@@ -89,6 +92,8 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         selectedCategory={category}
         searchQuery={query}
         searchVehicle={vehicle}
+        searchCheckIn={checkIn}
+        searchCheckOut={checkOut}
       />
       <main className={`flex-1 ${isSearchPage ? "flex flex-col overflow-hidden" : ""}`}>
         {children}

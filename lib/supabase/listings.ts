@@ -88,7 +88,31 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
     return [];
   }
 
-  return (data || []).map(rowToListing);
+  let listings = (data || []).map(rowToListing);
+
+  // Filter out listings with blocked dates overlapping the requested range
+  if (filters.checkIn && filters.checkOut) {
+    const requestedDates = getDateRange(filters.checkIn, filters.checkOut);
+    listings = listings.filter((listing) => {
+      if (!listing.blockedDates || listing.blockedDates.length === 0) return true;
+      const blockedSet = new Set(listing.blockedDates);
+      return !requestedDates.some((d) => blockedSet.has(d));
+    });
+  }
+
+  return listings;
+}
+
+/** Generate array of date strings between start and end (inclusive) */
+function getDateRange(start: string, end: string): string[] {
+  const dates: string[] = [];
+  const current = new Date(start + "T00:00:00");
+  const last = new Date(end + "T00:00:00");
+  while (current <= last) {
+    dates.push(current.toISOString().split("T")[0]);
+    current.setDate(current.getDate() + 1);
+  }
+  return dates;
 }
 
 export async function getListingById(id: string): Promise<Listing | null> {

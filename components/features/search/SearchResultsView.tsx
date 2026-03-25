@@ -12,6 +12,8 @@ interface SearchResultsViewProps {
   query?: string;
   category?: ListingCategory;
   vehicleType?: VehicleType;
+  checkIn?: string;
+  checkOut?: string;
 }
 
 export default function SearchResultsView({

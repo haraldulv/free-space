@@ -64,7 +64,6 @@ export default function AvailabilityEditor({ blockedDates, onChange, saving }: A
           }
         `}</style>
         <DayPicker
-          mode="single"
           onDayClick={handleDayClick}
           disabled={{ before: new Date() }}
           numberOfMonths={2}
