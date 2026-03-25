@@ -97,6 +97,7 @@ export default function ListingFormWizard({
   };
 
   const submit = async () => {
+    if (submitting) return;
     setSubmitting(true);
     setGlobalError("");
     try {
@@ -105,7 +106,6 @@ export default function ListingFormWizard({
       router.refresh();
     } catch (err) {
       setGlobalError(err instanceof Error ? err.message : "Noe gikk galt");
-    } finally {
       setSubmitting(false);
     }
   };
