@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { Search, X, Car, Truck, Caravan, Bus, MapPin } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import DatePicker from "@/components/ui/DatePicker";
+import { createClient } from "@/lib/supabase/client";
 import { VehicleType, vehicleLabels } from "@/types";
 
 interface SearchBarProps {
@@ -23,6 +23,10 @@ const vehicleOptions: { value: VehicleType; icon: React.ElementType }[] = [
   { value: "motorhome", icon: Bus },
 ];
 
+function formatLocalDate(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export default function SearchBar({
   initialQuery = "",
   initialVehicle,
@@ -31,19 +35,42 @@ export default function SearchBar({
   initialCheckOut,
   compact = false,
 }: SearchBarProps) {
-  const router = useRouter();
   const [location, setLocation] = useState(initialQuery);
   const [vehicle, setVehicle] = useState<VehicleType | undefined>(initialVehicle);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (initialCheckIn && initialCheckOut) {
-      return { from: new Date(initialCheckIn), to: new Date(initialCheckOut) };
+      return { from: new Date(initialCheckIn + "T00:00:00"), to: new Date(initialCheckOut + "T00:00:00") };
     }
     return undefined;
   });
   const [activeSegment, setActiveSegment] = useState<string | null>(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [allPlaces, setAllPlaces] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch distinct cities from listings
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("listings")
+      .select("city, region")
+      .neq("is_active", false)
+      .then(({ data }) => {
+        if (!data) return;
+        const seen = new Set<string>();
+        const places: string[] = [];
+        for (const row of data) {
+          const key = `${row.city}|${row.region}`;
+          if (!seen.has(key)) {
+            seen.add(key);
+            places.push(`${row.city}, ${row.region}`);
+          }
+        }
+        places.sort((a, b) => a.localeCompare(b, "nb"));
+        setAllPlaces(places);
+      });
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -60,15 +87,10 @@ export default function SearchBar({
     if (location.trim()) params.set("query", location.trim());
     if (vehicle) params.set("vehicle", vehicle);
     if (initialCategory) params.set("category", initialCategory);
-    if (dateRange?.from) params.set("checkIn", dateRange.from.toISOString().split("T")[0]);
-    if (dateRange?.to) params.set("checkOut", dateRange.to.toISOString().split("T")[0]);
+    if (dateRange?.from) params.set("checkIn", formatLocalDate(dateRange.from));
+    if (dateRange?.to) params.set("checkOut", formatLocalDate(dateRange.to));
     const qs = params.toString();
-    const url = qs ? `/search?${qs}` : "/";
-    router.push(url);
-    router.refresh();
-    setActiveSegment(null);
-    setMobileOpen(false);
-    setExpanded(false);
+    window.location.href = qs ? `/search?${qs}` : "/search";
   };
 
   const dateLabel =
@@ -78,20 +100,12 @@ export default function SearchBar({
 
   const vehicleLabel = vehicle ? vehicleLabels[vehicle] : undefined;
 
-  const allPlaces = [
-    "Oslo", "Bergen", "Trondheim", "Stavanger", "Tromsø", "Lofoten",
-    "Kristiansand", "Drammen", "Fredrikstad", "Bodø", "Ålesund",
-    "Hamar", "Lillehammer", "Molde", "Haugesund", "Tønsberg",
-    "Sandnes", "Reine", "Geiranger", "Flåm", "Voss", "Odda",
-    "Honningsvåg", "Hammerfest", "Alta", "Mandal", "Røros",
-    "Senja", "Balestrand", "Jørpeland", "Nordkapp",
-  ];
-
   const suggestions = useMemo(() => {
-    if (!location.trim() || activeSegment !== "where") return [];
-    const q = location.toLowerCase();
-    return allPlaces.filter((p) => p.toLowerCase().includes(q)).slice(0, 5);
-  }, [location, activeSegment]);
+    if (activeSegment !== "where") return [];
+    const q = location.toLowerCase().trim();
+    if (!q) return allPlaces.slice(0, 8);
+    return allPlaces.filter((p) => p.toLowerCase().includes(q)).slice(0, 8);
+  }, [location, activeSegment, allPlaces]);
 
   // Close expanded compact bar on click outside
   useEffect(() => {
@@ -111,10 +125,42 @@ export default function SearchBar({
     vehicleLabel || "Kjøretøy",
   ];
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleSearch();
+    }
+  };
+
+  // Shared suggestion list renderer
+  const renderSuggestions = () => (
+    <div className="animate-slide-down absolute left-0 mt-2 z-50 w-80 rounded-xl border border-neutral-200 bg-white py-2 shadow-xl max-h-80 overflow-y-auto">
+      {suggestions.length > 0 ? (
+        suggestions.map((place) => (
+          <button
+            key={place}
+            onClick={() => {
+              setLocation(place.split(",")[0]);
+              setActiveSegment("when");
+            }}
+            className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
+          >
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100">
+              <MapPin className="h-4 w-4 text-neutral-500" />
+            </div>
+            {place}
+          </button>
+        ))
+      ) : location.trim() ? (
+        <div className="px-4 py-3 text-sm text-neutral-400">Ingen treff for &ldquo;{location}&rdquo;</div>
+      ) : null}
+    </div>
+  );
+
   if (compact) {
     return (
       <>
-        {/* Compact pill — desktop: shows compact when collapsed, full pill when expanded */}
+        {/* Compact pill — desktop */}
         <div className="relative hidden md:block" ref={containerRef}>
           {!expanded ? (
             <button
@@ -137,7 +183,6 @@ export default function SearchBar({
               </div>
             </button>
           ) : (
-            /* Expanded: replaces the compact pill entirely */
             <div className="w-[min(600px,90vw)]">
               <div className={`search-pill flex items-center rounded-full border shadow-lg ${activeSegment ? "bg-neutral-100 border-neutral-200" : "bg-white border-neutral-200"}`}>
                 <button
@@ -145,7 +190,7 @@ export default function SearchBar({
                   onClick={() => setActiveSegment("where")}
                 >
                   <div className="text-xs font-semibold text-neutral-900">Hvor</div>
-                  <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleSearch()} onFocus={() => setActiveSegment("where")} placeholder="Søk etter sted" className="w-full bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none truncate" tabIndex={activeSegment === "where" ? 0 : -1} readOnly={activeSegment !== "where"} autoFocus />
+                  <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} onKeyDown={handleKeyDown} onFocus={() => setActiveSegment("where")} placeholder="Søk etter sted" className="w-full bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none truncate" tabIndex={activeSegment === "where" ? 0 : -1} readOnly={activeSegment !== "where"} autoFocus />
                 </button>
                 {!activeSegment && <div className="h-8 w-px bg-neutral-200 shrink-0" />}
                 <button
@@ -163,29 +208,12 @@ export default function SearchBar({
                   <div className="text-xs font-semibold text-neutral-900">Kjøretøy</div>
                   <div className={`text-sm truncate ${vehicleLabel ? "text-neutral-700" : "text-neutral-400"}`}>{vehicleLabel || "Legg til kjøretøy"}</div>
                 </button>
-                <button onClick={() => { handleSearch(); setExpanded(false); setActiveSegment(null); }} className="m-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md transition-all hover:shadow-lg active:scale-95" aria-label="Søk">
+                <button onClick={handleSearch} className="m-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md transition-all hover:shadow-lg active:scale-95" aria-label="Søk">
                   <Search className="h-3.5 w-3.5" />
                 </button>
               </div>
 
-              {/* Dropdowns below the pill */}
-              {activeSegment === "where" && (
-                <div className="animate-slide-down absolute left-0 mt-2 z-50 w-80 rounded-xl border border-neutral-200 bg-white py-2 shadow-xl">
-                  {suggestions.length > 0 ? suggestions.map((place) => (
-                    <button key={place} onClick={() => { setLocation(place); setActiveSegment("when"); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100"><MapPin className="h-4 w-4 text-neutral-500" /></div>
-                      {place}, Norge
-                    </button>
-                  )) : location.trim() ? (
-                    <div className="px-4 py-3 text-sm text-neutral-400">Ingen treff</div>
-                  ) : allPlaces.slice(0, 5).map((place) => (
-                    <button key={place} onClick={() => { setLocation(place); setActiveSegment("when"); }} className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors">
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100"><MapPin className="h-4 w-4 text-neutral-500" /></div>
-                      {place}, Norge
-                    </button>
-                  ))}
-                </div>
-              )}
+              {activeSegment === "where" && renderSuggestions()}
               {activeSegment === "when" && (
                 <div className="animate-slide-down absolute left-1/2 -translate-x-1/2 mt-2 z-50 rounded-xl border border-neutral-200 bg-white p-4 shadow-xl">
                   <DatePicker selected={dateRange} onSelect={setDateRange} />
@@ -237,7 +265,7 @@ export default function SearchBar({
             <div className="space-y-4 p-4">
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Hvor</label>
-                <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Søk etter sted" className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+                <input type="text" value={location} onChange={(e) => setLocation(e.target.value)} onKeyDown={handleKeyDown} placeholder="Søk etter sted" className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
               </div>
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Når</label>
@@ -280,7 +308,7 @@ export default function SearchBar({
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+              onKeyDown={handleKeyDown}
               onFocus={() => setActiveSegment("where")}
               placeholder="Søk etter sted"
               className="w-full bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none truncate"
@@ -338,53 +366,16 @@ export default function SearchBar({
         </div>
 
         {/* Location suggestions */}
-        {activeSegment === "where" && (
-          <div className="animate-slide-down absolute left-0 mt-2 z-50 w-80 rounded-xl border border-neutral-200 bg-white py-2 shadow-xl">
-            {suggestions.length > 0 ? (
-              suggestions.map((place) => (
-                <button
-                  key={place}
-                  onClick={() => {
-                    setLocation(place);
-                    setActiveSegment("when");
-                  }}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100">
-                    <MapPin className="h-4 w-4 text-neutral-500" />
-                  </div>
-                  {place}, Norge
-                </button>
-              ))
-            ) : location.trim() ? (
-              <div className="px-4 py-3 text-sm text-neutral-400">Ingen treff</div>
-            ) : (
-              allPlaces.slice(0, 5).map((place) => (
-                <button
-                  key={place}
-                  onClick={() => {
-                    setLocation(place);
-                    setActiveSegment("when");
-                  }}
-                  className="flex w-full items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 transition-colors"
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-100">
-                    <MapPin className="h-4 w-4 text-neutral-500" />
-                  </div>
-                  {place}, Norge
-                </button>
-              ))
-            )}
-          </div>
-        )}
+        {activeSegment === "where" && renderSuggestions()}
 
-        {/* Dropdowns */}
+        {/* Date picker */}
         {activeSegment === "when" && (
           <div className="animate-slide-down absolute left-1/2 -translate-x-1/2 mt-2 z-50 rounded-xl border border-neutral-200 bg-white p-4 shadow-xl">
             <DatePicker selected={dateRange} onSelect={setDateRange} />
           </div>
         )}
 
+        {/* Vehicle picker */}
         {activeSegment === "vehicle" && (
           <div className="animate-slide-down absolute right-12 mt-2 z-50 w-56 rounded-xl border border-neutral-200 bg-white py-2 shadow-xl">
             {vehicleOptions.map((opt) => {
@@ -444,33 +435,25 @@ export default function SearchBar({
           </div>
 
           <div className="space-y-4 p-4">
-            {/* Hvor */}
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">
-                Hvor
-              </label>
+              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Hvor</label>
               <input
                 type="text"
                 value={location}
                 onChange={(e) => setLocation(e.target.value)}
+                onKeyDown={handleKeyDown}
                 placeholder="Søk etter sted"
                 className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
               />
             </div>
 
-            {/* Når */}
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">
-                Når
-              </label>
+              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Når</label>
               <DatePicker selected={dateRange} onSelect={setDateRange} />
             </div>
 
-            {/* Kjøretøy */}
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">
-                Kjøretøy
-              </label>
+              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Kjøretøy</label>
               <div className="grid grid-cols-2 gap-2">
                 {vehicleOptions.map((opt) => {
                   const Icon = opt.icon;
@@ -478,9 +461,7 @@ export default function SearchBar({
                   return (
                     <button
                       key={opt.value}
-                      onClick={() =>
-                        setVehicle(isSelected ? undefined : opt.value)
-                      }
+                      onClick={() => setVehicle(isSelected ? undefined : opt.value)}
                       className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
                         isSelected
                           ? "border-primary-600 bg-primary-50 text-primary-700 font-medium"
