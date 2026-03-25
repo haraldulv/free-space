@@ -157,6 +157,7 @@ export default function SearchBar({
       : undefined;
 
   const vehicleLabel = vehicleLabels[vehicle];
+  const VehicleIcon = vehicleOptions.find((o) => o.value === vehicle)?.icon ?? Bus;
 
   useEffect(() => {
     if (!expanded) return;
@@ -228,7 +229,7 @@ export default function SearchBar({
               <span className="mx-1.5 h-5 w-px bg-neutral-200 shrink-0" />
               <span className="text-sm text-neutral-500 truncate">{summaryParts[1]}</span>
               <span className="mx-1.5 h-5 w-px bg-neutral-200 shrink-0" />
-              <span className="text-sm text-neutral-500 truncate">{summaryParts[2]}</span>
+              <span className="flex items-center gap-1 text-sm text-neutral-500 truncate"><VehicleIcon className="h-3.5 w-3.5" />{summaryParts[2]}</span>
               <div className="ml-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white">
                 <Search className="h-3.5 w-3.5" />
               </div>
@@ -257,7 +258,7 @@ export default function SearchBar({
                   onClick={() => setActiveSegment("vehicle")}
                 >
                   <div className="text-xs font-semibold text-neutral-900">Kjøretøy</div>
-                  <div className={`text-sm truncate ${vehicleLabel ? "text-neutral-700" : "text-neutral-400"}`}>{vehicleLabel || "Legg til kjøretøy"}</div>
+                  <div className={`flex items-center gap-1.5 text-sm truncate ${vehicleLabel ? "text-neutral-700" : "text-neutral-400"}`}><VehicleIcon className="h-3.5 w-3.5" />{vehicleLabel || "Legg til kjøretøy"}</div>
                 </button>
                 <button onClick={handleSearch} className="m-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md transition-all hover:shadow-lg active:scale-95" aria-label="Søk">
                   <Search className="h-3.5 w-3.5" />
