@@ -7,6 +7,7 @@ import ImageGallery from "@/components/features/ImageGallery";
 import AmenityList from "@/components/features/AmenityList";
 import HostCard from "@/components/features/HostCard";
 import BookingForm from "@/components/features/BookingForm";
+import ListingFavoriteButton from "@/components/features/ListingFavoriteButton";
 
 export const dynamic = "force-dynamic";
 
@@ -36,9 +37,12 @@ export default async function ListingPage({
             )}
           </div>
 
-          <h1 className="mt-3 text-3xl font-bold text-neutral-900">
-            {listing.title}
-          </h1>
+          <div className="mt-3 flex items-start justify-between gap-4">
+            <h1 className="text-3xl font-bold text-neutral-900">
+              {listing.title}
+            </h1>
+            <ListingFavoriteButton listingId={listing.id} />
+          </div>
 
           <div className="mt-2 flex items-center gap-4 text-neutral-500">
             <div className="flex items-center gap-1">

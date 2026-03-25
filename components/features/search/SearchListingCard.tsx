@@ -5,9 +5,12 @@ import Link from "next/link";
 import { Star, Zap } from "lucide-react";
 import { Listing } from "@/types";
 import ImageCarousel from "@/components/features/ImageCarousel";
+import FavoriteButton from "@/components/features/FavoriteButton";
 
 interface SearchListingCardProps {
   listing: Listing;
+  isFavorited?: boolean;
+  onFavoriteToggle?: (listingId: string, favorited: boolean) => void;
   isHovered: boolean;
   isSelected: boolean;
   onMouseEnter: () => void;
@@ -17,6 +20,8 @@ interface SearchListingCardProps {
 
 export default function SearchListingCard({
   listing,
+  isFavorited = false,
+  onFavoriteToggle,
   isHovered,
   isSelected,
   onMouseEnter,
@@ -45,11 +50,18 @@ export default function SearchListingCard({
             : "border-neutral-200 hover:border-neutral-300 hover:shadow-sm"
       }`}
     >
-      <div className="overflow-hidden rounded-t-lg">
+      <div className="relative overflow-hidden rounded-t-lg">
         <ImageCarousel
           images={listing.images}
           alt={listing.title}
         />
+        <div className="absolute top-2 right-2 z-10">
+          <FavoriteButton
+            listingId={listing.id}
+            isFavorited={isFavorited}
+            onToggle={(fav) => onFavoriteToggle?.(listing.id, fav)}
+          />
+        </div>
       </div>
       <Link href={`/listings/${listing.id}`} className="block">
         <div className="px-2.5 py-2">

@@ -1,8 +1,9 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Map, List, Maximize2, Minimize2 } from "lucide-react";
 import { Listing, ListingCategory, VehicleType } from "@/types";
+import { getUserFavorites } from "@/lib/supabase/favorites";
 import SearchResultsList from "./SearchResultsList";
 import SearchMap, { type MapBounds } from "./SearchMap";
 
@@ -23,6 +24,20 @@ export default function SearchResultsView({
   const [mobileView, setMobileView] = useState<"list" | "map">("list");
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
+  const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    getUserFavorites().then(setFavoriteIds);
+  }, []);
+
+  const handleFavoriteToggle = useCallback((listingId: string, favorited: boolean) => {
+    setFavoriteIds((prev) => {
+      const next = new Set(prev);
+      if (favorited) next.add(listingId);
+      else next.delete(listingId);
+      return next;
+    });
+  }, []);
 
   const handleBoundsChange = useCallback((bounds: MapBounds) => {
     setMapBounds(bounds);
@@ -52,6 +67,8 @@ export default function SearchResultsView({
       >
         <SearchResultsList
           listings={visibleListings}
+          favoriteIds={favoriteIds}
+          onFavoriteToggle={handleFavoriteToggle}
           hoveredListingId={hoveredListingId}
           selectedListingId={selectedListingId}
           onHover={setHoveredListingId}

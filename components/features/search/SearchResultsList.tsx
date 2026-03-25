@@ -5,6 +5,8 @@ import SearchListingCard from "./SearchListingCard";
 
 interface SearchResultsListProps {
   listings: Listing[];
+  favoriteIds: Set<string>;
+  onFavoriteToggle: (listingId: string, favorited: boolean) => void;
   hoveredListingId: string | null;
   selectedListingId: string | null;
   onHover: (id: string | null) => void;
@@ -13,6 +15,8 @@ interface SearchResultsListProps {
 
 export default function SearchResultsList({
   listings,
+  favoriteIds,
+  onFavoriteToggle,
   hoveredListingId,
   selectedListingId,
   onHover,
@@ -40,6 +44,8 @@ export default function SearchResultsList({
             <SearchListingCard
               key={listing.id}
               listing={listing}
+              isFavorited={favoriteIds.has(listing.id)}
+              onFavoriteToggle={onFavoriteToggle}
               isHovered={hoveredListingId === listing.id}
               isSelected={selectedListingId === listing.id}
               onMouseEnter={() => onHover(listing.id)}
