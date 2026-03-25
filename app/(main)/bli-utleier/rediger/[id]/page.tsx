@@ -25,6 +25,8 @@ function listingToFormData(listing: Listing): Partial<CreateListingData> {
     price: listing.price,
     priceUnit: listing.priceUnit,
     instantBooking: listing.instantBooking || false,
+    spotMarkers: listing.spotMarkers || [],
+    hideExactLocation: listing.hideExactLocation || false,
   };
 }
 
@@ -73,6 +75,8 @@ export default function EditListingPage() {
         maxVehicleLength: row.max_vehicle_length,
         tags: row.tags,
         instantBooking: row.instant_booking,
+        spotMarkers: row.spot_markers,
+        hideExactLocation: row.hide_exact_location,
       };
 
       setInitialData(listingToFormData(listing));
@@ -94,7 +98,10 @@ export default function EditListingPage() {
       mode="edit"
       listingId={id}
       initialData={initialData}
-      onSubmit={async (data) => { await updateListingAction(id, data); }}
+      onSubmit={async (data) => {
+        const result = await updateListingAction(id, data);
+        if (result.error) throw new Error(result.error);
+      }}
     />
   );
 }

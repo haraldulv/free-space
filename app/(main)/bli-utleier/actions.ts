@@ -10,14 +10,26 @@ async function getAuthUserId(): Promise<string> {
   return user.id;
 }
 
-export async function createListingAction(data: CreateListingData): Promise<string> {
-  const userId = await getAuthUserId();
-  return createListing(data, userId);
+export async function createListingAction(data: CreateListingData): Promise<{ id?: string; error?: string }> {
+  try {
+    const userId = await getAuthUserId();
+    const id = await createListing(data, userId);
+    return { id };
+  } catch (err) {
+    console.error("createListingAction error:", err);
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
 }
 
-export async function updateListingAction(id: string, data: Partial<CreateListingData>): Promise<void> {
-  const userId = await getAuthUserId();
-  return updateListing(id, data, userId);
+export async function updateListingAction(id: string, data: Partial<CreateListingData>): Promise<{ error?: string }> {
+  try {
+    const userId = await getAuthUserId();
+    await updateListing(id, data, userId);
+    return {};
+  } catch (err) {
+    console.error("updateListingAction error:", err);
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
 }
 
 export async function deleteListingAction(id: string): Promise<void> {

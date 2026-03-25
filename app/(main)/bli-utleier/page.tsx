@@ -34,7 +34,10 @@ export default function BliUtleierPage() {
   return (
     <ListingFormWizard
       userId={userId}
-      onSubmit={async (data) => { await createListingAction(data); }}
+      onSubmit={async (data) => {
+        const result = await createListingAction(data);
+        if (result.error) throw new Error(result.error);
+      }}
     />
   );
 }
