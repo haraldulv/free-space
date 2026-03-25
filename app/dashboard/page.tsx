@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { CalendarOff, Plus, Building2 } from "lucide-react";
+import { CalendarOff, Plus, Building2, Heart } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { getBookings } from "@/lib/utils/bookings";
 import { deleteListingAction } from "@/app/(main)/bli-utleier/actions";
@@ -51,10 +51,14 @@ function rowToListing(row: Record<string, unknown>): Listing {
 export default function DashboardPage() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
-  const initialTab = tabParam === "listings" || tabParam === "annonser" ? "listings" : "bookings";
-  const [tab, setTab] = useState<"bookings" | "listings">(initialTab);
+  const initialTab =
+    tabParam === "listings" || tabParam === "annonser" ? "listings"
+    : tabParam === "favoritter" ? "favorites"
+    : "bookings";
+  const [tab, setTab] = useState<"bookings" | "listings" | "favorites">(initialTab);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [favorites, setFavorites] = useState<Listing[]>([]);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -63,12 +67,29 @@ export default function DashboardPage() {
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
+
+      // Fetch host listings
       const { data: rows } = await supabase
         .from("listings")
         .select("*")
         .eq("host_id", data.user.id)
         .order("created_at", { ascending: false });
       if (rows) setListings(rows.map((r) => rowToListing(r as Record<string, unknown>)));
+
+      // Fetch favorites
+      const { data: favRows } = await supabase
+        .from("favorites")
+        .select("listing_id, listings(*)")
+        .eq("user_id", data.user.id)
+        .order("created_at", { ascending: false });
+      if (favRows) {
+        setFavorites(
+          favRows
+            .filter((r) => r.listings)
+            .map((r) => rowToListing(r.listings as unknown as Record<string, unknown>))
+        );
+      }
+
       setLoaded(true);
     });
   }, []);
@@ -97,6 +118,16 @@ export default function DashboardPage() {
           }`}
         >
           Mine bestillinger
+        </button>
+        <button
+          onClick={() => setTab("favorites")}
+          className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+            tab === "favorites"
+              ? "border-b-2 border-primary-600 text-primary-600"
+              : "text-neutral-500 hover:text-neutral-700"
+          }`}
+        >
+          Favoritter
         </button>
         <button
           onClick={() => setTab("listings")}
@@ -132,6 +163,54 @@ export default function DashboardPage() {
             <div className="mt-6 space-y-4">
               {bookings.map((booking) => (
                 <BookingCard key={booking.id} booking={booking} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Favorites tab */}
+      {tab === "favorites" && (
+        <>
+          {favorites.length === 0 ? (
+            <div className="mt-16 flex flex-col items-center text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
+                <Heart className="h-8 w-8 text-neutral-400" />
+              </div>
+              <h2 className="mt-4 text-lg font-semibold text-neutral-700">
+                Ingen favoritter ennå
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Trykk på hjertet på en annonse for å lagre den her.
+              </p>
+              <Link href="/search" className="mt-6">
+                <Button>Utforsk plasser</Button>
+              </Link>
+            </div>
+          ) : (
+            <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {favorites.map((listing) => (
+                <Link key={listing.id} href={`/listings/${listing.id}`} className="group">
+                  <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white transition-all hover:shadow-md">
+                    <div className="aspect-[7/5] relative overflow-hidden">
+                      {listing.images[0] && (
+                        <img
+                          src={listing.images[0]}
+                          alt={listing.title}
+                          className="h-full w-full object-cover transition-transform group-hover:scale-105"
+                        />
+                      )}
+                    </div>
+                    <div className="p-3">
+                      <h3 className="text-sm font-medium text-neutral-900 line-clamp-1">{listing.title}</h3>
+                      <p className="text-xs text-neutral-500">{listing.location.city}, {listing.location.region}</p>
+                      <p className="mt-1 text-sm">
+                        <span className="font-semibold">{listing.price} kr</span>
+                        <span className="text-neutral-500"> / {listing.priceUnit === "time" ? "time" : "natt"}</span>
+                      </p>
+                    </div>
+                  </div>
+                </Link>
               ))}
             </div>
           )}
