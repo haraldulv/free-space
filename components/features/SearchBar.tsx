@@ -396,8 +396,8 @@ export default function SearchBar({
             onClick={() => setActiveSegment(activeSegment === "vehicle" ? null : "vehicle")}
           >
             <div className="text-xs font-semibold text-neutral-900">Kjøretøy</div>
-            <div className={`text-sm truncate ${vehicleLabel ? "text-neutral-700" : "text-neutral-400"}`}>
-              {vehicleLabel || "Legg til kjøretøy"}
+            <div className={`flex items-center gap-1.5 text-sm truncate ${vehicleLabel ? "text-neutral-700" : "text-neutral-400"}`}>
+              <VehicleIcon className="h-3.5 w-3.5" />{vehicleLabel || "Legg til kjøretøy"}
             </div>
           </button>
 
