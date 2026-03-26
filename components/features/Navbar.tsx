@@ -14,12 +14,13 @@ import {
   LogOut,
   LogIn,
   UserPlus,
+  Search,
 } from "lucide-react";
 import SearchBar from "./SearchBar";
 import { ListingCategory, VehicleType } from "@/types";
 
 interface NavbarProps {
-  user?: { email: string; fullName?: string } | null;
+  user?: { email: string; fullName?: string; avatar?: string } | null;
   isHost?: boolean;
   onSignOut?: () => void;
   selectedCategory?: ListingCategory;
@@ -29,6 +30,8 @@ interface NavbarProps {
   searchCheckIn?: string;
   searchCheckOut?: string;
 }
+
+const menuItemClass = "flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50";
 
 export default function Navbar({
   user,
@@ -42,7 +45,9 @@ export default function Navbar({
   searchCheckOut,
 }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const avatarRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const isSearchPage = pathname === "/search";
@@ -51,6 +56,9 @@ export default function Navbar({
     function handleClickOutside(e: MouseEvent) {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         setMenuOpen(false);
+      }
+      if (avatarRef.current && !avatarRef.current.contains(e.target as Node)) {
+        setAvatarMenuOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -64,6 +72,8 @@ export default function Navbar({
     : "px-6 sm:px-10 lg:px-20 mx-auto max-w-[1760px]";
 
   const isHome = pathname === "/";
+
+  const initial = user?.fullName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?";
 
   return (
     <header className={`sticky top-0 z-50 border-b border-neutral-200/60 ${isHome ? "glass-navbar" : "bg-white"}`}>
@@ -86,7 +96,7 @@ export default function Navbar({
         {!isSearchPage && <div className="flex-1" />}
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
           {!(user && isHost) && (
             <Link
               href="/bli-utleier"
@@ -103,9 +113,10 @@ export default function Navbar({
             <Languages className="h-4 w-4" />
           </button>
 
+          {/* Hamburger — navigation menu */}
           <div className="relative" ref={menuRef}>
             <button
-              onClick={() => setMenuOpen(!menuOpen)}
+              onClick={() => { setMenuOpen(!menuOpen); setAvatarMenuOpen(false); }}
               className="flex items-center justify-center rounded-full border border-neutral-200 bg-white p-2 shadow-sm transition-all hover:shadow-md"
             >
               <Menu className="h-4 w-4 text-neutral-600" />
@@ -115,50 +126,43 @@ export default function Navbar({
               <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-neutral-100 bg-white py-2 shadow-xl">
                 {user ? (
                   <>
-                    <div className="px-4 py-2 text-sm text-neutral-500 border-b border-neutral-100">
-                      {user.fullName || user.email}
-                    </div>
-                    <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/dashboard" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <CalendarCheck className="h-4 w-4 text-neutral-400" />
                       Mine bestillinger
                     </Link>
-                    <Link href="/dashboard?tab=favoritter" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/dashboard?tab=favoritter" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <Heart className="h-4 w-4 text-neutral-400" />
                       Favoritter
                     </Link>
                     {isHost ? (
-                      <Link href="/dashboard?tab=annonser" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                      <Link href="/dashboard?tab=annonser" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                         <Megaphone className="h-4 w-4 text-neutral-400" />
                         Mine annonser
                       </Link>
                     ) : (
-                      <Link href="/bli-utleier" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                      <Link href="/bli-utleier" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                         <PlusCircle className="h-4 w-4 text-neutral-400" />
                         Bli utleier
                       </Link>
                     )}
                     <div className="my-1 border-t border-neutral-100" />
-                    <Link href="/settings" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
-                      <Settings className="h-4 w-4 text-neutral-400" />
-                      Innstillinger
+                    <Link href="/search" className={menuItemClass} onClick={() => setMenuOpen(false)}>
+                      <Search className="h-4 w-4 text-neutral-400" />
+                      Utforsk
                     </Link>
-                    <button onClick={() => { setMenuOpen(false); onSignOut?.(); }} className="flex items-center gap-3 w-full px-4 py-2.5 min-h-[44px] text-left text-sm text-neutral-700 hover:bg-neutral-50">
-                      <LogOut className="h-4 w-4 text-neutral-400" />
-                      Logg ut
-                    </button>
                   </>
                 ) : (
                   <>
-                    <Link href="/login" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm font-medium text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/login" className={`${menuItemClass} font-medium`} onClick={() => setMenuOpen(false)}>
                       <LogIn className="h-4 w-4 text-neutral-400" />
                       Logg inn
                     </Link>
-                    <Link href="/register" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/register" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <UserPlus className="h-4 w-4 text-neutral-400" />
                       Registrer deg
                     </Link>
                     <div className="my-1 border-t border-neutral-100" />
-                    <Link href="/bli-utleier" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/bli-utleier" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <PlusCircle className="h-4 w-4 text-neutral-400" />
                       Bli utleier
                     </Link>
@@ -167,6 +171,39 @@ export default function Navbar({
               </div>
             )}
           </div>
+
+          {/* Avatar — account menu (only when logged in) */}
+          {user && (
+            <div className="relative" ref={avatarRef}>
+              <button
+                onClick={() => { setAvatarMenuOpen(!avatarMenuOpen); setMenuOpen(false); }}
+                className="flex items-center justify-center rounded-full border-2 border-neutral-200 bg-neutral-100 overflow-hidden transition-all hover:border-primary-300 h-9 w-9"
+              >
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.fullName || "Avatar"} className="h-full w-full object-cover" />
+                ) : (
+                  <span className="text-sm font-medium text-neutral-600">{initial}</span>
+                )}
+              </button>
+
+              {avatarMenuOpen && (
+                <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-neutral-100 bg-white py-2 shadow-xl">
+                  <div className="px-4 py-2.5 border-b border-neutral-100">
+                    <p className="text-sm font-medium text-neutral-900">{user.fullName || "Min konto"}</p>
+                    <p className="text-xs text-neutral-500 truncate">{user.email}</p>
+                  </div>
+                  <Link href="/settings" className={menuItemClass} onClick={() => setAvatarMenuOpen(false)}>
+                    <Settings className="h-4 w-4 text-neutral-400" />
+                    Innstillinger
+                  </Link>
+                  <button onClick={() => { setAvatarMenuOpen(false); onSignOut?.(); }} className={`${menuItemClass} w-full text-left`}>
+                    <LogOut className="h-4 w-4 text-neutral-400" />
+                    Logg ut
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

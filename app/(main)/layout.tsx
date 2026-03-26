@@ -13,19 +13,33 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const isSearchPage = pathname === "/search";
 
-  const [user, setUser] = useState<{ email: string; fullName?: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; fullName?: string; avatar?: string } | null>(null);
   const [isHost, setIsHost] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
 
-    async function checkHost(userId: string) {
+    async function loadUserData(userId: string, email: string, metadata: Record<string, unknown>) {
+      // Check host status
       const { count } = await supabase
         .from("listings")
         .select("id", { count: "exact", head: true })
         .eq("host_id", userId)
         .limit(1);
       setIsHost((count ?? 0) > 0);
+
+      // Fetch avatar from profile
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("avatar_url, full_name")
+        .eq("id", userId)
+        .single();
+
+      setUser({
+        email,
+        fullName: profile?.full_name || (metadata?.full_name as string) || undefined,
+        avatar: profile?.avatar_url || (metadata?.avatar_url as string) || undefined,
+      });
     }
 
     // Get initial session
@@ -34,8 +48,9 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         setUser({
           email: data.user.email || "",
           fullName: data.user.user_metadata?.full_name,
+          avatar: data.user.user_metadata?.avatar_url,
         });
-        checkHost(data.user.id);
+        loadUserData(data.user.id, data.user.email || "", data.user.user_metadata || {});
       }
     });
 
@@ -45,8 +60,9 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         setUser({
           email: session.user.email || "",
           fullName: session.user.user_metadata?.full_name,
+          avatar: session.user.user_metadata?.avatar_url,
         });
-        checkHost(session.user.id);
+        loadUserData(session.user.id, session.user.email || "", session.user.user_metadata || {});
       } else {
         setUser(null);
         setIsHost(false);
