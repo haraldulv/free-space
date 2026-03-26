@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   CalendarCheck,
@@ -19,15 +19,16 @@ import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingCard from "@/components/features/BookingCard";
 import HostListingCard from "@/components/features/HostListingCard";
+import SettingsPanel from "@/components/features/SettingsPanel";
 import { Booking, Listing } from "@/types";
 
 type Tab = "bookings" | "favorites" | "listings" | "settings";
 
-const sidebarItems: { key: Tab; label: string; icon: React.ElementType; href?: string }[] = [
+const sidebarItems: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "bookings", label: "Mine bestillinger", icon: CalendarCheck },
   { key: "favorites", label: "Favoritter", icon: Heart },
   { key: "listings", label: "Mine annonser", icon: Megaphone },
-  { key: "settings", label: "Innstillinger", icon: Settings, href: "/settings" },
+  { key: "settings", label: "Innstillinger", icon: Settings },
 ];
 
 function rowToListing(row: Record<string, unknown>): Listing {
@@ -70,11 +71,11 @@ function rowToListing(row: Record<string, unknown>): Listing {
 
 export default function DashboardPage() {
   const searchParams = useSearchParams();
-  const router = useRouter();
   const tabParam = searchParams.get("tab");
   const initialTab: Tab =
     tabParam === "listings" || tabParam === "annonser" ? "listings"
     : tabParam === "favoritter" ? "favorites"
+    : tabParam === "settings" ? "settings"
     : "bookings";
   const [tab, setTab] = useState<Tab>(initialTab);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -114,10 +115,6 @@ export default function DashboardPage() {
   }, []);
 
   const handleTabChange = (item: typeof sidebarItems[number]) => {
-    if (item.href) {
-      router.push(item.href);
-      return;
-    }
     setTab(item.key);
   };
 
@@ -165,7 +162,7 @@ export default function DashboardPage() {
             <ul className="space-y-1">
               {sidebarItems.map((item) => {
                 const Icon = item.icon;
-                const isActive = !item.href && tab === item.key;
+                const isActive = tab === item.key;
                 return (
                   <li key={item.key}>
                     <button
@@ -188,7 +185,7 @@ export default function DashboardPage() {
           {/* Mobile tabs */}
           <div className="flex gap-1 border-b border-neutral-200 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
             {sidebarItems.map((item) => {
-              const isActive = !item.href && tab === item.key;
+              const isActive = tab === item.key;
               return (
                 <button
                   key={item.key}
@@ -326,6 +323,13 @@ export default function DashboardPage() {
                   </div>
                 )}
               </>
+            )}
+
+            {/* Settings */}
+            {tab === "settings" && (
+              <div className="mt-4 lg:mt-0">
+                <SettingsPanel />
+              </div>
             )}
           </div>
         </div>

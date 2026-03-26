@@ -192,7 +192,7 @@ export default function Navbar({
                     <p className="text-sm font-medium text-neutral-900">{user.fullName || "Min konto"}</p>
                     <p className="text-xs text-neutral-500 truncate">{user.email}</p>
                   </div>
-                  <Link href="/settings" className={menuItemClass} onClick={() => setAvatarMenuOpen(false)}>
+                  <Link href="/dashboard?tab=settings" className={menuItemClass} onClick={() => setAvatarMenuOpen(false)}>
                     <Settings className="h-4 w-4 text-neutral-400" />
                     Innstillinger
                   </Link>
