@@ -53,7 +53,7 @@ export default function ListingSection({ title, listings }: ListingSectionProps)
       <Container>
         {/* Header with title + arrows */}
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-neutral-900">{title}</h2>
+          <h2 className="text-lg sm:text-xl font-semibold text-neutral-900">{title}</h2>
           <div className="flex items-center gap-2">
             <button
               onClick={() => scroll("left")}
@@ -88,7 +88,7 @@ export default function ListingSection({ title, listings }: ListingSectionProps)
           className="flex gap-4 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {listings.map((listing) => (
-            <div key={listing.id} className="w-[200px] shrink-0">
+            <div key={listing.id} className="w-[200px] sm:w-[220px] md:w-[240px] shrink-0">
               <ListingCard listing={listing} />
             </div>
           ))}

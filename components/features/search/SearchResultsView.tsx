@@ -118,7 +118,7 @@ export default function SearchResultsView({
         onClick={() =>
           setMobileView((v) => (v === "list" ? "map" : "list"))
         }
-        className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-primary-600 px-6 py-3 text-sm font-medium text-white shadow-lg transition-colors hover:bg-primary-700 lg:hidden"
+        className="fixed bottom-[calc(1.5rem+env(safe-area-inset-bottom))] left-1/2 z-50 flex -translate-x-1/2 items-center gap-2 rounded-full bg-primary-600 px-6 py-3 text-sm font-medium text-white shadow-lg transition-colors hover:bg-primary-700 lg:hidden"
       >
         {mobileView === "list" ? (
           <>

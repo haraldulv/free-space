@@ -118,47 +118,47 @@ export default function Navbar({
                     <div className="px-4 py-2 text-sm text-neutral-500 border-b border-neutral-100">
                       {user.fullName || user.email}
                     </div>
-                    <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/dashboard" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
                       <CalendarCheck className="h-4 w-4 text-neutral-400" />
                       Mine bestillinger
                     </Link>
-                    <Link href="/dashboard?tab=favoritter" className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/dashboard?tab=favoritter" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
                       <Heart className="h-4 w-4 text-neutral-400" />
                       Favoritter
                     </Link>
                     {isHost ? (
-                      <Link href="/dashboard?tab=annonser" className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                      <Link href="/dashboard?tab=annonser" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
                         <Megaphone className="h-4 w-4 text-neutral-400" />
                         Mine annonser
                       </Link>
                     ) : (
-                      <Link href="/bli-utleier" className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                      <Link href="/bli-utleier" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
                         <PlusCircle className="h-4 w-4 text-neutral-400" />
                         Bli utleier
                       </Link>
                     )}
                     <div className="my-1 border-t border-neutral-100" />
-                    <Link href="/settings" className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/settings" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
                       <Settings className="h-4 w-4 text-neutral-400" />
                       Innstillinger
                     </Link>
-                    <button onClick={() => { setMenuOpen(false); onSignOut?.(); }} className="flex items-center gap-3 w-full px-4 py-2.5 text-left text-sm text-neutral-700 hover:bg-neutral-50">
+                    <button onClick={() => { setMenuOpen(false); onSignOut?.(); }} className="flex items-center gap-3 w-full px-4 py-2.5 min-h-[44px] text-left text-sm text-neutral-700 hover:bg-neutral-50">
                       <LogOut className="h-4 w-4 text-neutral-400" />
                       Logg ut
                     </button>
                   </>
                 ) : (
                   <>
-                    <Link href="/login" className="flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/login" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm font-medium text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
                       <LogIn className="h-4 w-4 text-neutral-400" />
                       Logg inn
                     </Link>
-                    <Link href="/register" className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/register" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
                       <UserPlus className="h-4 w-4 text-neutral-400" />
                       Registrer deg
                     </Link>
                     <div className="my-1 border-t border-neutral-100" />
-                    <Link href="/bli-utleier" className="flex items-center gap-3 px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
+                    <Link href="/bli-utleier" className="flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm text-neutral-700 hover:bg-neutral-50" onClick={() => setMenuOpen(false)}>
                       <PlusCircle className="h-4 w-4 text-neutral-400" />
                       Bli utleier
                     </Link>

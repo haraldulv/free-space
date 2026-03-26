@@ -122,4 +122,8 @@ export interface UserProfile {
   email: string;
   fullName: string;
   avatar?: string;
+  responseRate?: number;
+  responseTime?: string;
+  joinedYear?: number;
+  createdAt?: string;
 }

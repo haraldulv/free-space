@@ -26,3 +26,29 @@ export async function deleteListingImage(url: string): Promise<void> {
 
   await supabase.storage.from("listing-images").remove([match[1]]);
 }
+
+export async function uploadAvatar(file: File, userId: string): Promise<string> {
+  const supabase = createClient();
+  const ext = file.name.split(".").pop() || "jpg";
+  const path = `${userId}/${crypto.randomUUID()}.${ext}`;
+
+  const { error } = await supabase.storage
+    .from("avatars")
+    .upload(path, file, { contentType: file.type, upsert: true });
+
+  if (error) throw new Error(error.message);
+
+  const { data } = supabase.storage
+    .from("avatars")
+    .getPublicUrl(path);
+
+  return data.publicUrl;
+}
+
+export async function deleteAvatar(url: string): Promise<void> {
+  const supabase = createClient();
+  const match = url.match(/avatars\/(.+)$/);
+  if (!match) return;
+
+  await supabase.storage.from("avatars").remove([match[1]]);
+}

@@ -122,10 +122,10 @@ export default function DashboardPage() {
   return (
     <Container className="py-10 min-h-screen bg-neutral-50">
       {/* Tabs */}
-      <div className="flex gap-1 border-b border-neutral-200">
+      <div className="flex gap-1 border-b border-neutral-200 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <button
           onClick={() => setTab("bookings")}
-          className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
             tab === "bookings"
               ? "border-b-2 border-primary-600 text-primary-600"
               : "text-neutral-500 hover:text-neutral-700"
@@ -135,7 +135,7 @@ export default function DashboardPage() {
         </button>
         <button
           onClick={() => setTab("favorites")}
-          className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
             tab === "favorites"
               ? "border-b-2 border-primary-600 text-primary-600"
               : "text-neutral-500 hover:text-neutral-700"
@@ -145,7 +145,7 @@ export default function DashboardPage() {
         </button>
         <button
           onClick={() => setTab("listings")}
-          className={`px-4 py-2.5 text-sm font-medium transition-colors ${
+          className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
             tab === "listings"
               ? "border-b-2 border-primary-600 text-primary-600"
               : "text-neutral-500 hover:text-neutral-700"
