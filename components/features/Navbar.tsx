@@ -17,11 +17,14 @@ import {
   Search,
 } from "lucide-react";
 import SearchBar from "./SearchBar";
+import NotificationPanel from "./NotificationPanel";
 import { ListingCategory, VehicleType } from "@/types";
 
 interface NavbarProps {
-  user?: { email: string; fullName?: string; avatar?: string } | null;
+  user?: { email: string; fullName?: string; avatar?: string; id?: string } | null;
   isHost?: boolean;
+  unreadNotifications?: number;
+  onUnreadChange?: (count: number) => void;
   onSignOut?: () => void;
   selectedCategory?: ListingCategory;
   onCategoryChange?: (category?: ListingCategory) => void;
@@ -36,6 +39,8 @@ const menuItemClass = "flex items-center gap-3 px-4 py-2.5 min-h-[44px] text-sm 
 export default function Navbar({
   user,
   isHost,
+  unreadNotifications = 0,
+  onUnreadChange,
   onSignOut,
   selectedCategory,
   onCategoryChange,
@@ -112,6 +117,15 @@ export default function Navbar({
           >
             <Languages className="h-4 w-4" />
           </button>
+
+          {/* Notifications bell — logged in only */}
+          {user?.id && (
+            <NotificationPanel
+              userId={user.id}
+              unreadCount={unreadNotifications}
+              onUnreadChange={onUnreadChange || (() => {})}
+            />
+          )}
 
           {/* Hamburger — navigation menu */}
           <div className="relative" ref={menuRef}>

@@ -31,8 +31,10 @@ export async function POST(request: NextRequest) {
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object;
     const bookingId = paymentIntent.metadata?.bookingId;
+    const listingTitle = paymentIntent.metadata?.listingTitle || "en plass";
 
     if (bookingId) {
+      // Update booking status
       await supabase
         .from("bookings")
         .update({
@@ -40,6 +42,35 @@ export async function POST(request: NextRequest) {
           payment_status: "paid",
         })
         .eq("id", bookingId);
+
+      // Get booking to find host and guest
+      const { data: booking } = await supabase
+        .from("bookings")
+        .select("user_id, host_id, check_in, check_out")
+        .eq("id", bookingId)
+        .single();
+
+      if (booking) {
+        // Notify host: new booking received
+        if (booking.host_id) {
+          await supabase.from("notifications").insert({
+            user_id: booking.host_id,
+            type: "booking_received",
+            title: "Ny bestilling!",
+            body: `Noen har bestilt ${listingTitle} (${booking.check_in} – ${booking.check_out})`,
+            metadata: { bookingId },
+          });
+        }
+
+        // Notify guest: booking confirmed
+        await supabase.from("notifications").insert({
+          user_id: booking.user_id,
+          type: "booking_confirmed",
+          title: "Bestilling bekreftet",
+          body: `Din bestilling av ${listingTitle} er bekreftet og betalt.`,
+          metadata: { bookingId },
+        });
+      }
     }
   }
 

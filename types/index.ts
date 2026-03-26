@@ -121,6 +121,17 @@ export interface Booking {
   paymentStatus?: "pending" | "paid" | "failed" | "refunded";
 }
 
+export interface AppNotification {
+  id: string;
+  userId: string;
+  type: "booking_received" | "booking_confirmed" | "booking_cancelled";
+  title: string;
+  body?: string;
+  metadata?: Record<string, unknown>;
+  read: boolean;
+  createdAt: string;
+}
+
 export interface UserProfile {
   id: string;
   email: string;

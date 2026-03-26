@@ -5,6 +5,7 @@ import { useSearchParams, usePathname, useRouter } from "next/navigation";
 import Navbar from "@/components/features/Navbar";
 import Footer from "@/components/features/Footer";
 import { createClient } from "@/lib/supabase/client";
+import { getUnreadCount } from "@/lib/supabase/notifications";
 import { ListingCategory, VehicleType } from "@/types";
 
 function MainLayoutInner({ children }: { children: React.ReactNode }) {
@@ -13,8 +14,9 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const isSearchPage = pathname === "/search";
 
-  const [user, setUser] = useState<{ email: string; fullName?: string; avatar?: string } | null>(null);
+  const [user, setUser] = useState<{ email: string; fullName?: string; avatar?: string; id?: string } | null>(null);
   const [isHost, setIsHost] = useState(false);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
@@ -39,7 +41,12 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         email,
         fullName: profile?.full_name || (metadata?.full_name as string) || undefined,
         avatar: profile?.avatar_url || (metadata?.avatar_url as string) || undefined,
+        id: userId,
       });
+
+      // Fetch unread notification count
+      const count = await getUnreadCount(userId);
+      setUnreadNotifications(count);
     }
 
     // Get initial session
@@ -49,6 +56,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
           email: data.user.email || "",
           fullName: data.user.user_metadata?.full_name,
           avatar: data.user.user_metadata?.avatar_url,
+          id: data.user.id,
         });
         loadUserData(data.user.id, data.user.email || "", data.user.user_metadata || {});
       }
@@ -61,11 +69,13 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
           email: session.user.email || "",
           fullName: session.user.user_metadata?.full_name,
           avatar: session.user.user_metadata?.avatar_url,
+          id: session.user.id,
         });
         loadUserData(session.user.id, session.user.email || "", session.user.user_metadata || {});
       } else {
         setUser(null);
         setIsHost(false);
+        setUnreadNotifications(0);
       }
     });
 
@@ -103,6 +113,8 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
       <Navbar
         user={user}
         isHost={isHost}
+        unreadNotifications={unreadNotifications}
+        onUnreadChange={setUnreadNotifications}
         onSignOut={handleSignOut}
         selectedCategory={category}
         searchQuery={query}
