@@ -32,10 +32,14 @@ export default function BookingCard({ booking }: BookingCardProps) {
             </Badge>
             <Badge
               variant={
-                booking.status === "confirmed" ? "primary" : "secondary"
+                booking.status === "confirmed" ? "primary"
+                : booking.status === "pending" ? "secondary"
+                : "secondary"
               }
             >
-              {booking.status === "confirmed" ? "Bekreftet" : "Kansellert"}
+              {booking.status === "confirmed" ? "Bekreftet"
+                : booking.status === "pending" ? "Venter"
+                : "Kansellert"}
             </Badge>
           </div>
           <h3 className="mt-1 font-semibold text-neutral-900">

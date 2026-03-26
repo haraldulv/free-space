@@ -3,13 +3,70 @@
 import { useEffect, useState } from "react";
 import { useRouter, useSearchParams, useParams } from "next/navigation";
 import { differenceInDays } from "date-fns";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { createClient } from "@/lib/supabase/client";
-import { saveBooking, generateBookingId } from "@/lib/utils/bookings";
+import { createBookingAction } from "../actions";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingSummary from "@/components/features/BookingSummary";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Loader2 } from "lucide-react";
 import type { Listing } from "@/types";
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+
+function PaymentForm({ total, bookingId }: { total: number; bookingId: string }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [processing, setProcessing] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+
+    setProcessing(true);
+    setError("");
+
+    const { error: submitError } = await stripe.confirmPayment({
+      elements,
+      confirmParams: {
+        return_url: `${window.location.origin}/book/confirmation?bookingId=${bookingId}`,
+      },
+    });
+
+    if (submitError) {
+      setError(submitError.message || "Betalingen feilet");
+      setProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit}>
+      <PaymentElement />
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      <div className="mt-6 flex items-center gap-2 rounded-lg bg-primary-50 p-3 text-sm text-primary-700">
+        <ShieldCheck className="h-5 w-5 shrink-0" />
+        Din bestilling er beskyttet av Free Space-garantien.
+      </div>
+      <Button
+        type="submit"
+        size="lg"
+        className="mt-4 w-full"
+        disabled={!stripe || processing}
+      >
+        {processing ? (
+          <span className="inline-flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Behandler...
+          </span>
+        ) : (
+          `Betal — ${total} kr`
+        )}
+      </Button>
+    </form>
+  );
+}
 
 export default function BookPage() {
   const router = useRouter();
@@ -17,6 +74,10 @@ export default function BookPage() {
   const searchParams = useSearchParams();
   const [listing, setListing] = useState<Listing | null>(null);
   const [loading, setLoading] = useState(true);
+  const [clientSecret, setClientSecret] = useState("");
+  const [bookingId, setBookingId] = useState("");
+  const [creatingPayment, setCreatingPayment] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
@@ -52,6 +113,44 @@ export default function BookPage() {
   const checkIn = new Date(searchParams.get("checkIn") || "");
   const checkOut = new Date(searchParams.get("checkOut") || "");
 
+  const nights = !isNaN(checkIn.getTime()) && !isNaN(checkOut.getTime())
+    ? differenceInDays(checkOut, checkIn)
+    : 0;
+  const subtotal = listing ? listing.price * nights : 0;
+  const serviceFee = Math.round(subtotal * 0.1);
+  const total = subtotal + serviceFee;
+
+  // Create booking + payment intent once listing is loaded
+  useEffect(() => {
+    if (!listing || nights <= 0 || clientSecret) return;
+
+    setCreatingPayment(true);
+
+    const checkInStr = searchParams.get("checkIn")!;
+    const checkOutStr = searchParams.get("checkOut")!;
+
+    // Format dates as YYYY-MM-DD for Supabase date columns
+    const checkInDate = new Date(checkInStr);
+    const checkOutDate = new Date(checkOutStr);
+    const formatDate = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+    createBookingAction({
+      listingId: listing.id,
+      checkIn: formatDate(checkInDate),
+      checkOut: formatDate(checkOutDate),
+      totalPrice: total,
+    }).then((result) => {
+      if (result.error) {
+        setError(result.error);
+      } else {
+        setClientSecret(result.clientSecret!);
+        setBookingId(result.bookingId!);
+      }
+      setCreatingPayment(false);
+    });
+  }, [listing, nights]);
+
   if (loading) {
     return (
       <Container className="py-10">
@@ -64,29 +163,6 @@ export default function BookPage() {
     router.push("/");
     return null;
   }
-
-  const nights = differenceInDays(checkOut, checkIn);
-  const subtotal = listing.price * nights;
-  const serviceFee = Math.round(subtotal * 0.1);
-  const total = subtotal + serviceFee;
-
-  const handleConfirm = () => {
-    saveBooking({
-      id: generateBookingId(),
-      listingId: listing.id,
-      listingTitle: listing.title,
-      listingImage: listing.images[0],
-      listingCategory: listing.category,
-      location: `${listing.location.city}, ${listing.location.region}`,
-      checkIn: checkIn.toISOString(),
-      checkOut: checkOut.toISOString(),
-      totalPrice: total,
-      status: "confirmed",
-      createdAt: new Date().toISOString(),
-    });
-
-    router.push("/book/confirmation");
-  };
 
   return (
     <Container className="py-10">
@@ -110,20 +186,39 @@ export default function BookPage() {
             <h2 className="text-lg font-semibold text-neutral-900">
               Betaling
             </h2>
-            <p className="mt-2 text-sm text-neutral-500">
-              Dette er en demo — ingen ekte betaling vil bli gjennomført.
-            </p>
-            <div className="mt-6 flex items-center gap-2 rounded-lg bg-primary-50 p-3 text-sm text-primary-700">
-              <ShieldCheck className="h-5 w-5 shrink-0" />
-              Din bestilling er beskyttet av Free Space-garantien.
-            </div>
-            <Button
-              onClick={handleConfirm}
-              size="lg"
-              className="mt-6 w-full"
-            >
-              Bekreft og bestill — {total} kr
-            </Button>
+
+            {error && (
+              <p className="mt-3 text-sm text-red-600">{error}</p>
+            )}
+
+            {creatingPayment && (
+              <div className="mt-6 flex items-center justify-center gap-2 py-8 text-sm text-neutral-500">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Forbereder betaling...
+              </div>
+            )}
+
+            {clientSecret && (
+              <div className="mt-6">
+                <Elements
+                  stripe={stripePromise}
+                  options={{
+                    clientSecret,
+                    appearance: {
+                      theme: "stripe",
+                      variables: {
+                        colorPrimary: "#1a4fd6",
+                        fontFamily: "DM Sans, system-ui, sans-serif",
+                        borderRadius: "8px",
+                      },
+                    },
+                    locale: "nb",
+                  }}
+                >
+                  <PaymentForm total={total} bookingId={bookingId} />
+                </Elements>
+              </div>
+            )}
           </div>
         </div>
       </div>

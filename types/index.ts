@@ -113,8 +113,12 @@ export interface Booking {
   checkIn: string;
   checkOut: string;
   totalPrice: number;
-  status: "confirmed" | "cancelled";
+  status: "pending" | "confirmed" | "cancelled";
   createdAt: string;
+  userId?: string;
+  hostId?: string;
+  paymentIntentId?: string;
+  paymentStatus?: "pending" | "paid" | "failed" | "refunded";
 }
 
 export interface UserProfile {

@@ -13,7 +13,6 @@ import {
   Settings,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { getBookings } from "@/lib/utils/bookings";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/(main)/bli-utleier/actions";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
@@ -84,12 +83,36 @@ export default function DashboardPage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    setBookings(getBookings());
-
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data }) => {
       if (!data.user) return;
 
+      // Fetch bookings from Supabase
+      const { data: bookingRows } = await supabase
+        .from("bookings")
+        .select("*, listings(title, images, category, city, region)")
+        .eq("user_id", data.user.id)
+        .order("created_at", { ascending: false });
+
+      if (bookingRows) {
+        setBookings(
+          bookingRows.map((row) => ({
+            id: row.id,
+            listingId: row.listing_id,
+            listingTitle: (row.listings as Record<string, unknown>)?.title as string || "Ukjent",
+            listingImage: ((row.listings as Record<string, unknown>)?.images as string[])?.[0] || "",
+            listingCategory: (row.listings as Record<string, unknown>)?.category as Booking["listingCategory"] || "camping",
+            location: `${(row.listings as Record<string, unknown>)?.city || ""}, ${(row.listings as Record<string, unknown>)?.region || ""}`,
+            checkIn: row.check_in,
+            checkOut: row.check_out,
+            totalPrice: row.total_price,
+            status: row.status as Booking["status"],
+            createdAt: row.created_at,
+          }))
+        );
+      }
+
+      // Fetch host listings
       const { data: rows } = await supabase
         .from("listings")
         .select("*")
@@ -97,6 +120,7 @@ export default function DashboardPage() {
         .order("created_at", { ascending: false });
       if (rows) setListings(rows.map((r) => rowToListing(r as Record<string, unknown>)));
 
+      // Fetch favorites
       const { data: favRows } = await supabase
         .from("favorites")
         .select("listing_id, listings(*)")
