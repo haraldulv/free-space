@@ -35,6 +35,9 @@ export default function BookingForm({ listing }: BookingFormProps) {
       setShowCalendar(true);
       return;
     }
+    if (differenceInDays(dateRange.to, dateRange.from) < 1) {
+      return;
+    }
     const params = new URLSearchParams({
       checkIn: dateRange.from.toISOString(),
       checkOut: dateRange.to.toISOString(),

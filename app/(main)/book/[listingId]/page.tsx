@@ -164,6 +164,20 @@ export default function BookPage() {
     return null;
   }
 
+  if (nights <= 0) {
+    return (
+      <Container className="py-10">
+        <h1 className="text-2xl font-bold text-neutral-900">Ugyldig bestilling</h1>
+        <p className="mt-4 text-neutral-500">
+          Check-in og check-out kan ikke være samme dato. Vennligst velg minst én natt.
+        </p>
+        <Button className="mt-6" onClick={() => router.back()}>
+          Gå tilbake
+        </Button>
+      </Container>
+    );
+  }
+
   return (
     <Container className="py-10">
       <h1 className="text-2xl font-bold text-neutral-900">
@@ -191,7 +205,7 @@ export default function BookPage() {
               <p className="mt-3 text-sm text-red-600">{error}</p>
             )}
 
-            {creatingPayment && (
+            {creatingPayment && !error && (
               <div className="mt-6 flex items-center justify-center gap-2 py-8 text-sm text-neutral-500">
                 <Loader2 className="h-5 w-5 animate-spin" />
                 Forbereder betaling...
