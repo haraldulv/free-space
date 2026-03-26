@@ -1,27 +1,47 @@
+"use client";
+
+import { useState } from "react";
 import Image from "next/image";
-import { CalendarDays, MapPin, Car, Tent } from "lucide-react";
+import { CalendarDays, MapPin, Car, Tent, X } from "lucide-react";
 import Badge from "@/components/ui/Badge";
+import Button from "@/components/ui/Button";
 import { Booking } from "@/types";
 
 interface BookingCardProps {
   booking: Booking;
+  onCancel?: (bookingId: string) => Promise<void>;
 }
 
-export default function BookingCard({ booking }: BookingCardProps) {
+export default function BookingCard({ booking, onCancel }: BookingCardProps) {
+  const [cancelling, setCancelling] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const CategoryIcon = booking.listingCategory === "parking" ? Car : Tent;
   const checkIn = new Date(booking.checkIn).toLocaleDateString("nb-NO");
   const checkOut = new Date(booking.checkOut).toLocaleDateString("nb-NO");
+  const canCancel = booking.status === "pending" || booking.status === "confirmed";
+
+  const handleCancel = async () => {
+    if (!onCancel) return;
+    setCancelling(true);
+    await onCancel(booking.id);
+    setCancelling(false);
+    setShowConfirm(false);
+  };
 
   return (
     <div className="flex gap-4 rounded-xl border border-neutral-200 bg-white p-4 transition-shadow hover:shadow-sm">
       <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg sm:h-24 sm:w-24">
-        <Image
-          src={booking.listingImage}
-          alt={booking.listingTitle}
-          fill
-          className="object-cover"
-          sizes="96px"
-        />
+        {booking.listingImage ? (
+          <Image
+            src={booking.listingImage}
+            alt={booking.listingTitle}
+            fill
+            className="object-cover"
+            sizes="96px"
+          />
+        ) : (
+          <div className="h-full w-full bg-neutral-100" />
+        )}
       </div>
       <div className="flex flex-1 flex-col justify-between">
         <div>
@@ -58,6 +78,37 @@ export default function BookingCard({ booking }: BookingCardProps) {
           <span className="font-medium text-neutral-900">
             {booking.totalPrice} kr
           </span>
+          {canCancel && onCancel && (
+            <>
+              {!showConfirm ? (
+                <button
+                  onClick={() => setShowConfirm(true)}
+                  className="ml-auto text-sm text-red-500 hover:text-red-700 transition-colors"
+                >
+                  Kanseller
+                </button>
+              ) : (
+                <div className="ml-auto flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="bg-red-600 text-white hover:bg-red-700 hover:text-white text-xs"
+                    onClick={handleCancel}
+                    disabled={cancelling}
+                  >
+                    {cancelling ? "Kansellerer..." : "Bekreft"}
+                  </Button>
+                  <button
+                    onClick={() => setShowConfirm(false)}
+                    className="text-sm text-neutral-500 hover:text-neutral-700"
+                    disabled={cancelling}
+                  >
+                    Avbryt
+                  </button>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

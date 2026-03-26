@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/(main)/bli-utleier/actions";
+import { cancelBookingAction } from "@/app/(main)/book/actions";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingCard from "@/components/features/BookingCard";
@@ -95,20 +96,35 @@ export default function DashboardPage() {
         .order("created_at", { ascending: false });
 
       if (bookingRows) {
+        const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
+
+        // Auto-cleanup: delete pending bookings older than 30 minutes
+        const stale = bookingRows.filter(
+          (row) => row.status === "pending" && row.created_at < thirtyMinAgo
+        );
+        if (stale.length > 0) {
+          await supabase
+            .from("bookings")
+            .delete()
+            .in("id", stale.map((r) => r.id));
+        }
+
         setBookings(
-          bookingRows.map((row) => ({
-            id: row.id,
-            listingId: row.listing_id,
-            listingTitle: (row.listings as Record<string, unknown>)?.title as string || "Ukjent",
-            listingImage: ((row.listings as Record<string, unknown>)?.images as string[])?.[0] || "",
-            listingCategory: (row.listings as Record<string, unknown>)?.category as Booking["listingCategory"] || "camping",
-            location: `${(row.listings as Record<string, unknown>)?.city || ""}, ${(row.listings as Record<string, unknown>)?.region || ""}`,
-            checkIn: row.check_in,
-            checkOut: row.check_out,
-            totalPrice: row.total_price,
-            status: row.status as Booking["status"],
-            createdAt: row.created_at,
-          }))
+          bookingRows
+            .filter((row) => !(row.status === "pending" && row.created_at < thirtyMinAgo))
+            .map((row) => ({
+              id: row.id,
+              listingId: row.listing_id,
+              listingTitle: (row.listings as Record<string, unknown>)?.title as string || "Ukjent",
+              listingImage: ((row.listings as Record<string, unknown>)?.images as string[])?.[0] || "",
+              listingCategory: (row.listings as Record<string, unknown>)?.category as Booking["listingCategory"] || "camping",
+              location: `${(row.listings as Record<string, unknown>)?.city || ""}, ${(row.listings as Record<string, unknown>)?.region || ""}`,
+              checkIn: row.check_in,
+              checkOut: row.check_out,
+              totalPrice: row.total_price,
+              status: row.status as Booking["status"],
+              createdAt: row.created_at,
+            }))
         );
       }
 
@@ -140,6 +156,17 @@ export default function DashboardPage() {
 
   const handleTabChange = (item: typeof sidebarItems[number]) => {
     setTab(item.key);
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    const result = await cancelBookingAction(bookingId);
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    setBookings((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, status: "cancelled" as const } : b))
+    );
   };
 
   const handleDelete = async (id: string) => {
@@ -249,7 +276,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="mt-4 lg:mt-0 space-y-4">
                     {bookings.map((booking) => (
-                      <BookingCard key={booking.id} booking={booking} />
+                      <BookingCard key={booking.id} booking={booking} onCancel={handleCancelBooking} />
                     ))}
                   </div>
                 )}
