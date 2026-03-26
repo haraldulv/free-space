@@ -45,8 +45,8 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
       });
 
       // Fetch unread notification count
-      const count = await getUnreadCount(userId);
-      setUnreadNotifications(count);
+      const unread = await getUnreadCount(userId);
+      setUnreadNotifications(unread);
     }
 
     // Get initial session
