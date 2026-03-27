@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 
 export default function AuthLayout({
@@ -14,7 +15,7 @@ export default function AuthLayout({
         </span>
       </Link>
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm">
-        {children}
+        <Suspense>{children}</Suspense>
       </div>
     </div>
   );
