@@ -104,8 +104,8 @@ export default function BookingForm({ listing }: BookingFormProps) {
         </div>
       )}
 
-      <Button size="lg" className="mt-6 w-full" disabled>
-        Booking kommer snart
+      <Button onClick={handleBook} size="lg" className="mt-6 w-full">
+        {dateRange?.from && dateRange?.to ? "Reserver" : "Sjekk tilgjengelighet"}
       </Button>
     </div>
   );
