@@ -87,13 +87,17 @@ export async function sendMessageAction(data: {
       .eq("id", user.id)
       .single();
 
-    await supabase.from("notifications").insert({
+    const { error: notifError } = await supabase.from("notifications").insert({
       user_id: recipientId,
       type: "new_message",
       title: "Ny melding",
       body: `${profile?.full_name || "Noen"}: ${data.content.slice(0, 100)}`,
       metadata: { conversationId: data.conversationId },
     });
+
+    if (notifError) {
+      console.error("Notification insert error:", notifError.message, "recipientId:", recipientId);
+    }
 
     return {};
   } catch (err) {
