@@ -79,10 +79,15 @@ export default function ChatView({
     setSending(false);
   };
 
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      e.stopPropagation();
       handleSend();
+      // Keep focus on input to prevent page scroll
+      requestAnimationFrame(() => inputRef.current?.focus());
     }
   };
 
@@ -131,6 +136,7 @@ export default function ChatView({
       <div className="border-t border-neutral-200 p-3">
         <div className="flex items-end gap-2">
           <textarea
+            ref={inputRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}

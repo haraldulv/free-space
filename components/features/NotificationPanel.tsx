@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bell, CalendarCheck, XCircle, CheckCircle } from "lucide-react";
+import { Bell, CalendarCheck, XCircle, CheckCircle, MessageCircle, Star } from "lucide-react";
 import { getNotifications, markAllAsRead } from "@/lib/supabase/notifications";
 import type { AppNotification } from "@/types";
 
@@ -26,6 +26,8 @@ const typeIcons: Record<string, React.ElementType> = {
   booking_received: CalendarCheck,
   booking_confirmed: CheckCircle,
   booking_cancelled: XCircle,
+  new_message: MessageCircle,
+  new_review: Star,
 };
 
 export default function NotificationPanel({ userId, unreadCount, onUnreadChange }: NotificationPanelProps) {
