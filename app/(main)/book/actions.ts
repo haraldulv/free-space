@@ -2,12 +2,32 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
+import { getAvailableSpots } from "@/lib/supabase/listings";
 
 async function getAuthUser() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Ikke innlogget");
   return { supabase, user };
+}
+
+export async function checkAvailabilityAction(data: {
+  listingId: string;
+  checkIn: string;
+  checkOut: string;
+}): Promise<{ availableSpots: number; totalSpots: number }> {
+  const supabase = await createClient();
+
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("spots")
+    .eq("id", data.listingId)
+    .single();
+
+  const totalSpots = listing?.spots || 1;
+  const availableSpots = await getAvailableSpots(data.listingId, data.checkIn, data.checkOut);
+
+  return { availableSpots, totalSpots };
 }
 
 export async function createBookingAction(data: {
@@ -18,6 +38,10 @@ export async function createBookingAction(data: {
 }): Promise<{ bookingId?: string; clientSecret?: string; error?: string }> {
   try {
     const { supabase, user } = await getAuthUser();
+
+    // Check availability before creating booking
+    const available = await getAvailableSpots(data.listingId, data.checkIn, data.checkOut);
+    if (available <= 0) return { error: "Ingen ledige plasser for valgte datoer" };
 
     // Get listing to find host
     const { data: listing } = await supabase

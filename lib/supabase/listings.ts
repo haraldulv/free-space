@@ -112,9 +112,71 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
       const blockedSet = new Set(listing.blockedDates);
       return !requestedDates.some((d) => blockedSet.has(d));
     });
+
+    // Enrich listings with available spots count
+    const listingIds = listings.map((l) => l.id);
+    if (listingIds.length > 0) {
+      const bookedCounts = await getBookedSpotsCounts(supabase, listingIds, filters.checkIn, filters.checkOut);
+      listings = listings.map((l) => ({
+        ...l,
+        availableSpots: l.spots - (bookedCounts.get(l.id) || 0),
+      }));
+      // Filter out fully booked listings
+      listings = listings.filter((l) => (l.availableSpots ?? l.spots) > 0);
+    }
   }
 
   return listings;
+}
+
+/** Count booked spots per listing for a date range */
+async function getBookedSpotsCounts(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  listingIds: string[],
+  checkIn: string,
+  checkOut: string,
+): Promise<Map<string, number>> {
+  const { data } = await supabase
+    .from("bookings")
+    .select("listing_id")
+    .in("listing_id", listingIds)
+    .in("status", ["confirmed", "pending"])
+    .lt("check_in", checkOut)
+    .gt("check_out", checkIn);
+
+  const counts = new Map<string, number>();
+  for (const row of data || []) {
+    const id = row.listing_id as string;
+    counts.set(id, (counts.get(id) || 0) + 1);
+  }
+  return counts;
+}
+
+/** Get available spots for a single listing in a date range */
+export async function getAvailableSpots(
+  listingId: string,
+  checkIn: string,
+  checkOut: string,
+): Promise<number> {
+  const supabase = await createClient();
+
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("spots")
+    .eq("id", listingId)
+    .single();
+
+  if (!listing) return 0;
+
+  const { count } = await supabase
+    .from("bookings")
+    .select("id", { count: "exact", head: true })
+    .eq("listing_id", listingId)
+    .in("status", ["confirmed", "pending"])
+    .lt("check_in", checkOut)
+    .gt("check_out", checkIn);
+
+  return listing.spots - (count || 0);
 }
 
 /** Calculate distance between two coordinates in km */

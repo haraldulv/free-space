@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { DateRange } from "react-day-picker";
-import { differenceInDays } from "date-fns";
-import { CalendarDays, Star } from "lucide-react";
+import { differenceInDays, format } from "date-fns";
+import { CalendarDays, Star, Users } from "lucide-react";
 import DatePicker from "@/components/ui/DatePicker";
 import Button from "@/components/ui/Button";
 import { Listing } from "@/types";
+import { checkAvailabilityAction } from "@/app/(main)/book/actions";
 
 interface BookingFormProps {
   listing: Listing;
@@ -17,11 +18,30 @@ export default function BookingForm({ listing }: BookingFormProps) {
   const router = useRouter();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);
+  const [availability, setAvailability] = useState<{ availableSpots: number; totalSpots: number } | null>(null);
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   const nights =
     dateRange?.from && dateRange?.to
       ? differenceInDays(dateRange.to, dateRange.from)
       : 0;
+
+  // Check availability when dates change
+  useEffect(() => {
+    if (!dateRange?.from || !dateRange?.to || nights < 1) {
+      setAvailability(null);
+      return;
+    }
+    setCheckingAvailability(true);
+    checkAvailabilityAction({
+      listingId: listing.id,
+      checkIn: format(dateRange.from, "yyyy-MM-dd"),
+      checkOut: format(dateRange.to, "yyyy-MM-dd"),
+    }).then((result) => {
+      setAvailability(result);
+      setCheckingAvailability(false);
+    });
+  }, [dateRange?.from?.getTime(), dateRange?.to?.getTime(), listing.id, nights]);
 
   const subtotal = listing.price * (nights || 1);
   const serviceFee = Math.round(subtotal * 0.1);
@@ -85,6 +105,15 @@ export default function BookingForm({ listing }: BookingFormProps) {
         )}
       </div>
 
+      {nights > 0 && availability && (
+        <div className="mt-4 flex items-center gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-sm">
+          <Users className="h-4 w-4 text-neutral-400" />
+          <span className={availability.availableSpots === 0 ? "font-medium text-red-600" : "text-neutral-600"}>
+            {availability.availableSpots}/{availability.totalSpots} plasser tilgjengelig
+          </span>
+        </div>
+      )}
+
       {nights > 0 && (
         <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 text-sm">
           <div className="flex justify-between text-neutral-600">
@@ -104,8 +133,19 @@ export default function BookingForm({ listing }: BookingFormProps) {
         </div>
       )}
 
-      <Button onClick={handleBook} size="lg" className="mt-6 w-full">
-        {dateRange?.from && dateRange?.to ? "Reserver" : "Sjekk tilgjengelighet"}
+      <Button
+        onClick={handleBook}
+        size="lg"
+        className="mt-6 w-full"
+        disabled={checkingAvailability || (availability !== null && availability.availableSpots === 0)}
+      >
+        {checkingAvailability
+          ? "Sjekker tilgjengelighet..."
+          : availability?.availableSpots === 0
+            ? "Fullbooket"
+            : dateRange?.from && dateRange?.to
+              ? "Reserver"
+              : "Sjekk tilgjengelighet"}
       </Button>
     </div>
   );

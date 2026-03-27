@@ -101,6 +101,7 @@ export interface Listing {
   instantBooking?: boolean;
   isActive?: boolean;
   blockedDates?: string[];
+  availableSpots?: number;
 }
 
 export interface Booking {
