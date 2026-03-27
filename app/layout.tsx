@@ -10,7 +10,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Free Space — Parkering og camping i Norge",
+  title: "SpotShare — Parkering og camping i Norge",
   description:
     "Finn og book parkeringsplasser og campingplasser over hele Norge. Pendlerparkering og bobilturisme gjort enkelt.",
 };

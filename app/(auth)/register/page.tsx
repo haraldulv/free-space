@@ -36,7 +36,7 @@ export default function RegisterPage() {
     <div className="space-y-5">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-neutral-900">Opprett konto</h1>
-        <p className="mt-1 text-sm text-neutral-500">Bli med på Free Space og begynn å booke</p>
+        <p className="mt-1 text-sm text-neutral-500">Bli med på SpotShare og begynn å booke</p>
       </div>
 
       <GoogleSignInButton redirectTo={redirectTo} />

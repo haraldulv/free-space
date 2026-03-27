@@ -86,8 +86,8 @@ export default function Navbar({
         {/* Logo */}
         <Link href="/" className="shrink-0 group">
           <span className="text-[22px] text-neutral-900 transition-opacity group-hover:opacity-70 lowercase">
-            <span className="font-extralight tracking-tighter">free</span>
-            <span className="font-bold italic tracking-tight">space</span>
+            <span className="font-extralight tracking-tighter">spot</span>
+            <span className="font-bold italic tracking-tight">share</span>
           </span>
         </Link>
 

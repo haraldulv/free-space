@@ -34,8 +34,8 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
       <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4 text-center">
         <div>
           <span className="text-2xl text-neutral-900 lowercase">
-            <span className="font-extralight tracking-tighter">free</span>
-            <span className="font-bold italic tracking-tight">space</span>
+            <span className="font-extralight tracking-tighter">spot</span>
+            <span className="font-bold italic tracking-tight">share</span>
           </span>
         </div>
         <p className="text-sm text-neutral-500">Skriv inn passord for å fortsette</p>
