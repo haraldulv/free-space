@@ -1,12 +1,6 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 
 export default function RegisterPage() {
-  const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
-
   return (
     <div className="space-y-5">
       <div className="text-center">
@@ -17,7 +11,7 @@ export default function RegisterPage() {
       <p className="text-center text-sm text-neutral-400">
         Har du allerede en konto?{" "}
         <Link
-          href={`/login${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
+          href="/login"
           className="text-primary-600 hover:text-primary-700"
         >
           Logg inn
