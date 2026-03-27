@@ -94,12 +94,17 @@ export default function NotificationPanel({ userId, unreadCount, onUnreadChange 
               ) : (
                 notifications.map((notification) => {
                   const Icon = typeIcons[notification.type] || Bell;
+                  const href = notification.type === "new_message" && notification.metadata?.conversationId
+                    ? `/dashboard?tab=messages&conversation=${notification.metadata.conversationId}`
+                    : undefined;
+                  const Wrapper = href ? "a" : "div";
                   return (
-                    <div
+                    <Wrapper
                       key={notification.id}
+                      {...(href ? { href, onClick: () => setOpen(false) } : {})}
                       className={`flex gap-3 px-4 py-3 border-b border-neutral-50 ${
                         !notification.read ? "bg-primary-50/50" : ""
-                      }`}
+                      } ${href ? "cursor-pointer hover:bg-neutral-50 transition-colors" : ""}`}
                     >
                       <div className={`mt-0.5 shrink-0 ${!notification.read ? "text-primary-600" : "text-neutral-400"}`}>
                         <Icon className="h-4 w-4" />
@@ -113,7 +118,7 @@ export default function NotificationPanel({ userId, unreadCount, onUnreadChange 
                         )}
                         <p className="mt-1 text-xs text-neutral-400">{timeAgo(notification.createdAt)}</p>
                       </div>
-                    </div>
+                    </Wrapper>
                   );
                 })
               )}

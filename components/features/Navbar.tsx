@@ -140,7 +140,7 @@ export default function Navbar({
             </button>
 
             {menuOpen && (
-              <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-neutral-100 bg-white py-2 shadow-xl">
+              <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-neutral-100 bg-white py-2 shadow-xl z-50">
                 {user ? (
                   <>
                     <Link href="/dashboard" className={menuItemClass} onClick={() => setMenuOpen(false)}>
@@ -213,7 +213,7 @@ export default function Navbar({
               </button>
 
               {avatarMenuOpen && (
-                <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-neutral-100 bg-white py-2 shadow-xl">
+                <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-neutral-100 bg-white py-2 shadow-xl z-50">
                   <div className="px-4 py-2.5 border-b border-neutral-100">
                     <p className="text-sm font-medium text-neutral-900">{user.fullName || "Min konto"}</p>
                     <p className="text-xs text-neutral-500 truncate">{user.email}</p>
