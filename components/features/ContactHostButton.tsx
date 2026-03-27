@@ -25,7 +25,7 @@ export default function ContactHostButton({ listingId, hostId }: ContactHostButt
       return;
     }
 
-    window.location.href = `/meldinger?id=${result.conversationId}`;
+    window.location.href = `/dashboard?tab=messages&conversation=${result.conversationId}`;
   };
 
   return (

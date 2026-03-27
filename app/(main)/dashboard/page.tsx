@@ -10,23 +10,28 @@ import {
   Building2,
   Heart,
   Megaphone,
+  MessageCircle,
   Settings,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/(main)/bli-utleier/actions";
 import { cancelBookingAction } from "@/app/(main)/book/actions";
+import { getConversations } from "@/lib/supabase/chat";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingCard from "@/components/features/BookingCard";
 import HostListingCard from "@/components/features/HostListingCard";
 import SettingsPanel from "@/components/features/SettingsPanel";
-import { Booking, Listing } from "@/types";
+import ConversationList from "@/components/features/ConversationList";
+import ChatView from "@/components/features/ChatView";
+import { Booking, Listing, Conversation } from "@/types";
 
-type Tab = "bookings" | "favorites" | "listings" | "settings";
+type Tab = "bookings" | "favorites" | "listings" | "messages" | "settings";
 
 const sidebarItems: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "bookings", label: "Mine bestillinger", icon: CalendarCheck },
   { key: "favorites", label: "Favoritter", icon: Heart },
+  { key: "messages", label: "Meldinger", icon: MessageCircle },
   { key: "listings", label: "Mine annonser", icon: Megaphone },
   { key: "settings", label: "Innstillinger", icon: Settings },
 ];
@@ -72,15 +77,20 @@ function rowToListing(row: Record<string, unknown>): Listing {
 export default function DashboardPage() {
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
+  const conversationIdParam = searchParams.get("conversation");
   const initialTab: Tab =
     tabParam === "listings" || tabParam === "annonser" ? "listings"
     : tabParam === "favoritter" ? "favorites"
+    : tabParam === "meldinger" || tabParam === "messages" || conversationIdParam ? "messages"
     : tabParam === "settings" ? "settings"
     : "bookings";
   const [tab, setTab] = useState<Tab>(initialTab);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [favorites, setFavorites] = useState<Listing[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [selectedConvo, setSelectedConvo] = useState<Conversation | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -150,9 +160,51 @@ export default function DashboardPage() {
         );
       }
 
+      // Fetch conversations
+      setUserId(data.user.id);
+      const convos = await getConversations(data.user.id);
+      setConversations(convos);
+
+      // Auto-select conversation from URL param
+      if (conversationIdParam) {
+        const match = convos.find((c) => c.id === conversationIdParam);
+        if (match) {
+          setSelectedConvo(match);
+        } else {
+          const { data: convoRow } = await supabase
+            .from("conversations")
+            .select(`*, guest:guest_id(full_name, avatar_url), host:host_id(full_name, avatar_url), listing:listing_id(title, images)`)
+            .eq("id", conversationIdParam)
+            .single();
+
+          if (convoRow) {
+            const isGuest = convoRow.guest_id === data.user.id;
+            const otherUser = isGuest ? (convoRow.host as Record<string, unknown>) : (convoRow.guest as Record<string, unknown>);
+            const listing = convoRow.listing as Record<string, unknown> | null;
+            const newConvo: Conversation = {
+              id: convoRow.id,
+              listingId: convoRow.listing_id,
+              guestId: convoRow.guest_id,
+              hostId: convoRow.host_id,
+              bookingId: convoRow.booking_id,
+              lastMessageAt: convoRow.last_message_at,
+              createdAt: convoRow.created_at,
+              otherUserName: (otherUser?.full_name as string) || "Anonym",
+              otherUserAvatar: (otherUser?.avatar_url as string) || "",
+              listingTitle: (listing?.title as string) || "",
+              listingImage: ((listing?.images as string[]) || [])[0] || "",
+              lastMessageText: "",
+              unreadCount: 0,
+            };
+            setConversations((prev) => [newConvo, ...prev]);
+            setSelectedConvo(newConvo);
+          }
+        }
+      }
+
       setLoaded(true);
     });
-  }, []);
+  }, [conversationIdParam]);
 
   const handleTabChange = (item: typeof sidebarItems[number]) => {
     setTab(item.key);
@@ -374,6 +426,38 @@ export default function DashboardPage() {
                   </div>
                 )}
               </>
+            )}
+
+            {/* Messages */}
+            {tab === "messages" && (
+              <div className="mt-4 lg:mt-0">
+                <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white" style={{ height: "min(600px, calc(100vh - 220px))" }}>
+                  <div className="flex h-full">
+                    <div className={`${selectedConvo ? "hidden lg:block" : ""} w-full lg:w-80 border-r border-neutral-200 overflow-y-auto`}>
+                      <ConversationList
+                        conversations={conversations}
+                        selectedId={selectedConvo?.id}
+                        onSelect={setSelectedConvo}
+                      />
+                    </div>
+                    <div className={`${selectedConvo ? "" : "hidden lg:flex"} flex-1 flex flex-col`}>
+                      {selectedConvo && userId ? (
+                        <ChatView
+                          conversationId={selectedConvo.id}
+                          currentUserId={userId}
+                          otherUserName={selectedConvo.otherUserName || "Anonym"}
+                          listingTitle={selectedConvo.listingTitle || ""}
+                          onBack={() => setSelectedConvo(null)}
+                        />
+                      ) : (
+                        <div className="flex flex-1 items-center justify-center text-sm text-neutral-400">
+                          Velg en samtale
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
 
             {/* Settings */}

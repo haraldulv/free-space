@@ -149,7 +149,7 @@ export default function Navbar({
                       <Heart className="h-4 w-4 text-neutral-400" />
                       Favoritter
                     </Link>
-                    <Link href="/meldinger" className={menuItemClass} onClick={() => setMenuOpen(false)}>
+                    <Link href="/dashboard?tab=meldinger" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <MessageCircle className="h-4 w-4 text-neutral-400" />
                       Meldinger
                     </Link>
