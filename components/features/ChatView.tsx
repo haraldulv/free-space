@@ -26,7 +26,6 @@ export default function ChatView({
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
-  const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     getMessages(conversationId).then((msgs) => {
@@ -50,8 +49,12 @@ export default function ChatView({
     };
   }, [conversationId]);
 
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
+    }
   }, [messages]);
 
   const handleSend = async () => {
@@ -99,7 +102,7 @@ export default function ChatView({
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
           <p className="text-center text-sm text-neutral-400 mt-8">Ingen meldinger ennå. Start samtalen!</p>
         )}
@@ -122,7 +125,6 @@ export default function ChatView({
             </div>
           );
         })}
-        <div ref={bottomRef} />
       </div>
 
       {/* Input */}
