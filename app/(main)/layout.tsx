@@ -6,6 +6,7 @@ import Navbar from "@/components/features/Navbar";
 import Footer from "@/components/features/Footer";
 import { createClient } from "@/lib/supabase/client";
 import { getUnreadCount } from "@/lib/supabase/notifications";
+import { getUnreadMessageCount } from "@/lib/supabase/chat";
 import { ListingCategory, VehicleType } from "@/types";
 
 function MainLayoutInner({ children }: { children: React.ReactNode }) {
@@ -17,6 +18,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<{ email: string; fullName?: string; avatar?: string; id?: string } | null>(null);
   const [isHost, setIsHost] = useState(false);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
     const supabase = createClient();
@@ -47,6 +49,10 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
       // Fetch unread notification count
       const unread = await getUnreadCount(userId);
       setUnreadNotifications(unread);
+
+      // Fetch unread message count
+      const unreadMsgs = await getUnreadMessageCount(userId);
+      setUnreadMessages(unreadMsgs);
     }
 
     // Get initial session
@@ -114,6 +120,7 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         user={user}
         isHost={isHost}
         unreadNotifications={unreadNotifications}
+        unreadMessages={unreadMessages}
         onUnreadChange={setUnreadNotifications}
         onSignOut={handleSignOut}
         selectedCategory={category}

@@ -25,6 +25,7 @@ interface NavbarProps {
   user?: { email: string; fullName?: string; avatar?: string; id?: string } | null;
   isHost?: boolean;
   unreadNotifications?: number;
+  unreadMessages?: number;
   onUnreadChange?: (count: number) => void;
   onSignOut?: () => void;
   selectedCategory?: ListingCategory;
@@ -41,6 +42,7 @@ export default function Navbar({
   user,
   isHost,
   unreadNotifications = 0,
+  unreadMessages = 0,
   onUnreadChange,
   onSignOut,
   selectedCategory,
@@ -152,6 +154,11 @@ export default function Navbar({
                     <Link href="/dashboard?tab=meldinger" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <MessageCircle className="h-4 w-4 text-neutral-400" />
                       Meldinger
+                      {unreadMessages > 0 && (
+                        <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                          {unreadMessages}
+                        </span>
+                      )}
                     </Link>
                     {isHost ? (
                       <Link href="/dashboard?tab=annonser" className={menuItemClass} onClick={() => setMenuOpen(false)}>

@@ -266,6 +266,7 @@ export default function DashboardPage() {
               {sidebarItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = tab === item.key;
+                const unread = item.key === "messages" ? conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0) : 0;
                 return (
                   <li key={item.key}>
                     <button
@@ -278,6 +279,11 @@ export default function DashboardPage() {
                     >
                       <Icon className={`h-[18px] w-[18px] ${isActive ? "text-primary-600" : "text-neutral-400"}`} />
                       {item.label}
+                      {unread > 0 && (
+                        <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
+                          {unread}
+                        </span>
+                      )}
                     </button>
                   </li>
                 );
@@ -289,17 +295,23 @@ export default function DashboardPage() {
           <div className="flex gap-1 border-b border-neutral-200 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:hidden">
             {sidebarItems.map((item) => {
               const isActive = tab === item.key;
+              const unread = item.key === "messages" ? conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0) : 0;
               return (
                 <button
                   key={item.key}
                   onClick={() => handleTabChange(item)}
-                  className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`relative px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors ${
                     isActive
                       ? "border-b-2 border-primary-600 text-primary-600"
                       : "text-neutral-500 hover:text-neutral-700"
                   }`}
                 >
                   {item.label}
+                  {unread > 0 && (
+                    <span className="ml-1.5 inline-flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+                      {unread}
+                    </span>
+                  )}
                 </button>
               );
             })}
