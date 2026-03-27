@@ -35,7 +35,13 @@ export default function ChatView({
     });
 
     const channel = subscribeToMessages(conversationId, (msg) => {
-      setMessages((prev) => [...prev, msg]);
+      setMessages((prev) => {
+        // Skip if we already have this message (optimistic or duplicate)
+        if (prev.some((m) => m.content === msg.content && m.senderId === msg.senderId && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 5000)) {
+          return prev;
+        }
+        return [...prev, msg];
+      });
       markMessagesReadAction(conversationId);
     });
 

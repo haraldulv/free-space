@@ -93,7 +93,7 @@ export default function MeldingerPage() {
       <Container className="py-8">
         <h1 className="text-2xl font-semibold text-neutral-900">Meldinger</h1>
 
-        <div className="mt-6 overflow-hidden rounded-xl border border-neutral-200 bg-white" style={{ height: "calc(100vh - 200px)" }}>
+        <div className="mt-6 overflow-hidden rounded-xl border border-neutral-200 bg-white" style={{ height: "min(600px, calc(100vh - 200px))" }}>
           <div className="flex h-full">
             {/* Conversation list */}
             <div className={`${selected ? "hidden lg:block" : ""} w-full lg:w-80 border-r border-neutral-200 overflow-y-auto`}>
