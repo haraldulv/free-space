@@ -122,6 +122,45 @@ export interface Booking {
   paymentStatus?: "pending" | "paid" | "failed" | "refunded";
 }
 
+export interface Review {
+  id: string;
+  bookingId: string;
+  listingId: string;
+  userId: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  userName?: string;
+  userAvatar?: string;
+}
+
+export interface Conversation {
+  id: string;
+  listingId: string;
+  guestId: string;
+  hostId: string;
+  bookingId?: string;
+  lastMessageAt: string;
+  createdAt: string;
+  otherUserName?: string;
+  otherUserAvatar?: string;
+  listingTitle?: string;
+  listingImage?: string;
+  lastMessageText?: string;
+  unreadCount?: number;
+}
+
+export interface Message {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  content: string;
+  read: boolean;
+  createdAt: string;
+  senderName?: string;
+  senderAvatar?: string;
+}
+
 export interface AppNotification {
   id: string;
   userId: string;

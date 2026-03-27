@@ -2,9 +2,10 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { CalendarDays, MapPin, Car, Tent, X } from "lucide-react";
+import { CalendarDays, MapPin, Car, Tent, Star } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
+import ReviewForm from "@/components/features/ReviewForm";
 import { Booking } from "@/types";
 
 interface BookingCardProps {
@@ -15,10 +16,14 @@ interface BookingCardProps {
 export default function BookingCard({ booking, onCancel }: BookingCardProps) {
   const [cancelling, setCancelling] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [showReview, setShowReview] = useState(false);
+  const [reviewed, setReviewed] = useState(false);
   const CategoryIcon = booking.listingCategory === "parking" ? Car : Tent;
   const checkIn = new Date(booking.checkIn).toLocaleDateString("nb-NO");
   const checkOut = new Date(booking.checkOut).toLocaleDateString("nb-NO");
   const canCancel = booking.status === "pending" || booking.status === "confirmed";
+  const isPast = new Date(booking.checkOut) < new Date();
+  const canReview = booking.status === "confirmed" && isPast && !reviewed;
 
   const handleCancel = async () => {
     if (!onCancel) return;
@@ -78,7 +83,16 @@ export default function BookingCard({ booking, onCancel }: BookingCardProps) {
           <span className="font-medium text-neutral-900">
             {booking.totalPrice} kr
           </span>
-          {canCancel && onCancel && (
+          {canReview && (
+            <button
+              onClick={() => setShowReview(!showReview)}
+              className="ml-auto flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+            >
+              <Star className="h-3.5 w-3.5" />
+              Skriv anmeldelse
+            </button>
+          )}
+          {canCancel && onCancel && !canReview && (
             <>
               {!showConfirm ? (
                 <button
@@ -111,6 +125,18 @@ export default function BookingCard({ booking, onCancel }: BookingCardProps) {
           )}
         </div>
       </div>
+      {showReview && (
+        <div className="border-t border-neutral-100 p-4">
+          <ReviewForm
+            bookingId={booking.id}
+            listingId={booking.listingId}
+            onSuccess={() => {
+              setShowReview(false);
+              setReviewed(true);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

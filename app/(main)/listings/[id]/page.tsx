@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { MapPin, Users } from "lucide-react";
 import { getListingById, getAllListingIds } from "@/lib/supabase/listings";
+import { getListingReviews } from "@/lib/supabase/reviews";
 import Container from "@/components/ui/Container";
 import Badge from "@/components/ui/Badge";
 import ImageGallery from "@/components/features/ImageGallery";
@@ -9,6 +10,7 @@ import HostCard from "@/components/features/HostCard";
 import BookingForm from "@/components/features/BookingForm";
 import ListingFavoriteButton from "@/components/features/ListingFavoriteButton";
 import ListingMap from "@/components/features/ListingMap";
+import ReviewList from "@/components/features/ReviewList";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,10 @@ export default async function ListingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const listing = await getListingById(id);
+  const [listing, reviews] = await Promise.all([
+    getListingById(id),
+    getListingReviews(id),
+  ]);
   if (!listing) notFound();
 
   return (
@@ -96,7 +101,11 @@ export default async function ListingPage({
           </div>
 
           <div className="mt-6 border-t border-neutral-100 pt-6">
-            <HostCard host={listing.host} />
+            <HostCard host={listing.host} listingId={listing.id} />
+          </div>
+
+          <div className="mt-6 border-t border-neutral-100 pt-6">
+            <ReviewList reviews={reviews} rating={listing.rating} reviewCount={listing.reviewCount} />
           </div>
         </div>
 

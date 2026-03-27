@@ -15,6 +15,7 @@ import {
   LogIn,
   UserPlus,
   Search,
+  MessageCircle,
 } from "lucide-react";
 import SearchBar from "./SearchBar";
 import NotificationPanel from "./NotificationPanel";
@@ -147,6 +148,10 @@ export default function Navbar({
                     <Link href="/dashboard?tab=favoritter" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <Heart className="h-4 w-4 text-neutral-400" />
                       Favoritter
+                    </Link>
+                    <Link href="/meldinger" className={menuItemClass} onClick={() => setMenuOpen(false)}>
+                      <MessageCircle className="h-4 w-4 text-neutral-400" />
+                      Meldinger
                     </Link>
                     {isHost ? (
                       <Link href="/dashboard?tab=annonser" className={menuItemClass} onClick={() => setMenuOpen(false)}>
