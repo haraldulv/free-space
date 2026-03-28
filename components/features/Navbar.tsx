@@ -54,6 +54,7 @@ export default function Navbar({
 }: NavbarProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -73,6 +74,21 @@ export default function Navbar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  // Collapse navbar on scroll (home + dashboard only)
+  const isCollapsible = pathname === "/" || pathname === "/dashboard";
+  useEffect(() => {
+    if (!isCollapsible) {
+      setScrolled(false);
+      return;
+    }
+    function handleScroll() {
+      setScrolled(window.scrollY > 40);
+    }
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isCollapsible]);
+
   // On homepage: match Container padding (px-6 sm:px-10 lg:px-20)
   // On search page: tighter padding (px-5 sm:px-6 lg:px-8)
   const padClass = isSearchPage
@@ -83,9 +99,11 @@ export default function Navbar({
 
   const initial = user?.fullName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?";
 
+  const collapsed = isCollapsible && scrolled;
+
   return (
-    <header className={`sticky top-0 z-50 border-b border-neutral-200/60 ${isHome ? "glass-navbar" : "bg-white"}`}>
-      <div className={`flex items-center justify-between gap-4 ${padClass} ${isSearchPage ? "py-3" : "pt-4 pb-2"}`}>
+    <header className={`sticky top-0 z-50 border-b border-neutral-200/60 transition-all duration-300 ${isHome ? "glass-navbar" : "bg-white"}`}>
+      <div className={`flex items-center justify-between gap-4 ${padClass} ${isSearchPage ? "py-3" : collapsed ? "py-2.5" : "pt-4 pb-2"}`}>
         {/* Logo */}
         <Link href="/" className="shrink-0 group">
           <span className="text-[22px] text-neutral-900 transition-opacity group-hover:opacity-70 lowercase">
@@ -233,18 +251,26 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Full search bar row — only on non-search pages */}
+      {/* Full search bar row — only on non-search pages, collapses on scroll */}
       {!isSearchPage && (
-        <div className={`hidden md:flex justify-center pb-5 pt-2 ${padClass}`}>
+        <div
+          className={`hidden md:flex justify-center ${padClass} transition-all duration-300 ease-in-out overflow-hidden ${
+            collapsed ? "max-h-0 opacity-0 pb-0 pt-0" : "max-h-24 opacity-100 pb-5 pt-2"
+          }`}
+        >
           <div className="w-full max-w-2xl">
             <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} initialCheckIn={searchCheckIn} initialCheckOut={searchCheckOut} />
           </div>
         </div>
       )}
 
-      {/* Mobile search bar — only on non-search pages */}
+      {/* Mobile search bar — only on non-search pages, collapses on scroll */}
       {!isSearchPage && (
-        <div className={`pb-3 md:hidden ${padClass}`}>
+        <div
+          className={`md:hidden ${padClass} transition-all duration-300 ease-in-out overflow-hidden ${
+            collapsed ? "max-h-0 opacity-0 pb-0" : "max-h-24 opacity-100 pb-3"
+          }`}
+        >
           <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} initialCheckIn={searchCheckIn} initialCheckOut={searchCheckOut} />
         </div>
       )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { Listing } from "@/types";
 
@@ -124,6 +124,7 @@ export default function SearchMapInner({
   onSelect,
   onBoundsChange,
 }: SearchMapInnerProps) {
+  const [mapType, setMapType] = useState<"roadmap" | "hybrid">("roadmap");
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Map<string, PriceOverlay>>(new Map());
@@ -381,6 +382,13 @@ export default function SearchMapInner({
     }
   }, [selectedListingId, listings, onSelect]);
 
+  // Sync map type
+  useEffect(() => {
+    if (mapRef.current) {
+      mapRef.current.setMapTypeId(mapType);
+    }
+  }, [mapType]);
+
   if (!API_KEY) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-neutral-100">
@@ -391,5 +399,26 @@ export default function SearchMapInner({
     );
   }
 
-  return <div ref={containerRef} className="h-full w-full" />;
+  return (
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="h-full w-full" />
+      <button
+        onClick={() => setMapType((t) => t === "roadmap" ? "hybrid" : "roadmap")}
+        className="absolute bottom-4 left-4 flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs font-medium text-neutral-700 shadow-md transition-all hover:shadow-lg"
+        title={mapType === "roadmap" ? "Bytt til satellitt" : "Bytt til kart"}
+      >
+        {mapType === "roadmap" ? (
+          <>
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+            Satellitt
+          </>
+        ) : (
+          <>
+            <svg className="h-3.5 w-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            Kart
+          </>
+        )}
+      </button>
+    </div>
+  );
 }
