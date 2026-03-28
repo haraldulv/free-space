@@ -15,10 +15,10 @@ export async function getNotifications(userId: string): Promise<AppNotification[
   return data.map((row) => ({
     id: row.id,
     userId: row.user_id,
-    type: row.type,
+    type: row.type as AppNotification["type"],
     title: row.title,
     body: row.body,
-    metadata: row.metadata,
+    metadata: row.metadata as Record<string, unknown> | undefined,
     read: row.read,
     createdAt: row.created_at,
   }));
