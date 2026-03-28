@@ -166,7 +166,7 @@ export interface Message {
 export interface AppNotification {
   id: string;
   userId: string;
-  type: "booking_received" | "booking_confirmed" | "booking_cancelled" | "payout_sent";
+  type: "booking_received" | "booking_confirmed" | "booking_cancelled" | "new_message" | "new_review" | "payout_sent";
   title: string;
   body?: string;
   metadata?: Record<string, unknown>;
