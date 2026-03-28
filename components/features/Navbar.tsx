@@ -98,8 +98,8 @@ export default function Navbar({
 
   const initial = user?.fullName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?";
 
-  // Home: collapse on scroll. Dashboard: always compact. Others: full.
-  const collapsed = (isHome && scrolled) || isDashboard;
+  // Home: collapse on scroll. All other pages: always compact.
+  const collapsed = isHome ? scrolled : !isSearchPage;
 
   return (
     <header className={`sticky top-0 z-50 border-b border-neutral-200/60 transition-all duration-300 ${isHome ? "glass-navbar" : "bg-white"}`}>
@@ -251,13 +251,11 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Full search bar row — pages with full navbar (not search, not dashboard, not collapsed home) */}
-      {!isSearchPage && !isDashboard && (
+      {/* Full search bar row — only homepage when not scrolled */}
+      {!isSearchPage && (
         <div
-          className={`hidden md:flex justify-center ${padClass} overflow-hidden ${
-            isHome
-              ? `transition-all duration-300 ease-in-out ${collapsed ? "max-h-0 opacity-0 pb-0 pt-0" : "max-h-24 opacity-100 pb-5 pt-2"}`
-              : "pb-5 pt-2"
+          className={`hidden md:flex justify-center ${padClass} overflow-hidden transition-all duration-300 ease-in-out ${
+            collapsed ? "max-h-0 opacity-0 pb-0 pt-0" : "max-h-24 opacity-100 pb-5 pt-2"
           }`}
         >
           <div className="w-full max-w-2xl">
@@ -266,13 +264,11 @@ export default function Navbar({
         </div>
       )}
 
-      {/* Mobile search bar — pages with full navbar */}
-      {!isSearchPage && !isDashboard && (
+      {/* Mobile search bar — only homepage when not scrolled */}
+      {!isSearchPage && (
         <div
-          className={`md:hidden ${padClass} overflow-hidden ${
-            isHome
-              ? `transition-all duration-300 ease-in-out ${collapsed ? "max-h-0 opacity-0 pb-0" : "max-h-24 opacity-100 pb-3"}`
-              : "pb-3"
+          className={`md:hidden ${padClass} overflow-hidden transition-all duration-300 ease-in-out ${
+            collapsed ? "max-h-0 opacity-0 pb-0" : "max-h-24 opacity-100 pb-3"
           }`}
         >
           <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} initialCheckIn={searchCheckIn} initialCheckOut={searchCheckOut} />
