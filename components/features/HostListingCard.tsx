@@ -3,9 +3,10 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Pencil, Trash2, Zap, Users, Eye, EyeOff } from "lucide-react";
+import { Pencil, Trash2, Zap, Users, Eye, EyeOff, QrCode } from "lucide-react";
 import { Listing } from "@/types";
 import Badge from "@/components/ui/Badge";
+import QrCodeModal from "@/components/features/QrCodeModal";
 
 interface HostListingCardProps {
   listing: Listing;
@@ -15,6 +16,7 @@ interface HostListingCardProps {
 
 export default function HostListingCard({ listing, onDelete, onToggleActive }: HostListingCardProps) {
   const [toggling, setToggling] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const isActive = listing.isActive !== false;
 
   const handleToggle = async () => {
@@ -83,6 +85,13 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
       {/* Actions */}
       <div className="flex shrink-0 flex-col gap-1.5">
         <button
+          onClick={() => setShowQr(true)}
+          title="QR-koder"
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
+        >
+          <QrCode className="h-3.5 w-3.5" />
+        </button>
+        <button
           onClick={handleToggle}
           disabled={toggling}
           title={isActive ? "Deaktiver annonse" : "Aktiver annonse"}
@@ -111,6 +120,8 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
           <Trash2 className="h-3.5 w-3.5" />
         </button>
       </div>
+
+      {showQr && <QrCodeModal listing={listing} onClose={() => setShowQr(false)} />}
     </div>
   );
 }
