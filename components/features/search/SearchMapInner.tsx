@@ -124,7 +124,7 @@ export default function SearchMapInner({
   onSelect,
   onBoundsChange,
 }: SearchMapInnerProps) {
-  const [mapType, setMapType] = useState<"roadmap" | "hybrid">("roadmap");
+  const [mapType, setMapType] = useState<"roadmap" | "hybrid">("hybrid");
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Map<string, PriceOverlay>>(new Map());
