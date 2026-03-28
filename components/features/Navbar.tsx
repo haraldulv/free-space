@@ -254,8 +254,8 @@ export default function Navbar({
       {/* Full search bar row — only homepage when not scrolled */}
       {!isSearchPage && (
         <div
-          className={`hidden md:flex justify-center ${padClass} overflow-hidden transition-all duration-300 ease-in-out ${
-            collapsed ? "max-h-0 opacity-0 pb-0 pt-0" : "max-h-24 opacity-100 pb-5 pt-2"
+          className={`hidden md:flex justify-center ${padClass} transition-all duration-300 ease-in-out ${
+            collapsed ? "max-h-0 opacity-0 pb-0 pt-0 overflow-hidden" : "max-h-24 opacity-100 pb-5 pt-2"
           }`}
         >
           <div className="w-full max-w-2xl">
@@ -267,8 +267,8 @@ export default function Navbar({
       {/* Mobile search bar — only homepage when not scrolled */}
       {!isSearchPage && (
         <div
-          className={`md:hidden ${padClass} overflow-hidden transition-all duration-300 ease-in-out ${
-            collapsed ? "max-h-0 opacity-0 pb-0" : "max-h-24 opacity-100 pb-3"
+          className={`md:hidden ${padClass} transition-all duration-300 ease-in-out ${
+            collapsed ? "max-h-0 opacity-0 pb-0 overflow-hidden" : "max-h-24 opacity-100 pb-3"
           }`}
         >
           <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} initialCheckIn={searchCheckIn} initialCheckOut={searchCheckOut} />
