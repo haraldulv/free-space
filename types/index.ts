@@ -102,6 +102,8 @@ export interface Listing {
   isActive?: boolean;
   blockedDates?: string[];
   availableSpots?: number;
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 export interface Booking {
@@ -164,7 +166,7 @@ export interface Message {
 export interface AppNotification {
   id: string;
   userId: string;
-  type: "booking_received" | "booking_confirmed" | "booking_cancelled";
+  type: "booking_received" | "booking_confirmed" | "booking_cancelled" | "payout_sent";
   title: string;
   body?: string;
   metadata?: Record<string, unknown>;

@@ -18,6 +18,8 @@ export async function getProfileAction(): Promise<{
     responseRate: number;
     responseTime: string;
     joinedYear: number;
+    stripeOnboardingComplete?: boolean;
+    stripeAccountId?: string;
   };
   error?: string;
 }> {
@@ -26,7 +28,7 @@ export async function getProfileAction(): Promise<{
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, avatar_url, response_rate, response_time, joined_year")
+      .select("full_name, avatar_url, response_rate, response_time, joined_year, stripe_account_id, stripe_onboarding_complete")
       .eq("id", user.id)
       .single();
 
@@ -39,6 +41,8 @@ export async function getProfileAction(): Promise<{
         responseRate: profile?.response_rate || 0,
         responseTime: profile?.response_time || "innen 1 time",
         joinedYear: profile?.joined_year || new Date().getFullYear(),
+        stripeOnboardingComplete: profile?.stripe_onboarding_complete || false,
+        stripeAccountId: profile?.stripe_account_id ? `****${profile.stripe_account_id.slice(-4)}` : undefined,
       },
     };
   } catch (err) {

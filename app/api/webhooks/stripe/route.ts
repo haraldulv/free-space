@@ -74,6 +74,16 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  if (event.type === "account.updated") {
+    const account = event.data.object;
+    if (account.charges_enabled) {
+      await supabase
+        .from("profiles")
+        .update({ stripe_onboarding_complete: true })
+        .eq("stripe_account_id", account.id);
+    }
+  }
+
   if (event.type === "payment_intent.payment_failed") {
     const paymentIntent = event.data.object;
     const bookingId = paymentIntent.metadata?.bookingId;

@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { getAvailableSpots } from "@/lib/supabase/listings";
+import { SERVICE_FEE_RATE } from "@/lib/config";
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -52,6 +53,17 @@ export async function createBookingAction(data: {
 
     if (!listing) return { error: "Annonse ikke funnet" };
 
+    // Verify host has Stripe Connect
+    const { data: hostProfile } = await supabase
+      .from("profiles")
+      .select("stripe_account_id, stripe_onboarding_complete")
+      .eq("id", listing.host_id)
+      .single();
+
+    if (!hostProfile?.stripe_account_id || !hostProfile?.stripe_onboarding_complete) {
+      return { error: "Utleier har ikke satt opp utbetalinger ennå. Prøv igjen senere." };
+    }
+
     // Insert booking with pending status
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
@@ -79,6 +91,8 @@ export async function createBookingAction(data: {
         listingId: data.listingId,
         userId: user.id,
         listingTitle: listing.title,
+        hostStripeAccountId: hostProfile.stripe_account_id,
+        serviceFeeRate: String(SERVICE_FEE_RATE),
       },
     });
 
@@ -104,12 +118,17 @@ export async function cancelBookingAction(bookingId: string): Promise<{ error?: 
 
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, user_id, payment_intent_id, payment_status")
+      .select("id, user_id, payment_intent_id, payment_status, transfer_status, stripe_transfer_id")
       .eq("id", bookingId)
       .single();
 
     if (!booking) return { error: "Bestilling ikke funnet" };
     if (booking.user_id !== user.id) return { error: "Ikke tilgang" };
+
+    // Reverse transfer if already paid out to host
+    if (booking.transfer_status === "transferred" && booking.stripe_transfer_id) {
+      await stripe.transfers.createReversal(booking.stripe_transfer_id);
+    }
 
     // Refund if paid
     if (booking.payment_status === "paid" && booking.payment_intent_id) {
@@ -120,7 +139,11 @@ export async function cancelBookingAction(bookingId: string): Promise<{ error?: 
 
     await supabase
       .from("bookings")
-      .update({ status: "cancelled", payment_status: "refunded" })
+      .update({
+        status: "cancelled",
+        payment_status: "refunded",
+        transfer_status: booking.transfer_status === "transferred" ? "reversed" : "not_applicable",
+      })
       .eq("id", bookingId);
 
     return {};

@@ -79,6 +79,8 @@ export default function EditListingPage() {
         instantBooking: row.instant_booking || false,
         spotMarkers: row.spot_markers || [],
         hideExactLocation: row.hide_exact_location || false,
+        checkInTime: row.check_in_time || "15:00",
+        checkOutTime: row.check_out_time || "11:00",
       });
       setBlockedDates(row.blocked_dates || []);
       setLoading(false);
@@ -185,6 +187,8 @@ export default function EditListingPage() {
             spots={formData.spots || 1}
             maxVehicleLength={formData.maxVehicleLength}
             category={formData.category}
+            checkInTime={formData.checkInTime}
+            checkOutTime={formData.checkOutTime}
             onChange={updateField}
             errors={errors}
           />

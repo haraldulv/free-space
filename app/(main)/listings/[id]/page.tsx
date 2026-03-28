@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { MapPin, Users } from "lucide-react";
+import { MapPin, Users, Clock } from "lucide-react";
 import { getListingById, getAllListingIds } from "@/lib/supabase/listings";
 import { getListingReviews } from "@/lib/supabase/reviews";
 import Container from "@/components/ui/Container";
@@ -58,6 +58,10 @@ export default async function ListingPage({
             <div className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               {listing.spots} plasser
+            </div>
+            <div className="flex items-center gap-1">
+              <Clock className="h-4 w-4" />
+              Inn {listing.checkInTime || "15:00"} / Ut {listing.checkOutTime || "11:00"}
             </div>
           </div>
 

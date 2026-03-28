@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin, Clock } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import { Listing } from "@/types";
 
@@ -11,6 +11,8 @@ interface BookingSummaryProps {
   subtotal: number;
   serviceFee: number;
   total: number;
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 export default function BookingSummary({
@@ -21,6 +23,8 @@ export default function BookingSummary({
   subtotal,
   serviceFee,
   total,
+  checkInTime,
+  checkOutTime,
 }: BookingSummaryProps) {
   const priceLabel = listing.priceUnit === "time" ? "dag" : "natt";
 
@@ -55,6 +59,10 @@ export default function BookingSummary({
           <CalendarDays className="h-4 w-4 text-neutral-400" />
           {checkIn.toLocaleDateString("nb-NO")} –{" "}
           {checkOut.toLocaleDateString("nb-NO")}
+        </div>
+        <div className="flex items-center gap-2 text-sm text-neutral-500">
+          <Clock className="h-4 w-4 text-neutral-400" />
+          Innsjekk fra {checkInTime || "15:00"} / Utsjekk innen {checkOutTime || "11:00"}
         </div>
       </div>
 

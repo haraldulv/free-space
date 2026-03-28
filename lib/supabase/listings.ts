@@ -22,6 +22,8 @@ export interface CreateListingData {
   spotMarkers?: SpotMarker[];
   hideExactLocation?: boolean;
   blockedDates?: string[];
+  checkInTime?: string;
+  checkOutTime?: string;
 }
 
 /** Convert a Supabase row to our Listing type */
@@ -62,6 +64,8 @@ function rowToListing(row: Record<string, unknown>): Listing {
     vehicleType: (row.vehicle_type as VehicleType) || "motorhome",
     isActive: row.is_active as boolean | undefined,
     blockedDates: row.blocked_dates as string[] | undefined,
+    checkInTime: (row.check_in_time as string) || "15:00",
+    checkOutTime: (row.check_out_time as string) || "11:00",
   };
 }
 
@@ -308,6 +312,8 @@ export async function createListing(input: CreateListingData, hostId: string): P
     spot_markers: input.spotMarkers || [],
     hide_exact_location: input.hideExactLocation || false,
     blocked_dates: input.blockedDates || [],
+    check_in_time: input.checkInTime || "15:00",
+    check_out_time: input.checkOutTime || "11:00",
     host_name: profile?.full_name || "Anonym",
     host_avatar: profile?.avatar_url || "",
     host_response_rate: profile?.response_rate || 0,
@@ -343,6 +349,8 @@ export async function updateListing(id: string, input: Partial<CreateListingData
   if (input.spotMarkers !== undefined) updateData.spot_markers = input.spotMarkers;
   if (input.hideExactLocation !== undefined) updateData.hide_exact_location = input.hideExactLocation;
   if (input.blockedDates !== undefined) updateData.blocked_dates = input.blockedDates;
+  if (input.checkInTime !== undefined) updateData.check_in_time = input.checkInTime;
+  if (input.checkOutTime !== undefined) updateData.check_out_time = input.checkOutTime;
 
   const { error } = await supabase
     .from("listings")

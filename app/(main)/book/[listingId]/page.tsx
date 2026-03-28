@@ -12,6 +12,7 @@ import Button from "@/components/ui/Button";
 import BookingSummary from "@/components/features/BookingSummary";
 import { ShieldCheck, Loader2 } from "lucide-react";
 import type { Listing } from "@/types";
+import { SERVICE_FEE_RATE } from "@/lib/config";
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -104,6 +105,8 @@ export default function BookPage() {
             maxVehicleLength: data.max_vehicle_length,
             spots: data.spots,
             tags: data.tags,
+            checkInTime: data.check_in_time || "15:00",
+            checkOutTime: data.check_out_time || "11:00",
           });
         }
         setLoading(false);
@@ -117,7 +120,7 @@ export default function BookPage() {
     ? differenceInDays(checkOut, checkIn)
     : 0;
   const subtotal = listing ? listing.price * nights : 0;
-  const serviceFee = Math.round(subtotal * 0.1);
+  const serviceFee = Math.round(subtotal * SERVICE_FEE_RATE);
   const total = subtotal + serviceFee;
 
   // Create booking + payment intent once listing is loaded
@@ -193,6 +196,8 @@ export default function BookPage() {
             subtotal={subtotal}
             serviceFee={serviceFee}
             total={total}
+            checkInTime={listing.checkInTime}
+            checkOutTime={listing.checkOutTime}
           />
         </div>
         <div>

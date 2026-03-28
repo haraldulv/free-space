@@ -10,6 +10,8 @@ interface BasicInfoStepProps {
   spots: number;
   maxVehicleLength?: number;
   category?: ListingCategory;
+  checkInTime?: string;
+  checkOutTime?: string;
   onChange: (field: string, value: string | number | undefined) => void;
   errors: Record<string, string>;
 }
@@ -20,6 +22,8 @@ export default function BasicInfoStep({
   spots,
   maxVehicleLength,
   category,
+  checkInTime,
+  checkOutTime,
   onChange,
   errors,
 }: BasicInfoStepProps) {
@@ -77,6 +81,25 @@ export default function BasicInfoStep({
             error={errors.maxVehicleLength}
           />
         )}
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Input
+          id="checkInTime"
+          label="Innsjekk fra"
+          type="time"
+          value={checkInTime || "15:00"}
+          onChange={(e) => onChange("checkInTime", e.target.value)}
+          error={errors.checkInTime}
+        />
+        <Input
+          id="checkOutTime"
+          label="Utsjekk innen"
+          type="time"
+          value={checkOutTime || "11:00"}
+          onChange={(e) => onChange("checkOutTime", e.target.value)}
+          error={errors.checkOutTime}
+        />
       </div>
     </div>
   );

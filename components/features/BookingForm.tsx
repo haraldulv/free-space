@@ -8,6 +8,7 @@ import { CalendarDays, Star, Users } from "lucide-react";
 import DatePicker from "@/components/ui/DatePicker";
 import Button from "@/components/ui/Button";
 import { Listing } from "@/types";
+import { SERVICE_FEE_RATE } from "@/lib/config";
 import { checkAvailabilityAction } from "@/app/(main)/book/actions";
 
 interface BookingFormProps {
@@ -44,7 +45,7 @@ export default function BookingForm({ listing }: BookingFormProps) {
   }, [dateRange?.from?.getTime(), dateRange?.to?.getTime(), listing.id, nights]);
 
   const subtotal = listing.price * (nights || 1);
-  const serviceFee = Math.round(subtotal * 0.1);
+  const serviceFee = Math.round(subtotal * SERVICE_FEE_RATE);
   const total = subtotal + serviceFee;
 
   // Convert blocked date strings to Date objects for the calendar

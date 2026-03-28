@@ -71,6 +71,8 @@ function rowToListing(row: Record<string, unknown>): Listing {
     instantBooking: row.instant_booking as boolean | undefined,
     isActive: row.is_active as boolean | undefined,
     blockedDates: row.blocked_dates as string[] | undefined,
+    checkInTime: (row.check_in_time as string) || "15:00",
+    checkOutTime: (row.check_out_time as string) || "11:00",
   };
 }
 

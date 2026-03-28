@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Camera, LogOut, Trash2, User, Mail, Calendar, Check } from "lucide-react";
+import { Camera, LogOut, Trash2, User, Mail, Calendar, Check, CreditCard, ExternalLink, CheckCircle2, Loader2 } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -21,6 +21,8 @@ interface ProfileData {
   responseRate: number;
   responseTime: string;
   joinedYear: number;
+  stripeOnboardingComplete?: boolean;
+  stripeAccountId?: string;
 }
 
 export default function SettingsPanel() {
@@ -31,6 +33,7 @@ export default function SettingsPanel() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [connectingStripe, setConnectingStripe] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -87,6 +90,24 @@ export default function SettingsPanel() {
       setError(err instanceof Error ? err.message : "Kunne ikke laste opp bilde");
     }
     setUploadingAvatar(false);
+  };
+
+  const handleConnectStripe = async () => {
+    setConnectingStripe(true);
+    setError("");
+    try {
+      const res = await fetch("/api/stripe/connect", { method: "POST" });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error);
+        setConnectingStripe(false);
+      } else {
+        window.location.href = data.url;
+      }
+    } catch {
+      setError("Kunne ikke koble til Stripe");
+      setConnectingStripe(false);
+    }
   };
 
   const handleSignOut = async () => {
@@ -200,6 +221,46 @@ export default function SettingsPanel() {
             <User className="h-4 w-4 text-neutral-400" />
             Svartid: {profile.responseTime}
           </div>
+        </div>
+      </section>
+
+      {/* Payouts section */}
+      <section className="mt-10 border-t border-neutral-200 pt-8">
+        <h2 className="text-base font-medium text-neutral-700">Utbetalinger</h2>
+        <p className="mt-1 text-sm text-neutral-500">
+          Koble til Stripe for å motta utbetalinger når gjester booker plassen din.
+        </p>
+        <div className="mt-4">
+          {profile.stripeOnboardingComplete ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+                <CheckCircle2 className="h-5 w-5" />
+                Stripe er tilkoblet
+              </div>
+              <a
+                href="/api/stripe/connect/dashboard"
+                className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
+              >
+                <CreditCard className="h-4 w-4" />
+                Åpne Stripe Dashboard
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            </div>
+          ) : (
+            <Button onClick={handleConnectStripe} disabled={connectingStripe}>
+              {connectingStripe ? (
+                <span className="inline-flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Kobler til...
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Koble til Stripe
+                </span>
+              )}
+            </Button>
+          )}
         </div>
       </section>
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Zap, MapPin, Bus, Caravan, Car, CalendarX2 } from "lucide-react";
+import { Zap, MapPin, Bus, Caravan, Car, CalendarX2, Clock } from "lucide-react";
 import { amenityConfig } from "@/components/features/AmenityList";
 import type { Amenity, ListingCategory, VehicleType } from "@/types";
 import { vehicleLabels } from "@/types";
@@ -30,6 +30,8 @@ interface ReviewStepProps {
     priceUnit?: "time" | "natt";
     instantBooking?: boolean;
     blockedDates?: string[];
+    checkInTime?: string;
+    checkOutTime?: string;
   };
 }
 
@@ -94,9 +96,13 @@ export default function ReviewStep({ data }: ReviewStepProps) {
         </div>
 
         {/* Details */}
-        <div className="flex gap-4 text-sm text-neutral-600">
+        <div className="flex flex-wrap gap-4 text-sm text-neutral-600">
           <span>{data.spots} {data.spots === 1 ? "plass" : "plasser"}</span>
           {data.maxVehicleLength && <span>Maks {data.maxVehicleLength}m</span>}
+          <span className="flex items-center gap-1">
+            <Clock className="h-3.5 w-3.5 text-neutral-400" />
+            Inn {data.checkInTime || "15:00"} / Ut {data.checkOutTime || "11:00"}
+          </span>
         </div>
 
         {/* Amenities */}
