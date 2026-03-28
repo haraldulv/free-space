@@ -74,10 +74,10 @@ export default function Navbar({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Collapse navbar on scroll (home + dashboard only)
-  const isCollapsible = pathname === "/" || pathname === "/dashboard";
+  // Collapse navbar on scroll (homepage only)
+  const isDashboard = pathname === "/dashboard";
   useEffect(() => {
-    if (!isCollapsible) {
+    if (!isHome) {
       setScrolled(false);
       return;
     }
@@ -87,7 +87,7 @@ export default function Navbar({
     window.addEventListener("scroll", handleScroll, { passive: true });
     handleScroll();
     return () => window.removeEventListener("scroll", handleScroll);
-  }, [isCollapsible]);
+  }, [isHome]);
 
   // On homepage: match Container padding (px-6 sm:px-10 lg:px-20)
   // On search page: tighter padding (px-5 sm:px-6 lg:px-8)
@@ -99,7 +99,8 @@ export default function Navbar({
 
   const initial = user?.fullName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?";
 
-  const collapsed = isCollapsible && scrolled;
+  // Home: collapse on scroll. Dashboard: always compact. Others: full.
+  const collapsed = (isHome && scrolled) || isDashboard;
 
   return (
     <header className={`sticky top-0 z-50 border-b border-neutral-200/60 transition-all duration-300 ${isHome ? "glass-navbar" : "bg-white"}`}>
@@ -112,14 +113,14 @@ export default function Navbar({
           </span>
         </Link>
 
-        {/* Compact search bar — centered in row 1 on search page */}
-        {isSearchPage && (
+        {/* Compact search bar — centered in header row */}
+        {(isSearchPage || collapsed) ? (
           <div className="flex-1 flex justify-center">
             <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} initialCheckIn={searchCheckIn} initialCheckOut={searchCheckOut} compact />
           </div>
+        ) : (
+          <div className="flex-1" />
         )}
-
-        {!isSearchPage && <div className="flex-1" />}
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2 shrink-0">
@@ -251,11 +252,13 @@ export default function Navbar({
         </div>
       </div>
 
-      {/* Full search bar row — only on non-search pages, collapses on scroll */}
-      {!isSearchPage && (
+      {/* Full search bar row — pages with full navbar (not search, not dashboard, not collapsed home) */}
+      {!isSearchPage && !isDashboard && (
         <div
-          className={`hidden md:flex justify-center ${padClass} transition-all duration-300 ease-in-out overflow-hidden ${
-            collapsed ? "max-h-0 opacity-0 pb-0 pt-0" : "max-h-24 opacity-100 pb-5 pt-2"
+          className={`hidden md:flex justify-center ${padClass} overflow-hidden ${
+            isHome
+              ? `transition-all duration-300 ease-in-out ${collapsed ? "max-h-0 opacity-0 pb-0 pt-0" : "max-h-24 opacity-100 pb-5 pt-2"}`
+              : "pb-5 pt-2"
           }`}
         >
           <div className="w-full max-w-2xl">
@@ -264,11 +267,13 @@ export default function Navbar({
         </div>
       )}
 
-      {/* Mobile search bar — only on non-search pages, collapses on scroll */}
-      {!isSearchPage && (
+      {/* Mobile search bar — pages with full navbar */}
+      {!isSearchPage && !isDashboard && (
         <div
-          className={`md:hidden ${padClass} transition-all duration-300 ease-in-out overflow-hidden ${
-            collapsed ? "max-h-0 opacity-0 pb-0" : "max-h-24 opacity-100 pb-3"
+          className={`md:hidden ${padClass} overflow-hidden ${
+            isHome
+              ? `transition-all duration-300 ease-in-out ${collapsed ? "max-h-0 opacity-0 pb-0" : "max-h-24 opacity-100 pb-3"}`
+              : "pb-3"
           }`}
         >
           <SearchBar initialQuery={searchQuery} initialVehicle={searchVehicle} initialCategory={selectedCategory} initialCheckIn={searchCheckIn} initialCheckOut={searchCheckOut} />
