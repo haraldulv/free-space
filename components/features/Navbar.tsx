@@ -60,6 +60,8 @@ export default function Navbar({
   const router = useRouter();
   const pathname = usePathname();
   const isSearchPage = pathname === "/search";
+  const isHome = pathname === "/";
+  const isDashboard = pathname === "/dashboard";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -75,7 +77,6 @@ export default function Navbar({
   }, []);
 
   // Collapse navbar on scroll (homepage only)
-  const isDashboard = pathname === "/dashboard";
   useEffect(() => {
     if (!isHome) {
       setScrolled(false);
@@ -94,8 +95,6 @@ export default function Navbar({
   const padClass = isSearchPage
     ? "px-5 sm:px-6 lg:px-8"
     : "px-6 sm:px-10 lg:px-20 mx-auto max-w-[1760px]";
-
-  const isHome = pathname === "/";
 
   const initial = user?.fullName?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || "?";
 
