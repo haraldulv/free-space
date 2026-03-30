@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { CalendarDays, MapPin, Car, Tent, Star } from "lucide-react";
+import { CalendarDays, MapPin, Car, Tent, Star, User } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ReviewForm from "@/components/features/ReviewForm";
@@ -10,10 +10,11 @@ import { Booking } from "@/types";
 
 interface BookingCardProps {
   booking: Booking;
+  variant?: "guest" | "host";
   onCancel?: (bookingId: string) => Promise<void>;
 }
 
-export default function BookingCard({ booking, onCancel }: BookingCardProps) {
+export default function BookingCard({ booking, variant = "guest", onCancel }: BookingCardProps) {
   const [cancelling, setCancelling] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -70,6 +71,12 @@ export default function BookingCard({ booking, onCancel }: BookingCardProps) {
           <h3 className="mt-1 font-semibold text-neutral-900">
             {booking.listingTitle}
           </h3>
+          {variant === "host" && booking.guestName && (
+            <p className="mt-0.5 flex items-center gap-1 text-sm text-neutral-500">
+              <User className="h-3.5 w-3.5" />
+              {booking.guestName}
+            </p>
+          )}
         </div>
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-neutral-500">
           <span className="flex items-center gap-1">
@@ -83,7 +90,7 @@ export default function BookingCard({ booking, onCancel }: BookingCardProps) {
           <span className="font-medium text-neutral-900">
             {booking.totalPrice} kr
           </span>
-          {canReview && (
+          {variant === "guest" && canReview && (
             <button
               onClick={() => setShowReview(!showReview)}
               className="ml-auto flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
@@ -92,7 +99,7 @@ export default function BookingCard({ booking, onCancel }: BookingCardProps) {
               Skriv anmeldelse
             </button>
           )}
-          {canCancel && onCancel && !canReview && (
+          {variant === "guest" && canCancel && onCancel && !canReview && (
             <>
               {!showConfirm ? (
                 <button

@@ -12,6 +12,7 @@ import {
   Megaphone,
   MessageCircle,
   Settings,
+  Inbox,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/(main)/bli-utleier/actions";
@@ -26,10 +27,11 @@ import ConversationList from "@/components/features/ConversationList";
 import ChatView from "@/components/features/ChatView";
 import { Booking, Listing, Conversation } from "@/types";
 
-type Tab = "bookings" | "favorites" | "listings" | "messages" | "settings";
+type Tab = "bookings" | "rentals" | "favorites" | "listings" | "messages" | "settings";
 
-const sidebarItems: { key: Tab; label: string; icon: React.ElementType }[] = [
+const allSidebarItems: { key: Tab; label: string; icon: React.ElementType; hostOnly?: boolean }[] = [
   { key: "bookings", label: "Mine bestillinger", icon: CalendarCheck },
+  { key: "rentals", label: "Utleieringer", icon: Inbox, hostOnly: true },
   { key: "favorites", label: "Favoritter", icon: Heart },
   { key: "messages", label: "Meldinger", icon: MessageCircle },
   { key: "listings", label: "Mine annonser", icon: Megaphone },
@@ -82,12 +84,14 @@ export default function DashboardPage() {
   const conversationIdParam = searchParams.get("conversation");
   const initialTab: Tab =
     tabParam === "listings" || tabParam === "annonser" ? "listings"
+    : tabParam === "rentals" ? "rentals"
     : tabParam === "favoritter" ? "favorites"
     : tabParam === "meldinger" || tabParam === "messages" || conversationIdParam ? "messages"
     : tabParam === "settings" ? "settings"
     : "bookings";
   const [tab, setTab] = useState<Tab>(initialTab);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [rentals, setRentals] = useState<Booking[]>([]);
   const [listings, setListings] = useState<Listing[]>([]);
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -137,6 +141,33 @@ export default function DashboardPage() {
               status: row.status as Booking["status"],
               createdAt: row.created_at,
             }))
+        );
+      }
+
+      // Fetch host rentals (bookings on user's listings)
+      const { data: rentalRows } = await supabase
+        .from("bookings")
+        .select("*, listings(title, images, category, city, region), guest:user_id(full_name, avatar_url)")
+        .eq("host_id", data.user.id)
+        .order("created_at", { ascending: false });
+
+      if (rentalRows) {
+        setRentals(
+          rentalRows.map((row) => ({
+            id: row.id,
+            listingId: row.listing_id,
+            listingTitle: (row.listings as Record<string, unknown>)?.title as string || "Ukjent",
+            listingImage: ((row.listings as Record<string, unknown>)?.images as string[])?.[0] || "",
+            listingCategory: (row.listings as Record<string, unknown>)?.category as Booking["listingCategory"] || "camping",
+            location: `${(row.listings as Record<string, unknown>)?.city || ""}, ${(row.listings as Record<string, unknown>)?.region || ""}`,
+            checkIn: row.check_in,
+            checkOut: row.check_out,
+            totalPrice: row.total_price,
+            status: row.status as Booking["status"],
+            createdAt: row.created_at,
+            guestName: (row.guest as Record<string, unknown>)?.full_name as string || "Anonym",
+            guestAvatar: (row.guest as Record<string, unknown>)?.avatar_url as string || "",
+          }))
         );
       }
 
@@ -207,6 +238,9 @@ export default function DashboardPage() {
       setLoaded(true);
     });
   }, [conversationIdParam]);
+
+  const isHost = listings.length > 0 || rentals.length > 0;
+  const sidebarItems = allSidebarItems.filter((item) => !item.hostOnly || isHost);
 
   const handleTabChange = (item: typeof sidebarItems[number]) => {
     setTab(item.key);
@@ -343,6 +377,31 @@ export default function DashboardPage() {
                   <div className="mt-4 lg:mt-0 space-y-4">
                     {bookings.map((booking) => (
                       <BookingCard key={booking.id} booking={booking} onCancel={handleCancelBooking} />
+                    ))}
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Rentals (host incoming bookings) */}
+            {tab === "rentals" && (
+              <>
+                {rentals.length === 0 ? (
+                  <div className="mt-12 lg:mt-16 flex flex-col items-center text-center">
+                    <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
+                      <Inbox className="h-8 w-8 text-neutral-400" />
+                    </div>
+                    <h2 className="mt-4 text-lg font-semibold text-neutral-700">
+                      Ingen utleieringer ennå
+                    </h2>
+                    <p className="mt-1 text-sm text-neutral-500">
+                      Når noen booker en av plassene dine, dukker det opp her.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="mt-4 lg:mt-0 space-y-4">
+                    {rentals.map((rental) => (
+                      <BookingCard key={rental.id} booking={rental} variant="host" />
                     ))}
                   </div>
                 )}

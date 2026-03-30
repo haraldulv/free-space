@@ -122,6 +122,8 @@ export interface Booking {
   hostId?: string;
   paymentIntentId?: string;
   paymentStatus?: "pending" | "paid" | "failed" | "refunded";
+  guestName?: string;
+  guestAvatar?: string;
 }
 
 export interface Review {

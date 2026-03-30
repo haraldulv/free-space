@@ -94,8 +94,13 @@ export default function NotificationPanel({ userId, unreadCount, onUnreadChange 
               ) : (
                 notifications.map((notification) => {
                   const Icon = typeIcons[notification.type] || Bell;
-                  const href = notification.type === "new_message" && notification.metadata?.conversationId
-                    ? `/dashboard?tab=messages&conversation=${notification.metadata.conversationId}`
+                  const href =
+                    notification.type === "new_message" && notification.metadata?.conversationId
+                      ? `/dashboard?tab=messages&conversation=${notification.metadata.conversationId}`
+                    : notification.type === "booking_received" || notification.type === "payout_sent"
+                      ? "/dashboard?tab=rentals"
+                    : notification.type === "booking_confirmed" || notification.type === "booking_cancelled"
+                      ? "/dashboard?tab=bookings"
                     : undefined;
                   const Wrapper = href ? "a" : "div";
                   return (
