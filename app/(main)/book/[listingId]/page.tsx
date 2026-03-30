@@ -10,7 +10,7 @@ import { createBookingAction } from "../actions";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingSummary from "@/components/features/BookingSummary";
-import { ShieldCheck, Loader2 } from "lucide-react";
+import { ShieldCheck, Loader2, Car } from "lucide-react";
 import type { Listing } from "@/types";
 import { SERVICE_FEE_RATE } from "@/lib/config";
 
@@ -79,6 +79,9 @@ export default function BookPage() {
   const [bookingId, setBookingId] = useState("");
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [error, setError] = useState("");
+  const [licensePlate, setLicensePlate] = useState("");
+  const [isRentalCar, setIsRentalCar] = useState(false);
+  const [vehicleReady, setVehicleReady] = useState(false);
 
   useEffect(() => {
     const supabase = createClient();
@@ -123,16 +126,15 @@ export default function BookPage() {
   const serviceFee = Math.round(subtotal * SERVICE_FEE_RATE);
   const total = subtotal + serviceFee;
 
-  // Create booking + payment intent once listing is loaded
+  // Create booking + payment intent once vehicle info is submitted
   useEffect(() => {
-    if (!listing || nights <= 0 || clientSecret) return;
+    if (!listing || nights <= 0 || clientSecret || !vehicleReady) return;
 
     setCreatingPayment(true);
 
     const checkInStr = searchParams.get("checkIn")!;
     const checkOutStr = searchParams.get("checkOut")!;
 
-    // Format dates as YYYY-MM-DD for Supabase date columns
     const checkInDate = new Date(checkInStr);
     const checkOutDate = new Date(checkOutStr);
     const formatDate = (d: Date) =>
@@ -143,6 +145,8 @@ export default function BookPage() {
       checkIn: formatDate(checkInDate),
       checkOut: formatDate(checkOutDate),
       totalPrice: total,
+      licensePlate: isRentalCar ? undefined : licensePlate.trim().toUpperCase(),
+      isRentalCar,
     }).then((result) => {
       if (result.error) {
         setError(result.error);
@@ -152,7 +156,7 @@ export default function BookPage() {
       }
       setCreatingPayment(false);
     });
-  }, [listing, nights]);
+  }, [vehicleReady]);
 
   if (loading) {
     return (
@@ -200,8 +204,59 @@ export default function BookPage() {
             checkOutTime={listing.checkOutTime}
           />
         </div>
-        <div>
-          <div className="rounded-xl border border-neutral-200 bg-white p-6">
+        <div className="space-y-6">
+          {/* Vehicle info */}
+          {!vehicleReady && (
+            <div className="rounded-xl border border-neutral-200 bg-white p-6">
+              <h2 className="text-lg font-semibold text-neutral-900">
+                Kjøretøy
+              </h2>
+              <p className="mt-1 text-sm text-neutral-500">
+                Utleier trenger registreringsnummeret for å identifisere bilen din.
+              </p>
+              <div className="mt-4 space-y-4">
+                {!isRentalCar && (
+                  <div>
+                    <label htmlFor="licensePlate" className="mb-1.5 block text-sm font-medium text-neutral-700">
+                      Registreringsnummer
+                    </label>
+                    <div className="relative">
+                      <Car className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
+                      <input
+                        id="licensePlate"
+                        type="text"
+                        value={licensePlate}
+                        onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
+                        placeholder="F.eks. AB 12345"
+                        className="w-full rounded-lg border border-neutral-200 py-2.5 pl-10 pr-3 text-sm uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                )}
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={isRentalCar}
+                    onChange={(e) => setIsRentalCar(e.target.checked)}
+                    className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+                  />
+                  <span className="text-sm text-neutral-600">
+                    Leiebil — jeg kjenner ikke registreringsnummeret ennå
+                  </span>
+                </label>
+                <Button
+                  className="w-full"
+                  disabled={!isRentalCar && !licensePlate.trim()}
+                  onClick={() => setVehicleReady(true)}
+                >
+                  Fortsett til betaling
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* Payment */}
+          <div className={`rounded-xl border border-neutral-200 bg-white p-6 ${!vehicleReady ? "opacity-50 pointer-events-none" : ""}`}>
             <h2 className="text-lg font-semibold text-neutral-900">
               Betaling
             </h2>

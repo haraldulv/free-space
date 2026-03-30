@@ -36,6 +36,8 @@ export async function createBookingAction(data: {
   checkIn: string;
   checkOut: string;
   totalPrice: number;
+  licensePlate?: string;
+  isRentalCar?: boolean;
 }): Promise<{ bookingId?: string; clientSecret?: string; error?: string }> {
   try {
     const { supabase, user } = await getAuthUser();
@@ -76,6 +78,8 @@ export async function createBookingAction(data: {
         status: "pending",
         payment_status: "pending",
         host_id: listing.host_id,
+        license_plate: data.licensePlate || null,
+        is_rental_car: data.isRentalCar || false,
       })
       .select("id")
       .single();

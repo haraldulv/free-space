@@ -124,6 +124,14 @@ export interface Booking {
   paymentStatus?: "pending" | "paid" | "failed" | "refunded";
   guestName?: string;
   guestAvatar?: string;
+  guestEmail?: string;
+  licensePlate?: string;
+  isRentalCar?: boolean;
+  checkInTime?: string;
+  checkOutTime?: string;
+  listingLat?: number;
+  listingLng?: number;
+  listingAddress?: string;
 }
 
 export interface Review {
