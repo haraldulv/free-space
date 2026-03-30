@@ -31,12 +31,52 @@ type Tab = "bookings" | "rentals" | "favorites" | "listings" | "messages" | "set
 
 const allSidebarItems: { key: Tab; label: string; icon: React.ElementType; hostOnly?: boolean }[] = [
   { key: "bookings", label: "Mine bestillinger", icon: CalendarCheck },
-  { key: "rentals", label: "Utleieringer", icon: Inbox, hostOnly: true },
+  { key: "rentals", label: "Utleie", icon: Inbox, hostOnly: true },
   { key: "favorites", label: "Favoritter", icon: Heart },
   { key: "messages", label: "Meldinger", icon: MessageCircle },
   { key: "listings", label: "Mine annonser", icon: Megaphone },
   { key: "settings", label: "Innstillinger", icon: Settings },
 ];
+
+function groupBookings(items: Booking[]) {
+  const today = new Date().toISOString().split("T")[0];
+  const upcoming: Booking[] = [];
+  const active: Booking[] = [];
+  const past: Booking[] = [];
+
+  for (const b of items) {
+    if (b.status === "cancelled") {
+      past.push(b);
+    } else if (b.checkIn > today) {
+      upcoming.push(b);
+    } else if (b.checkOut >= today) {
+      active.push(b);
+    } else {
+      past.push(b);
+    }
+  }
+
+  return { upcoming, active, past };
+}
+
+function BookingSection({ title, items, variant = "guest", onCancel }: {
+  title: string;
+  items: Booking[];
+  variant?: "guest" | "host";
+  onCancel?: (id: string) => Promise<void>;
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <h3 className="mb-3 text-sm font-medium text-neutral-500">{title}</h3>
+      <div className="space-y-3">
+        {items.map((b) => (
+          <BookingCard key={b.id} booking={b} variant={variant} onCancel={onCancel} />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function rowToListing(row: Record<string, unknown>): Listing {
   return {
@@ -374,10 +414,17 @@ export default function DashboardPage() {
                     </Link>
                   </div>
                 ) : (
-                  <div className="mt-4 lg:mt-0 space-y-4">
-                    {bookings.map((booking) => (
-                      <BookingCard key={booking.id} booking={booking} onCancel={handleCancelBooking} />
-                    ))}
+                  <div className="mt-4 lg:mt-0 space-y-6">
+                    {(() => {
+                      const { upcoming, active, past } = groupBookings(bookings);
+                      return (
+                        <>
+                          <BookingSection title="Aktive" items={active} onCancel={handleCancelBooking} />
+                          <BookingSection title="Kommende" items={upcoming} onCancel={handleCancelBooking} />
+                          <BookingSection title="Tidligere" items={past} onCancel={handleCancelBooking} />
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </>
@@ -392,17 +439,24 @@ export default function DashboardPage() {
                       <Inbox className="h-8 w-8 text-neutral-400" />
                     </div>
                     <h2 className="mt-4 text-lg font-semibold text-neutral-700">
-                      Ingen utleieringer ennå
+                      Ingen utleie ennå
                     </h2>
                     <p className="mt-1 text-sm text-neutral-500">
                       Når noen booker en av plassene dine, dukker det opp her.
                     </p>
                   </div>
                 ) : (
-                  <div className="mt-4 lg:mt-0 space-y-4">
-                    {rentals.map((rental) => (
-                      <BookingCard key={rental.id} booking={rental} variant="host" />
-                    ))}
+                  <div className="mt-4 lg:mt-0 space-y-6">
+                    {(() => {
+                      const { upcoming, active, past } = groupBookings(rentals);
+                      return (
+                        <>
+                          <BookingSection title="Aktive" items={active} variant="host" />
+                          <BookingSection title="Kommende" items={upcoming} variant="host" />
+                          <BookingSection title="Tidligere" items={past} variant="host" />
+                        </>
+                      );
+                    })()}
                   </div>
                 )}
               </>
