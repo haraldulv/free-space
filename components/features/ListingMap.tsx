@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import type { SpotMarker } from "@/types";
+import { isNative } from "@/lib/capacitor";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
@@ -33,10 +34,10 @@ export default function ListingMap({ lat, lng, spotMarkers = [], hideExactLocati
         zoom: hideExactLocation ? 14 : 17,
         mapId: "listing-detail-map",
         disableDefaultUI: true,
-        zoomControl: true,
+        zoomControl: !isNative(),
         gestureHandling: "cooperative",
         clickableIcons: false,
-        mapTypeId: hideExactLocation ? "roadmap" : "hybrid",
+        mapTypeId: "hybrid",
       });
 
       if (hideExactLocation) {

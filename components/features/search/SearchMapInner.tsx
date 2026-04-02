@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { Listing } from "@/types";
+import { isNative } from "@/lib/capacitor";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 let loaderInitialized = false;
@@ -189,16 +190,19 @@ export default function SearchMapInner({
         else zoom = 5;
       }
 
+      const native = isNative();
+
       const map = new GoogleMap(containerRef.current!, {
         center,
         zoom,
         disableDefaultUI: true,
-        zoomControl: true,
+        zoomControl: !native,
         zoomControlOptions: {
           position: google.maps.ControlPosition.RIGHT_BOTTOM,
         },
         gestureHandling: "greedy",
         clickableIcons: false,
+        mapTypeId: "hybrid",
         styles: [
           // Subtle, warm style — keep POIs and landmarks visible
           { featureType: "poi.business", elementType: "labels.icon", stylers: [{ visibility: "on" }] },
@@ -224,7 +228,9 @@ export default function SearchMapInner({
       if (listings.length > 0) {
         const bounds = new google.maps.LatLngBounds();
         listings.forEach((l) => bounds.extend({ lat: l.location.lat, lng: l.location.lng }));
-        map.fitBounds(bounds, 50);
+        // Trigger resize first so the map knows its true container size
+        google.maps.event.trigger(map, "resize");
+        map.fitBounds(bounds, { top: 50, right: 50, bottom: 50, left: 50 });
       }
     }
 

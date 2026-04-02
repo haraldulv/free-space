@@ -40,6 +40,17 @@ export default function RootLayout({
               if (window.Capacitor.Plugins.Keyboard) {
                 window.Capacitor.Plugins.Keyboard.setAccessoryBarVisible({ isVisible: true });
               }
+              // Listen for deep links / app URL open events
+              if (window.Capacitor.Plugins.App) {
+                window.Capacitor.Plugins.App.addListener('appUrlOpen', function(event) {
+                  var url = event.url;
+                  // Handle auth callback deep links
+                  if (url && url.indexOf('/auth/callback') !== -1) {
+                    var path = url.replace(/^https?:\\/\\/[^/]+/, '');
+                    window.location.href = path;
+                  }
+                });
+              }
             }
           });
         `}} />

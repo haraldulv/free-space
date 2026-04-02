@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { Browser } from "@capacitor/browser";
 import { createClient } from "@/lib/supabase/client";
 
 export default function GoogleSignInButton({ redirectTo }: { redirectTo?: string }) {
@@ -13,19 +15,62 @@ export default function GoogleSignInButton({ redirectTo }: { redirectTo?: string
     if (redirectTo) {
       callbackUrl.searchParams.set("next", redirectTo);
     }
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: callbackUrl.toString(),
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
+
+    if (Capacitor.isNativePlatform()) {
+      // On native: use signInWithOAuth to get the OAuth URL, then open in in-app browser
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl.toString(),
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+          skipBrowserRedirect: true,
         },
-      },
-    });
-    if (error) {
-      console.error("Google sign-in error:", error.message);
-      setLoading(false);
+      });
+
+      if (error || !data.url) {
+        console.error("Google sign-in error:", error?.message);
+        setLoading(false);
+        return;
+      }
+
+      // Listen for the callback URL to close browser and handle session
+      const browserFinished = await Browser.addListener("browserFinished", () => {
+        setLoading(false);
+        browserFinished.remove();
+      });
+
+      const browserUrlChanged = await Browser.addListener("browserPageLoaded", async () => {
+        // After page loads in browser, check if we got a session
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          await Browser.close();
+          browserUrlChanged.remove();
+          browserFinished.remove();
+          window.location.href = redirectTo || "/";
+        }
+      });
+
+      // Open OAuth URL in in-app browser (ASWebAuthenticationSession on iOS)
+      await Browser.open({ url: data.url, presentationStyle: "popover" });
+    } else {
+      // On web: standard redirect flow
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl.toString(),
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
+        },
+      });
+      if (error) {
+        console.error("Google sign-in error:", error.message);
+        setLoading(false);
+      }
     }
   };
 
