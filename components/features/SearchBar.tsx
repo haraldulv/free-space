@@ -304,7 +304,7 @@ export default function SearchBar({
 
         {/* Mobile overlay */}
         {mobileOpen && (
-          <div className="mobile-overlay md:hidden">
+          <div className="md:hidden" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
               <button onClick={() => setMobileOpen(false)} className="rounded-full p-2.5 hover:bg-neutral-100" aria-label="Lukk"><X className="h-5 w-5" /></button>
               <span className="text-sm font-semibold">Søk</span>
