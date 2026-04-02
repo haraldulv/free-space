@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { DayPicker, DateRange } from "react-day-picker";
 import "react-day-picker/src/style.css";
 
@@ -16,8 +17,17 @@ export default function DatePicker({
   disabled,
   numberOfMonths = 2,
 }: DatePickerProps) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+
   return (
-    <div className="rdp-custom rounded-lg border border-neutral-200 p-3">
+    <div className="rdp-custom rounded-lg border border-neutral-200 bg-white p-3">
       <style>{`
         .rdp-custom .rdp-root {
           --rdp-accent-color: #1a3268;
@@ -39,7 +49,7 @@ export default function DatePicker({
         selected={selected}
         onSelect={onSelect}
         disabled={[{ before: new Date() }, ...(disabled || [])]}
-        numberOfMonths={numberOfMonths}
+        numberOfMonths={isMobile ? 1 : numberOfMonths}
         weekStartsOn={1}
       />
     </div>
