@@ -4,29 +4,29 @@ import Foundation
 
 struct Listing: Codable, Identifiable, Hashable {
     let id: String
-    let hostId: String
+    let hostId: String?
     let title: String
-    let description: String
-    let category: ListingCategory
-    let vehicleType: VehicleType
-    let city: String
-    let region: String
-    let address: String
-    let lat: Double
-    let lng: Double
-    let price: Int
-    let priceUnit: PriceUnit
-    let amenities: [String]
+    let description: String?
+    let category: ListingCategory?
+    let vehicleType: VehicleType?
+    let city: String?
+    let region: String?
+    let address: String?
+    let lat: Double?
+    let lng: Double?
+    let price: Int?
+    let priceUnit: PriceUnit?
+    let amenities: [String]?
     let maxVehicleLength: Double?
-    let spots: Int
-    let images: [String]
-    let instantBooking: Bool
+    let spots: Int?
+    let images: [String]?
+    let instantBooking: Bool?
     let spotMarkers: [SpotMarker]?
-    let hideExactLocation: Bool
+    let hideExactLocation: Bool?
     let blockedDates: [String]?
     let checkInTime: String?
     let checkOutTime: String?
-    let isActive: Bool
+    let isActive: Bool?
     let rating: Double?
     let reviewCount: Int?
     let hostName: String?

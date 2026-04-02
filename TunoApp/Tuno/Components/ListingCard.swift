@@ -7,12 +7,14 @@ struct ListingCard: View {
 
     @State private var imageIndex = 0
 
+    private var images: [String] { listing.images ?? [] }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Image carousel
             ZStack(alignment: .topTrailing) {
                 TabView(selection: $imageIndex) {
-                    ForEach(Array(listing.images.enumerated()), id: \.offset) { index, url in
+                    ForEach(Array(images.enumerated()), id: \.offset) { index, url in
                         AsyncImage(url: URL(string: url)) { phase in
                             switch phase {
                             case .success(let image):
@@ -35,7 +37,7 @@ struct ListingCard: View {
                         .tag(index)
                     }
                 }
-                .tabViewStyle(.page(indexDisplayMode: listing.images.count > 1 ? .automatic : .never))
+                .tabViewStyle(.page(indexDisplayMode: images.count > 1 ? .automatic : .never))
                 .frame(height: 200)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
@@ -55,7 +57,7 @@ struct ListingCard: View {
                 }
 
                 // Instant booking badge
-                if listing.instantBooking {
+                if listing.instantBooking == true {
                     HStack(spacing: 3) {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 10))
@@ -94,25 +96,25 @@ struct ListingCard: View {
                     }
                 }
 
-                Text("\(listing.city), \(listing.region)")
+                Text("\(listing.city ?? ""), \(listing.region ?? "")")
                     .font(.system(size: 13))
                     .foregroundStyle(.neutral500)
                     .lineLimit(1)
 
                 HStack(spacing: 4) {
-                    Text("\(listing.price) kr")
+                    Text("\(listing.price ?? 0) kr")
                         .font(.system(size: 15, weight: .bold))
-                    Text("/ \(listing.priceUnit.displayName)")
+                    Text("/ \(listing.priceUnit?.displayName ?? "natt")")
                         .font(.system(size: 13))
                         .foregroundStyle(.neutral500)
 
                     Spacer()
 
-                    if listing.spots > 1 {
+                    if (listing.spots ?? 1) > 1 {
                         HStack(spacing: 3) {
                             Image(systemName: "car.fill")
                                 .font(.system(size: 11))
-                            Text("\(listing.spots)p")
+                            Text("\(listing.spots ?? 1)p")
                                 .font(.system(size: 12, weight: .medium))
                         }
                         .foregroundStyle(.neutral500)

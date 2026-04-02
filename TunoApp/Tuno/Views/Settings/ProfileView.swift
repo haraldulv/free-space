@@ -187,7 +187,7 @@ struct MyListingsView: View {
                 List(listings) { listing in
                     NavigationLink(value: listing) {
                         HStack(spacing: 12) {
-                            AsyncImage(url: URL(string: listing.images.first ?? "")) { phase in
+                            AsyncImage(url: URL(string: listing.images?.first ?? "")) { phase in
                                 switch phase {
                                 case .success(let image):
                                     image.resizable().aspectRatio(contentMode: .fill)
@@ -203,9 +203,9 @@ struct MyListingsView: View {
                                     .font(.system(size: 15, weight: .medium))
                                 HStack(spacing: 4) {
                                     Circle()
-                                        .fill(listing.isActive ? Color.green : Color.neutral400)
+                                        .fill(listing.isActive == true ? Color.green : Color.neutral400)
                                         .frame(width: 8, height: 8)
-                                    Text(listing.isActive ? "Aktiv" : "Inaktiv")
+                                    Text(listing.isActive == true ? "Aktiv" : "Inaktiv")
                                         .font(.system(size: 13))
                                         .foregroundStyle(.neutral500)
                                 }

@@ -11,11 +11,15 @@ struct ListingDetailView: View {
             if isLoading {
                 ProgressView()
             } else if let listing {
+                let images = listing.images ?? []
+                let amenities = listing.amenities ?? []
+                let hideExact = listing.hideExactLocation ?? false
+
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
                         // Image gallery
                         TabView(selection: $imageIndex) {
-                            ForEach(Array(listing.images.enumerated()), id: \.offset) { index, url in
+                            ForEach(Array(images.enumerated()), id: \.offset) { index, url in
                                 AsyncImage(url: URL(string: url)) { phase in
                                     switch phase {
                                     case .success(let image):
@@ -36,13 +40,15 @@ struct ListingDetailView: View {
                             // Category badge + title
                             VStack(alignment: .leading, spacing: 8) {
                                 HStack(spacing: 8) {
-                                    Text(listing.category.displayName)
-                                        .font(.system(size: 12, weight: .semibold))
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 4)
-                                        .background(Color.primary50)
-                                        .foregroundStyle(.primary600)
-                                        .clipShape(Capsule())
+                                    if let cat = listing.category {
+                                        Text(cat.displayName)
+                                            .font(.system(size: 12, weight: .semibold))
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 4)
+                                            .background(Color.primary50)
+                                            .foregroundStyle(.primary600)
+                                            .clipShape(Capsule())
+                                    }
 
                                     if let maxLen = listing.maxVehicleLength {
                                         Text("Max \(Int(maxLen))m")
@@ -62,33 +68,35 @@ struct ListingDetailView: View {
 
                             // Location, spots, times
                             VStack(spacing: 8) {
-                                InfoRow(icon: "mappin", text: "\(listing.address), \(listing.city)")
-                                InfoRow(icon: "car.2.fill", text: "\(listing.spots) plasser")
+                                InfoRow(icon: "mappin", text: "\(listing.address ?? ""), \(listing.city ?? "")")
+                                InfoRow(icon: "car.2.fill", text: "\(listing.spots ?? 1) plasser")
                                 InfoRow(icon: "clock", text: "Inn \(listing.checkInTime ?? "15:00") / Ut \(listing.checkOutTime ?? "11:00")")
                             }
 
                             Divider()
 
                             // Description
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Om denne plassen")
-                                    .font(.system(size: 18, weight: .semibold))
-                                Text(listing.description)
-                                    .font(.system(size: 15))
-                                    .foregroundStyle(.neutral600)
-                                    .lineSpacing(4)
+                            if let desc = listing.description, !desc.isEmpty {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Om denne plassen")
+                                        .font(.system(size: 18, weight: .semibold))
+                                    Text(desc)
+                                        .font(.system(size: 15))
+                                        .foregroundStyle(.neutral600)
+                                        .lineSpacing(4)
+                                }
+
+                                Divider()
                             }
 
-                            Divider()
-
                             // Amenities
-                            if !listing.amenities.isEmpty {
+                            if !amenities.isEmpty {
                                 VStack(alignment: .leading, spacing: 12) {
                                     Text("Fasiliteter")
                                         .font(.system(size: 18, weight: .semibold))
 
                                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                                        ForEach(listing.amenities, id: \.self) { amenity in
+                                        ForEach(amenities, id: \.self) { amenity in
                                             HStack(spacing: 8) {
                                                 Image(systemName: amenityIcon(amenity))
                                                     .font(.system(size: 14))
@@ -107,37 +115,39 @@ struct ListingDetailView: View {
                             }
 
                             // Map
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(listing.hideExactLocation ? "Omtrentlig plassering" : "Plassering")
-                                    .font(.system(size: 18, weight: .semibold))
+                            if let lat = listing.lat, let lng = listing.lng {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(hideExact ? "Omtrentlig plassering" : "Plassering")
+                                        .font(.system(size: 18, weight: .semibold))
 
-                                if !listing.hideExactLocation {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "mappin")
-                                            .font(.system(size: 12))
-                                        Text(listing.address)
-                                            .font(.system(size: 13))
+                                    if !hideExact {
+                                        HStack(spacing: 4) {
+                                            Image(systemName: "mappin")
+                                                .font(.system(size: 12))
+                                            Text(listing.address ?? "")
+                                                .font(.system(size: 13))
+                                        }
+                                        .foregroundStyle(.neutral500)
                                     }
-                                    .foregroundStyle(.neutral500)
+
+                                    ListingMapView(
+                                        lat: lat,
+                                        lng: lng,
+                                        spotMarkers: listing.spotMarkers ?? [],
+                                        hideExactLocation: hideExact
+                                    )
+                                    .frame(height: 250)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                                    if hideExact {
+                                        Text("Eksakt adresse deles etter bekreftet booking.")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.neutral400)
+                                    }
                                 }
 
-                                ListingMapView(
-                                    lat: listing.lat,
-                                    lng: listing.lng,
-                                    spotMarkers: listing.spotMarkers ?? [],
-                                    hideExactLocation: listing.hideExactLocation
-                                )
-                                .frame(height: 250)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-                                if listing.hideExactLocation {
-                                    Text("Eksakt adresse deles etter bekreftet booking.")
-                                        .font(.system(size: 12))
-                                        .foregroundStyle(.neutral400)
-                                }
+                                Divider()
                             }
-
-                            Divider()
 
                             // Rating
                             if let rating = listing.rating, let count = listing.reviewCount, count > 0 {
@@ -161,13 +171,13 @@ struct ListingDetailView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 4) {
-                                Text("\(listing.price) kr")
+                                Text("\(listing.price ?? 0) kr")
                                     .font(.system(size: 18, weight: .bold))
-                                Text("/ \(listing.priceUnit.displayName)")
+                                Text("/ \(listing.priceUnit?.displayName ?? "natt")")
                                     .font(.system(size: 14))
                                     .foregroundStyle(.neutral500)
                             }
-                            if listing.instantBooking {
+                            if listing.instantBooking == true {
                                 HStack(spacing: 3) {
                                     Image(systemName: "bolt.fill")
                                         .font(.system(size: 10))

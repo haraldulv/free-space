@@ -27,17 +27,29 @@ final class ListingService: ObservableObject {
 
     func fetchRecent(limit: Int = 12) async -> [Listing] {
         do {
-            let listings: [Listing] = try await supabase
+            let response = try await supabase
                 .from("listings")
                 .select()
                 .eq("is_active", value: true)
                 .order("created_at", ascending: false)
                 .limit(limit)
                 .execute()
-                .value
+
+            print("📡 Supabase response status: \(response.status)")
+            print("📡 Supabase response data size: \(response.data.count) bytes")
+
+            let listings: [Listing] = try JSONDecoder().decode([Listing].self, from: response.data)
+            print("✅ Decoded \(listings.count) listings")
             return listings
+        } catch let decodingError as DecodingError {
+            print("❌ Decoding error: \(decodingError)")
+            // Try to print raw JSON to see what we got
+            if let raw = try? await supabase.from("listings").select("id, title").eq("is_active", value: true).limit(3).execute() {
+                print("📋 Raw sample: \(String(data: raw.data, encoding: .utf8) ?? "nil")")
+            }
+            return []
         } catch {
-            print("Failed to fetch recent listings: \(error)")
+            print("❌ Failed to fetch recent listings: \(error)")
             return []
         }
     }
@@ -104,14 +116,12 @@ final class ListingService: ObservableObject {
             // Client-side Haversine distance filter if coordinates provided
             if let lat, let lng {
                 listings = listings.filter { listing in
-                    let distance = haversineDistance(
-                        lat1: lat, lng1: lng,
-                        lat2: listing.lat, lng2: listing.lng
-                    )
+                    guard let lLat = listing.lat, let lLng = listing.lng else { return false }
+                    let distance = haversineDistance(lat1: lat, lng1: lng, lat2: lLat, lng2: lLng)
                     return distance <= radiusKm
                 }.sorted { a, b in
-                    let distA = haversineDistance(lat1: lat, lng1: lng, lat2: a.lat, lng2: a.lng)
-                    let distB = haversineDistance(lat1: lat, lng1: lng, lat2: b.lat, lng2: b.lng)
+                    let distA = haversineDistance(lat1: lat, lng1: lng, lat2: a.lat ?? 0, lng2: a.lng ?? 0)
+                    let distB = haversineDistance(lat1: lat, lng1: lng, lat2: b.lat ?? 0, lng2: b.lng ?? 0)
                     return distA < distB
                 }
             }

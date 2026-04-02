@@ -117,15 +117,16 @@ struct SearchMapView: UIViewRepresentable {
     }
 
     private func addMarkers(to mapView: GMSMapView) {
-        guard !listings.isEmpty else { return }
+        let validListings = listings.filter { $0.lat != nil && $0.lng != nil }
+        guard !validListings.isEmpty else { return }
 
-        let bounds = listings.reduce(GMSCoordinateBounds()) { bounds, listing in
-            bounds.includingCoordinate(CLLocationCoordinate2D(latitude: listing.lat, longitude: listing.lng))
+        let bounds = validListings.reduce(GMSCoordinateBounds()) { bounds, listing in
+            bounds.includingCoordinate(CLLocationCoordinate2D(latitude: listing.lat!, longitude: listing.lng!))
         }
 
-        for listing in listings {
+        for listing in validListings {
             let marker = GMSMarker()
-            marker.position = CLLocationCoordinate2D(latitude: listing.lat, longitude: listing.lng)
+            marker.position = CLLocationCoordinate2D(latitude: listing.lat!, longitude: listing.lng!)
             marker.iconView = createPriceBubble(listing: listing)
             marker.userData = listing.id
             marker.map = mapView
@@ -147,13 +148,13 @@ struct SearchMapView: UIViewRepresentable {
         let label = UILabel()
         let text = NSMutableAttributedString()
 
-        if listing.instantBooking {
+        if listing.instantBooking == true {
             let bolt = NSAttributedString(string: "⚡", attributes: [.font: UIFont.systemFont(ofSize: 11)])
             text.append(bolt)
         }
 
         let price = NSAttributedString(
-            string: "\(listing.price) kr",
+            string: "\(listing.price ?? 0) kr",
             attributes: [
                 .font: UIFont.systemFont(ofSize: 13, weight: .bold),
                 .foregroundColor: UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
