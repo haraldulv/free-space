@@ -9,8 +9,7 @@ export default function Footer() {
           <div>
             <Link href="/">
               <span className="text-xl text-neutral-900 lowercase">
-                <span className="font-extralight tracking-tighter">tu</span>
-                <span className="font-bold italic tracking-tight">no</span>
+                tuno
               </span>
             </Link>
             <p className="mt-3 text-sm text-neutral-500">
