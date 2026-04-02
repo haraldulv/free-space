@@ -102,7 +102,7 @@ export default function Navbar({
   const collapsed = isHome ? scrolled : !isSearchPage;
 
   return (
-    <header className={`safe-top sticky top-0 z-50 border-b border-neutral-200/60 transition-all duration-300 ${isHome ? "glass-navbar" : "bg-white"}`}>
+    <header className={`sticky top-0 z-50 border-b border-neutral-200/60 transition-all duration-300 ${isHome ? "glass-navbar" : "bg-white"}`}>
       <div className={`flex items-center justify-between gap-4 ${padClass} ${isSearchPage ? "py-3" : collapsed ? "py-2.5" : "pt-4 pb-2"}`}>
         {/* Logo */}
         <Link href="/" className="shrink-0 group">

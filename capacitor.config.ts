@@ -5,13 +5,18 @@ const config: CapacitorConfig = {
   appName: 'Tuno',
   webDir: 'out',
   server: {
-    url: 'https://tuno.no',
+    url: 'https://www.tuno.no',
     cleartext: false,
   },
   ios: {
     scheme: 'Tuno',
+    contentInset: 'always',
   },
   plugins: {
+    StatusBar: {
+      overlaysWebView: false,
+      style: 'DARK',
+    },
     SplashScreen: {
       launchAutoHide: true,
       backgroundColor: '#1a4fd6',
