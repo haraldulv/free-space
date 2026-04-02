@@ -29,6 +29,13 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="manifest" href="/manifest.json" />
         <link rel="apple-touch-icon" href="/icons/icon-180.png" />
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.addEventListener('load', function() {
+            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen) {
+              window.Capacitor.Plugins.SplashScreen.hide();
+            }
+          });
+        `}} />
       </head>
       <body className="min-h-full flex flex-col font-sans">
         <PasswordGate>{children}</PasswordGate>
