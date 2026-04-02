@@ -3,8 +3,47 @@ import SwiftUI
 struct ProfileView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var showLogoutConfirm = false
+    @State private var showLogin = false
 
     var body: some View {
+        if !authManager.isAuthenticated {
+            // Not logged in — show login prompt
+            VStack(spacing: 20) {
+                Spacer()
+
+                Image(systemName: "person.crop.circle")
+                    .font(.system(size: 60))
+                    .foregroundStyle(.neutral300)
+
+                Text("Logg inn for å se profilen din")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.neutral500)
+
+                Button {
+                    showLogin = true
+                } label: {
+                    Text("Logg inn")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.primary600)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .padding(.horizontal, 40)
+
+                Spacer()
+            }
+            .navigationTitle("Profil")
+            .fullScreenCover(isPresented: $showLogin) {
+                LoginView()
+            }
+        } else {
+            loggedInView
+        }
+    }
+
+    var loggedInView: some View {
         List {
             // Profile header
             Section {

@@ -10,10 +10,8 @@ struct TunoApp: App {
             Group {
                 if authManager.isLoading {
                     LaunchScreen()
-                } else if authManager.isAuthenticated {
-                    MainTabView()
                 } else {
-                    LoginView()
+                    MainTabView()
                 }
             }
             .environmentObject(authManager)
