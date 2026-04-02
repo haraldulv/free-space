@@ -4,14 +4,15 @@ import { useState, useEffect } from "react";
 
 const PASS = "kimharald";
 const STORAGE_KEY = "fs_auth";
+const GATE_DISABLED = process.env.NEXT_PUBLIC_DISABLE_PASSWORD_GATE === "true";
 
 export default function PasswordGate({ children }: { children: React.ReactNode }) {
-  const [authorized, setAuthorized] = useState(false);
+  const [authorized, setAuthorized] = useState(GATE_DISABLED);
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    if (sessionStorage.getItem(STORAGE_KEY) === "1") {
+    if (GATE_DISABLED || sessionStorage.getItem(STORAGE_KEY) === "1") {
       setAuthorized(true);
     }
   }, []);
@@ -34,8 +35,8 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
       <form onSubmit={handleSubmit} className="w-full max-w-xs space-y-4 text-center">
         <div>
           <span className="text-2xl text-neutral-900 lowercase">
-            <span className="font-extralight tracking-tighter">spot</span>
-            <span className="font-bold italic tracking-tight">share</span>
+            <span className="font-extralight tracking-tighter">tu</span>
+            <span className="font-bold italic tracking-tight">no</span>
           </span>
         </div>
         <p className="text-sm text-neutral-500">Skriv inn passord for å fortsette</p>

@@ -3,7 +3,10 @@
     "allow": [
       "WebFetch(domain:albapay.com)",
       "Bash(yes:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(git push:*)",
+      "Bash(find /Users/haraldsalvesen/projects/free-space -maxdepth 2 -type f \\\\\\(-name .env* -o -name *.config.* -o -name stripe* \\\\\\))",
+      "Bash(ls:*)"
     ]
   }
 }

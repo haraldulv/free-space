@@ -1,6 +1,6 @@
 import { Booking } from "@/types";
 
-const BOOKINGS_KEY = "freespace_bookings";
+const BOOKINGS_KEY = "tuno_bookings";
 
 export function getBookings(): Booking[] {
   if (typeof window === "undefined") return [];

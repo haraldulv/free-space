@@ -7,7 +7,7 @@ export async function GET() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://spotshare.no";
+      const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
       return NextResponse.redirect(new URL("/login", origin));
     }
 
@@ -18,11 +18,11 @@ export async function GET() {
       .single();
 
     if (!profile?.stripe_account_id) {
-      const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://spotshare.no";
+      const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
       return NextResponse.redirect(new URL("/dashboard?tab=settings", origin));
     }
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://spotshare.no";
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
     const url = await createAccountLink(
       profile.stripe_account_id,
       `${origin}/api/stripe/connect/callback`,
@@ -32,7 +32,7 @@ export async function GET() {
     return NextResponse.redirect(url);
   } catch (err) {
     console.error("Connect refresh error:", err);
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://spotshare.no";
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
     return NextResponse.redirect(new URL("/dashboard?tab=settings", origin));
   }
 }

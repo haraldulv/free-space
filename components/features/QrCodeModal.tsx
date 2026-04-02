@@ -11,13 +11,13 @@ interface QrCodeModalProps {
 }
 
 function getQrUrl(listingId: string, spot: number): string {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spotshare.no";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
   const targetUrl = `${siteUrl}/listings/${listingId}?spot=${spot}`;
   return `https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(targetUrl)}`;
 }
 
 function getListingUrl(listingId: string, spot: number): string {
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://spotshare.no";
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
   return `${siteUrl}/listings/${listingId}?spot=${spot}`;
 }
 

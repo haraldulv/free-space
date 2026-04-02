@@ -33,7 +33,7 @@ export default function LoginPage() {
     <div className="space-y-5">
       <div className="text-center">
         <h1 className="text-2xl font-bold text-neutral-900">Velkommen tilbake</h1>
-        <p className="mt-1 text-sm text-neutral-500">Logg inn på din SpotShare-konto</p>
+        <p className="mt-1 text-sm text-neutral-500">Logg inn på din Tuno-konto</p>
       </div>
 
       <GoogleSignInButton redirectTo={redirectTo} />

@@ -9,8 +9,8 @@ export default function Footer() {
           <div>
             <Link href="/">
               <span className="text-xl text-neutral-900 lowercase">
-                <span className="font-extralight tracking-tighter">spot</span>
-                <span className="font-bold italic tracking-tight">share</span>
+                <span className="font-extralight tracking-tighter">tu</span>
+                <span className="font-bold italic tracking-tight">no</span>
               </span>
             </Link>
             <p className="mt-3 text-sm text-neutral-500">
@@ -66,7 +66,7 @@ export default function Footer() {
         </div>
 
         <div className="mt-8 border-t border-neutral-200 pt-8 text-center text-sm text-neutral-400">
-          &copy; {new Date().getFullYear()} SpotShare. Alle rettigheter reservert.
+          &copy; {new Date().getFullYear()} Tuno. Alle rettigheter reservert.
         </div>
       </Container>
     </footer>

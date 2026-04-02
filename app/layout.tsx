@@ -10,7 +10,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "SpotShare — Parkering og camping i Norge",
+  title: "Tuno — Parkering og camping i Norge",
   description:
     "Finn og book parkeringsplasser og campingplasser over hele Norge. Pendlerparkering og bobilturisme gjort enkelt.",
 };
@@ -24,6 +24,11 @@ export default function RootLayout({
     <html lang="nb" className={`${dmSans.variable} h-full antialiased`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta name="theme-color" content="#1a4fd6" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" href="/icons/icon-180.png" />
       </head>
       <body className="min-h-full flex flex-col font-sans">
         <PasswordGate>{children}</PasswordGate>

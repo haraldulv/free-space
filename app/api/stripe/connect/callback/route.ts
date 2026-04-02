@@ -7,7 +7,7 @@ export async function GET() {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
-      return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_SITE_URL || "https://spotshare.no"));
+      return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no"));
     }
 
     const { data: profile } = await supabase
@@ -27,11 +27,11 @@ export async function GET() {
       }
     }
 
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://spotshare.no";
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
     return NextResponse.redirect(new URL("/dashboard?tab=settings", origin));
   } catch (err) {
     console.error("Connect callback error:", err);
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://spotshare.no";
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
     return NextResponse.redirect(new URL("/dashboard?tab=settings", origin));
   }
 }

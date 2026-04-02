@@ -48,7 +48,7 @@ function PaymentForm({ total, bookingId }: { total: number; bookingId: string })
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       <div className="mt-6 flex items-center gap-2 rounded-lg bg-primary-50 p-3 text-sm text-primary-700">
         <ShieldCheck className="h-5 w-5 shrink-0" />
-        Din bestilling er beskyttet av spotshare-garantien.
+        Din bestilling er beskyttet av Tuno-garantien.
       </div>
       <Button
         type="submit"

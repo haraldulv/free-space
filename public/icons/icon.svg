@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <rect width="1024" height="1024" rx="224" fill="#1a4fd6"/>
+  <text x="512" y="540" text-anchor="middle" dominant-baseline="central" font-family="DM Sans, sans-serif" fill="white">
+    <tspan font-size="320" font-weight="200" letter-spacing="-10">tu</tspan>
+    <tspan font-size="320" font-weight="700" font-style="italic" letter-spacing="-5">no</tspan>
+  </text>
+</svg>

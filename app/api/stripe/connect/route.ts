@@ -31,7 +31,7 @@ export async function POST() {
     }
 
     // Create onboarding link
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://spotshare.no";
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
     const url = await createAccountLink(
       accountId,
       `${origin}/api/stripe/connect/callback`,
