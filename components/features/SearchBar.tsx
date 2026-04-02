@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Search, X, Car, Caravan, Bus, MapPin } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
@@ -302,15 +303,15 @@ export default function SearchBar({
           </div>
         </button>
 
-        {/* Mobile overlay */}
-        {mobileOpen && (
-          <div className="md:hidden" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column', overflowY: 'auto', WebkitOverflowScrolling: 'touch' }}>
+        {/* Mobile overlay — portaled to body to escape backdrop-filter stacking context */}
+        {mobileOpen && createPortal(
+          <div className="md:hidden" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
               <button onClick={() => setMobileOpen(false)} className="rounded-full p-2.5 hover:bg-neutral-100" aria-label="Lukk"><X className="h-5 w-5" /></button>
               <span className="text-sm font-semibold">Søk</span>
               <div className="w-9" />
             </div>
-            <div className="space-y-4 p-4">
+            <div className="space-y-4 p-4 overflow-y-auto flex-1">
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Hvor</label>
                 <input type="text" value={location} onChange={(e) => handleLocationChange(e.target.value)} onKeyDown={handleKeyDown} placeholder="Søk etter sted eller adresse" className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
@@ -342,7 +343,8 @@ export default function SearchBar({
                 <Search className="mr-2 inline-block h-4 w-4" />Søk
               </button>
             </div>
-          </div>
+          </div>,
+          document.body
         )}
       </>
     );
@@ -454,9 +456,9 @@ export default function SearchBar({
         </div>
       </button>
 
-      {/* Mobile overlay */}
-      {mobileOpen && (
-        <div className="mobile-overlay md:hidden">
+      {/* Mobile overlay — portaled to body to escape backdrop-filter stacking context */}
+      {mobileOpen && createPortal(
+        <div className="md:hidden" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
           <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
             <button onClick={() => setMobileOpen(false)} className="rounded-full p-2.5 hover:bg-neutral-100" aria-label="Lukk">
               <X className="h-5 w-5" />
@@ -523,7 +525,8 @@ export default function SearchBar({
               Søk
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
