@@ -1,0 +1,48 @@
+name: Tuno
+options:
+  bundleIdPrefix: no.tuno
+  deploymentTarget:
+    iOS: "18.0"
+  xcodeVersion: "16.0"
+  createIntermediateGroups: true
+  defaultConfig: Release
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    DEVELOPMENT_TEAM: 3VD2DMBJ6M
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: 1
+
+packages:
+  Supabase:
+    url: https://github.com/supabase/supabase-swift.git
+    from: "2.0.0"
+
+targets:
+  Tuno:
+    type: application
+    platform: iOS
+    sources:
+      - Tuno
+    settings:
+      base:
+        INFOPLIST_FILE: Tuno/Info.plist
+        PRODUCT_BUNDLE_IDENTIFIER: no.tuno.app
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      - package: Supabase
+        product: Supabase
+    info:
+      path: Tuno/Info.plist
+      properties:
+        CFBundleDisplayName: Tuno
+        CFBundleName: Tuno
+        CFBundleShortVersionString: "1.0.0"
+        CFBundleVersion: "1"
+        UILaunchScreen:
+          UIColorName: AccentColor
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        ITSAppUsesNonExemptEncryption: false
+        NSLocationWhenInUseUsageDescription: "Tuno trenger tilgang til posisjonen din for å vise parkerings- og campingplasser i nærheten."
