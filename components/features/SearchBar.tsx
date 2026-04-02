@@ -304,9 +304,9 @@ export default function SearchBar({
 
         {/* Mobile overlay */}
         {mobileOpen && (
-          <div className="fixed inset-0 z-[100] bg-white md:hidden animate-slide-up" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+          <div className="mobile-overlay md:hidden">
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-              <button onClick={() => setMobileOpen(false)} className="rounded-full p-2 hover:bg-neutral-100" aria-label="Lukk"><X className="h-5 w-5" /></button>
+              <button onClick={() => setMobileOpen(false)} className="rounded-full p-2.5 hover:bg-neutral-100" aria-label="Lukk"><X className="h-5 w-5" /></button>
               <span className="text-sm font-semibold">Søk</span>
               <div className="w-9" />
             </div>
@@ -456,7 +456,7 @@ export default function SearchBar({
 
       {/* Mobile overlay */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-[100] bg-white md:hidden animate-slide-up" style={{ paddingTop: "env(safe-area-inset-top)" }}>
+        <div className="mobile-overlay md:hidden">
           <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
             <button onClick={() => setMobileOpen(false)} className="rounded-full p-2.5 hover:bg-neutral-100" aria-label="Lukk">
               <X className="h-5 w-5" />
@@ -465,7 +465,7 @@ export default function SearchBar({
             <div className="w-10" />
           </div>
 
-          <div className="space-y-4 p-4 overflow-y-auto" style={{ maxHeight: "calc(100vh - 60px - env(safe-area-inset-top))" }}>
+          <div className="space-y-4 p-4 overflow-y-auto flex-1">
             <div>
               <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Hvor</label>
               <input

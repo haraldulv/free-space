@@ -38,6 +38,25 @@ body {
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+/* Safe area utility classes for Capacitor iOS */
+.safe-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.mobile-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+  background-color: #ffffff;
+  padding-top: env(safe-area-inset-top, 0px);
+  display: flex;
+  flex-direction: column;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Mobile overlay slide-up animation */
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(100%); }
