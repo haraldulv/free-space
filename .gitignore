@@ -40,3 +40,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 airbnb*.png
+
+# capacitor / ios
+ios/App/Pods/
+ios/App/build/
+ios/App/DerivedData/
