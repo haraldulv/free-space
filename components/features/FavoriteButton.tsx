@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Heart } from "lucide-react";
 import { toggleFavorite } from "@/lib/supabase/favorites";
+import { hapticLight } from "@/lib/haptics";
 
 interface FavoriteButtonProps {
   listingId: string;
@@ -25,6 +26,7 @@ export default function FavoriteButton({
     e.stopPropagation();
     if (loading) return;
     setLoading(true);
+    hapticLight();
     try {
       const result = await toggleFavorite(listingId);
       setFavorited(result);

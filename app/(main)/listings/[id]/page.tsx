@@ -9,6 +9,7 @@ import AmenityList from "@/components/features/AmenityList";
 import HostCard from "@/components/features/HostCard";
 import BookingForm from "@/components/features/BookingForm";
 import ListingFavoriteButton from "@/components/features/ListingFavoriteButton";
+import ShareButton from "@/components/features/ShareButton";
 import ListingMap from "@/components/features/ListingMap";
 import ReviewList from "@/components/features/ReviewList";
 
@@ -47,7 +48,10 @@ export default async function ListingPage({
             <h1 className="text-3xl font-bold text-neutral-900">
               {listing.title}
             </h1>
-            <ListingFavoriteButton listingId={listing.id} />
+            <div className="flex items-center gap-2">
+              <ShareButton title={listing.title} listingId={listing.id} />
+              <ListingFavoriteButton listingId={listing.id} />
+            </div>
           </div>
 
           <div className="mt-2 flex items-center gap-4 text-neutral-500">

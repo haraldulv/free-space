@@ -31,8 +31,15 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-180.png" />
         <script dangerouslySetInnerHTML={{ __html: `
           window.addEventListener('load', function() {
-            if (window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.SplashScreen) {
-              window.Capacitor.Plugins.SplashScreen.hide();
+            if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
+              // Hide splash screen
+              if (window.Capacitor.Plugins.SplashScreen) {
+                window.Capacitor.Plugins.SplashScreen.hide();
+              }
+              // Keyboard: show Done button above keyboard
+              if (window.Capacitor.Plugins.Keyboard) {
+                window.Capacitor.Plugins.Keyboard.setAccessoryBarVisible({ isVisible: true });
+              }
             }
           });
         `}} />

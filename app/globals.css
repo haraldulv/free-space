@@ -30,12 +30,27 @@
   --font-sans: var(--font-dm-sans);
 }
 
+/* Native iOS feel */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* Allow text selection and long-press on text elements */
+p, span, h1, h2, h3, h4, h5, h6, a, li, td, th, label, input, textarea {
+  -webkit-touch-callout: default;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
 body {
   background: var(--color-background);
   color: var(--color-foreground);
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   padding-bottom: env(safe-area-inset-bottom);
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 /* Safe area utility classes for Capacitor iOS */
@@ -139,6 +154,24 @@ body {
 .card-hover:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08);
+}
+
+/* Prevent image long-press save dialog on iOS */
+img {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  pointer-events: auto;
+}
+
+/* Smooth native-like page transitions */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+main {
+  animation: fade-in 0.15s ease-out;
 }
 
 /* Google Maps info window — card popup */
