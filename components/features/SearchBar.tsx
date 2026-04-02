@@ -304,7 +304,7 @@ export default function SearchBar({
 
         {/* Mobile overlay */}
         {mobileOpen && (
-          <div className="fixed inset-0 z-[100] bg-white md:hidden animate-slide-up">
+          <div className="fixed inset-0 z-[100] bg-white md:hidden animate-slide-up" style={{ paddingTop: "env(safe-area-inset-top)" }}>
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
               <button onClick={() => setMobileOpen(false)} className="rounded-full p-2 hover:bg-neutral-100" aria-label="Lukk"><X className="h-5 w-5" /></button>
               <span className="text-sm font-semibold">Søk</span>

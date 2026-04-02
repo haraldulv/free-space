@@ -64,14 +64,14 @@ export default function ImageGallery({ images, alt }: ImageGalleryProps) {
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4">
           <button
             onClick={() => setLightboxOpen(false)}
-            className="absolute right-4 top-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+            className="absolute right-4 top-4 rounded-full bg-white/10 p-3 text-white transition-colors hover:bg-white/20"
             aria-label="Close"
           >
             <X className="h-6 w-6" />
           </button>
           <button
             onClick={prev}
-            className="absolute left-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+            className="absolute left-4 rounded-full bg-white/10 p-3 text-white transition-colors hover:bg-white/20"
             aria-label="Previous"
           >
             <ChevronLeft className="h-6 w-6" />
@@ -87,7 +87,7 @@ export default function ImageGallery({ images, alt }: ImageGalleryProps) {
           </div>
           <button
             onClick={next}
-            className="absolute right-4 rounded-full bg-white/10 p-2 text-white transition-colors hover:bg-white/20"
+            className="absolute right-4 rounded-full bg-white/10 p-3 text-white transition-colors hover:bg-white/20"
             aria-label="Next"
           >
             <ChevronRight className="h-6 w-6" />

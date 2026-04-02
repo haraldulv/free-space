@@ -69,7 +69,7 @@ export default function BookingForm({ listing }: BookingFormProps) {
   const priceLabel = listing.priceUnit === "time" ? "dag" : "natt";
 
   return (
-    <div className="sticky top-24 rounded-xl border border-neutral-200 bg-white p-6 shadow-sm">
+    <div className="lg:sticky lg:top-24 rounded-xl border border-neutral-200 bg-white p-4 sm:p-6 shadow-sm">
       <div className="flex items-baseline justify-between">
         <div>
           <span className="text-2xl font-bold text-neutral-900">

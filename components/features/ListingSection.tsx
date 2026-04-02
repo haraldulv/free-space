@@ -58,7 +58,7 @@ export default function ListingSection({ title, listings }: ListingSectionProps)
             <button
               onClick={() => scroll("left")}
               disabled={!canScrollLeft}
-              className={`flex h-8 w-8 items-center justify-center rounded-full border border-neutral-300 transition-colors ${
+              className={`flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 transition-colors ${
                 canScrollLeft
                   ? "bg-white text-neutral-700 hover:bg-neutral-50"
                   : "bg-neutral-100 text-neutral-300 cursor-default"
@@ -70,7 +70,7 @@ export default function ListingSection({ title, listings }: ListingSectionProps)
             <button
               onClick={() => scroll("right")}
               disabled={!canScrollRight}
-              className={`flex h-8 w-8 items-center justify-center rounded-full border border-neutral-300 transition-colors ${
+              className={`flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 transition-colors ${
                 canScrollRight
                   ? "bg-white text-neutral-700 hover:bg-neutral-50"
                   : "bg-neutral-100 text-neutral-300 cursor-default"

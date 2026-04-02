@@ -30,7 +30,7 @@ export default async function ListingPage({
     <Container className="py-8">
       <ImageGallery images={listing.images} alt={listing.title} />
 
-      <div className="mt-8 grid grid-cols-1 gap-10 lg:grid-cols-3">
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:gap-10 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <div className="flex items-center gap-3">
             <Badge>
