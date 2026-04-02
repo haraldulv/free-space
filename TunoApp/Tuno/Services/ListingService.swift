@@ -25,14 +25,39 @@ final class ListingService: ObservableObject {
         }
     }
 
+    func fetchRecent(limit: Int = 12) async -> [Listing] {
+        do {
+            let listings: [Listing] = try await supabase
+                .from("listings")
+                .select()
+                .eq("is_active", value: true)
+                .order("created_at", ascending: false)
+                .limit(limit)
+                .execute()
+                .value
+            return listings
+        } catch {
+            print("Failed to fetch recent listings: \(error)")
+            return []
+        }
+    }
+
     func fetchHomeListings() async {
         isLoading = true
+
+        // Try tags first
         async let popular = fetchByTag("popular", limit: 8)
         async let featured = fetchByTag("featured", limit: 8)
         async let available = fetchByTag("available_today", limit: 8)
         popularListings = await popular
         featuredListings = await featured
         availableTodayListings = await available
+
+        // Fallback: if no tagged listings, show recent ones
+        if popularListings.isEmpty && featuredListings.isEmpty {
+            popularListings = await fetchRecent(limit: 8)
+        }
+
         isLoading = false
     }
 
