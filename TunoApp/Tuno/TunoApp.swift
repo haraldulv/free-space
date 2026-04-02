@@ -20,6 +20,7 @@ struct TunoApp: App {
             }
             .environmentObject(authManager)
             .tint(Color.primary600)
+            .preferredColorScheme(.light)
         }
     }
 }
