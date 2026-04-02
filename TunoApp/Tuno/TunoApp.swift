@@ -5,6 +5,10 @@ import Supabase
 struct TunoApp: App {
     @StateObject private var authManager = AuthManager()
 
+    init() {
+        initializeGoogleMaps()
+    }
+
     var body: some Scene {
         WindowGroup {
             Group {

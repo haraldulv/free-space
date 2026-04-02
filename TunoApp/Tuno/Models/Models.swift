@@ -35,10 +35,11 @@ struct Listing: Codable, Identifiable, Hashable {
     let hostResponseTime: String?
     let hostJoinedYear: Int?
     let hostListingsCount: Int?
+    let tags: [String]?
     let createdAt: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, title, description, category, city, region, address, lat, lng, price, amenities, spots, images, rating
+        case id, title, description, category, city, region, address, lat, lng, price, amenities, spots, images, rating, tags
         case hostId = "host_id"
         case vehicleType = "vehicle_type"
         case priceUnit = "price_unit"

@@ -106,6 +106,39 @@ struct ListingDetailView: View {
                                 Divider()
                             }
 
+                            // Map
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(listing.hideExactLocation ? "Omtrentlig plassering" : "Plassering")
+                                    .font(.system(size: 18, weight: .semibold))
+
+                                if !listing.hideExactLocation {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "mappin")
+                                            .font(.system(size: 12))
+                                        Text(listing.address)
+                                            .font(.system(size: 13))
+                                    }
+                                    .foregroundStyle(.neutral500)
+                                }
+
+                                ListingMapView(
+                                    lat: listing.lat,
+                                    lng: listing.lng,
+                                    spotMarkers: listing.spotMarkers ?? [],
+                                    hideExactLocation: listing.hideExactLocation
+                                )
+                                .frame(height: 250)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                                if listing.hideExactLocation {
+                                    Text("Eksakt adresse deles etter bekreftet booking.")
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.neutral400)
+                                }
+                            }
+
+                            Divider()
+
                             // Rating
                             if let rating = listing.rating, let count = listing.reviewCount, count > 0 {
                                 HStack(spacing: 6) {

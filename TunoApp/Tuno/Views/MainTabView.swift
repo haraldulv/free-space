@@ -18,19 +18,19 @@ struct MainTabView: View {
                 }
             }
 
-            Tab("Bestillinger", systemImage: "calendar", value: 2) {
+            Tab("Bestillinger", systemImage: "calendar.badge.checkmark", value: 2) {
                 NavigationStack {
                     BookingsView()
                 }
             }
 
-            Tab("Meldinger", systemImage: "message", value: 3) {
+            Tab("Meldinger", systemImage: "bubble.left", value: 3) {
                 NavigationStack {
                     MessagesListView()
                 }
             }
 
-            Tab("Profil", systemImage: "person", value: 4) {
+            Tab("Profil", systemImage: "person.crop.circle", value: 4) {
                 NavigationStack {
                     ProfileView()
                 }

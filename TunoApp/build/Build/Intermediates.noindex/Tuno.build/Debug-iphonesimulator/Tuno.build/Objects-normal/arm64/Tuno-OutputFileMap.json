@@ -1,0 +1,219 @@
+{
+  "" : {
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Tuno-primary.dia",
+    "emit-module-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Tuno-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Tuno-primary-emit-module.dia",
+    "pch" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Tuno-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Tuno-primary.swiftdeps"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Components/InputField.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/InputField.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/InputField.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/InputField.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/InputField.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/InputField.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/InputField.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/InputField.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/InputField~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Components/ListingCard.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingCard.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingCard.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingCard.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingCard.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingCard.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingCard.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingCard.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingCard~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Models/Models.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Models.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Models.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Models.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Models.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Models.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Models.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Models.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Models~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Services/AuthManager.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/AuthManager.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/AuthManager.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/AuthManager.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/AuthManager.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/AuthManager.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/AuthManager.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/AuthManager.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/AuthManager~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Services/ListingService.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingService.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingService.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingService.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingService.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingService.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingService.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingService.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingService~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Services/SupabaseService.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SupabaseService.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SupabaseService.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SupabaseService.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SupabaseService.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SupabaseService.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SupabaseService.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SupabaseService.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SupabaseService~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Theme.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Theme.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Theme.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Theme.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Theme.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Theme.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Theme.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Theme.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/Theme~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/TunoApp.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/TunoApp.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/TunoApp.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/TunoApp.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/TunoApp.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/TunoApp.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/TunoApp.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/TunoApp.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/TunoApp~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/Auth/ForgotPasswordView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ForgotPasswordView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ForgotPasswordView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ForgotPasswordView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ForgotPasswordView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ForgotPasswordView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ForgotPasswordView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ForgotPasswordView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ForgotPasswordView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/Auth/LoginView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LoginView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LoginView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LoginView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LoginView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LoginView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LoginView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LoginView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LoginView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/Auth/RegisterView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/RegisterView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/RegisterView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/RegisterView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/RegisterView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/RegisterView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/RegisterView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/RegisterView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/RegisterView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/Dashboard/BookingsView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/BookingsView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/BookingsView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/BookingsView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/BookingsView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/BookingsView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/BookingsView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/BookingsView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/BookingsView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/Dashboard/FavoritesView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/FavoritesView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/FavoritesView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/FavoritesView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/FavoritesView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/FavoritesView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/FavoritesView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/FavoritesView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/FavoritesView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/LaunchScreen.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LaunchScreen.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LaunchScreen.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LaunchScreen.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LaunchScreen.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LaunchScreen.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LaunchScreen.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LaunchScreen.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/LaunchScreen~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/Listing/ListingDetailView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingDetailView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingDetailView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingDetailView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingDetailView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingDetailView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingDetailView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingDetailView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ListingDetailView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/MainTabView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MainTabView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MainTabView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MainTabView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MainTabView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MainTabView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MainTabView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MainTabView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MainTabView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/Messages/MessagesListView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MessagesListView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MessagesListView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MessagesListView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MessagesListView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MessagesListView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MessagesListView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MessagesListView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/MessagesListView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/Search/HomeView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/HomeView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/HomeView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/HomeView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/HomeView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/HomeView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/HomeView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/HomeView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/HomeView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/Search/SearchView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SearchView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SearchView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SearchView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SearchView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SearchView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SearchView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SearchView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/SearchView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/Tuno/Views/Settings/ProfileView.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ProfileView.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ProfileView.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ProfileView.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ProfileView.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ProfileView.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ProfileView.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ProfileView.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/ProfileView~partial.swiftmodule"
+  },
+  "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/haraldsalvesen/projects/free-space/TunoApp/build/Build/Intermediates.noindex/Tuno.build/Debug-iphonesimulator/Tuno.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  }
+}

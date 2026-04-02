@@ -40,25 +40,43 @@ struct HomeView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 20)
 
-                // Popular listings
-                if !listingService.popularListings.isEmpty {
-                    ListingSection(
-                        title: "Populære plasser",
-                        listings: listingService.popularListings
-                    )
-                }
-
-                // Featured
-                if !listingService.featuredListings.isEmpty {
-                    ListingSection(
-                        title: "Utvalgte plasser",
-                        listings: listingService.featuredListings
-                    )
-                }
-
                 if listingService.isLoading {
                     ProgressView()
                         .padding(.top, 40)
+                } else if listingService.popularListings.isEmpty && listingService.featuredListings.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "map")
+                            .font(.system(size: 40))
+                            .foregroundStyle(.neutral300)
+                        Text("Ingen plasser å vise")
+                            .font(.system(size: 16, weight: .medium))
+                            .foregroundStyle(.neutral500)
+                    }
+                    .padding(.top, 40)
+                } else {
+                    // Popular listings
+                    if !listingService.popularListings.isEmpty {
+                        ListingSection(
+                            title: "Populære i Norge",
+                            listings: listingService.popularListings
+                        )
+                    }
+
+                    // Featured
+                    if !listingService.featuredListings.isEmpty {
+                        ListingSection(
+                            title: "Fremhevede i Norge",
+                            listings: listingService.featuredListings
+                        )
+                    }
+
+                    // Available today
+                    if !listingService.availableTodayListings.isEmpty {
+                        ListingSection(
+                            title: "Tilgjengelig i dag",
+                            listings: listingService.availableTodayListings
+                        )
+                    }
                 }
             }
             .padding(.bottom, 20)

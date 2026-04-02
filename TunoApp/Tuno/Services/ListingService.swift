@@ -4,6 +4,7 @@ import Foundation
 final class ListingService: ObservableObject {
     @Published var popularListings: [Listing] = []
     @Published var featuredListings: [Listing] = []
+    @Published var availableTodayListings: [Listing] = []
     @Published var searchResults: [Listing] = []
     @Published var isLoading = false
 
@@ -13,6 +14,7 @@ final class ListingService: ObservableObject {
                 .from("listings")
                 .select()
                 .eq("is_active", value: true)
+                .contains("tags", value: [tag])
                 .limit(limit)
                 .execute()
                 .value
@@ -27,8 +29,10 @@ final class ListingService: ObservableObject {
         isLoading = true
         async let popular = fetchByTag("popular", limit: 8)
         async let featured = fetchByTag("featured", limit: 8)
+        async let available = fetchByTag("available_today", limit: 8)
         popularListings = await popular
         featuredListings = await featured
+        availableTodayListings = await available
         isLoading = false
     }
 
