@@ -10,14 +10,10 @@ struct HomeView: View {
             VStack(spacing: 32) {
                 // Hero
                 VStack(spacing: 16) {
-                    Text("tuno")
-                        .font(.system(size: 36, weight: .bold))
-                        .foregroundStyle(.neutral900)
-
-                    Text("Finn parkering og campingplasser\ni hele Norge")
-                        .font(.system(size: 16))
-                        .foregroundStyle(.neutral500)
-                        .multilineTextAlignment(.center)
+                    Image("TunoLogo")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(height: 40)
 
                     // Search bar
                     Button {
