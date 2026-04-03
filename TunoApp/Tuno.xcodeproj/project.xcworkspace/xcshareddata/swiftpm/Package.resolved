@@ -1,5 +1,5 @@
 {
-  "originHash" : "3019788645e6014960ca0110cf3f87c44c2c6d34fb66fa08a03083affc4109cd",
+  "originHash" : "6bca79f82d9d324bd3db301f210e4ed089db989f288581816e2bd9da38d28ec2",
   "pins" : [
     {
       "identity" : "ios-maps-sdk",
@@ -17,6 +17,15 @@
       "state" : {
         "revision" : "2960dc2278a84e1daf1f16b417c978a96920ecdd",
         "version" : "10.10.0"
+      }
+    },
+    {
+      "identity" : "stripe-ios-spm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/stripe/stripe-ios-spm.git",
+      "state" : {
+        "revision" : "f4f28a0b358011089e4538059d443eccff183382",
+        "version" : "24.25.0"
       }
     },
     {

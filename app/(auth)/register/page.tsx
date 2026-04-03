@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { registerSchema } from "@/lib/utils/validation";
 import AuthForm from "@/components/features/AuthForm";
 import GoogleSignInButton from "@/components/features/GoogleSignInButton";
+import AppleSignInButton from "@/components/features/AppleSignInButton";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -39,6 +40,7 @@ export default function RegisterPage() {
         <p className="mt-1 text-sm text-neutral-500">Bli med på Tuno og begynn å booke</p>
       </div>
 
+      <AppleSignInButton redirectTo={redirectTo} />
       <GoogleSignInButton redirectTo={redirectTo} />
 
       <div className="relative">

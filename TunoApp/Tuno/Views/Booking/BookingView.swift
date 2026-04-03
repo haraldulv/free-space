@@ -1,5 +1,95 @@
 import SwiftUI
-import StripePaymentSheet
+import PassKit
+import StripePaymentsUI
+import StripeApplePay
+
+// Stripe card input wrapped for SwiftUI
+struct CardFormView: UIViewRepresentable {
+    @Binding var isComplete: Bool
+    @Binding var cardField: STPPaymentCardTextField?
+
+    class Coordinator: NSObject, STPPaymentCardTextFieldDelegate {
+        var parent: CardFormView
+        init(_ parent: CardFormView) { self.parent = parent }
+        func paymentCardTextFieldDidChange(_ textField: STPPaymentCardTextField) {
+            parent.isComplete = textField.isValid
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIView(context: Context) -> STPPaymentCardTextField {
+        let field = STPPaymentCardTextField()
+        field.delegate = context.coordinator
+        field.postalCodeEntryEnabled = false
+        field.countryCode = "NO"
+        DispatchQueue.main.async { self.cardField = field }
+        return field
+    }
+
+    func updateUIView(_ uiView: STPPaymentCardTextField, context: Context) {}
+}
+
+// Native Apple Pay button
+struct ApplePayButtonView: UIViewRepresentable {
+    let action: () -> Void
+
+    func makeUIView(context: Context) -> PKPaymentButton {
+        let button = PKPaymentButton(paymentButtonType: .buy, paymentButtonStyle: .black)
+        button.addTarget(context.coordinator, action: #selector(Coordinator.tapped), for: .touchUpInside)
+        return button
+    }
+
+    func updateUIView(_ uiView: PKPaymentButton, context: Context) {}
+    func makeCoordinator() -> Coordinator { Coordinator(action: action) }
+
+    class Coordinator: NSObject {
+        let action: () -> Void
+        init(action: @escaping () -> Void) { self.action = action }
+        @objc func tapped() { action() }
+    }
+}
+
+// Apple Pay handler
+class ApplePayHandler: NSObject, PKPaymentAuthorizationControllerDelegate {
+    let clientSecret: String
+    let completion: (Bool) -> Void
+
+    init(clientSecret: String, completion: @escaping (Bool) -> Void) {
+        self.clientSecret = clientSecret
+        self.completion = completion
+    }
+
+    func paymentAuthorizationController(_ controller: PKPaymentAuthorizationController, didAuthorizePayment payment: PKPayment, handler: @escaping (PKPaymentAuthorizationResult) -> Void) {
+        STPAPIClient.shared.createPaymentMethod(with: payment) { paymentMethod, error in
+            guard let paymentMethod, error == nil else {
+                print("❌ Apple Pay createPM error: \(error?.localizedDescription ?? "unknown")")
+                handler(PKPaymentAuthorizationResult(status: .failure, errors: nil))
+                self.completion(false)
+                return
+            }
+
+            let params = STPPaymentIntentParams(clientSecret: self.clientSecret)
+            params.paymentMethodId = paymentMethod.stripeId
+
+            STPAPIClient.shared.confirmPaymentIntent(with: params) { paymentIntent, confirmError in
+                if paymentIntent?.status == .succeeded {
+                    print("✅ Apple Pay succeeded!")
+                    handler(PKPaymentAuthorizationResult(status: .success, errors: nil))
+                    self.completion(true)
+                } else {
+                    print("❌ Apple Pay confirm error: \(confirmError?.localizedDescription ?? "unknown")")
+                    handler(PKPaymentAuthorizationResult(status: .failure, errors: nil))
+                    self.completion(false)
+                }
+            }
+        }
+    }
+
+    func paymentAuthorizationControllerDidFinish(_ controller: PKPaymentAuthorizationController) {
+        controller.dismiss()
+    }
+}
 
 struct BookingView: View {
     let listing: Listing
@@ -14,7 +104,11 @@ struct BookingView: View {
     @State private var availableSpots: Int?
     @State private var totalSpots: Int?
     @State private var showConfirmation = false
-    @State private var paymentResult: PaymentSheetResult?
+    @State private var cardIsComplete = false
+    @State private var cardField: STPPaymentCardTextField?
+    @State private var showCardForm = false
+    @State private var applePayHandler: ApplePayHandler?
+    @State private var isApplePayLoading = false
 
     private var nights: Int {
         max(1, Calendar.current.dateComponents([.day], from: checkIn, to: checkOut).day ?? 1)
@@ -32,41 +126,20 @@ struct BookingView: View {
         subtotal + serviceFee
     }
 
-    private var blockedDateSet: Set<DateComponents> {
-        var set = Set<DateComponents>()
-        for dateStr in listing.blockedDates ?? [] {
-            let parts = dateStr.split(separator: "-")
-            if parts.count == 3,
-               let y = Int(parts[0]), let m = Int(parts[1]), let d = Int(parts[2]) {
-                set.insert(DateComponents(year: y, month: m, day: d))
-            }
-        }
-        return set
-    }
-
-    private var isValid: Bool {
+    private var isFormValid: Bool {
         checkOut > checkIn && (isRentalCar || !licensePlate.trimmingCharacters(in: .whitespaces).isEmpty)
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                // Listing summary
                 listingSummary
-
                 Divider()
-
-                // Date selection
                 dateSection
-
                 Divider()
-
-                // Vehicle info
                 vehicleSection
-
                 Divider()
 
-                // Availability
                 if let available = availableSpots, let total = totalSpots {
                     HStack(spacing: 6) {
                         Image(systemName: available > 0 ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -77,10 +150,18 @@ struct BookingView: View {
                     }
                 }
 
-                // Price breakdown
                 priceBreakdown
 
-                // Error
+                // Card form (expandable)
+                if showCardForm {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Kortinformasjon")
+                            .font(.system(size: 16, weight: .semibold))
+                        CardFormView(isComplete: $cardIsComplete, cardField: $cardField)
+                            .frame(height: 50)
+                    }
+                }
+
                 if let error = bookingService.error {
                     Text(error)
                         .font(.system(size: 14))
@@ -92,33 +173,70 @@ struct BookingView: View {
         }
         .background(.white)
         .safeAreaInset(edge: .bottom) {
-            // Pay button
-            VStack(spacing: 0) {
+            VStack(spacing: 8) {
                 Divider()
-                Button {
-                    Task { await handlePayment() }
-                } label: {
-                    Group {
-                        if bookingService.isProcessing {
-                            ProgressView().tint(.white)
-                        } else {
-                            HStack(spacing: 8) {
-                                Image(systemName: "apple.logo")
+
+                if showCardForm {
+                    // Card payment button
+                    Button {
+                        Task { await confirmCardPayment() }
+                    } label: {
+                        Group {
+                            if bookingService.isProcessing {
+                                ProgressView().tint(.white)
+                            } else {
                                 Text("Betal \(total) kr")
+                                    .font(.system(size: 16, weight: .semibold))
                             }
-                            .font(.system(size: 16, weight: .semibold))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(cardIsComplete ? Color.primary600 : Color.neutral300)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .disabled(!cardIsComplete || bookingService.isProcessing)
+                    .padding(.horizontal, 20)
+                } else {
+                    // Apple Pay (one tap — creates booking + presents Apple Pay)
+                    if BookingService.canPayWithApplePay {
+                        if isApplePayLoading {
+                            ProgressView()
+                                .frame(height: 50)
+                        } else {
+                            ApplePayButtonView {
+                                Task { await handleApplePay() }
+                            }
+                            .frame(height: 50)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .padding(.horizontal, 20)
+                            .opacity(isFormValid && !(availableSpots == 0) ? 1 : 0.4)
+                            .allowsHitTesting(isFormValid && !(availableSpots == 0))
                         }
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(isValid && !(availableSpots == 0) ? Color.black : Color.neutral300)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                    // "Betal med kort" toggle
+                    Button {
+                        if bookingService.clientSecret == nil {
+                            Task {
+                                await createBookingIfNeeded()
+                                if bookingService.clientSecret != nil {
+                                    withAnimation { showCardForm = true }
+                                }
+                            }
+                        } else {
+                            withAnimation { showCardForm = true }
+                        }
+                    } label: {
+                        Text("Betal med kort")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.primary600)
+                    }
+                    .disabled(!isFormValid || availableSpots == 0)
+                    .padding(.bottom, 4)
                 }
-                .disabled(!isValid || bookingService.isProcessing || availableSpots == 0)
-                .padding(.horizontal, 20)
-                .padding(.vertical, 12)
             }
+            .padding(.vertical, 8)
             .background(.white)
         }
         .navigationTitle("Bestill")
@@ -138,9 +256,13 @@ struct BookingView: View {
             if checkOut <= checkIn {
                 checkOut = Calendar.current.date(byAdding: .day, value: 1, to: checkIn) ?? checkIn
             }
+            showCardForm = false
+            bookingService.clientSecret = nil
             Task { await checkAvailability() }
         }
         .onChange(of: checkOut) {
+            showCardForm = false
+            bookingService.clientSecret = nil
             Task { await checkAvailability() }
         }
     }
@@ -160,7 +282,6 @@ struct BookingView: View {
                 .frame(width: 80, height: 80)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
-
             VStack(alignment: .leading, spacing: 4) {
                 Text(listing.title)
                     .font(.system(size: 16, weight: .semibold))
@@ -179,7 +300,6 @@ struct BookingView: View {
                         .foregroundStyle(.neutral500)
                 }
             }
-
             Spacer()
         }
     }
@@ -188,20 +308,15 @@ struct BookingView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Datoer")
                 .font(.system(size: 18, weight: .semibold))
-
             HStack(spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Innsjekk")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundStyle(.neutral500)
-                    DatePicker("", selection: $checkIn,
-                               in: Date()...,
-                               displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                        .labelsHidden()
+                    DatePicker("", selection: $checkIn, in: Date()..., displayedComponents: .date)
+                        .datePickerStyle(.compact).labelsHidden()
                         .environment(\.locale, Locale(identifier: "nb"))
                 }
-
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Utsjekk")
                         .font(.system(size: 12, weight: .medium))
@@ -209,14 +324,11 @@ struct BookingView: View {
                     DatePicker("", selection: $checkOut,
                                in: Calendar.current.date(byAdding: .day, value: 1, to: checkIn)!...,
                                displayedComponents: .date)
-                        .datePickerStyle(.compact)
-                        .labelsHidden()
+                        .datePickerStyle(.compact).labelsHidden()
                         .environment(\.locale, Locale(identifier: "nb"))
                 }
-
                 Spacer()
             }
-
             Text("\(nights) \(nights == 1 ? "natt" : "netter")")
                 .font(.system(size: 14))
                 .foregroundStyle(.neutral500)
@@ -227,11 +339,9 @@ struct BookingView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Kjøretøy")
                 .font(.system(size: 18, weight: .semibold))
-
             Toggle("Leiebil (ingen registreringsnummer)", isOn: $isRentalCar)
                 .font(.system(size: 14))
                 .tint(.primary600)
-
             if !isRentalCar {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Registreringsnummer")
@@ -242,10 +352,7 @@ struct BookingView: View {
                         .padding(14)
                         .background(Color.neutral50)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.neutral200, lineWidth: 1)
-                        )
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.characters)
                 }
@@ -257,32 +364,20 @@ struct BookingView: View {
         VStack(spacing: 10) {
             HStack {
                 Text("\(listing.price ?? 0) kr × \(nights) \(nights == 1 ? "natt" : "netter")")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.neutral600)
+                    .font(.system(size: 14)).foregroundStyle(.neutral600)
                 Spacer()
-                Text("\(subtotal) kr")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.neutral600)
+                Text("\(subtotal) kr").font(.system(size: 14)).foregroundStyle(.neutral600)
             }
-
             HStack {
-                Text("Serviceavgift")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.neutral600)
+                Text("Serviceavgift").font(.system(size: 14)).foregroundStyle(.neutral600)
                 Spacer()
-                Text("\(serviceFee) kr")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.neutral600)
+                Text("\(serviceFee) kr").font(.system(size: 14)).foregroundStyle(.neutral600)
             }
-
             Divider()
-
             HStack {
-                Text("Totalt")
-                    .font(.system(size: 16, weight: .bold))
+                Text("Totalt").font(.system(size: 16, weight: .bold))
                 Spacer()
-                Text("\(total) kr")
-                    .font(.system(size: 16, weight: .bold))
+                Text("\(total) kr").font(.system(size: 16, weight: .bold))
             }
         }
         .padding(16)
@@ -304,7 +399,9 @@ struct BookingView: View {
         totalSpots = result.total
     }
 
-    private func handlePayment() async {
+    private func createBookingIfNeeded() async {
+        guard bookingService.clientSecret == nil else { return }
+
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
@@ -317,27 +414,68 @@ struct BookingView: View {
             isRentalCar: isRentalCar
         )
 
-        let success = await bookingService.createBookingAndPreparePayment(
-            request: request,
-            listingTitle: listing.title
-        )
+        _ = await bookingService.createBooking(request: request)
+    }
 
-        guard success, let paymentSheet = bookingService.paymentSheet else { return }
+    private func handleApplePay() async {
+        isApplePayLoading = true
+        await createBookingIfNeeded()
+        isApplePayLoading = false
 
-        paymentSheet.present(from: UIApplication.shared.connectedScenes
-            .compactMap { $0 as? UIWindowScene }
-            .flatMap { $0.windows }
-            .first { $0.isKeyWindow }?
-            .rootViewController ?? UIViewController()
-        ) { result in
-            switch result {
-            case .completed:
-                showConfirmation = true
-            case .canceled:
-                break
-            case .failed(let error):
-                bookingService.error = error.localizedDescription
+        guard let clientSecret = bookingService.clientSecret else { return }
+
+        let request = PKPaymentRequest()
+        request.merchantIdentifier = "merchant.no.tuno.app"
+        request.countryCode = "NO"
+        request.currencyCode = "NOK"
+        request.supportedNetworks = [.visa, .masterCard, .amex]
+        request.merchantCapabilities = .threeDSecure
+        request.paymentSummaryItems = [
+            PKPaymentSummaryItem(label: listing.title, amount: NSDecimalNumber(value: total))
+        ]
+
+        let handler = ApplePayHandler(clientSecret: clientSecret) { success in
+            DispatchQueue.main.async {
+                if success {
+                    self.showConfirmation = true
+                } else {
+                    self.bookingService.error = "Apple Pay-betaling feilet"
+                }
             }
+        }
+        self.applePayHandler = handler
+
+        let controller = PKPaymentAuthorizationController(paymentRequest: request)
+        controller.delegate = handler
+        controller.present()
+    }
+
+    private func confirmCardPayment() async {
+        guard let field = cardField, field.isValid else {
+            bookingService.error = "Fyll inn kortinformasjon"
+            return
+        }
+
+        let pmId: String? = await withCheckedContinuation { continuation in
+            STPAPIClient.shared.createPaymentMethod(with: field.paymentMethodParams) { paymentMethod, error in
+                if let error {
+                    print("❌ Create PM error: \(error)")
+                    continuation.resume(returning: nil)
+                } else {
+                    print("💳 Created PM: \(paymentMethod?.stripeId ?? "?")")
+                    continuation.resume(returning: paymentMethod?.stripeId)
+                }
+            }
+        }
+
+        guard let pmId else {
+            bookingService.error = "Kunne ikke opprette betalingsmetode"
+            return
+        }
+
+        let success = await bookingService.confirmCardPayment(paymentMethodId: pmId)
+        if success {
+            showConfirmation = true
         }
     }
 }

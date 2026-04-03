@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { loginSchema } from "@/lib/utils/validation";
 import AuthForm from "@/components/features/AuthForm";
 import GoogleSignInButton from "@/components/features/GoogleSignInButton";
+import AppleSignInButton from "@/components/features/AppleSignInButton";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -36,6 +37,7 @@ export default function LoginPage() {
         <p className="mt-1 text-sm text-neutral-500">Logg inn på din Tuno-konto</p>
       </div>
 
+      <AppleSignInButton redirectTo={redirectTo} />
       <GoogleSignInButton redirectTo={redirectTo} />
 
       <div className="relative">

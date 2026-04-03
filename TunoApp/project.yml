@@ -24,7 +24,7 @@ packages:
   GooglePlaces:
     url: https://github.com/googlemaps/ios-places-sdk.git
     from: "10.0.0"
-  StripePaymentSheet:
+  Stripe:
     url: https://github.com/stripe/stripe-ios-spm.git
     from: "24.0.0"
 
@@ -54,8 +54,10 @@ targets:
         product: GoogleMaps
       - package: GooglePlaces
         product: GooglePlaces
-      - package: StripePaymentSheet
-        product: StripePaymentSheet
+      - package: Stripe
+        product: StripeApplePay
+      - package: Stripe
+        product: StripePaymentsUI
     info:
       path: Tuno/Info.plist
       properties:

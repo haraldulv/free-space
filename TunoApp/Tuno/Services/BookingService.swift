@@ -1,5 +1,8 @@
 import Foundation
-import StripePaymentSheet
+import UIKit
+import PassKit
+import StripeApplePay
+import StripePaymentsUI
 
 struct CreateBookingRequest: Encodable {
     let listingId: String
@@ -19,29 +22,31 @@ struct CreateBookingResponse: Decodable {
 
 @MainActor
 final class BookingService: ObservableObject {
-    @Published var paymentSheet: PaymentSheet?
     @Published var isProcessing = false
     @Published var error: String?
     @Published var bookingId: String?
+    @Published var clientSecret: String?
 
     static let serviceFeeRate = 0.10
 
-    func createBookingAndPreparePayment(request: CreateBookingRequest, listingTitle: String) async -> Bool {
+    static var canPayWithApplePay: Bool {
+        StripeAPI.deviceSupportsApplePay()
+    }
+
+    func createBooking(request: CreateBookingRequest) async -> Bool {
         isProcessing = true
         error = nil
 
         do {
             let session = try await supabase.auth.session
             let token = session.accessToken
+            print("🔑 Got auth token, calling API...")
 
             var urlRequest = URLRequest(url: URL(string: "\(AppConfig.siteURL)/api/bookings/create")!)
             urlRequest.httpMethod = "POST"
             urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            let encoder = JSONEncoder()
-            encoder.keyEncodingStrategy = .convertToSnakeCase
-            urlRequest.httpBody = try encoder.encode(request)
+            urlRequest.httpBody = try JSONEncoder().encode(request)
 
             let (data, response) = try await URLSession.shared.data(for: urlRequest)
 
@@ -51,9 +56,10 @@ final class BookingService: ObservableObject {
                 return false
             }
 
-            let decoder = JSONDecoder()
-            decoder.keyDecodingStrategy = .convertFromSnakeCase
-            let result = try decoder.decode(CreateBookingResponse.self, from: data)
+            let responseBody = String(data: data, encoding: .utf8) ?? "nil"
+            print("📡 API response (\(httpResponse.statusCode)): \(responseBody)")
+
+            let result = try JSONDecoder().decode(CreateBookingResponse.self, from: data)
 
             if let errorMsg = result.error {
                 error = errorMsg
@@ -61,31 +67,69 @@ final class BookingService: ObservableObject {
                 return false
             }
 
-            guard let clientSecret = result.clientSecret,
+            guard let secret = result.clientSecret,
                   let publishableKey = result.publishableKey else {
                 error = "Mangler betalingsinformasjon"
                 isProcessing = false
                 return false
             }
 
-            self.bookingId = result.bookingId
+            print("✅ Got clientSecret and publishableKey")
 
-            // Configure Stripe PaymentSheet
             STPAPIClient.shared.publishableKey = publishableKey
-
-            var config = PaymentSheet.Configuration()
-            config.merchantDisplayName = "Tuno"
-            config.applePay = .init(merchantId: "merchant.no.tuno.app", merchantCountryCode: "NO")
-            config.defaultBillingDetails.address.country = "NO"
-            config.allowsDelayedPaymentMethods = false
-
-            self.paymentSheet = PaymentSheet(paymentIntentClientSecret: clientSecret, configuration: config)
+            self.bookingId = result.bookingId
+            self.clientSecret = secret
             isProcessing = false
             return true
         } catch {
+            print("❌ BookingService error: \(error)")
             self.error = "Noe gikk galt: \(error.localizedDescription)"
             isProcessing = false
             return false
+        }
+    }
+
+    func confirmCardPayment(paymentMethodId: String) async -> Bool {
+        guard let clientSecret else {
+            error = "Mangler betalingsinformasjon"
+            return false
+        }
+
+        isProcessing = true
+        error = nil
+
+        let paymentIntentParams = STPPaymentIntentParams(clientSecret: clientSecret)
+        paymentIntentParams.paymentMethodId = paymentMethodId
+
+        return await withCheckedContinuation { continuation in
+            STPAPIClient.shared.confirmPaymentIntent(with: paymentIntentParams) { paymentIntent, confirmError in
+                DispatchQueue.main.async {
+                    self.isProcessing = false
+
+                    if let confirmError {
+                        print("❌ confirmPayment error: \(confirmError)")
+                        self.error = confirmError.localizedDescription
+                        continuation.resume(returning: false)
+                        return
+                    }
+
+                    guard let paymentIntent else {
+                        self.error = "Betaling feilet"
+                        continuation.resume(returning: false)
+                        return
+                    }
+
+                    print("💳 Payment status: \(paymentIntent.status)")
+
+                    if paymentIntent.status == .succeeded {
+                        print("✅ Payment succeeded!")
+                        continuation.resume(returning: true)
+                    } else {
+                        self.error = "Betaling feilet"
+                        continuation.resume(returning: false)
+                    }
+                }
+            }
         }
     }
 
@@ -102,10 +146,6 @@ final class BookingService: ObservableObject {
                 .single()
                 .execute()
                 .value
-
-            struct BookingCount: Decodable {
-                let count: Int
-            }
 
             let count = try await supabase
                 .from("bookings")

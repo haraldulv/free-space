@@ -22,7 +22,6 @@ struct BookingConfirmationView: View {
         VStack(spacing: 32) {
             Spacer()
 
-            // Success icon
             ZStack {
                 Circle()
                     .fill(Color.green.opacity(0.1))
@@ -41,7 +40,6 @@ struct BookingConfirmationView: View {
                     .foregroundStyle(.neutral500)
             }
 
-            // Booking details card
             VStack(spacing: 16) {
                 HStack(spacing: 14) {
                     if let imageUrl = listing.images?.first, let url = URL(string: imageUrl) {
@@ -66,7 +64,6 @@ struct BookingConfirmationView: View {
                                 .foregroundStyle(.neutral500)
                         }
                     }
-
                     Spacer()
                 }
 
@@ -97,9 +94,9 @@ struct BookingConfirmationView: View {
             Spacer()
 
             Button {
-                dismiss()
+                NotificationCenter.default.post(name: .switchToBookingsTab, object: nil)
             } label: {
-                Text("Ferdig")
+                Text("Se mine bestillinger")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)

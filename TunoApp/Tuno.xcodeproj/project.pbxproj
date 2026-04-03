@@ -8,9 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		0B771074E8ABC573EB77837C /* GooglePlaces in Frameworks */ = {isa = PBXBuildFile; productRef = 506B5A64845B7A5C6C66721B /* GooglePlaces */; };
+		1444FFC1C4196A4874B30662 /* StripePaymentsUI in Frameworks */ = {isa = PBXBuildFile; productRef = E4D15CE7DFF6030221CC42B9 /* StripePaymentsUI */; };
 		249014FE9C51150340A11E57 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F63CFB5AB083DA9258409 /* Assets.xcassets */; };
 		30DB0664F70CAF9A54C49E83 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED34354F8C7AAA6F81D0CB62 /* RegisterView.swift */; };
-		334A02C478CF7B63C58A376A /* StripePaymentSheet in Frameworks */ = {isa = PBXBuildFile; productRef = B17A96C016AA3FB341575F74 /* StripePaymentSheet */; };
+		334A02C478CF7B63C58A376A /* StripeApplePay in Frameworks */ = {isa = PBXBuildFile; productRef = EFD6004772316F38FF89D02C /* StripeApplePay */; };
 		367A9055909C4B33333782E3 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5416B142A121192B7EDCA9A2 /* LocationManager.swift */; };
 		3F2C71CB33819E76B0A47700 /* MessagesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BB47DB7ED9FBB036BC353A /* MessagesListView.swift */; };
 		4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */; };
@@ -83,7 +84,8 @@
 				D419BBEA241B1C886CA82778 /* Supabase in Frameworks */,
 				C34BE6B3922A411B534762E6 /* GoogleMaps in Frameworks */,
 				0B771074E8ABC573EB77837C /* GooglePlaces in Frameworks */,
-				334A02C478CF7B63C58A376A /* StripePaymentSheet in Frameworks */,
+				334A02C478CF7B63C58A376A /* StripeApplePay in Frameworks */,
+				1444FFC1C4196A4874B30662 /* StripePaymentsUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -251,7 +253,8 @@
 				177959CBC6EFAB9035701BA2 /* Supabase */,
 				A2D7BAFCCFBB3E087B97786C /* GoogleMaps */,
 				506B5A64845B7A5C6C66721B /* GooglePlaces */,
-				B17A96C016AA3FB341575F74 /* StripePaymentSheet */,
+				EFD6004772316F38FF89D02C /* StripeApplePay */,
+				E4D15CE7DFF6030221CC42B9 /* StripePaymentsUI */,
 			);
 			productName = Tuno;
 			productReference = 49328B9F033AAE32F12579CD /* Tuno.app */;
@@ -578,10 +581,15 @@
 			package = B2219E454CED32FD701D6A32 /* XCRemoteSwiftPackageReference "ios-maps-sdk" */;
 			productName = GoogleMaps;
 		};
-		B17A96C016AA3FB341575F74 /* StripePaymentSheet */ = {
+		E4D15CE7DFF6030221CC42B9 /* StripePaymentsUI */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 3D0404E3DF73C534E0C5CA05 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
-			productName = StripePaymentSheet;
+			productName = StripePaymentsUI;
+		};
+		EFD6004772316F38FF89D02C /* StripeApplePay */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3D0404E3DF73C534E0C5CA05 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
+			productName = StripeApplePay;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -37,5 +37,12 @@ struct MainTabView: View {
             }
         }
         .tint(.primary600)
+        .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
+            selectedTab = 2
+        }
     }
+}
+
+extension Notification.Name {
+    static let switchToBookingsTab = Notification.Name("switchToBookingsTab")
 }
