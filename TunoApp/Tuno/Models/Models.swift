@@ -89,9 +89,9 @@ enum ListingCategory: String, Codable, CaseIterable {
 }
 
 enum VehicleType: String, Codable, CaseIterable {
-    case car
-    case campervan
     case motorhome
+    case campervan
+    case car
 
     var displayName: String {
         switch self {
@@ -108,6 +108,74 @@ enum VehicleType: String, Codable, CaseIterable {
         case .motorhome: return "truck.box.fill"
         }
     }
+}
+
+// MARK: - Amenity
+
+enum AmenityType: String, CaseIterable {
+    case evCharging = "ev_charging"
+    case covered
+    case securityCamera = "security_camera"
+    case gated
+    case lighting
+    case toilets
+    case showers
+    case electricity
+    case water
+    case wifi
+    case campfire
+    case lakeAccess = "lake_access"
+    case mountainView = "mountain_view"
+    case petsAllowed = "pets_allowed"
+    case wasteDisposal = "waste_disposal"
+    case handicapAccessible = "handicap_accessible"
+
+    var label: String {
+        switch self {
+        case .evCharging: return "Elbil-lading"
+        case .covered: return "Under tak"
+        case .securityCamera: return "Overvåkingskamera"
+        case .gated: return "Portadgang"
+        case .lighting: return "Belysning"
+        case .toilets: return "Toalett"
+        case .showers: return "Dusj"
+        case .electricity: return "Strøm (tilkobling)"
+        case .water: return "Vanntilkobling"
+        case .wifi: return "WiFi"
+        case .campfire: return "Bålplass"
+        case .lakeAccess: return "Sjø-/innsjøtilgang"
+        case .mountainView: return "Fjellpanorama"
+        case .petsAllowed: return "Dyrevennlig"
+        case .wasteDisposal: return "Septiktømming"
+        case .handicapAccessible: return "Rullestoltilgjengelig"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .evCharging: return "bolt.fill"
+        case .covered: return "umbrella.fill"
+        case .securityCamera: return "video.fill"
+        case .gated: return "lock.fill"
+        case .lighting: return "lightbulb.fill"
+        case .toilets: return "toilet.fill"
+        case .showers: return "shower.fill"
+        case .electricity: return "bolt.fill"
+        case .water: return "drop.fill"
+        case .wifi: return "wifi"
+        case .campfire: return "flame.fill"
+        case .lakeAccess: return "water.waves"
+        case .mountainView: return "mountain.2.fill"
+        case .petsAllowed: return "pawprint.fill"
+        case .wasteDisposal: return "trash.fill"
+        case .handicapAccessible: return "figure.roll"
+        }
+    }
+
+    /// Amenities useful as search filters
+    static let filterableAmenities: [AmenityType] = [
+        .electricity, .wifi, .water, .toilets, .showers, .evCharging, .wasteDisposal
+    ]
 }
 
 enum PriceUnit: String, Codable {

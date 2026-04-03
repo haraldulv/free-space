@@ -1,5 +1,5 @@
 {
-  "originHash" : "03dbf7e8d0f2fcff7cd1ad4ae830fb53207023cad635da46ce53c6c38ff5f291",
+  "originHash" : "3019788645e6014960ca0110cf3f87c44c2c6d34fb66fa08a03083affc4109cd",
   "pins" : [
     {
       "identity" : "ios-maps-sdk",
@@ -8,6 +8,15 @@
       "state" : {
         "revision" : "02f8f144ef266da44d50a68d1562ca051bac27cc",
         "version" : "9.4.0"
+      }
+    },
+    {
+      "identity" : "ios-places-sdk",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/googlemaps/ios-places-sdk.git",
+      "state" : {
+        "revision" : "2960dc2278a84e1daf1f16b417c978a96920ecdd",
+        "version" : "10.10.0"
       }
     },
     {

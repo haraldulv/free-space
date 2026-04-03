@@ -1,5 +1,7 @@
 import Foundation
 import Supabase
+import AuthenticationServices
+import CryptoKit
 
 @MainActor
 final class AuthManager: ObservableObject {
@@ -115,6 +117,39 @@ final class AuthManager: ObservableObject {
         }
     }
 
+    // MARK: - Apple Sign In
+
+    func signInWithApple() async {
+        self.error = nil
+        do {
+            let helper = AppleSignInHelper()
+            let credential = try await helper.performSignIn()
+
+            try await supabase.auth.signInWithIdToken(
+                credentials: .init(
+                    provider: .apple,
+                    idToken: credential.idToken,
+                    nonce: credential.nonce
+                )
+            )
+
+            // Create profile if it doesn't exist
+            if let user = try? await supabase.auth.session.user {
+                let fullName = credential.fullName
+                if let fullName, !fullName.isEmpty {
+                    try? await supabase.from("profiles").upsert([
+                        "id": user.id.uuidString,
+                        "full_name": fullName,
+                    ]).execute()
+                }
+            }
+        } catch {
+            if (error as NSError).code != ASAuthorizationError.canceled.rawValue {
+                self.error = "Apple-innlogging feilet"
+            }
+        }
+    }
+
     func signOut() async {
         try? await supabase.auth.signOut()
         currentUser = nil
@@ -138,5 +173,87 @@ final class AuthManager: ObservableObject {
 
     var displayName: String {
         profile?.fullName ?? currentUser?.email ?? "Bruker"
+    }
+}
+
+// MARK: - Apple Sign In Helper
+
+struct AppleSignInCredential {
+    let idToken: String
+    let nonce: String
+    let fullName: String?
+}
+
+class AppleSignInHelper: NSObject, ASAuthorizationControllerDelegate {
+    private var continuation: CheckedContinuation<AppleSignInCredential, Error>?
+    private var nonce: String = ""
+
+    func performSignIn() async throws -> AppleSignInCredential {
+        nonce = randomNonceString()
+        let hashedNonce = sha256(nonce)
+
+        let provider = ASAuthorizationAppleIDProvider()
+        let request = provider.createRequest()
+        request.requestedScopes = [.fullName, .email]
+        request.nonce = hashedNonce
+
+        let controller = ASAuthorizationController(authorizationRequests: [request])
+        controller.delegate = self
+
+        return try await withCheckedThrowingContinuation { continuation in
+            self.continuation = continuation
+            controller.performRequests()
+        }
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        guard let credential = authorization.credential as? ASAuthorizationAppleIDCredential,
+              let tokenData = credential.identityToken,
+              let idToken = String(data: tokenData, encoding: .utf8) else {
+            continuation?.resume(throwing: NSError(domain: "AppleSignIn", code: -1, userInfo: [NSLocalizedDescriptionKey: "Missing token"]))
+            return
+        }
+
+        var fullName: String?
+        if let nameComponents = credential.fullName {
+            let parts = [nameComponents.givenName, nameComponents.familyName].compactMap { $0 }
+            if !parts.isEmpty {
+                fullName = parts.joined(separator: " ")
+            }
+        }
+
+        continuation?.resume(returning: AppleSignInCredential(idToken: idToken, nonce: nonce, fullName: fullName))
+    }
+
+    func authorizationController(controller: ASAuthorizationController, didCompleteWithError error: Error) {
+        continuation?.resume(throwing: error)
+    }
+
+    private func randomNonceString(length: Int = 32) -> String {
+        let charset = Array("0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._")
+        var result = ""
+        var remainingLength = length
+        while remainingLength > 0 {
+            let randoms: [UInt8] = (0..<16).map { _ in
+                var random: UInt8 = 0
+                let status = SecRandomCopyBytes(kSecRandomDefault, 1, &random)
+                precondition(status == errSecSuccess)
+                return random
+            }
+            randoms.forEach { random in
+                if remainingLength == 0 { return }
+                if random < charset.count {
+                    result.append(charset[Int(random)])
+                    remainingLength -= 1
+                }
+            }
+        }
+        return result
+    }
+
+    private func sha256(_ input: String) -> String {
+        let data = Data(input.utf8)
+        let hash = SHA256.hash(data: data)
+        return hash.compactMap { String(format: "%02x", $0) }.joined()
     }
 }

@@ -13,7 +13,7 @@ final class ListingService: ObservableObject {
             let listings: [Listing] = try await supabase
                 .from("listings")
                 .select()
-                .eq("is_active", value: true)
+                .or("is_active.eq.true,is_active.is.null")
                 .contains("tags", value: [tag])
                 .limit(limit)
                 .execute()
@@ -30,7 +30,7 @@ final class ListingService: ObservableObject {
             let response = try await supabase
                 .from("listings")
                 .select()
-                .eq("is_active", value: true)
+                .or("is_active.eq.true,is_active.is.null")
                 .order("created_at", ascending: false)
                 .limit(limit)
                 .execute()
@@ -56,18 +56,30 @@ final class ListingService: ObservableObject {
 
     func fetchHomeListings() async {
         isLoading = true
+        print("🏠 fetchHomeListings START")
 
-        // Try tags first
-        async let popular = fetchByTag("popular", limit: 8)
-        async let featured = fetchByTag("featured", limit: 8)
-        async let available = fetchByTag("available_today", limit: 8)
-        popularListings = await popular
-        featuredListings = await featured
-        availableTodayListings = await available
+        // Fetch active listings for home sections
+        do {
+            let response = try await supabase
+                .from("listings")
+                .select()
+                .or("is_active.eq.true,is_active.is.null")
+                .order("created_at", ascending: false)
+                .limit(30)
+                .execute()
 
-        // Fallback: if no tagged listings, show recent ones
-        if popularListings.isEmpty && featuredListings.isEmpty {
-            popularListings = await fetchRecent(limit: 8)
+            let listings = try JSONDecoder().decode([Listing].self, from: response.data)
+            print("🏠 Decoded \(listings.count) listings")
+
+            // Split into sections
+            let withImages = listings.filter { ($0.images?.isEmpty == false) }
+            let instant = listings.filter { $0.instantBooking == true }
+
+            popularListings = Array(withImages.prefix(10))
+            featuredListings = Array(instant.prefix(10))
+            availableTodayListings = Array(listings.suffix(from: min(10, listings.count)).prefix(10))
+        } catch {
+            print("🏠 ERROR: \(error)")
         }
 
         isLoading = false
@@ -81,14 +93,15 @@ final class ListingService: ObservableObject {
         lng: Double? = nil,
         radiusKm: Double = 20,
         checkIn: String? = nil,
-        checkOut: String? = nil
+        checkOut: String? = nil,
+        amenities: Set<AmenityType>? = nil
     ) async {
         isLoading = true
         do {
             var request = supabase
                 .from("listings")
                 .select()
-                .eq("is_active", value: true)
+                .or("is_active.eq.true,is_active.is.null")
 
             if let category {
                 request = request.eq("category", value: category.rawValue)
@@ -104,12 +117,16 @@ final class ListingService: ObservableObject {
                     request = request.in("vehicle_type", values: ["motorhome"])
                 }
             }
-            if let query, !query.isEmpty {
+            // Only text-search if no coordinates (place search uses geo filter instead)
+            if lat == nil, let query, !query.isEmpty {
                 request = request.or("title.ilike.%\(query)%,city.ilike.%\(query)%,region.ilike.%\(query)%,address.ilike.%\(query)%")
             }
 
+            // Fetch more when doing geo-search to ensure coverage
+            let fetchLimit = lat != nil ? 500 : 50
+
             var listings: [Listing] = try await request
-                .limit(50)
+                .limit(fetchLimit)
                 .execute()
                 .value
 
@@ -134,6 +151,15 @@ final class ListingService: ObservableObject {
                     // Check if any date in the range is blocked
                     let dates = dateRange(from: checkIn, to: checkOut)
                     return dates.allSatisfy { !blockedSet.contains($0) }
+                }
+            }
+
+            // Filter by amenities — listing must have ALL selected amenities
+            if let amenities, !amenities.isEmpty {
+                let requiredKeys = amenities.map { $0.rawValue }
+                listings = listings.filter { listing in
+                    guard let listingAmenities = listing.amenities else { return false }
+                    return requiredKeys.allSatisfy { listingAmenities.contains($0) }
                 }
             }
 

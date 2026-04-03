@@ -17,7 +17,7 @@ create table if not exists public.reviews (
 
 alter table public.reviews enable row level security;
 
-create policy "Reviews are viewable by everyone"
+create policy "Reviews are viewable by everyone"           
   on public.reviews for select using (true);
 
 create policy "Users can create reviews for their bookings"

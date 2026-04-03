@@ -21,6 +21,11 @@ struct TunoApp: App {
             .environmentObject(authManager)
             .tint(Color.primary600)
             .preferredColorScheme(.light)
+            .onOpenURL { url in
+                Task {
+                    try? await supabase.auth.session(from: url)
+                }
+            }
         }
     }
 }

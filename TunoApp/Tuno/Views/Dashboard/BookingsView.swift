@@ -4,10 +4,17 @@ struct BookingsView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var bookings: [Booking] = []
     @State private var isLoading = true
+    @State private var showLogin = false
 
     var body: some View {
         Group {
-            if isLoading {
+            if !authManager.isAuthenticated {
+                AuthPromptView(
+                    icon: "calendar",
+                    message: "Logg inn for å se bestillingene dine",
+                    showLogin: $showLogin
+                )
+            } else if isLoading {
                 ProgressView()
             } else if bookings.isEmpty {
                 VStack(spacing: 12) {
@@ -33,6 +40,9 @@ struct BookingsView: View {
             }
         }
         .navigationTitle("Bestillinger")
+        .fullScreenCover(isPresented: $showLogin) {
+            LoginView()
+        }
         .task {
             await loadBookings()
         }

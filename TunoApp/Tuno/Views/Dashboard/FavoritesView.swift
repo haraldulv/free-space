@@ -4,10 +4,17 @@ struct FavoritesView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var favorites: [Listing] = []
     @State private var isLoading = true
+    @State private var showLogin = false
 
     var body: some View {
         Group {
-            if isLoading {
+            if !authManager.isAuthenticated {
+                AuthPromptView(
+                    icon: "heart",
+                    message: "Logg inn for å se favorittene dine",
+                    showLogin: $showLogin
+                )
+            } else if isLoading {
                 ProgressView()
             } else if favorites.isEmpty {
                 VStack(spacing: 12) {
@@ -39,6 +46,9 @@ struct FavoritesView: View {
             }
         }
         .navigationTitle("Favoritter")
+        .fullScreenCover(isPresented: $showLogin) {
+            LoginView()
+        }
         .task {
             await loadFavorites()
         }

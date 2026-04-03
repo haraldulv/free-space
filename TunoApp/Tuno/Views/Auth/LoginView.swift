@@ -3,6 +3,7 @@ import AuthenticationServices
 
 struct LoginView: View {
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.dismiss) var dismiss
     @Environment(\.webAuthenticationSession) var webAuthenticationSession
     @State private var email = ""
     @State private var password = ""
@@ -26,36 +27,61 @@ struct LoginView: View {
                     }
                     .padding(.top, 60)
 
-                    // Google Sign In
-                    Button {
-                        Task {
-                            isLoading = true
-                            await authManager.signInWithGoogle { url in
-                                try await self.webAuthenticationSession.authenticate(
-                                    using: url,
-                                    callbackURLScheme: "no.tuno.app"
-                                )
+                    // Social Sign In
+                    VStack(spacing: 10) {
+                        // Apple Sign In
+                        Button {
+                            Task {
+                                isLoading = true
+                                await authManager.signInWithApple()
+                                isLoading = false
                             }
-                            isLoading = false
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "apple.logo")
+                                    .font(.system(size: 18))
+                                Text("Fortsett med Apple")
+                                    .font(.system(size: 16, weight: .medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(.black)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                    } label: {
-                        HStack(spacing: 12) {
-                            Image(systemName: "g.circle.fill")
-                                .font(.title3)
-                            Text("Fortsett med Google")
-                                .font(.system(size: 16, weight: .medium))
+                        .disabled(isLoading)
+
+                        // Google Sign In
+                        Button {
+                            Task {
+                                isLoading = true
+                                await authManager.signInWithGoogle { url in
+                                    try await self.webAuthenticationSession.authenticate(
+                                        using: url,
+                                        callbackURLScheme: "no.tuno.app"
+                                    )
+                                }
+                                isLoading = false
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "g.circle.fill")
+                                    .font(.title3)
+                                Text("Fortsett med Google")
+                                    .font(.system(size: 16, weight: .medium))
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 14)
+                            .background(.white)
+                            .foregroundStyle(.neutral700)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.neutral300, lineWidth: 1)
+                            )
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(.white)
-                        .foregroundStyle(.neutral700)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(Color.neutral300, lineWidth: 1)
-                        )
+                        .disabled(isLoading)
                     }
-                    .disabled(isLoading)
 
                     // Divider
                     HStack {
@@ -164,6 +190,14 @@ struct LoginView: View {
                 .padding(.horizontal, 24)
             }
             .background(.white)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark")
+                            .foregroundStyle(.neutral600)
+                    }
+                }
+            }
             .fullScreenCover(isPresented: $showRegister) {
                 RegisterView()
             }

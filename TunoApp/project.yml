@@ -21,6 +21,12 @@ packages:
   GoogleMaps:
     url: https://github.com/googlemaps/ios-maps-sdk.git
     from: "9.0.0"
+  GooglePlaces:
+    url: https://github.com/googlemaps/ios-places-sdk.git
+    from: "10.0.0"
+  StripePaymentSheet:
+    url: https://github.com/stripe/stripe-ios-spm.git
+    from: "24.0.0"
 
 targets:
   Tuno:
@@ -28,16 +34,28 @@ targets:
     platform: iOS
     sources:
       - Tuno
+    entitlements:
+      path: Tuno/Tuno.entitlements
+      properties:
+        com.apple.developer.applesignin:
+          - Default
+        com.apple.developer.in-app-payments:
+          - merchant.no.tuno.app
     settings:
       base:
         INFOPLIST_FILE: Tuno/Info.plist
         PRODUCT_BUNDLE_IDENTIFIER: no.tuno.app
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: Tuno/Tuno.entitlements
     dependencies:
       - package: Supabase
         product: Supabase
       - package: GoogleMaps
         product: GoogleMaps
+      - package: GooglePlaces
+        product: GooglePlaces
+      - package: StripePaymentSheet
+        product: StripePaymentSheet
     info:
       path: Tuno/Info.plist
       properties:
@@ -51,3 +69,7 @@ targets:
           - UIInterfaceOrientationPortrait
         ITSAppUsesNonExemptEncryption: false
         NSLocationWhenInUseUsageDescription: "Tuno trenger tilgang til posisjonen din for å vise parkerings- og campingplasser i nærheten."
+        CFBundleURLTypes:
+          - CFBundleURLSchemes:
+              - no.tuno.app
+            CFBundleURLName: no.tuno.app
