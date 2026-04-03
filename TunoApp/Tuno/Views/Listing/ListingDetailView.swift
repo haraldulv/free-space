@@ -97,12 +97,13 @@ struct ListingDetailView: View {
 
                                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                                         ForEach(amenities, id: \.self) { amenity in
+                                            let type = AmenityType(rawValue: amenity)
                                             HStack(spacing: 8) {
-                                                Image(systemName: amenityIcon(amenity))
+                                                Image(systemName: type?.icon ?? "checkmark.circle.fill")
                                                     .font(.system(size: 14))
                                                     .foregroundStyle(.primary600)
                                                     .frame(width: 20)
-                                                Text(amenity)
+                                                Text(type?.label ?? amenity)
                                                     .font(.system(size: 14))
                                                     .foregroundStyle(.neutral700)
                                                 Spacer()
@@ -190,8 +191,8 @@ struct ListingDetailView: View {
 
                         Spacer()
 
-                        Button {
-                            // TODO: Booking flow
+                        NavigationLink {
+                            BookingView(listing: listing)
                         } label: {
                             Text("Bestill")
                                 .font(.system(size: 16, weight: .semibold))
@@ -247,17 +248,3 @@ struct InfoRow: View {
     }
 }
 
-private func amenityIcon(_ name: String) -> String {
-    switch name.lowercased() {
-    case "strøm", "electricity": return "bolt.fill"
-    case "vann", "water": return "drop.fill"
-    case "wifi": return "wifi"
-    case "toalett", "wc": return "toilet.fill"
-    case "dusj", "shower": return "shower.fill"
-    case "avfall", "søppel": return "trash.fill"
-    case "belysning": return "lightbulb.fill"
-    case "kameraovervåking": return "video.fill"
-    case "gjerde", "port": return "lock.fill"
-    default: return "checkmark.circle.fill"
-    }
-}
