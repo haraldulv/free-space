@@ -124,10 +124,13 @@ struct ProfileView: View {
             }
         }
         .navigationTitle("Profil")
-        .confirmationDialog("Logg ut?", isPresented: $showLogoutConfirm) {
+        .alert("Logg ut", isPresented: $showLogoutConfirm) {
             Button("Logg ut", role: .destructive) {
                 Task { await authManager.signOut() }
             }
+            Button("Avbryt", role: .cancel) {}
+        } message: {
+            Text("Er du sikker på at du vil logge ut?")
         }
     }
 }

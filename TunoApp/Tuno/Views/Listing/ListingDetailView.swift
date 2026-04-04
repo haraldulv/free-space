@@ -2,9 +2,11 @@ import SwiftUI
 
 struct ListingDetailView: View {
     let listingId: String
+    @EnvironmentObject var authManager: AuthManager
     @State private var listing: Listing?
     @State private var isLoading = true
     @State private var imageIndex = 0
+    @State private var showLogin = false
 
     var body: some View {
         Group {
@@ -191,16 +193,30 @@ struct ListingDetailView: View {
 
                         Spacer()
 
-                        NavigationLink {
-                            BookingView(listing: listing)
-                        } label: {
-                            Text("Bestill")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 32)
-                                .padding(.vertical, 14)
-                                .background(Color.primary600)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        if authManager.isAuthenticated {
+                            NavigationLink {
+                                BookingView(listing: listing)
+                            } label: {
+                                Text("Bestill")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 32)
+                                    .padding(.vertical, 14)
+                                    .background(Color.primary600)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                        } else {
+                            Button {
+                                showLogin = true
+                            } label: {
+                                Text("Logg inn for å bestille")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 32)
+                                    .padding(.vertical, 14)
+                                    .background(Color.primary600)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
                         }
                     }
                     .padding(.horizontal, 20)
@@ -222,6 +238,9 @@ struct ListingDetailView: View {
                         .foregroundStyle(.neutral600)
                 }
             }
+        }
+        .fullScreenCover(isPresented: $showLogin) {
+            LoginView()
         }
         .task {
             let service = ListingService()
