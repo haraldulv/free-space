@@ -229,16 +229,15 @@ class ChatService: ObservableObject {
 
         Task {
             for await insertion in insertions {
-                let row = insertion.record
+                guard let decoded = try? insertion.decodeRecord(as: Message.self) else { continue }
                 let msg = ChatMessage(
-                    id: (try? row["id"]?.value.decode(String.self)) ?? UUID().uuidString,
-                    senderId: (try? row["sender_id"]?.value.decode(String.self)) ?? "",
-                    content: (try? row["content"]?.value.decode(String.self)) ?? "",
-                    createdAt: (try? row["created_at"]?.value.decode(String.self)) ?? "",
-                    read: (try? row["read"]?.value.decode(Bool.self)) ?? false
+                    id: decoded.id,
+                    senderId: decoded.senderId,
+                    content: decoded.content,
+                    createdAt: decoded.createdAt ?? "",
+                    read: decoded.read
                 )
                 await MainActor.run {
-                    // Only add if not already in list
                     if !self.messages.contains(where: { $0.id == msg.id }) {
                         self.messages.append(msg)
                     }
