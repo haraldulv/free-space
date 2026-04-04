@@ -229,7 +229,7 @@ class ChatService: ObservableObject {
 
         Task {
             for await insertion in insertions {
-                guard let decoded = try? insertion.decodeRecord(as: Message.self) else { continue }
+                guard let decoded = try? insertion.decodeRecord(as: Message.self, decoder: JSONDecoder()) else { continue }
                 let msg = ChatMessage(
                     id: decoded.id,
                     senderId: decoded.senderId,
