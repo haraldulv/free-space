@@ -566,6 +566,11 @@ struct SearchView: View {
         df.locale = Locale(identifier: "nb_NO")
         return df.string(from: date)
     }
+
+    private func toggleFavorite(_ listingId: String) {
+        guard let userId = authManager.currentUser?.id else { return }
+        Task { await favoritesService.toggle(listingId: listingId, userId: userId.uuidString) }
+    }
 }
 
 // MARK: - Date Range Picker Sheet
@@ -869,9 +874,6 @@ struct AmenityFilterSheet: View {
             }
         }
     }
-
-    private func toggleFavorite(_ listingId: String) {
-        guard let userId = authManager.currentUser?.id else { return }
-        Task { await favoritesService.toggle(listingId: listingId, userId: userId.uuidString) }
-    }
 }
+
+
