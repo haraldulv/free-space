@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct HomeView: View {
+    @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var favoritesService: FavoritesService
     @StateObject private var listingService = ListingService()
     @State private var searchText = ""
     @State private var showSearch = false
@@ -91,6 +93,8 @@ struct HomeView: View {
 struct ListingSection: View {
     let title: String
     let listings: [Listing]
+    @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var favoritesService: FavoritesService
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -103,8 +107,12 @@ struct ListingSection: View {
                 LazyHStack(spacing: 16) {
                     ForEach(listings) { listing in
                         NavigationLink(value: listing) {
-                            ListingCard(listing: listing)
-                                .frame(width: 280)
+                            ListingCard(
+                                listing: listing,
+                                isFavorited: favoritesService.favoriteIds.contains(listing.id),
+                                onFavoriteToggle: { _ in toggleFavorite(listing.id) }
+                            )
+                            .frame(width: 280)
                         }
                         .buttonStyle(.plain)
                     }
@@ -115,5 +123,10 @@ struct ListingSection: View {
         .navigationDestination(for: Listing.self) { listing in
             ListingDetailView(listingId: listing.id)
         }
+    }
+
+    private func toggleFavorite(_ listingId: String) {
+        guard let userId = authManager.currentUser?.id else { return }
+        Task { await favoritesService.toggle(listingId: listingId, userId: userId.uuidString) }
     }
 }

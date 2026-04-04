@@ -8,6 +8,8 @@ extension View {
 
 struct SearchView: View {
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var favoritesService: FavoritesService
     @StateObject private var listingService = ListingService()
     @StateObject private var placesService = PlacesService()
     @StateObject private var locationManager = LocationManager()
@@ -395,7 +397,11 @@ struct SearchView: View {
                     LazyVStack(spacing: 16) {
                         ForEach(listingService.searchResults) { listing in
                             NavigationLink(value: listing) {
-                                ListingCard(listing: listing)
+                                ListingCard(
+                                    listing: listing,
+                                    isFavorited: favoritesService.favoriteIds.contains(listing.id),
+                                    onFavoriteToggle: { _ in toggleFavorite(listing.id) }
+                                )
                             }
                             .buttonStyle(.plain)
                         }
@@ -862,5 +868,10 @@ struct AmenityFilterSheet: View {
                 }
             }
         }
+    }
+
+    private func toggleFavorite(_ listingId: String) {
+        guard let userId = authManager.currentUser?.id else { return }
+        Task { await favoritesService.toggle(listingId: listingId, userId: userId.uuidString) }
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 struct ListingDetailView: View {
     let listingId: String
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var favoritesService: FavoritesService
     @State private var listing: Listing?
     @State private var isLoading = true
     @State private var imageIndex = 0
@@ -231,11 +232,23 @@ struct ListingDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    // TODO: Share
-                } label: {
-                    Image(systemName: "square.and.arrow.up")
-                        .foregroundStyle(.neutral600)
+                HStack(spacing: 12) {
+                    if authManager.isAuthenticated {
+                        Button {
+                            guard let userId = authManager.currentUser?.id else { return }
+                            Task { await favoritesService.toggle(listingId: listingId, userId: userId.uuidString) }
+                        } label: {
+                            Image(systemName: favoritesService.favoriteIds.contains(listingId) ? "heart.fill" : "heart")
+                                .foregroundStyle(favoritesService.favoriteIds.contains(listingId) ? .red : .neutral600)
+                        }
+                    }
+
+                    Button {
+                        // TODO: Share
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                            .foregroundStyle(.neutral600)
+                    }
                 }
             }
         }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct FavoritesView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var favoritesService: FavoritesService
     @State private var favorites: [Listing] = []
     @State private var isLoading = true
     @State private var showLogin = false
@@ -33,7 +34,11 @@ struct FavoritesView: View {
                     LazyVStack(spacing: 20) {
                         ForEach(favorites) { listing in
                             NavigationLink(value: listing) {
-                                ListingCard(listing: listing, isFavorited: true)
+                                ListingCard(
+                                    listing: listing,
+                                    isFavorited: favoritesService.favoriteIds.contains(listing.id),
+                                    onFavoriteToggle: { _ in toggleFavorite(listing.id) }
+                                )
                             }
                             .buttonStyle(.plain)
                         }
@@ -52,6 +57,9 @@ struct FavoritesView: View {
         .task {
             await loadFavorites()
         }
+        .onChange(of: favoritesService.favoriteIds) {
+            Task { await loadFavorites() }
+        }
     }
 
     private func loadFavorites() async {
@@ -60,26 +68,26 @@ struct FavoritesView: View {
             return
         }
         do {
-            let favs: [Favorite] = try await supabase
-                .from("favorites")
-                .select()
-                .eq("user_id", value: userId.uuidString)
-                .execute()
-                .value
-
-            let listingIds = favs.map(\.listingId)
-            if !listingIds.isEmpty {
+            let ids = Array(favoritesService.favoriteIds)
+            if !ids.isEmpty {
                 let listings: [Listing] = try await supabase
                     .from("listings")
                     .select()
-                    .in("id", values: listingIds)
+                    .in("id", values: ids)
                     .execute()
                     .value
                 favorites = listings
+            } else {
+                favorites = []
             }
         } catch {
             print("Failed to load favorites: \(error)")
         }
         isLoading = false
+    }
+
+    private func toggleFavorite(_ listingId: String) {
+        guard let userId = authManager.currentUser?.id else { return }
+        Task { await favoritesService.toggle(listingId: listingId, userId: userId.uuidString) }
     }
 }
