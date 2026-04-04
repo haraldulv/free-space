@@ -8,6 +8,10 @@ struct ListingDetailView: View {
     @State private var isLoading = true
     @State private var imageIndex = 0
     @State private var showLogin = false
+    @State private var chatConversationId: String?
+    @State private var chatHostName: String?
+    @State private var showChat = false
+    @StateObject private var chatService = ChatService()
 
     var body: some View {
         Group {
@@ -153,6 +157,41 @@ struct ListingDetailView: View {
                                 Divider()
                             }
 
+                            // Contact host
+                            if authManager.isAuthenticated,
+                               let hostId = listing.hostId,
+                               hostId != authManager.currentUser?.id.uuidString {
+                                Button {
+                                    Task {
+                                        guard let userId = authManager.currentUser?.id else { return }
+                                        let convoId = await chatService.getOrCreateConversation(
+                                            listingId: listing.id,
+                                            guestId: userId.uuidString,
+                                            hostId: hostId
+                                        )
+                                        if let convoId {
+                                            chatConversationId = convoId
+                                            chatHostName = listing.hostName ?? "Utleier"
+                                            showChat = true
+                                        }
+                                    }
+                                } label: {
+                                    HStack(spacing: 8) {
+                                        Image(systemName: "bubble.left.fill")
+                                            .font(.system(size: 14))
+                                        Text("Kontakt utleier")
+                                            .font(.system(size: 15, weight: .semibold))
+                                    }
+                                    .foregroundStyle(.primary600)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 14)
+                                    .background(Color.primary50)
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
+
+                                Divider()
+                            }
+
                             // Rating
                             if let rating = listing.rating, let count = listing.reviewCount, count > 0 {
                                 HStack(spacing: 6) {
@@ -254,6 +293,15 @@ struct ListingDetailView: View {
         }
         .fullScreenCover(isPresented: $showLogin) {
             LoginView()
+        }
+        .navigationDestination(isPresented: $showChat) {
+            if let convoId = chatConversationId {
+                ChatView(
+                    conversationId: convoId,
+                    otherUserName: chatHostName ?? "Utleier",
+                    listingTitle: listing?.title ?? ""
+                )
+            }
         }
         .task {
             let service = ListingService()
