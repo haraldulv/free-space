@@ -11,7 +11,7 @@ struct ChatView: View {
     @FocusState private var isInputFocused: Bool
 
     private var currentUserId: String {
-        authManager.currentUser?.id.uuidString ?? ""
+        authManager.currentUser?.id.uuidString.lowercased() ?? ""
     }
 
     var body: some View {
