@@ -10,12 +10,10 @@
 	<array>
 		<string>merchant.no.tuno.app</string>
 	</array>
-<!-- Associated Domains — enable in Apple Developer Portal first
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:tuno.no</string>
 		<string>applinks:www.tuno.no</string>
 	</array>
--->
 </dict>
 </plist>

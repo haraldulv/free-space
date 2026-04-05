@@ -44,7 +44,7 @@ struct TunoApp: App {
                     Task {
                         try? await supabase.auth.session(from: url)
                     }
-                } else if url.host?.contains("tuno.no") == true || url.scheme == "https" {
+                } else {
                     // Universal Link — e.g. tuno.no/listings/abc123?spot=1
                     if let listingId = extractListingId(from: url) {
                         NotificationCenter.default.post(

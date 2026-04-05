@@ -52,10 +52,9 @@ targets:
           - Default
         com.apple.developer.in-app-payments:
           - merchant.no.tuno.app
-        # Enable after adding Associated Domains in Apple Developer Portal:
-        # com.apple.developer.associated-domains:
-        #   - applinks:tuno.no
-        #   - applinks:www.tuno.no
+        com.apple.developer.associated-domains:
+          - applinks:tuno.no
+          - applinks:www.tuno.no
     settings:
       base:
         INFOPLIST_FILE: Tuno/Info.plist

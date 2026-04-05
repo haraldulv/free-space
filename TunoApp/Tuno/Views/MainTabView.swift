@@ -3,6 +3,7 @@ import SwiftUI
 struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var selectedTab = 0
+    @State private var deepLinkListingId: String?
 
     var body: some View {
         TabView(selection: $selectedTab) {
@@ -39,6 +40,17 @@ struct MainTabView: View {
         .tint(.primary600)
         .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
             selectedTab = 2
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openListing)) { notification in
+            if let id = notification.userInfo?["listingId"] as? String {
+                selectedTab = 0
+                deepLinkListingId = id
+            }
+        }
+        .sheet(item: $deepLinkListingId) { listingId in
+            NavigationStack {
+                ListingDetailView(listingId: listingId)
+            }
         }
     }
 }
