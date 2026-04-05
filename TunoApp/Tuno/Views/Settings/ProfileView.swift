@@ -179,6 +179,8 @@ struct MyListingsView: View {
     @State private var isLoading = true
     @State private var showCreateListing = false
     @State private var deleteTarget: Listing?
+    @State private var qrTarget: Listing?
+    @State private var editTarget: Listing?
 
     var body: some View {
         Group {
@@ -239,6 +241,27 @@ struct MyListingsView: View {
                                 }
 
                                 Spacer()
+
+                                // Action buttons
+                                HStack(spacing: 12) {
+                                    Button {
+                                        qrTarget = listing
+                                    } label: {
+                                        Image(systemName: "qrcode")
+                                            .font(.system(size: 16))
+                                            .foregroundStyle(.neutral500)
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    Button {
+                                        editTarget = listing
+                                    } label: {
+                                        Image(systemName: "pencil")
+                                            .font(.system(size: 16))
+                                            .foregroundStyle(.neutral500)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
                         }
                         .swipeActions(edge: .trailing) {
@@ -280,6 +303,14 @@ struct MyListingsView: View {
         .sheet(isPresented: $showCreateListing, onDismiss: { Task { await loadListings() } }) {
             NavigationStack {
                 CreateListingView()
+            }
+        }
+        .sheet(item: $qrTarget) { listing in
+            QRCodeModal(listing: listing)
+        }
+        .sheet(item: $editTarget, onDismiss: { Task { await loadListings() } }) { listing in
+            NavigationStack {
+                EditListingView(listing: listing)
             }
         }
         .alert("Slett annonse?", isPresented: .init(

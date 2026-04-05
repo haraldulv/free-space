@@ -5,7 +5,7 @@
    <BuildAction
       parallelizeBuildables = "YES"
       buildImplicitDependencies = "YES"
-      buildArchitectures = "Automatic">
+      runPostActionsOnFailure = "NO">
       <BuildActionEntries>
          <BuildActionEntry
             buildForTesting = "YES"
@@ -15,7 +15,7 @@
             buildForAnalyzing = "YES">
             <BuildableReference
                BuildableIdentifier = "primary"
-               BlueprintIdentifier = "Tuno"
+               BlueprintIdentifier = "2315018F2DC883211F221EDA"
                BuildableName = "Tuno.app"
                BlueprintName = "Tuno"
                ReferencedContainer = "container:Tuno.xcodeproj">
@@ -28,12 +28,24 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       shouldUseLaunchSchemeArgsEnv = "YES"
-      shouldAutocreateTestPlan = "YES">
+      onlyGenerateCoverageForSpecifiedTargets = "NO">
+      <MacroExpansion>
+         <BuildableReference
+            BuildableIdentifier = "primary"
+            BlueprintIdentifier = "2315018F2DC883211F221EDA"
+            BuildableName = "Tuno.app"
+            BlueprintName = "Tuno"
+            ReferencedContainer = "container:Tuno.xcodeproj">
+         </BuildableReference>
+      </MacroExpansion>
+      <Testables>
+      </Testables>
    </TestAction>
    <LaunchAction
       buildConfiguration = "Debug"
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
+      disableMainThreadChecker = "YES"
       launchStyle = "0"
       useCustomWorkingDirectory = "NO"
       ignoresPersistentStateOnLaunch = "NO"
@@ -44,14 +56,14 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "Tuno"
+            BlueprintIdentifier = "2315018F2DC883211F221EDA"
             BuildableName = "Tuno.app"
             BlueprintName = "Tuno"
             ReferencedContainer = "container:Tuno.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
-      <EnvironmentVariables>
-      </EnvironmentVariables>
+      <CommandLineArguments>
+      </CommandLineArguments>
    </LaunchAction>
    <ProfileAction
       buildConfiguration = "Release"
@@ -63,13 +75,16 @@
          runnableDebuggingMode = "0">
          <BuildableReference
             BuildableIdentifier = "primary"
-            BlueprintIdentifier = "Tuno"
+            BlueprintIdentifier = "2315018F2DC883211F221EDA"
             BuildableName = "Tuno.app"
             BlueprintName = "Tuno"
             ReferencedContainer = "container:Tuno.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>
+   <AnalyzeAction
+      buildConfiguration = "Debug">
+   </AnalyzeAction>
    <ArchiveAction
       buildConfiguration = "Release"
       revealArchiveInOrganizer = "YES">

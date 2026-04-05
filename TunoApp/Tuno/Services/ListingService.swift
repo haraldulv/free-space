@@ -56,31 +56,14 @@ final class ListingService: ObservableObject {
 
     func fetchHomeListings() async {
         isLoading = true
-        print("🏠 fetchHomeListings START")
 
-        // Fetch active listings for home sections
-        do {
-            let response = try await supabase
-                .from("listings")
-                .select()
-                .or("is_active.eq.true,is_active.is.null")
-                .order("created_at", ascending: false)
-                .limit(30)
-                .execute()
+        async let popular = fetchByTag("popular", limit: 20)
+        async let featured = fetchByTag("featured", limit: 20)
+        async let available = fetchByTag("available_today", limit: 20)
 
-            let listings = try JSONDecoder().decode([Listing].self, from: response.data)
-            print("🏠 Decoded \(listings.count) listings")
-
-            // Split into sections
-            let withImages = listings.filter { ($0.images?.isEmpty == false) }
-            let instant = listings.filter { $0.instantBooking == true }
-
-            popularListings = Array(withImages.prefix(10))
-            featuredListings = Array(instant.prefix(10))
-            availableTodayListings = Array(listings.suffix(from: min(10, listings.count)).prefix(10))
-        } catch {
-            print("🏠 ERROR: \(error)")
-        }
+        popularListings = await popular
+        featuredListings = await featured
+        availableTodayListings = await available
 
         isLoading = false
     }

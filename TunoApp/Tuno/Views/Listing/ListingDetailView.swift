@@ -75,9 +75,13 @@ struct ListingDetailView: View {
 
                             // Location, spots, times
                             VStack(spacing: 8) {
-                                InfoRow(icon: "mappin", text: "\(listing.address ?? ""), \(listing.city ?? "")")
-                                InfoRow(icon: "car.2.fill", text: "\(listing.spots ?? 1) plasser")
-                                InfoRow(icon: "clock", text: "Inn \(listing.checkInTime ?? "15:00") / Ut \(listing.checkOutTime ?? "11:00")")
+                                if let address = listing.address, !address.isEmpty {
+                                    let city = listing.city ?? ""
+                                    InfoRow(icon: "mappin", text: city.isEmpty ? address : "\(address), \(city)")
+                                }
+                                let spotCount = listing.spots ?? 1
+                                InfoRow(icon: "car.2.fill", text: "\(spotCount) \(spotCount == 1 ? "plass" : "plasser")")
+                                InfoRow(icon: "clock", text: "Inn \(listing.checkInTime ?? "15:00") · Ut \(listing.checkOutTime ?? "11:00")")
                             }
 
                             Divider()

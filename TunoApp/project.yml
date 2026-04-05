@@ -28,6 +28,17 @@ packages:
     url: https://github.com/stripe/stripe-ios-spm.git
     from: "24.0.0"
 
+schemes:
+  Tuno:
+    build:
+      targets:
+        Tuno: all
+    run:
+      config: Debug
+      disableMainThreadChecker: true
+      diagnosticOptions:
+        mainThreadChecker: false
+
 targets:
   Tuno:
     type: application
@@ -41,6 +52,10 @@ targets:
           - Default
         com.apple.developer.in-app-payments:
           - merchant.no.tuno.app
+        # Enable after adding Associated Domains in Apple Developer Portal:
+        # com.apple.developer.associated-domains:
+        #   - applinks:tuno.no
+        #   - applinks:www.tuno.no
     settings:
       base:
         INFOPLIST_FILE: Tuno/Info.plist

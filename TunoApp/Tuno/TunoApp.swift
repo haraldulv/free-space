@@ -38,15 +38,35 @@ struct TunoApp: App {
                 }
             }
             .onOpenURL { url in
-                if url.host == "stripe" {
-                    // Stripe onboarding callback — reload profile to pick up stripe_onboarding_complete
+                if url.scheme == "no.tuno.app" && url.host == "stripe" {
                     NotificationCenter.default.post(name: .stripeOnboardingComplete, object: nil)
-                } else {
+                } else if url.scheme == "no.tuno.app" {
                     Task {
                         try? await supabase.auth.session(from: url)
+                    }
+                } else if url.host?.contains("tuno.no") == true || url.scheme == "https" {
+                    // Universal Link — e.g. tuno.no/listings/abc123?spot=1
+                    if let listingId = extractListingId(from: url) {
+                        NotificationCenter.default.post(
+                            name: .openListing,
+                            object: nil,
+                            userInfo: ["listingId": listingId]
+                        )
                     }
                 }
             }
         }
     }
+
+    private func extractListingId(from url: URL) -> String? {
+        // URL format: tuno.no/listings/{id}
+        let components = url.pathComponents
+        guard let listingsIndex = components.firstIndex(of: "listings"),
+              listingsIndex + 1 < components.count else { return nil }
+        return components[listingsIndex + 1]
+    }
+}
+
+extension Notification.Name {
+    static let openListing = Notification.Name("openListing")
 }

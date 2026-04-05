@@ -6,6 +6,7 @@ struct HomeView: View {
     @StateObject private var listingService = ListingService()
     @State private var searchText = ""
     @State private var showSearch = false
+    @State private var deepLinkListingId: String?
 
     var body: some View {
         ScrollView {
@@ -87,7 +88,19 @@ struct HomeView: View {
         .task {
             await listingService.fetchHomeListings()
         }
+        .navigationDestination(item: $deepLinkListingId) { listingId in
+            ListingDetailView(listingId: listingId)
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .openListing)) { notification in
+            if let id = notification.userInfo?["listingId"] as? String {
+                deepLinkListingId = id
+            }
+        }
     }
+}
+
+extension String: @retroactive Identifiable {
+    public var id: String { self }
 }
 
 struct ListingSection: View {
