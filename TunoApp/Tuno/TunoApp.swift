@@ -1,10 +1,17 @@
 import SwiftUI
 import Supabase
 
+@MainActor
+final class DeepLinkManager: ObservableObject {
+    static let shared = DeepLinkManager()
+    @Published var pendingListingId: String?
+}
+
 @main
 struct TunoApp: App {
     @StateObject private var authManager = AuthManager()
     @StateObject private var favoritesService = FavoritesService()
+    @StateObject private var deepLinkManager = DeepLinkManager.shared
 
     init() {
         initializeGoogleMaps()
@@ -21,6 +28,7 @@ struct TunoApp: App {
             }
             .environmentObject(authManager)
             .environmentObject(favoritesService)
+            .environmentObject(deepLinkManager)
             .tint(Color.primary600)
             .preferredColorScheme(.light)
             .onChange(of: authManager.isAuthenticated) {
@@ -45,14 +53,15 @@ struct TunoApp: App {
                         try? await supabase.auth.session(from: url)
                     }
                 } else {
-                    // Universal Link — e.g. tuno.no/listings/abc123?spot=1
                     if let listingId = extractListingId(from: url) {
-                        NotificationCenter.default.post(
-                            name: .openListing,
-                            object: nil,
-                            userInfo: ["listingId": listingId]
-                        )
+                        deepLinkManager.pendingListingId = listingId
                     }
+                }
+            }
+            .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
+                if let url = activity.webpageURL,
+                   let listingId = extractListingId(from: url) {
+                    deepLinkManager.pendingListingId = listingId
                 }
             }
         }
@@ -67,6 +76,3 @@ struct TunoApp: App {
     }
 }
 
-extension Notification.Name {
-    static let openListing = Notification.Name("openListing")
-}
