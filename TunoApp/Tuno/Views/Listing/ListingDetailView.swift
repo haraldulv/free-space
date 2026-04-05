@@ -74,10 +74,14 @@ struct ListingDetailView: View {
                             }
 
                             // Location, spots, times
-                            VStack(spacing: 8) {
+                            VStack(alignment: .leading, spacing: 8) {
                                 if let address = listing.address, !address.isEmpty {
                                     let city = listing.city ?? ""
-                                    InfoRow(icon: "mappin", text: city.isEmpty ? address : "\(address), \(city)")
+                                    // Avoid duplicating city if already in address
+                                    let displayAddress = !city.isEmpty && address.contains(city)
+                                        ? address
+                                        : (city.isEmpty ? address : "\(address), \(city)")
+                                    InfoRow(icon: "mappin", text: displayAddress)
                                 }
                                 let spotCount = listing.spots ?? 1
                                 InfoRow(icon: "car.2.fill", text: "\(spotCount) \(spotCount == 1 ? "plass" : "plasser")")

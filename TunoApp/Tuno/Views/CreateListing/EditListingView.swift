@@ -19,6 +19,11 @@ struct EditListingView: View {
     @State private var address: String = ""
     @State private var city: String = ""
     @State private var region: String = ""
+    @State private var lat: Double = 0
+    @State private var lng: Double = 0
+    @State private var spotMarkers: [SpotMarker] = []
+    @State private var isSpotMode = false
+    @State private var mapUpdateTrigger = UUID()
     @State private var price: String = ""
     @State private var priceUnit: PriceUnit = .natt
     @State private var instantBooking: Bool = false
@@ -180,6 +185,80 @@ struct EditListingView: View {
                             .textFieldStyle(.roundedBorder)
                     }
                 }
+
+                // Map with spot markers
+                if lat != 0 || lng != 0 {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack {
+                            Button {
+                                isSpotMode.toggle()
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "mappin.and.ellipse")
+                                    Text("Marker plasser")
+                                }
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(isSpotMode ? .white : .primary600)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .background(isSpotMode ? Color.primary600 : Color.primary50)
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(Color.primary600, lineWidth: 1))
+                            }
+                            Spacer()
+                            if isSpotMode {
+                                Text("Trykk på kartet")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.neutral500)
+                            }
+                        }
+
+                        LocationPickerMapView(
+                            lat: $lat,
+                            lng: $lng,
+                            spotMarkers: $spotMarkers,
+                            isSpotMode: isSpotMode,
+                            updateTrigger: mapUpdateTrigger
+                        )
+                        .frame(height: 300)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                        if !spotMarkers.isEmpty {
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 8) {
+                                    ForEach(Array(spotMarkers.enumerated()), id: \.offset) { index, _ in
+                                        HStack(spacing: 6) {
+                                            Circle()
+                                                .fill(Color.primary600)
+                                                .frame(width: 22, height: 22)
+                                                .overlay(
+                                                    Text("\(index + 1)")
+                                                        .font(.system(size: 11, weight: .bold))
+                                                        .foregroundStyle(.white)
+                                                )
+                                            Text("Plass \(index + 1)")
+                                                .font(.system(size: 13, weight: .medium))
+                                            Button {
+                                                spotMarkers.remove(at: index)
+                                                mapUpdateTrigger = UUID()
+                                            } label: {
+                                                Image(systemName: "xmark")
+                                                    .font(.system(size: 10, weight: .bold))
+                                                    .foregroundStyle(.neutral400)
+                                            }
+                                        }
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .background(Color.neutral50)
+                                        .clipShape(Capsule())
+                                        .overlay(Capsule().stroke(Color.neutral200))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Toggle(isOn: $hideExactLocation) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Skjul eksakt adresse")
@@ -353,6 +432,9 @@ struct EditListingView: View {
         address = listing.address ?? ""
         city = listing.city ?? ""
         region = listing.region ?? ""
+        lat = listing.lat ?? 0
+        lng = listing.lng ?? 0
+        spotMarkers = listing.spotMarkers ?? []
         price = listing.price.map { "\($0)" } ?? ""
         priceUnit = listing.priceUnit ?? .natt
         instantBooking = listing.instantBooking ?? false
@@ -376,6 +458,12 @@ struct EditListingView: View {
 
         Task {
             do {
+                let spotMarkersArray = spotMarkers.map { marker -> [String: Any] in
+                    var obj: [String: Any] = ["lat": marker.lat, "lng": marker.lng]
+                    if let label = marker.label { obj["label"] = label }
+                    return obj
+                }
+
                 let updates: [String: Any] = [
                     "title": title,
                     "description": description,
@@ -385,6 +473,8 @@ struct EditListingView: View {
                     "address": address,
                     "city": city,
                     "region": region,
+                    "lat": lat,
+                    "lng": lng,
                     "price": Int(price) ?? 0,
                     "price_unit": priceUnit.rawValue,
                     "instant_booking": instantBooking,
@@ -392,6 +482,7 @@ struct EditListingView: View {
                     "images": imageURLs,
                     "blocked_dates": Array(blockedDates).sorted(),
                     "hide_exact_location": hideExactLocation,
+                    "spot_markers": spotMarkersArray,
                 ]
 
                 let jsonData = try JSONSerialization.data(withJSONObject: updates)

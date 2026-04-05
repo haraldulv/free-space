@@ -208,7 +208,9 @@ struct MyListingsView: View {
             } else {
                 List {
                     ForEach(listings) { listing in
-                        NavigationLink(value: listing) {
+                        NavigationLink {
+                            ListingDetailView(listingId: listing.id)
+                        } label: {
                             HStack(spacing: 12) {
                                 AsyncImage(url: URL(string: listing.images?.first ?? "")) { phase in
                                     switch phase {
@@ -285,9 +287,6 @@ struct MyListingsView: View {
                     }
                 }
                 .listStyle(.plain)
-                .navigationDestination(for: Listing.self) { listing in
-                    ListingDetailView(listingId: listing.id)
-                }
             }
         }
         .navigationTitle("Mine annonser")
