@@ -60,14 +60,11 @@ export async function POST(request: NextRequest) {
         .eq("id", userId);
     }
 
-    // Create onboarding link — use app callback URL for native
+    // Create onboarding link — include userId for callback auth
     const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
-    const callbackUrl = platform === "ios"
-      ? `${origin}/api/stripe/connect/callback?platform=ios`
-      : `${origin}/api/stripe/connect/callback`;
-    const refreshUrl = platform === "ios"
-      ? `${origin}/api/stripe/connect/refresh?platform=ios`
-      : `${origin}/api/stripe/connect/refresh`;
+    const params = platform === "ios" ? `?platform=ios&uid=${userId}` : `?uid=${userId}`;
+    const callbackUrl = `${origin}/api/stripe/connect/callback${params}`;
+    const refreshUrl = `${origin}/api/stripe/connect/refresh${params}`;
 
     const url = await createAccountLink(accountId, callbackUrl, refreshUrl);
 

@@ -24,6 +24,8 @@ struct BecomeHostView: View {
                 .ignoresSafeArea()
         }
         .onReceive(NotificationCenter.default.publisher(for: .stripeOnboardingComplete)) { _ in
+            // Close Safari and reload profile
+            safariURL = nil
             Task {
                 await authManager.loadProfile()
             }
