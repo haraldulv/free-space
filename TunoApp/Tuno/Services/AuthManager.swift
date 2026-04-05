@@ -64,6 +64,7 @@ final class AuthManager: ObservableObject {
         } catch {
             print("Failed to load profile: \(error)")
         }
+        await checkHostStatus()
     }
 
     // MARK: - Email/Password Auth
@@ -80,27 +81,29 @@ final class AuthManager: ObservableObject {
         }
     }
 
-    func signUp(fullName: String, email: String, password: String) async {
+    /// Returns true if signup succeeded (user should check email)
+    func signUp(fullName: String, email: String, password: String) async -> Bool {
         self.error = nil
         do {
             let result = try await supabase.auth.signUp(
                 email: email,
                 password: password,
-                data: ["full_name": .string(fullName)]
+                data: ["full_name": .string(fullName)],
+                redirectTo: URL(string: "no.tuno.app://auth/callback")
             )
-            let user = result.user
 
-            // Create profile
-            try await supabase.from("profiles").insert([
-                "id": user.id.uuidString,
+            // Profile insert may fail if email verification is required (RLS)
+            // — that's OK, profile will be created on first sign-in
+            try? await supabase.from("profiles").insert([
+                "id": result.user.id.uuidString.lowercased(),
                 "full_name": fullName,
             ]).execute()
 
-            currentUser = user
-            isAuthenticated = true
-            await loadProfile()
+            return true
         } catch {
+            print("❌ SignUp error: \(error)")
             self.error = "Kunne ikke opprette konto. Prøv igjen."
+            return false
         }
     }
 
@@ -167,12 +170,29 @@ final class AuthManager: ObservableObject {
         }
     }
 
+    @Published var hasListings = false
+
     var isHost: Bool {
-        profile?.stripeOnboardingComplete == true
+        profile?.stripeOnboardingComplete == true || hasListings
     }
 
     var displayName: String {
         profile?.fullName ?? currentUser?.email ?? "Bruker"
+    }
+
+    func checkHostStatus() async {
+        guard let userId = currentUser?.id else { return }
+        do {
+            let count: Int = try await supabase
+                .from("listings")
+                .select("id", head: true, count: .exact)
+                .eq("host_id", value: userId.uuidString.lowercased())
+                .execute()
+                .count ?? 0
+            hasListings = count > 0
+        } catch {
+            print("Failed to check host status: \(error)")
+        }
     }
 }
 

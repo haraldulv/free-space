@@ -96,13 +96,12 @@ struct ProfileView: View {
                     } label: {
                         Label("Mine annonser", systemImage: "house.fill")
                     }
-                }
-
-                NavigationLink {
-                    // TODO: Become host flow
-                    Text("Bli utleier")
-                } label: {
-                    Label("Bli utleier", systemImage: "plus.circle.fill")
+                } else {
+                    NavigationLink {
+                        BecomeHostView()
+                    } label: {
+                        Label("Bli utleier", systemImage: "plus.circle.fill")
+                    }
                 }
             }
 
@@ -178,41 +177,87 @@ struct MyListingsView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var listings: [Listing] = []
     @State private var isLoading = true
+    @State private var showCreateListing = false
+    @State private var deleteTarget: Listing?
 
     var body: some View {
         Group {
             if isLoading {
                 ProgressView()
             } else if listings.isEmpty {
-                Text("Du har ingen annonser ennå")
-                    .foregroundStyle(.neutral500)
+                VStack(spacing: 16) {
+                    Image(systemName: "house")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.neutral300)
+                    Text("Du har ingen annonser ennå")
+                        .foregroundStyle(.neutral500)
+                    Button {
+                        showCreateListing = true
+                    } label: {
+                        Text("Opprett annonse")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 24)
+                            .padding(.vertical, 12)
+                            .background(Color.primary600)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
             } else {
-                List(listings) { listing in
-                    NavigationLink(value: listing) {
-                        HStack(spacing: 12) {
-                            AsyncImage(url: URL(string: listing.images?.first ?? "")) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image.resizable().aspectRatio(contentMode: .fill)
-                                default:
-                                    Rectangle().fill(Color.neutral100)
+                List {
+                    ForEach(listings) { listing in
+                        NavigationLink(value: listing) {
+                            HStack(spacing: 12) {
+                                AsyncImage(url: URL(string: listing.images?.first ?? "")) { phase in
+                                    switch phase {
+                                    case .success(let image):
+                                        image.resizable().aspectRatio(contentMode: .fill)
+                                    default:
+                                        Rectangle().fill(Color.neutral100)
+                                    }
                                 }
-                            }
-                            .frame(width: 60, height: 60)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .frame(width: 60, height: 60)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .opacity(listing.isActive == true ? 1 : 0.5)
 
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(listing.title)
-                                    .font(.system(size: 15, weight: .medium))
-                                HStack(spacing: 4) {
-                                    Circle()
-                                        .fill(listing.isActive == true ? Color.green : Color.neutral400)
-                                        .frame(width: 8, height: 8)
-                                    Text(listing.isActive == true ? "Aktiv" : "Inaktiv")
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(.neutral500)
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(listing.title)
+                                        .font(.system(size: 15, weight: .medium))
+                                    HStack(spacing: 4) {
+                                        Circle()
+                                            .fill(listing.isActive == true ? Color.green : Color.neutral400)
+                                            .frame(width: 8, height: 8)
+                                        Text(listing.isActive == true ? "Aktiv" : "Inaktiv")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(.neutral500)
+                                    }
+                                    if let price = listing.price {
+                                        Text("\(price) kr/\(listing.priceUnit?.displayName ?? "natt")")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(.primary600)
+                                    }
                                 }
+
+                                Spacer()
                             }
+                        }
+                        .swipeActions(edge: .trailing) {
+                            Button(role: .destructive) {
+                                deleteTarget = listing
+                            } label: {
+                                Label("Slett", systemImage: "trash")
+                            }
+                        }
+                        .swipeActions(edge: .leading) {
+                            Button {
+                                toggleActive(listing)
+                            } label: {
+                                Label(
+                                    listing.isActive == true ? "Deaktiver" : "Aktiver",
+                                    systemImage: listing.isActive == true ? "eye.slash" : "eye"
+                                )
+                            }
+                            .tint(listing.isActive == true ? .orange : .green)
                         }
                     }
                 }
@@ -223,23 +268,78 @@ struct MyListingsView: View {
             }
         }
         .navigationTitle("Mine annonser")
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    showCreateListing = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+            }
+        }
+        .sheet(isPresented: $showCreateListing, onDismiss: { Task { await loadListings() } }) {
+            NavigationStack {
+                CreateListingView()
+            }
+        }
+        .alert("Slett annonse?", isPresented: .init(
+            get: { deleteTarget != nil },
+            set: { if !$0 { deleteTarget = nil } }
+        )) {
+            Button("Slett", role: .destructive) {
+                if let listing = deleteTarget {
+                    deleteListing(listing)
+                }
+            }
+            Button("Avbryt", role: .cancel) {}
+        } message: {
+            Text("Denne handlingen kan ikke angres.")
+        }
         .task {
-            guard let userId = authManager.currentUser?.id else {
-                isLoading = false
-                return
-            }
-            do {
-                listings = try await supabase
-                    .from("listings")
-                    .select()
-                    .eq("host_id", value: userId.uuidString)
-                    .order("created_at", ascending: false)
-                    .execute()
-                    .value
-            } catch {
-                print("Failed: \(error)")
-            }
+            await loadListings()
+        }
+    }
+
+    private func loadListings() async {
+        guard let userId = authManager.currentUser?.id else {
             isLoading = false
+            return
+        }
+        do {
+            listings = try await supabase
+                .from("listings")
+                .select()
+                .eq("host_id", value: userId.uuidString.lowercased())
+                .order("created_at", ascending: false)
+                .execute()
+                .value
+        } catch {
+            print("Failed to load listings: \(error)")
+        }
+        isLoading = false
+    }
+
+    private func toggleActive(_ listing: Listing) {
+        let newState = !(listing.isActive ?? true)
+        Task {
+            try? await supabase
+                .from("listings")
+                .update(["is_active": newState])
+                .eq("id", value: listing.id)
+                .execute()
+            await loadListings()
+        }
+    }
+
+    private func deleteListing(_ listing: Listing) {
+        Task {
+            try? await supabase
+                .from("listings")
+                .delete()
+                .eq("id", value: listing.id)
+                .execute()
+            deleteTarget = nil
+            await loadListings()
         }
     }
 }

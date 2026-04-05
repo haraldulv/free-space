@@ -9,6 +9,7 @@ struct RegisterView: View {
     @State private var email = ""
     @State private var password = ""
     @State private var isLoading = false
+    @State private var showVerificationAlert = false
 
     var body: some View {
         NavigationStack {
@@ -103,8 +104,11 @@ struct RegisterView: View {
                     Button {
                         Task {
                             isLoading = true
-                            await authManager.signUp(fullName: fullName, email: email, password: password)
+                            let success = await authManager.signUp(fullName: fullName, email: email, password: password)
                             isLoading = false
+                            if success {
+                                showVerificationAlert = true
+                            }
                         }
                     } label: {
                         Group {
@@ -144,6 +148,11 @@ struct RegisterView: View {
                     }
                 }
             }
+        }
+        .alert("Sjekk e-posten din", isPresented: $showVerificationAlert) {
+            Button("OK") { dismiss() }
+        } message: {
+            Text("Vi har sendt en bekreftelseslenke til \(email). Klikk på lenken for å aktivere kontoen din, og logg deretter inn.")
         }
     }
 }

@@ -38,8 +38,13 @@ struct TunoApp: App {
                 }
             }
             .onOpenURL { url in
-                Task {
-                    try? await supabase.auth.session(from: url)
+                if url.host == "stripe" {
+                    // Stripe onboarding callback — reload profile to pick up stripe_onboarding_complete
+                    NotificationCenter.default.post(name: .stripeOnboardingComplete, object: nil)
+                } else {
+                    Task {
+                        try? await supabase.auth.session(from: url)
+                    }
                 }
             }
         }
