@@ -106,9 +106,11 @@ export default function Navbar({
       <div className={`flex items-center justify-between gap-4 ${padClass} ${isSearchPage ? "py-3" : collapsed ? "py-2.5" : "pt-4 pb-2"}`}>
         {/* Logo */}
         <Link href="/" className="shrink-0 group">
-          <span className="text-[22px] text-neutral-900 transition-opacity group-hover:opacity-70 lowercase">
-            tuno
-          </span>
+          <img
+            src="/tuno-logo.png"
+            alt="Tuno"
+            className="h-7 transition-opacity group-hover:opacity-70"
+          />
         </Link>
 
         {/* Compact search bar — centered in header row */}
