@@ -1,7 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { createConnectAccount, createAccountLink } from "@/lib/stripe";
+import {
+  createConnectAccount,
+  createAccountLink,
+  createAccountSession,
+} from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
   try {
@@ -40,18 +44,21 @@ export async function POST(request: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     );
 
-    // Check if already has an account
+    // Check if already has an account, and pull full_name for prefill
     const { data: profile } = await db
       .from("profiles")
-      .select("stripe_account_id")
+      .select("stripe_account_id, full_name")
       .eq("id", userId)
       .single();
 
-    let accountId = profile?.stripe_account_id;
+    let accountId = profile?.stripe_account_id as string | null | undefined;
 
     if (!accountId) {
-      // Create new Express account
-      const account = await createConnectAccount(userEmail);
+      // Create new Express account with aggressive prefill
+      const account = await createConnectAccount({
+        email: userEmail,
+        fullName: profile?.full_name ?? null,
+      });
       accountId = account.id;
 
       await db
@@ -60,9 +67,26 @@ export async function POST(request: NextRequest) {
         .eq("id", userId);
     }
 
-    // Create onboarding link — include userId for callback auth
+    // Embedded onboarding for iOS — return AccountSession client_secret
+    if (platform === "ios") {
+      const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+      if (!publishableKey) {
+        return NextResponse.json(
+          { error: "Stripe publishable key not configured" },
+          { status: 500 },
+        );
+      }
+      const session = await createAccountSession(accountId);
+      return NextResponse.json({
+        accountId,
+        clientSecret: session.client_secret,
+        publishableKey,
+      });
+    }
+
+    // Web — hosted onboarding redirect (fallback until web embedded ships)
     const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
-    const params = platform === "ios" ? `?platform=ios&uid=${userId}` : `?uid=${userId}`;
+    const params = `?uid=${userId}`;
     const callbackUrl = `${origin}/api/stripe/connect/callback${params}`;
     const refreshUrl = `${origin}/api/stripe/connect/refresh${params}`;
 
