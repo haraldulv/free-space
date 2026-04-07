@@ -1,12 +1,11 @@
 import SwiftUI
-import SafariServices
 
 struct BecomeHostView: View {
     @EnvironmentObject var authManager: AuthManager
+    @StateObject private var stripePresenter = StripeConnectOnboardingPresenter()
     @State private var isLoadingStripe = false
     @State private var stripeError: String?
     @State private var showCreateListing = false
-    @State private var safariURL: URL?
 
     var body: some View {
         Group {
@@ -19,15 +18,14 @@ struct BecomeHostView: View {
         }
         .navigationTitle("Bli utleier")
         .navigationBarTitleDisplayMode(.inline)
-        .sheet(item: $safariURL) { url in
-            SafariView(url: url)
-                .ignoresSafeArea()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .stripeOnboardingComplete)) { _ in
-            // Close Safari and reload profile
-            safariURL = nil
-            Task {
-                await authManager.loadProfile()
+        .onAppear {
+            stripePresenter.onExit = {
+                Task {
+                    await authManager.loadProfile()
+                }
+            }
+            stripePresenter.onError = { message in
+                stripeError = message
             }
         }
     }
@@ -118,15 +116,18 @@ struct BecomeHostView: View {
                 }
 
                 guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let urlString = json["url"] as? String,
-                      let url = URL(string: urlString) else {
+                      let clientSecret = json["clientSecret"] as? String,
+                      let publishableKey = json["publishableKey"] as? String else {
                     stripeError = "Ugyldig respons fra server"
                     isLoadingStripe = false
                     return
                 }
 
-                safariURL = url
                 isLoadingStripe = false
+                stripePresenter.present(
+                    initialClientSecret: clientSecret,
+                    publishableKey: publishableKey
+                )
             } catch {
                 stripeError = "Noe gikk galt: \(error.localizedDescription)"
                 isLoadingStripe = false
@@ -135,26 +136,8 @@ struct BecomeHostView: View {
     }
 }
 
-// MARK: - Safari View
-
-struct SafariView: UIViewControllerRepresentable {
-    let url: URL
-
-    func makeUIViewController(context: Context) -> SFSafariViewController {
-        let vc = SFSafariViewController(url: url)
-        vc.preferredControlTintColor = UIColor(red: 0.102, green: 0.310, blue: 0.839, alpha: 1)
-        return vc
-    }
-
-    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
-}
-
-// Make URL work with .sheet(item:)
-extension URL: @retroactive Identifiable {
-    public var id: String { absoluteString }
-}
-
-// Notification for Stripe callback
+// Notification posted by the deep-link handler in TunoApp.swift. Kept for the
+// (now-unused) web AccountLink fallback path; harmless if it never fires.
 extension Notification.Name {
     static let stripeOnboardingComplete = Notification.Name("stripeOnboardingComplete")
 }

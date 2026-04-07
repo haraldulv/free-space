@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		07205B7D36A522F22C8188BD /* StripeConnect in Frameworks */ = {isa = PBXBuildFile; productRef = 0E9D1B9B90E5D9267C5F5C10 /* StripeConnect */; };
 		0A8748402C49449A4F0B8CE4 /* ListingFormModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB67EEF4A6A12892A1B1697E /* ListingFormModel.swift */; };
 		0B771074E8ABC573EB77837C /* GooglePlaces in Frameworks */ = {isa = PBXBuildFile; productRef = 506B5A64845B7A5C6C66721B /* GooglePlaces */; };
 		1444FFC1C4196A4874B30662 /* StripePaymentsUI in Frameworks */ = {isa = PBXBuildFile; productRef = E4D15CE7DFF6030221CC42B9 /* StripePaymentsUI */; };
@@ -16,6 +17,7 @@
 		334A02C478CF7B63C58A376A /* StripeApplePay in Frameworks */ = {isa = PBXBuildFile; productRef = EFD6004772316F38FF89D02C /* StripeApplePay */; };
 		367A9055909C4B33333782E3 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5416B142A121192B7EDCA9A2 /* LocationManager.swift */; };
 		3F2C71CB33819E76B0A47700 /* MessagesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BB47DB7ED9FBB036BC353A /* MessagesListView.swift */; };
+		3FEB9F42C480CC3FD8457883 /* StripeConnectOnboardingPresenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4CB4E80F87CA65F487DF378 /* StripeConnectOnboardingPresenter.swift */; };
 		414ACCF50897E595892BBE9B /* CreateListingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A8155F44B5F1E01A1FE767 /* CreateListingView.swift */; };
 		4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */; };
 		4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01854C020C64868465F39BDC /* Models.swift */; };
@@ -76,6 +78,7 @@
 		83B043C9DBACDB46B61E6148 /* ListingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingCard.swift; sourceTree = "<group>"; };
 		8CF2C4D557CBB8DCF564CD2A /* ChatService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatService.swift; sourceTree = "<group>"; };
 		905014F6D3B1C983862933A1 /* QRCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift; sourceTree = "<group>"; };
+		A4CB4E80F87CA65F487DF378 /* StripeConnectOnboardingPresenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StripeConnectOnboardingPresenter.swift; sourceTree = "<group>"; };
 		A9A8155F44B5F1E01A1FE767 /* CreateListingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateListingView.swift; sourceTree = "<group>"; };
 		A9C00EBE7ED77620DE8CBA92 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		AF4ECC50EF60CAE563B7D668 /* FavoritesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesService.swift; sourceTree = "<group>"; };
@@ -102,6 +105,7 @@
 				0B771074E8ABC573EB77837C /* GooglePlaces in Frameworks */,
 				334A02C478CF7B63C58A376A /* StripeApplePay in Frameworks */,
 				1444FFC1C4196A4874B30662 /* StripePaymentsUI in Frameworks */,
+				07205B7D36A522F22C8188BD /* StripeConnect in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -219,6 +223,7 @@
 				B8D99627256D695D60592DC8 /* EditListingView.swift */,
 				EB67EEF4A6A12892A1B1697E /* ListingFormModel.swift */,
 				905014F6D3B1C983862933A1 /* QRCodeView.swift */,
+				A4CB4E80F87CA65F487DF378 /* StripeConnectOnboardingPresenter.swift */,
 			);
 			path = CreateListing;
 			sourceTree = "<group>";
@@ -287,6 +292,7 @@
 				506B5A64845B7A5C6C66721B /* GooglePlaces */,
 				EFD6004772316F38FF89D02C /* StripeApplePay */,
 				E4D15CE7DFF6030221CC42B9 /* StripePaymentsUI */,
+				0E9D1B9B90E5D9267C5F5C10 /* StripeConnect */,
 			);
 			productName = Tuno;
 			productReference = 49328B9F033AAE32F12579CD /* Tuno.app */;
@@ -379,6 +385,7 @@
 				C0BA2DBEE5876C34B94A911D /* QRCodeView.swift in Sources */,
 				30DB0664F70CAF9A54C49E83 /* RegisterView.swift in Sources */,
 				E912DD2299D28C54B1846A12 /* SearchView.swift in Sources */,
+				3FEB9F42C480CC3FD8457883 /* StripeConnectOnboardingPresenter.swift in Sources */,
 				9AE9EF8B07B0FB00DF4149AF /* SupabaseService.swift in Sources */,
 				C76237D5837392B271673FB3 /* Theme.swift in Sources */,
 				659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */,
@@ -606,6 +613,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		0E9D1B9B90E5D9267C5F5C10 /* StripeConnect */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 3D0404E3DF73C534E0C5CA05 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
+			productName = StripeConnect;
+		};
 		177959CBC6EFAB9035701BA2 /* Supabase */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 859B3117EE4C2B83974F356F /* XCRemoteSwiftPackageReference "supabase-swift" */;

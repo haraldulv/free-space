@@ -72,6 +72,8 @@ targets:
         product: StripeApplePay
       - package: Stripe
         product: StripePaymentsUI
+      - package: Stripe
+        product: StripeConnect
     info:
       path: Tuno/Info.plist
       properties:
@@ -90,6 +92,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         ITSAppUsesNonExemptEncryption: false
         NSLocationWhenInUseUsageDescription: "Tuno trenger tilgang til posisjonen din for å vise parkerings- og campingplasser i nærheten."
+        NSCameraUsageDescription: "Tuno bruker kameraet til å ta bilder av legitimasjon under Stripe-onboarding for utleiere."
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - no.tuno.app

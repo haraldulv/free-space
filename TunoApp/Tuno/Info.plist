@@ -33,6 +33,8 @@
 	<string>1</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSCameraUsageDescription</key>
+	<string>Tuno bruker kameraet til å ta bilder av legitimasjon under Stripe-onboarding for utleiere.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Tuno trenger tilgang til posisjonen din for å vise parkerings- og campingplasser i nærheten.</string>
 	<key>UILaunchScreen</key>
