@@ -108,17 +108,20 @@ struct BecomeHostView: View {
 
                 let (data, response) = try await URLSession.shared.data(for: request)
 
+                let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any]
+
                 guard let httpResponse = response as? HTTPURLResponse,
                       httpResponse.statusCode == 200 else {
-                    stripeError = "Kunne ikke starte Stripe-oppsett"
+                    let serverError = json?["error"] as? String
+                    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+                    stripeError = serverError ?? "Stripe-oppsett feilet (HTTP \(status))"
                     isLoadingStripe = false
                     return
                 }
 
-                guard let json = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                      let clientSecret = json["clientSecret"] as? String,
-                      let publishableKey = json["publishableKey"] as? String else {
-                    stripeError = "Ugyldig respons fra server"
+                guard let clientSecret = json?["clientSecret"] as? String,
+                      let publishableKey = json?["publishableKey"] as? String else {
+                    stripeError = "Ugyldig respons fra server: \(json ?? [:])"
                     isLoadingStripe = false
                     return
                 }
