@@ -19,6 +19,8 @@
     "@capacitor/splash-screen": "^8.0.1",
     "@capacitor/status-bar": "^8.0.2",
     "@googlemaps/js-api-loader": "^2.0.2",
+    "@stripe/connect-js": "^3.3.35",
+    "@stripe/react-connect-js": "^3.3.34",
     "@stripe/react-stripe-js": "^3.6.0",
     "@stripe/stripe-js": "^7.3.0",
     "@supabase/ssr": "^0.9.0",

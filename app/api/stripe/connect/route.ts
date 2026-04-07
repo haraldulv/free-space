@@ -3,14 +3,12 @@ import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import {
   createConnectAccount,
-  createAccountLink,
   createAccountSession,
 } from "@/lib/stripe";
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json().catch(() => ({}));
-    const platform = body.platform as string | undefined;
+    await request.json().catch(() => ({}));
 
     // Authenticate — Bearer token (native app) or cookies (web)
     let userId: string;
@@ -67,32 +65,20 @@ export async function POST(request: NextRequest) {
         .eq("id", userId);
     }
 
-    // Embedded onboarding for iOS — return AccountSession client_secret
-    if (platform === "ios") {
-      const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
-      if (!publishableKey) {
-        return NextResponse.json(
-          { error: "Stripe publishable key not configured" },
-          { status: 500 },
-        );
-      }
-      const session = await createAccountSession(accountId);
-      return NextResponse.json({
-        accountId,
-        clientSecret: session.client_secret,
-        publishableKey,
-      });
+    // Embedded onboarding (iOS via StripeConnect SDK, web via @stripe/react-connect-js)
+    const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    if (!publishableKey) {
+      return NextResponse.json(
+        { error: "Stripe publishable key not configured" },
+        { status: 500 },
+      );
     }
-
-    // Web — hosted onboarding redirect (fallback until web embedded ships)
-    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
-    const params = `?uid=${userId}`;
-    const callbackUrl = `${origin}/api/stripe/connect/callback${params}`;
-    const refreshUrl = `${origin}/api/stripe/connect/refresh${params}`;
-
-    const url = await createAccountLink(accountId, callbackUrl, refreshUrl);
-
-    return NextResponse.json({ url });
+    const session = await createAccountSession(accountId);
+    return NextResponse.json({
+      accountId,
+      clientSecret: session.client_secret,
+      publishableKey,
+    });
   } catch (err) {
     console.error("Connect route error:", err);
     return NextResponse.json(

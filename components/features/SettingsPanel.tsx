@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Camera, LogOut, Trash2, User, Mail, Calendar, Check, CreditCard, ExternalLink, CheckCircle2, Loader2 } from "lucide-react";
+import { Camera, LogOut, Trash2, User, Mail, Calendar, Check, CreditCard, ExternalLink, CheckCircle2 } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -12,6 +12,7 @@ import {
   updateAvatarAction,
   deleteAccountAction,
 } from "@/app/(main)/settings/actions";
+import StripeConnectOnboarding from "@/components/features/StripeConnectOnboarding";
 
 interface ProfileData {
   id: string;
@@ -33,7 +34,7 @@ export default function SettingsPanel() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [connectingStripe, setConnectingStripe] = useState(false);
+  const [showStripeOnboarding, setShowStripeOnboarding] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -92,22 +93,13 @@ export default function SettingsPanel() {
     setUploadingAvatar(false);
   };
 
-  const handleConnectStripe = async () => {
-    setConnectingStripe(true);
-    setError("");
-    try {
-      const res = await fetch("/api/stripe/connect", { method: "POST" });
-      const data = await res.json();
-      if (data.error) {
-        setError(data.error);
-        setConnectingStripe(false);
-      } else {
-        window.location.href = data.url;
-      }
-    } catch {
-      setError("Kunne ikke koble til Stripe");
-      setConnectingStripe(false);
+  const handleStripeExit = async () => {
+    // Refresh profile to pick up the new stripe_onboarding_complete flag.
+    const result = await getProfileAction();
+    if (result.profile) {
+      setProfile(result.profile);
     }
+    setShowStripeOnboarding(false);
   };
 
   const handleSignOut = async () => {
@@ -246,19 +238,14 @@ export default function SettingsPanel() {
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>
             </div>
+          ) : showStripeOnboarding ? (
+            <StripeConnectOnboarding onExit={handleStripeExit} />
           ) : (
-            <Button onClick={handleConnectStripe} disabled={connectingStripe}>
-              {connectingStripe ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Kobler til...
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-2">
-                  <CreditCard className="h-4 w-4" />
-                  Koble til Stripe
-                </span>
-              )}
+            <Button onClick={() => setShowStripeOnboarding(true)}>
+              <span className="inline-flex items-center gap-2">
+                <CreditCard className="h-4 w-4" />
+                Koble til Stripe
+              </span>
             </Button>
           )}
         </div>
