@@ -16,15 +16,27 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "No signature" }, { status: 400 });
   }
 
+  // Stripe sender platform-events (payment_intent.*) og Connect-events (account.updated)
+  // til samme URL men med forskjellige signing secrets — ett per endpoint i Dashboard.
+  // Prøv begge secrets og aksepter requesten hvis én matcher.
+  const secrets = [
+    process.env.STRIPE_WEBHOOK_SECRET,
+    process.env.STRIPE_CONNECT_WEBHOOK_SECRET,
+  ].filter((s): s is string => Boolean(s));
+
   let event;
-  try {
-    event = stripe.webhooks.constructEvent(
-      body,
-      signature,
-      process.env.STRIPE_WEBHOOK_SECRET!
-    );
-  } catch (err) {
-    console.error("Webhook signature verification failed:", err);
+  let lastError: unknown;
+  for (const secret of secrets) {
+    try {
+      event = stripe.webhooks.constructEvent(body, signature, secret);
+      break;
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  if (!event) {
+    console.error("Webhook signature verification failed:", lastError);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
