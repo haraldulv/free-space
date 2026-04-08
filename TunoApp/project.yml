@@ -72,8 +72,6 @@ targets:
         product: StripeApplePay
       - package: Stripe
         product: StripePaymentsUI
-      - package: Stripe
-        product: StripeConnect
     info:
       path: Tuno/Info.plist
       properties:

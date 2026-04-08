@@ -46,9 +46,7 @@ struct TunoApp: App {
                 }
             }
             .onOpenURL { url in
-                if url.scheme == "no.tuno.app" && url.host == "stripe" {
-                    NotificationCenter.default.post(name: .stripeOnboardingComplete, object: nil)
-                } else if url.scheme == "no.tuno.app" {
+                if url.scheme == "no.tuno.app" {
                     Task {
                         try? await supabase.auth.session(from: url)
                     }

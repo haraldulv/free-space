@@ -12,7 +12,7 @@ export type ConnectAccountPrefill = {
 /**
  * Split a full name into first/last for Stripe `individual` prefill.
  * Lossy for compound last names ("van der Berg", "Bakke-Hansen Jensen") —
- * the host can correct it inside the onboarding form.
+ * the host can correct it inside the native onboarding flow.
  */
 function splitName(full?: string | null): {
   first_name?: string;
@@ -25,7 +25,15 @@ function splitName(full?: string | null): {
   return { first_name: parts[0], last_name: parts.slice(1).join(" ") };
 }
 
-/** Create a Stripe Connect Express account for a host */
+/**
+ * Create a Stripe Connect account with full platform UI ownership.
+ *
+ * Uses the modern `controller` API (the legacy `type: "custom"` shortcut is
+ * deprecated). With `stripe_dashboard.type: "none"` and
+ * `requirement_collection: "application"`, Tuno owns 100% of the onboarding
+ * UI — no Stripe-hosted pages, no sign-in gate, no embedded components that
+ * pop out to connect.stripe.com.
+ */
 export async function createConnectAccount(
   prefill: ConnectAccountPrefill,
 ): Promise<Stripe.Account> {
@@ -40,10 +48,17 @@ export async function createConnectAccount(
   if (name.last_name) individual.last_name = name.last_name;
 
   return stripe.accounts.create({
-    type: "express",
     country: "NO",
-    default_currency: "nok",
     email,
+    controller: {
+      fees: { payer: "application" },
+      losses: { payments: "application" },
+      requirement_collection: "application",
+      stripe_dashboard: { type: "none" },
+    },
+    capabilities: {
+      transfers: { requested: true },
+    },
     business_type: "individual",
     business_profile: {
       url: "https://www.tuno.no",
@@ -51,52 +66,13 @@ export async function createConnectAccount(
       product_description:
         "Utleier av parkerings- og bobilplasser via Tuno-plattformen",
     },
-    capabilities: {
-      transfers: { requested: true },
-    },
+    individual,
     settings: {
       payouts: {
         schedule: { interval: "manual" },
       },
     },
-    individual,
     metadata: { platform: "tuno" },
-  });
-}
-
-/** Create an account onboarding link (hosted onboarding — used by web fallback) */
-export async function createAccountLink(
-  accountId: string,
-  returnUrl: string,
-  refreshUrl: string,
-): Promise<string> {
-  const link = await stripe.accountLinks.create({
-    account: accountId,
-    return_url: returnUrl,
-    refresh_url: refreshUrl,
-    type: "account_onboarding",
-  });
-  return link.url;
-}
-
-/**
- * Create an Account Session for embedded onboarding components.
- * Used by both iOS (StripeConnect SDK) and web (@stripe/react-connect-js).
- * Client secrets expire ~30 minutes — the embedded component refetches as needed.
- */
-export async function createAccountSession(
-  accountId: string,
-): Promise<Stripe.AccountSession> {
-  return stripe.accountSessions.create({
-    account: accountId,
-    components: {
-      account_onboarding: {
-        enabled: true,
-        features: {
-          external_account_collection: true,
-        },
-      },
-    },
   });
 }
 

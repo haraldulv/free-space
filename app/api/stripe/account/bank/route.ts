@@ -1,24 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
+import Stripe from "stripe";
 import { createClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
-import { createConnectAccount, stripe } from "@/lib/stripe";
+import { stripe } from "@/lib/stripe";
+
+const bankSchema = z.object({
+  iban: z
+    .string()
+    .transform((s) => s.replace(/\s+/g, "").toUpperCase())
+    .pipe(z.string().regex(/^NO\d{13}$/, "Ugyldig norsk IBAN (forventet NO + 13 siffer)")),
+  accountHolderName: z.string().min(2, "Kontoeier må oppgis"),
+});
 
 /**
- * POST /api/stripe/connect
+ * POST /api/stripe/account/bank
  *
- * Creates a Custom Stripe Connect account if one doesn't exist, then returns
- * the current onboarding state (requirements + capabilities). The iOS app
- * (and eventually web) uses this as the entry point to the native onboarding
- * flow and for status polling.
+ * Attaches a Norwegian bank account (IBAN) as the external account for
+ * payouts. The IBAN is normalized (whitespace removed, uppercased) before
+ * validation and before being sent to Stripe.
  */
 export async function POST(request: NextRequest) {
   try {
-    await request.json().catch(() => ({}));
+    const body = await request.json().catch(() => ({}));
+    const parsed = bankSchema.safeParse(body);
+    if (!parsed.success) {
+      const first = parsed.error.issues[0];
+      return NextResponse.json(
+        {
+          error: first?.message ?? "Ugyldig forespørsel",
+          field: first?.path.join("."),
+        },
+        { status: 400 },
+      );
+    }
 
-    // Authenticate — Bearer token (native app) or cookies (web)
+    // Authenticate — Bearer (iOS) or cookies (web)
     let userId: string;
-    let userEmail: string;
-
     const authHeader = request.headers.get("authorization");
     if (authHeader?.startsWith("Bearer ")) {
       const supabase = createServiceClient(
@@ -33,7 +51,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Ugyldig token" }, { status: 401 });
       }
       userId = user.id;
-      userEmail = user.email || "";
     } else {
       const supabase = await createClient();
       const {
@@ -43,7 +60,6 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "Ikke innlogget" }, { status: 401 });
       }
       userId = user.id;
-      userEmail = user.email || "";
     }
 
     const db = createServiceClient(
@@ -53,33 +69,42 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await db
       .from("profiles")
-      .select("stripe_account_id, full_name")
+      .select("stripe_account_id")
       .eq("id", userId)
       .single();
 
-    let accountId = profile?.stripe_account_id as string | null | undefined;
-
+    const accountId = profile?.stripe_account_id as string | null | undefined;
     if (!accountId) {
-      const account = await createConnectAccount({
-        email: userEmail,
-        fullName: profile?.full_name ?? null,
-      });
-      accountId = account.id;
-
-      await db
-        .from("profiles")
-        .update({ stripe_account_id: accountId })
-        .eq("id", userId);
+      return NextResponse.json(
+        { error: "Ingen Stripe-konto funnet. Kontakt support." },
+        { status: 400 },
+      );
     }
 
-    // Pull the current account state from Stripe. The native client uses
-    // `requirements.currently_due` to know which steps the user still needs
-    // to complete, and `charges_enabled`/`payouts_enabled` to show the final
-    // "ready" status.
+    try {
+      await stripe.accounts.createExternalAccount(accountId, {
+        external_account: {
+          object: "bank_account",
+          country: "NO",
+          currency: "nok",
+          account_number: parsed.data.iban,
+          account_holder_name: parsed.data.accountHolderName,
+          account_holder_type: "individual",
+        },
+      });
+    } catch (err) {
+      if (err instanceof Stripe.errors.StripeInvalidRequestError) {
+        return NextResponse.json(
+          { error: err.message, field: err.param ?? null },
+          { status: 400 },
+        );
+      }
+      throw err;
+    }
+
     const account = await stripe.accounts.retrieve(accountId);
 
     return NextResponse.json({
-      accountId,
       requirements: {
         currently_due: account.requirements?.currently_due ?? [],
         eventually_due: account.requirements?.eventually_due ?? [],
@@ -90,7 +115,7 @@ export async function POST(request: NextRequest) {
       payouts_enabled: account.payouts_enabled ?? false,
     });
   } catch (err) {
-    console.error("Connect route error:", err);
+    console.error("Bank account error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "Noe gikk galt" },
       { status: 500 },

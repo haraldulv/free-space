@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Camera, LogOut, Trash2, User, Mail, Calendar, Check, CreditCard, ExternalLink, CheckCircle2 } from "lucide-react";
+import { Camera, LogOut, Trash2, User, Mail, Calendar, Check, CreditCard, CheckCircle2, Smartphone } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -12,7 +12,6 @@ import {
   updateAvatarAction,
   deleteAccountAction,
 } from "@/app/(main)/settings/actions";
-import StripeConnectOnboarding from "@/components/features/StripeConnectOnboarding";
 
 interface ProfileData {
   id: string;
@@ -34,7 +33,6 @@ export default function SettingsPanel() {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [showStripeOnboarding, setShowStripeOnboarding] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -91,15 +89,6 @@ export default function SettingsPanel() {
       setError(err instanceof Error ? err.message : "Kunne ikke laste opp bilde");
     }
     setUploadingAvatar(false);
-  };
-
-  const handleStripeExit = async () => {
-    // Refresh profile to pick up the new stripe_onboarding_complete flag.
-    const result = await getProfileAction();
-    if (result.profile) {
-      setProfile(result.profile);
-    }
-    setShowStripeOnboarding(false);
   };
 
   const handleSignOut = async () => {
@@ -220,33 +209,27 @@ export default function SettingsPanel() {
       <section className="mt-10 border-t border-neutral-200 pt-8">
         <h2 className="text-base font-medium text-neutral-700">Utbetalinger</h2>
         <p className="mt-1 text-sm text-neutral-500">
-          Koble til Stripe for å motta utbetalinger når gjester booker plassen din.
+          Koble til en bankkonto for å motta utbetalinger når gjester booker plassen din.
         </p>
         <div className="mt-4">
           {profile.stripeOnboardingComplete ? (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium text-green-600">
-                <CheckCircle2 className="h-5 w-5" />
-                Stripe er tilkoblet
-              </div>
-              <a
-                href="/api/stripe/connect/dashboard"
-                className="inline-flex items-center gap-2 text-sm text-primary-600 hover:text-primary-700 font-medium"
-              >
-                <CreditCard className="h-4 w-4" />
-                Åpne Stripe Dashboard
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
+            <div className="flex items-center gap-2 text-sm font-medium text-green-600">
+              <CheckCircle2 className="h-5 w-5" />
+              Utbetalinger er satt opp
             </div>
-          ) : showStripeOnboarding ? (
-            <StripeConnectOnboarding onExit={handleStripeExit} />
           ) : (
-            <Button onClick={() => setShowStripeOnboarding(true)}>
-              <span className="inline-flex items-center gap-2">
-                <CreditCard className="h-4 w-4" />
-                Koble til Stripe
-              </span>
-            </Button>
+            <div className="rounded-lg border border-primary-200 bg-primary-50 p-5">
+              <div className="flex items-start gap-3">
+                <Smartphone className="h-5 w-5 text-primary-600 mt-0.5" />
+                <div>
+                  <h3 className="font-semibold text-primary-900">Sett opp i Tuno-appen</h3>
+                  <p className="mt-1 text-sm text-neutral-700">
+                    Utleier-registrering er foreløpig kun tilgjengelig i Tuno-appen.
+                    Last ned appen for å sette opp utbetalinger og komme i gang som utleier.
+                  </p>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </section>

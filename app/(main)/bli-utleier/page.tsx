@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CreditCard, ArrowRight } from "lucide-react";
+import { Smartphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import ListingFormWizard from "@/components/features/listing-form/ListingFormWizard";
 import Button from "@/components/ui/Button";
@@ -49,21 +49,15 @@ export default function BliUtleierPage() {
       <Container className="py-16">
         <div className="mx-auto max-w-md text-center">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-50">
-            <CreditCard className="h-8 w-8 text-primary-600" />
+            <Smartphone className="h-8 w-8 text-primary-600" />
           </div>
           <h1 className="mt-6 text-2xl font-bold text-neutral-900">
-            Sett opp utbetalinger
+            Kom i gang i Tuno-appen
           </h1>
           <p className="mt-3 text-neutral-600">
-            Før du kan opprette en annonse, må du koble til Stripe for å motta utbetalinger fra gjester.
+            Utleier-registrering er foreløpig kun tilgjengelig i Tuno-appen.
+            Last ned appen for å sette opp utbetalinger og opprette din første annonse.
           </p>
-          <Button
-            className="mt-6"
-            onClick={() => router.push("/dashboard?tab=settings")}
-          >
-            Gå til innstillinger
-            <ArrowRight className="ml-1.5 h-4 w-4" />
-          </Button>
         </div>
       </Container>
     );
