@@ -38,11 +38,11 @@ Løser parkeringsmangel for pendlere (f.eks. Oslo) og camping/bobil-turisme (f.e
 - **524+ listings** seeded (alle vehicle_type='motorhome') + bruker-opprettede
 
 ## Design-preferanser
-- **Fargepalett:** Ren blå (#1a4fd6 primary-600, #3366ff primary-500)
-- DM Sans font, logo: "free*space*" (extralight + bold italic, svart)
+- **Fargepalett:** Mint-grønn `#46C185` (Tuno brand, brukt på splash + app-ikon). ALDRI blå noe sted.
+- DM Sans font, logo: "tuno" (ren tekst, svart)
 - Alt UI-tekst på norsk (lang="nb")
-- **Ikke bruk:** grønn ("kjedelig"), charcoal ("for kjedelig"), coral/rød, sage, jord-toner
-- Blått skal være moderne og rent, ikke corporate
+- **Ikke bruk:** blå (gammel Free Space-arv), charcoal ("for kjedelig"), coral/rød, sage, jord-toner
+- Grønt skal være friskt og moderne, ikke corporate
 - Logo: kun tekst, ingen ikoner, ingen to-farget tekst. "Hip and modern, Grünerløkka vibes"
 - Kort skal alltid ha synlig border, subtil hover-effekt, ikke "hjemmesnekra"
 - Glassmorphism navbar kun på forsiden, solid hvit ellers

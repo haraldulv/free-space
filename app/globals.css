@@ -1,17 +1,17 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Clean blue — modern, trustworthy, simple */
-  --color-primary-50: #f0f5ff;
-  --color-primary-100: #e0ebff;
-  --color-primary-200: #c2d6ff;
-  --color-primary-300: #93b5ff;
-  --color-primary-400: #5e8bff;
-  --color-primary-500: #3366ff;
-  --color-primary-600: #1a4fd6;
-  --color-primary-700: #153fad;
-  --color-primary-800: #12358e;
-  --color-primary-900: #102d75;
+  /* Tuno mint green — fresh, modern, trustworthy. Brand = primary-600 (#46c185) */
+  --color-primary-50: #f0fdf6;
+  --color-primary-100: #dcfce8;
+  --color-primary-200: #bbf7d0;
+  --color-primary-300: #86efad;
+  --color-primary-400: #5dd896;
+  --color-primary-500: #4bcd8e;
+  --color-primary-600: #46c185;
+  --color-primary-700: #36a06b;
+  --color-primary-800: #2d7f55;
+  --color-primary-900: #266547;
 
   --color-neutral-50: #fafafa;
   --color-neutral-100: #f5f5f5;
