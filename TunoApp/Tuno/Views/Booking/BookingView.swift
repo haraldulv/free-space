@@ -447,7 +447,7 @@ struct BookingView: View {
 
         let controller = PKPaymentAuthorizationController(paymentRequest: request)
         controller.delegate = handler
-        controller.present()
+        await controller.present()
     }
 
     private func confirmCardPayment() async {
