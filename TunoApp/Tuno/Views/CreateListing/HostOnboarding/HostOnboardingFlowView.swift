@@ -168,7 +168,7 @@ private struct WelcomeStep: View {
             .background(Color.primary50)
             .clipShape(RoundedRectangle(cornerRadius: 12))
 
-            Text("Ved å fortsette godtar du [Stripes tjenestevilkår for tilkoblede kontoer](https://stripe.com/connect-account/legal/full) og Tunos utleiervilkår. Tuno bruker Stripe som betalingsleverandør.")
+            Text("Ved å fortsette godtar du [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer for annonser](https://tuno.no/retningslinjer). Tuno bruker Stripe som betalingsleverandør.")
                 .font(.system(size: 13))
                 .foregroundStyle(.neutral600)
                 .tint(.primary600)

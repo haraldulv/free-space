@@ -16,6 +16,7 @@ interface AuthFormProps {
   }[];
   submitLabel: string;
   footer?: ReactNode;
+  extraContent?: ReactNode;
   onSubmit: (values: Record<string, string>) => Promise<void>;
 }
 
@@ -25,6 +26,7 @@ export default function AuthForm({
   fields,
   submitLabel,
   footer,
+  extraContent,
   onSubmit,
 }: AuthFormProps) {
   const [values, setValues] = useState<Record<string, string>>({});
@@ -78,6 +80,8 @@ export default function AuthForm({
           error={errors[field.name]}
         />
       ))}
+
+      {extraContent}
 
       <Button type="submit" size="lg" className="w-full" disabled={loading}>
         {loading ? "Vennligst vent..." : submitLabel}

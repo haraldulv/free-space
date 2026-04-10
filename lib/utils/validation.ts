@@ -1,33 +1,33 @@
 import { z } from "zod";
 
 export const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  email: z.string().email("Skriv inn en gyldig e-postadresse"),
+  password: z.string().min(6, "Passord må ha minst 6 tegn"),
 });
 
 export const registerSchema = z
   .object({
-    fullName: z.string().min(2, "Name must be at least 2 characters"),
-    email: z.string().email("Please enter a valid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    fullName: z.string().min(2, "Navn må ha minst 2 tegn"),
+    email: z.string().email("Skriv inn en gyldig e-postadresse"),
+    password: z.string().min(6, "Passord må ha minst 6 tegn"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Passordene stemmer ikke overens",
     path: ["confirmPassword"],
   });
 
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
+  email: z.string().email("Skriv inn en gyldig e-postadresse"),
 });
 
 export const resetPasswordSchema = z
   .object({
-    password: z.string().min(6, "Password must be at least 6 characters"),
+    password: z.string().min(6, "Passord må ha minst 6 tegn"),
     confirmPassword: z.string(),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: "Passwords don't match",
+    message: "Passordene stemmer ikke overens",
     path: ["confirmPassword"],
   });
 

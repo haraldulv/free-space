@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
@@ -13,14 +14,23 @@ export default function RegisterPage() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
   const supabase = createClient();
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsError, setTermsError] = useState("");
 
   const handleRegister = async (values: Record<string, string>) => {
+    setTermsError("");
+
+    if (!termsAccepted) {
+      setTermsError("Du må godta vilkårene for å opprette konto");
+      throw new Error("Du må godta vilkårene for å opprette konto");
+    }
+
     const result = registerSchema.safeParse(values);
     if (!result.success) {
       throw new Error(result.error.issues[0].message);
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data: signUpData, error } = await supabase.auth.signUp({
       email: result.data.email,
       password: result.data.password,
       options: {
@@ -29,8 +39,15 @@ export default function RegisterPage() {
     });
 
     if (error) throw new Error(error.message);
-    router.push(redirectTo);
-    router.refresh();
+
+    if (signUpData.user) {
+      await supabase
+        .from("profiles")
+        .update({ terms_accepted_at: new Date().toISOString() })
+        .eq("id", signUpData.user.id);
+    }
+
+    window.location.href = `/bekreft-epost?email=${encodeURIComponent(result.data.email)}`;
   };
 
   return (
@@ -85,6 +102,42 @@ export default function RegisterPage() {
         ]}
         submitLabel="Opprett konto"
         onSubmit={handleRegister}
+        extraContent={
+          <div>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={termsAccepted}
+                onChange={(e) => {
+                  setTermsAccepted(e.target.checked);
+                  if (e.target.checked) setTermsError("");
+                }}
+                className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-[#46C185] focus:ring-[#46C185]"
+              />
+              <span className="text-sm text-neutral-600">
+                Jeg godtar Tunos{" "}
+                <Link
+                  href="/vilkar"
+                  target="_blank"
+                  className="underline text-neutral-900 hover:text-[#46C185]"
+                >
+                  brukervilkår
+                </Link>{" "}
+                og{" "}
+                <Link
+                  href="/personvern"
+                  target="_blank"
+                  className="underline text-neutral-900 hover:text-[#46C185]"
+                >
+                  personvernerklæring
+                </Link>
+              </span>
+            </label>
+            {termsError && (
+              <p className="mt-1 text-sm text-red-600">{termsError}</p>
+            )}
+          </div>
+        }
         footer={
           <>
             Har du allerede en konto?{" "}

@@ -55,10 +55,28 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-neutral-900">Juridisk</h3>
             <ul className="mt-3 space-y-2">
               <li>
-                <span className="text-sm text-neutral-500">Vilkår</span>
+                <Link
+                  href="/vilkar"
+                  className="text-sm text-neutral-500 hover:text-neutral-700"
+                >
+                  Vilkår
+                </Link>
               </li>
               <li>
-                <span className="text-sm text-neutral-500">Personvern</span>
+                <Link
+                  href="/personvern"
+                  className="text-sm text-neutral-500 hover:text-neutral-700"
+                >
+                  Personvern
+                </Link>
+              </li>
+              <li>
+                <Link
+                  href="/utleiervilkar"
+                  className="text-sm text-neutral-500 hover:text-neutral-700"
+                >
+                  Utleiervilkår
+                </Link>
               </li>
             </ul>
           </div>
