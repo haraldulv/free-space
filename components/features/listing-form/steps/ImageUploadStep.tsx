@@ -3,7 +3,16 @@
 import { useCallback, useRef, useState } from "react";
 import { Upload, X, GripVertical } from "lucide-react";
 import Image from "next/image";
-import { uploadListingImage } from "@/lib/supabase/storage";
+import { uploadListingImage, deleteListingImage } from "@/lib/supabase/storage";
+
+async function moderateImage(imageUrl: string): Promise<{ approved: boolean; reason?: string }> {
+  const res = await fetch("/api/moderate-image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ imageUrl }),
+  });
+  return res.json();
+}
 
 interface ImageUploadStepProps {
   images: string[];
@@ -15,6 +24,7 @@ interface ImageUploadStepProps {
 export default function ImageUploadStep({ images, userId, onChange, error }: ImageUploadStepProps) {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [moderationError, setModerationError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
@@ -25,11 +35,26 @@ export default function ImageUploadStep({ images, userId, onChange, error }: Ima
       if (toUpload.length === 0) return;
 
       setUploading(true);
+      setModerationError("");
       try {
-        const urls = await Promise.all(
-          toUpload.map((file) => uploadListingImage(file, userId)),
-        );
-        onChange([...images, ...urls]);
+        const approvedUrls: string[] = [];
+
+        for (const file of toUpload) {
+          const url = await uploadListingImage(file, userId);
+
+          const result = await moderateImage(url);
+          if (!result.approved) {
+            await deleteListingImage(url);
+            setModerationError(result.reason || "Bildet ble blokkert av innholdsfilter.");
+            continue;
+          }
+
+          approvedUrls.push(url);
+        }
+
+        if (approvedUrls.length > 0) {
+          onChange([...images, ...approvedUrls]);
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error("Upload error:", msg);
@@ -75,6 +100,12 @@ export default function ImageUploadStep({ images, userId, onChange, error }: Ima
       </div>
 
       {error && <p className="text-sm text-red-500">{error}</p>}
+
+      {moderationError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+          {moderationError}
+        </div>
+      )}
 
       {/* Drop zone */}
       <div

@@ -114,7 +114,32 @@ export default function RetningslinjerPage() {
         </ul>
       </Section>
 
-      <Section title="8. Oppførsel og kommunikasjon">
+      <Section title="8. Nulltoleranse: AI-genererte bilder og støtende innhold">
+        <p>
+          Tuno har <strong>nulltoleranse</strong> for AI-genererte bilder og
+          støtende materialer. Alle bilder skal vise den faktiske plassen slik
+          den er i virkeligheten.
+        </p>
+        <p>
+          Alle opplastede bilder kontrolleres automatisk. Bilder som er
+          AI-genererte, manipulerte, støtende, voldelige eller seksuelt
+          eksplisitte vil bli blokkert ved opplasting, og annonsen kan ikke
+          opprettes eller lagres.
+        </p>
+        <p>
+          Ved brudd på denne regelen vil:
+        </p>
+        <ul className="list-disc pl-5 space-y-1">
+          <li>Bildet bli fjernet umiddelbart</li>
+          <li>Annonsen bli deaktivert</li>
+          <li>
+            Ved gjentatte brudd: kontoen din blir permanent utestengt fra Tuno
+            uten forvarsel
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="9. Oppførsel og kommunikasjon">
         <p>
           Vi forventer at alle brukere behandler hverandre med respekt. Dette
           gjelder kommunikasjon via meldinger, ved ankomst og under oppholdet.
@@ -125,7 +150,7 @@ export default function RetningslinjerPage() {
         </p>
       </Section>
 
-      <Section title="9. Moderering">
+      <Section title="10. Moderering">
         <p>
           Tuno forbeholder seg retten til å gjennomgå, deaktivere eller fjerne
           annonser som bryter disse retningslinjene. Ved gjentatte brudd kan
