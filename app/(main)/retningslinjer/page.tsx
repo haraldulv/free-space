@@ -159,10 +159,10 @@ export default function RetningslinjerPage() {
         <p>
           Dersom du mener en avgjørelse er feil, kan du kontakte oss på{" "}
           <a
-            href="mailto:kontakt@tuno.no"
+            href="mailto:support@tuno.no"
             className="underline text-neutral-900 hover:text-[#46C185]"
           >
-            kontakt@tuno.no
+            support@tuno.no
           </a>
           .
         </p>

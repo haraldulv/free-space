@@ -17,10 +17,10 @@ export default function PersonvernPage() {
           personopplysninger som samles inn gjennom tuno.no og Tuno-appen. Du kan
           kontakte oss på{" "}
           <a
-            href="mailto:kontakt@tuno.no"
+            href="mailto:support@tuno.no"
             className="underline text-neutral-900 hover:text-[#46C185]"
           >
-            kontakt@tuno.no
+            support@tuno.no
           </a>{" "}
           med spørsmål om personvern.
         </p>
@@ -174,10 +174,10 @@ export default function PersonvernPage() {
         <p>
           For å utøve dine rettigheter, kontakt oss på{" "}
           <a
-            href="mailto:kontakt@tuno.no"
+            href="mailto:support@tuno.no"
             className="underline text-neutral-900 hover:text-[#46C185]"
           >
-            kontakt@tuno.no
+            support@tuno.no
           </a>
           . Vi svarer innen 30 dager.
         </p>
