@@ -16,10 +16,11 @@ struct LoginView: View {
             ScrollView {
                 VStack(spacing: 32) {
                     // Logo
-                    VStack(spacing: 8) {
-                        Text("tuno")
-                            .font(.system(size: 40, weight: .bold))
-                            .foregroundStyle(.neutral900)
+                    VStack(spacing: 12) {
+                        Image("TunoLogo")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(height: 44)
 
                         Text("Finn din plass")
                             .font(.system(size: 16))
@@ -98,7 +99,7 @@ struct LoginView: View {
                             Text("E-post")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.neutral700)
-                            TextField("din@epost.no", text: $email)
+                            TextField("", text: $email)
                                 .textFieldStyle(.plain)
                                 .padding(14)
                                 .background(.neutral50)

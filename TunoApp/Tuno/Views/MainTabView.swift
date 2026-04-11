@@ -4,11 +4,12 @@ struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var deepLinkManager: DeepLinkManager
     @State private var selectedTab = 0
+    @State private var homeNavPath = NavigationPath()
 
     var body: some View {
         TabView(selection: $selectedTab) {
             Tab("Utforsk", systemImage: "magnifyingglass", value: 0) {
-                NavigationStack {
+                NavigationStack(path: $homeNavPath) {
                     HomeView()
                 }
             }
@@ -40,6 +41,8 @@ struct MainTabView: View {
         .tint(.primary600)
         .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
             selectedTab = 2
+            homeNavPath = NavigationPath()
+            deepLinkManager.pendingListingId = nil
         }
         .sheet(item: $deepLinkManager.pendingListingId) { listingId in
             NavigationStack {

@@ -102,6 +102,9 @@ struct SearchView: View {
                 searchZoom = 12
                 performSearch()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
+                dismiss()
+            }
         }
     }
 

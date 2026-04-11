@@ -1,15 +1,15 @@
 import SwiftUI
 
 extension Color {
-    // Primary blue palette
-    static let primary50 = Color(hex: "#f0f5ff")
-    static let primary100 = Color(hex: "#e0ebff")
-    static let primary200 = Color(hex: "#c2d6ff")
-    static let primary300 = Color(hex: "#93b5ff")
-    static let primary400 = Color(hex: "#5e8bff")
-    static let primary500 = Color(hex: "#3366ff")
-    static let primary600 = Color(hex: "#1a4fd6")
-    static let primary700 = Color(hex: "#153fad")
+    // Primary Tuno green palette (brand: #46C185)
+    static let primary50 = Color(hex: "#ecfaf3")
+    static let primary100 = Color(hex: "#d4f4e3")
+    static let primary200 = Color(hex: "#a9e8c6")
+    static let primary300 = Color(hex: "#7edaa7")
+    static let primary400 = Color(hex: "#5fcf96")
+    static let primary500 = Color(hex: "#4dc88c")
+    static let primary600 = Color(hex: "#46c185")
+    static let primary700 = Color(hex: "#34a06b")
 
     // Neutral palette
     static let neutral50 = Color(hex: "#fafafa")
