@@ -5,11 +5,14 @@ struct RegisterView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.dismiss) var dismiss
     @Environment(\.webAuthenticationSession) var webAuthenticationSession
+    @Environment(\.openURL) var openURL
     @State private var fullName = ""
     @State private var email = ""
     @State private var password = ""
     @State private var isLoading = false
     @State private var showVerificationAlert = false
+    @State private var termsAccepted = false
+    @State private var termsError = ""
 
     var body: some View {
         NavigationStack {
@@ -95,6 +98,56 @@ struct RegisterView: View {
                         SecureInputField(label: "Passord", text: $password)
                     }
 
+                    VStack(alignment: .leading, spacing: 6) {
+                        Button {
+                            termsAccepted.toggle()
+                            if termsAccepted { termsError = "" }
+                        } label: {
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: termsAccepted ? "checkmark.square.fill" : "square")
+                                    .font(.system(size: 20))
+                                    .foregroundStyle(termsAccepted ? Color.primary600 : Color.neutral400)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    (Text("Jeg godtar Tunos ")
+                                        .foregroundStyle(.neutral600)
+                                     + Text("brukervilkår")
+                                        .foregroundStyle(.neutral900)
+                                        .underline()
+                                     + Text(" og ")
+                                        .foregroundStyle(.neutral600)
+                                     + Text("personvernerklæring")
+                                        .foregroundStyle(.neutral900)
+                                        .underline())
+                                    .font(.system(size: 14))
+                                    .multilineTextAlignment(.leading)
+                                }
+                                Spacer(minLength: 0)
+                            }
+                        }
+                        .buttonStyle(.plain)
+
+                        HStack(spacing: 16) {
+                            Button("Les brukervilkår") {
+                                if let url = URL(string: "https://tuno.no/vilkar") { openURL(url) }
+                            }
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.primary600)
+                            Button("Les personvern") {
+                                if let url = URL(string: "https://tuno.no/personvern") { openURL(url) }
+                            }
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.primary600)
+                        }
+                        .padding(.leading, 30)
+
+                        if !termsError.isEmpty {
+                            Text(termsError)
+                                .font(.system(size: 13))
+                                .foregroundStyle(.red)
+                                .padding(.leading, 30)
+                        }
+                    }
+
                     if let error = authManager.error {
                         Text(error)
                             .font(.system(size: 14))
@@ -102,6 +155,11 @@ struct RegisterView: View {
                     }
 
                     Button {
+                        termsError = ""
+                        guard termsAccepted else {
+                            termsError = "Du må godta vilkårene for å opprette konto"
+                            return
+                        }
                         Task {
                             isLoading = true
                             let success = await authManager.signUp(fullName: fullName, email: email, password: password)

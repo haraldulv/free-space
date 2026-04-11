@@ -94,9 +94,11 @@ final class AuthManager: ObservableObject {
 
             // Profile insert may fail if email verification is required (RLS)
             // — that's OK, profile will be created on first sign-in
+            let nowIso = ISO8601DateFormatter().string(from: Date())
             try? await supabase.from("profiles").insert([
                 "id": result.user.id.uuidString.lowercased(),
                 "full_name": fullName,
+                "terms_accepted_at": nowIso,
             ]).execute()
 
             return true
