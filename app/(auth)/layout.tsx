@@ -9,9 +9,7 @@ export default function AuthLayout({
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-neutral-50 px-4">
       <Link href="/" className="mb-8">
-        <span className="text-2xl text-neutral-900 lowercase">
-          tuno
-        </span>
+        <img src="/tuno-logo.png" alt="Tuno" className="h-8" />
       </Link>
       <div className="w-full max-w-md rounded-xl bg-white p-8 shadow-sm">
         <Suspense>{children}</Suspense>
