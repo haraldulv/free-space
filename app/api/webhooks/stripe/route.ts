@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@supabase/supabase-js";
+import { sendBookingConfirmation, sendBookingNotificationToHost } from "@/lib/email";
 
 // Use service role for webhook (no user auth context)
 const supabase = createClient(
@@ -55,14 +56,23 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", bookingId);
 
-      // Get booking to find host and guest
+      // Get booking + profiles for notifications and emails
       const { data: booking } = await supabase
         .from("bookings")
-        .select("user_id, host_id, check_in, check_out")
+        .select("user_id, host_id, check_in, check_out, total_price")
         .eq("id", bookingId)
         .single();
 
       if (booking) {
+        const [guestRes, hostRes] = await Promise.all([
+          supabase.auth.admin.getUserById(booking.user_id),
+          booking.host_id ? supabase.from("profiles").select("full_name").eq("id", booking.host_id).single() : null,
+        ]);
+        const guestEmail = guestRes.data.user?.email;
+        const guestName = guestRes.data.user?.user_metadata?.full_name || "Gjest";
+        const hostName = hostRes?.data?.full_name || "Utleier";
+        const hostEmail = booking.host_id ? (await supabase.auth.admin.getUserById(booking.host_id)).data.user?.email : null;
+
         // Notify host: new booking received
         if (booking.host_id) {
           await supabase.from("notifications").insert({
@@ -82,6 +92,28 @@ export async function POST(request: NextRequest) {
           body: `Din bestilling av ${listingTitle} er bekreftet og betalt.`,
           metadata: { bookingId },
         });
+
+        // Send branded emails
+        if (guestEmail) {
+          sendBookingConfirmation(guestEmail, {
+            guestName,
+            listingTitle,
+            checkIn: booking.check_in,
+            checkOut: booking.check_out,
+            totalPrice: booking.total_price,
+            bookingId,
+          }).catch(console.error);
+        }
+        if (hostEmail) {
+          sendBookingNotificationToHost(hostEmail, {
+            hostName,
+            guestName,
+            listingTitle,
+            checkIn: booking.check_in,
+            checkOut: booking.check_out,
+            totalPrice: booking.total_price,
+          }).catch(console.error);
+        }
       }
     }
   }

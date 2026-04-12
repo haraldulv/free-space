@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createTransfer } from "@/lib/stripe";
 import { SERVICE_FEE_RATE } from "@/lib/config";
+import { sendPayoutEmail } from "@/lib/email";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -79,14 +80,27 @@ export async function GET(request: NextRequest) {
           })
           .eq("id", booking.id);
 
+        const hostAmountNok = Math.round(booking.total_price * (1 - SERVICE_FEE_RATE));
+
         // Notify host
         await supabase.from("notifications").insert({
           user_id: booking.host_id,
           type: "payout_sent",
           title: "Utbetaling sendt!",
-          body: `${Math.round(booking.total_price * (1 - SERVICE_FEE_RATE))} kr er overført til din konto for ${listing?.title || "en bestilling"}.`,
+          body: `${hostAmountNok} kr er overført til din konto for ${listing?.title || "en bestilling"}.`,
           metadata: { bookingId: booking.id },
         });
+
+        // Send payout email
+        const { data: hostAuth } = await supabase.auth.admin.getUserById(booking.host_id);
+        const { data: hostProfile } = await supabase.from("profiles").select("full_name").eq("id", booking.host_id).single();
+        if (hostAuth.user?.email) {
+          sendPayoutEmail(hostAuth.user.email, {
+            hostName: hostProfile?.full_name || "Utleier",
+            amount: hostAmountNok,
+            listingTitle: listing?.title || "en plass",
+          }).catch(console.error);
+        }
 
         processed++;
       } catch (err) {

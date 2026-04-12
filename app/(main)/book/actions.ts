@@ -5,6 +5,8 @@ import { stripe } from "@/lib/stripe";
 import { getAvailableSpots } from "@/lib/supabase/listings";
 import { SERVICE_FEE_RATE } from "@/lib/config";
 import { computeRefund, type CancelledBy } from "@/lib/cancellation";
+import { sendCancellationEmail } from "@/lib/email";
+import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -120,7 +122,7 @@ export async function cancelBookingAction(
 
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, user_id, host_id, check_in, total_price, payment_intent_id, payment_status, transfer_status, stripe_transfer_id, status")
+      .select("id, user_id, host_id, listing_id, check_in, check_out, total_price, payment_intent_id, payment_status, transfer_status, stripe_transfer_id, status")
       .eq("id", bookingId)
       .single();
 
@@ -157,6 +159,31 @@ export async function cancelBookingAction(
         refund_amount: result.refundAmount,
       })
       .eq("id", bookingId);
+
+    // Send cancellation emails
+    try {
+      const db = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const { data: listing } = await db.from("listings").select("title").eq("id", booking.listing_id).single();
+      const [guestAuth, hostAuth] = await Promise.all([
+        db.auth.admin.getUserById(booking.user_id),
+        booking.host_id ? db.auth.admin.getUserById(booking.host_id) : null,
+      ]);
+      const guestEmail = guestAuth.data.user?.email;
+      const hostEmail = hostAuth?.data.user?.email;
+      const guestName = guestAuth.data.user?.user_metadata?.full_name || "Gjest";
+      const emailData = {
+        listingTitle: listing?.title || "en plass",
+        checkIn: booking.check_in,
+        checkOut: booking.check_out || booking.check_in,
+        refundAmount: result.refundAmount,
+        cancelledBy,
+      };
+      if (guestEmail) sendCancellationEmail(guestEmail, { name: guestName, ...emailData }).catch(console.error);
+      if (hostEmail && cancelledBy === "guest") {
+        const { data: hostProfile } = await db.from("profiles").select("full_name").eq("id", booking.host_id).single();
+        sendCancellationEmail(hostEmail, { name: hostProfile?.full_name || "Utleier", ...emailData }).catch(console.error);
+      }
+    } catch { /* email errors should not block cancellation */ }
 
     return { refundAmount: result.refundAmount };
   } catch (err) {
