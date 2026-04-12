@@ -13,9 +13,14 @@ import {
   EyeOff,
   ChevronDown,
   Search,
+  BarChart3,
+  TrendingUp,
+  DollarSign,
+  UserPlus,
 } from "lucide-react";
+import { SERVICE_FEE_RATE } from "@/lib/config";
 
-type Tab = "bookings" | "users" | "listings" | "messages";
+type Tab = "overview" | "bookings" | "users" | "listings" | "messages";
 
 interface AdminBooking {
   id: string;
@@ -75,6 +80,7 @@ interface AdminMessage {
 }
 
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
+  { key: "overview", label: "Oversikt", icon: BarChart3 },
   { key: "bookings", label: "Bookings", icon: CalendarCheck },
   { key: "users", label: "Brukere", icon: Users },
   { key: "listings", label: "Annonser", icon: Megaphone },
@@ -82,7 +88,7 @@ const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
 ];
 
 export default function AdminPage() {
-  const [tab, setTab] = useState<Tab>("bookings");
+  const [tab, setTab] = useState<Tab>("overview");
   const [bookings, setBookings] = useState<AdminBooking[]>([]);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [listings, setListings] = useState<AdminListing[]>([]);
@@ -198,6 +204,9 @@ export default function AdminPage() {
 
       {/* Content */}
       <div className="mt-4">
+        {/* Overview */}
+        {tab === "overview" && <OverviewTab bookings={bookings} users={users} listings={listings} />}
+
         {/* Bookings */}
         {tab === "bookings" && (
           <div className="overflow-x-auto rounded-xl border border-neutral-200 bg-white">
@@ -439,6 +448,186 @@ export default function AdminPage() {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function OverviewTab({ bookings, users, listings }: { bookings: AdminBooking[]; users: AdminUser[]; listings: AdminListing[] }) {
+  const confirmedBookings = bookings.filter((b) => b.status === "confirmed" || b.payment_status === "paid");
+  const totalRevenue = confirmedBookings.reduce((sum, b) => sum + b.total_price, 0);
+  const platformFee = Math.round(totalRevenue * SERVICE_FEE_RATE / (1 + SERVICE_FEE_RATE));
+  const cancelledBookings = bookings.filter((b) => b.status === "cancelled");
+  const totalRefunded = cancelledBookings.reduce((sum, b) => sum + (b.refund_amount || 0), 0);
+  const activeListings = listings.filter((l) => l.is_active);
+  const hosts = users.filter((u) => u.stripe_account_id);
+
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  // Monthly revenue (last 6 months)
+  const months: { label: string; key: string }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      label: d.toLocaleDateString("nb-NO", { month: "short" }),
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+    });
+  }
+
+  const monthlyData = months.map((m) => {
+    const monthBookings = confirmedBookings.filter((b) => b.created_at?.startsWith(m.key));
+    const revenue = monthBookings.reduce((sum, b) => sum + b.total_price, 0);
+    const fee = Math.round(revenue * SERVICE_FEE_RATE / (1 + SERVICE_FEE_RATE));
+    return { ...m, revenue, fee, count: monthBookings.length };
+  });
+
+  const maxRevenue = Math.max(...monthlyData.map((m) => m.revenue), 1);
+
+  // New users this month
+  const newUsersThisMonth = users.filter((u) => u.created_at?.startsWith(thisMonth)).length;
+
+  // Recent bookings (last 5)
+  const recentBookings = bookings.slice(0, 5);
+
+  // Top listings by bookings
+  const listingBookingCount = new Map<string, number>();
+  for (const b of confirmedBookings) {
+    const title = b.listing?.title || "Ukjent";
+    listingBookingCount.set(title, (listingBookingCount.get(title) || 0) + 1);
+  }
+  const topListings = Array.from(listingBookingCount.entries())
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+
+  return (
+    <div className="space-y-6">
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatCard icon={DollarSign} label="Total omsetning" value={`${totalRevenue.toLocaleString("nb-NO")} kr`} sub={`${platformFee.toLocaleString("nb-NO")} kr plattformavgift`} color="green" />
+        <StatCard icon={CalendarCheck} label="Bookings" value={String(confirmedBookings.length)} sub={`${cancelledBookings.length} kansellert (${totalRefunded.toLocaleString("nb-NO")} kr refundert)`} color="blue" />
+        <StatCard icon={Megaphone} label="Annonser" value={`${activeListings.length} aktive`} sub={`${listings.length} totalt, ${hosts.length} utleiere`} color="purple" />
+        <StatCard icon={UserPlus} label="Brukere" value={String(users.length)} sub={`${newUsersThisMonth} nye denne måneden`} color="amber" />
+      </div>
+
+      {/* Charts row */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        {/* Monthly revenue chart */}
+        <div className="rounded-xl border border-neutral-200 bg-white p-5">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-700">
+            <TrendingUp className="h-4 w-4 text-primary-600" />
+            Månedlig omsetning
+          </h3>
+          <div className="mt-4 flex items-end gap-3 h-44">
+            {monthlyData.map((m) => (
+              <div key={m.key} className="flex flex-1 flex-col items-center gap-1">
+                <span className="text-xs font-medium text-neutral-700">
+                  {m.revenue > 0 ? `${m.revenue.toLocaleString("nb-NO")}` : ""}
+                </span>
+                <div className="w-full flex flex-col items-center">
+                  <div
+                    className="w-full max-w-10 rounded-t-md bg-primary-500 transition-all"
+                    style={{ height: `${Math.max((m.revenue / maxRevenue) * 120, m.revenue > 0 ? 4 : 0)}px` }}
+                  />
+                  <div
+                    className="w-full max-w-10 rounded-b-md bg-primary-200"
+                    style={{ height: `${Math.max((m.fee / maxRevenue) * 120, m.fee > 0 ? 2 : 0)}px` }}
+                  />
+                </div>
+                <span className="text-xs text-neutral-400">{m.label}</span>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex items-center gap-4 text-xs text-neutral-400">
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-primary-500" /> Omsetning</span>
+            <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-primary-200" /> Plattformavgift</span>
+          </div>
+        </div>
+
+        {/* Top listings */}
+        <div className="rounded-xl border border-neutral-200 bg-white p-5">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-700">
+            <BarChart3 className="h-4 w-4 text-primary-600" />
+            Mest populære annonser
+          </h3>
+          <div className="mt-4 space-y-3">
+            {topListings.length === 0 ? (
+              <p className="text-sm text-neutral-400">Ingen bookings ennå</p>
+            ) : (
+              topListings.map(([title, count], i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-bold text-neutral-500">
+                    {i + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-neutral-700 truncate">{title}</p>
+                    <div className="mt-1 h-1.5 w-full rounded-full bg-neutral-100">
+                      <div
+                        className="h-1.5 rounded-full bg-primary-500"
+                        style={{ width: `${(count / (topListings[0]?.[1] || 1)) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                  <span className="text-sm font-semibold text-neutral-600">{count}</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent bookings */}
+      <div className="rounded-xl border border-neutral-200 bg-white p-5">
+        <h3 className="text-sm font-semibold text-neutral-700">Siste bookings</h3>
+        <div className="mt-3 divide-y divide-neutral-100">
+          {recentBookings.map((b) => (
+            <div key={b.id} className="flex items-center justify-between py-3">
+              <div>
+                <p className="text-sm font-medium text-neutral-700">{b.listing?.title || "—"}</p>
+                <p className="text-xs text-neutral-400">{b.guest?.full_name || "Anonym"} → {b.host?.full_name || "Utleier"}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm font-semibold">{b.total_price} kr</p>
+                <span className={`text-xs ${b.status === "confirmed" ? "text-green-600" : b.status === "pending" ? "text-amber-600" : "text-red-500"}`}>
+                  {b.status === "confirmed" ? "Bekreftet" : b.status === "pending" ? "Venter" : "Kansellert"}
+                </span>
+              </div>
+            </div>
+          ))}
+          {recentBookings.length === 0 && (
+            <p className="py-4 text-sm text-neutral-400">Ingen bookings ennå</p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const statColors = {
+  green: "bg-green-50 text-green-600",
+  blue: "bg-blue-50 text-blue-600",
+  purple: "bg-purple-50 text-purple-600",
+  amber: "bg-amber-50 text-amber-600",
+};
+
+function StatCard({ icon: Icon, label, value, sub, color }: {
+  icon: React.ElementType;
+  label: string;
+  value: string;
+  sub: string;
+  color: keyof typeof statColors;
+}) {
+  return (
+    <div className="rounded-xl border border-neutral-200 bg-white p-4">
+      <div className="flex items-center gap-3">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-lg ${statColors[color]}`}>
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <p className="text-xs text-neutral-500">{label}</p>
+          <p className="text-lg font-bold text-neutral-900">{value}</p>
+        </div>
+      </div>
+      <p className="mt-2 text-xs text-neutral-400">{sub}</p>
     </div>
   );
 }

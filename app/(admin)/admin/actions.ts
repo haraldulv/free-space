@@ -30,7 +30,7 @@ async function requireAdmin() {
 export async function loadAdminDataAction() {
   const { supabase } = await requireAdmin();
 
-  const [bookingRes, userRes, listingRes, convoRes] = await Promise.all([
+  const [bookingRes, profileRes, listingRes, convoRes] = await Promise.all([
     supabase
       .from("bookings")
       .select("*, guest:user_id(full_name), host:host_id(full_name), listing:listing_id(title)")
@@ -38,7 +38,7 @@ export async function loadAdminDataAction() {
       .limit(200),
     supabase
       .from("profiles")
-      .select("id, full_name, email, avatar_url, is_admin, created_at, stripe_account_id, stripe_onboarding_complete")
+      .select("id, full_name, avatar_url, is_admin, created_at, stripe_account_id, stripe_onboarding_complete")
       .order("created_at", { ascending: false }),
     supabase
       .from("listings")
@@ -51,9 +51,23 @@ export async function loadAdminDataAction() {
       .limit(100),
   ]);
 
+  // Fetch emails from auth.users via admin API
+  const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  const emailMap = new Map<string, string>();
+  if (authData?.users) {
+    for (const u of authData.users) {
+      emailMap.set(u.id, u.email || "");
+    }
+  }
+
+  const users = (profileRes.data || []).map((p: Record<string, unknown>) => ({
+    ...p,
+    email: emailMap.get(p.id as string) || "",
+  }));
+
   return {
     bookings: bookingRes.data || [],
-    users: userRes.data || [],
+    users,
     listings: listingRes.data || [],
     conversations: convoRes.data || [],
   };
