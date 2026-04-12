@@ -52,6 +52,38 @@ export type Amenity =
   | "waste_disposal"
   | "handicap_accessible";
 
+export type ListingExtra = {
+  id: string;
+  name: string;
+  price: number;
+  perNight: boolean;
+};
+
+export type ExtraId =
+  | "ev_charging"
+  | "power_hookup"
+  | "septic_disposal"
+  | "sauna"
+  | "firewood"
+  | "kayak"
+  | "bike_rental"
+  | "fishing_gear"
+  | "bedding"
+  | "grill";
+
+export const AVAILABLE_EXTRAS: { id: ExtraId; name: string; defaultPrice: number; perNight: boolean; category: ListingCategory[] }[] = [
+  { id: "ev_charging", name: "Elbil-lading", defaultPrice: 50, perNight: true, category: ["parking", "camping"] },
+  { id: "power_hookup", name: "Strømtilkobling", defaultPrice: 75, perNight: true, category: ["camping"] },
+  { id: "septic_disposal", name: "Septiktømming", defaultPrice: 150, perNight: false, category: ["camping"] },
+  { id: "sauna", name: "Badstue", defaultPrice: 200, perNight: false, category: ["camping"] },
+  { id: "firewood", name: "Ved", defaultPrice: 100, perNight: false, category: ["camping"] },
+  { id: "kayak", name: "Kajakk", defaultPrice: 150, perNight: true, category: ["camping"] },
+  { id: "bike_rental", name: "Sykkelutleie", defaultPrice: 100, perNight: true, category: ["camping"] },
+  { id: "fishing_gear", name: "Fiskeutstyr", defaultPrice: 75, perNight: true, category: ["camping"] },
+  { id: "bedding", name: "Sengetøy", defaultPrice: 100, perNight: false, category: ["camping"] },
+  { id: "grill", name: "Grillpakke", defaultPrice: 50, perNight: false, category: ["camping"] },
+];
+
 export const AMENITIES_BY_CATEGORY: Record<ListingCategory, Amenity[]> = {
   parking: ["ev_charging", "covered", "security_camera", "gated", "lighting", "handicap_accessible"],
   camping: ["electricity", "water", "waste_disposal", "toilets", "showers", "wifi", "campfire", "lake_access", "mountain_view", "pets_allowed", "handicap_accessible"],
@@ -104,6 +136,7 @@ export interface Listing {
   availableSpots?: number;
   checkInTime?: string;
   checkOutTime?: string;
+  extras?: ListingExtra[];
 }
 
 export interface Booking {
@@ -139,6 +172,7 @@ export interface Booking {
   hostName?: string;
   hostPhone?: string;
   conversationId?: string;
+  selectedExtras?: { id: string; name: string; price: number; quantity: number }[];
 }
 
 export interface Review {
