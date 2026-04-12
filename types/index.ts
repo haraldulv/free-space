@@ -132,6 +132,10 @@ export interface Booking {
   listingLat?: number;
   listingLng?: number;
   listingAddress?: string;
+  cancelledAt?: string;
+  cancelledBy?: "guest" | "host";
+  cancellationReason?: string;
+  refundAmount?: number;
 }
 
 export interface Review {

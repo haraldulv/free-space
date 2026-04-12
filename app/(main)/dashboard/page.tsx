@@ -63,7 +63,7 @@ function BookingSection({ title, items, variant = "guest", onCancel }: {
   title: string;
   items: Booking[];
   variant?: "guest" | "host";
-  onCancel?: (id: string) => Promise<void>;
+  onCancel?: (id: string, reason?: string) => Promise<void>;
 }) {
   if (items.length === 0) return null;
   return (
@@ -188,6 +188,10 @@ export default function DashboardPage() {
               listingLat: (row.listings as Record<string, unknown>)?.lat as number,
               listingLng: (row.listings as Record<string, unknown>)?.lng as number,
               listingAddress: (row.listings as Record<string, unknown>)?.address as string,
+              cancelledAt: row.cancelled_at,
+              cancelledBy: row.cancelled_by,
+              cancellationReason: row.cancellation_reason,
+              refundAmount: row.refund_amount,
             }))
         );
       }
@@ -221,6 +225,11 @@ export default function DashboardPage() {
             listingAddress: (row.listings as Record<string, unknown>)?.address as string,
             guestName: (row.guest as Record<string, unknown>)?.full_name as string || "Anonym",
             guestAvatar: (row.guest as Record<string, unknown>)?.avatar_url as string || "",
+            guestEmail: (row.guest as Record<string, unknown>)?.email as string || "",
+            cancelledAt: row.cancelled_at,
+            cancelledBy: row.cancelled_by,
+            cancellationReason: row.cancellation_reason,
+            refundAmount: row.refund_amount,
           }))
         );
       }
@@ -300,14 +309,25 @@ export default function DashboardPage() {
     setTab(item.key);
   };
 
-  const handleCancelBooking = async (bookingId: string) => {
-    const result = await cancelBookingAction(bookingId);
+  const handleCancelBooking = async (bookingId: string, reason?: string) => {
+    const result = await cancelBookingAction(bookingId, reason);
     if (result.error) {
       alert(result.error);
       return;
     }
     setBookings((prev) =>
-      prev.map((b) => (b.id === bookingId ? { ...b, status: "cancelled" as const } : b))
+      prev.map((b) => (b.id === bookingId ? { ...b, status: "cancelled" as const, paymentStatus: "refunded" as const, refundAmount: result.refundAmount, cancelledBy: "guest" as const } : b))
+    );
+  };
+
+  const handleCancelRental = async (bookingId: string, reason?: string) => {
+    const result = await cancelBookingAction(bookingId, reason);
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    setRentals((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, status: "cancelled" as const, paymentStatus: "refunded" as const, refundAmount: result.refundAmount, cancelledBy: "host" as const } : b))
     );
   };
 
@@ -465,8 +485,8 @@ export default function DashboardPage() {
                       const { upcoming, active, past } = groupBookings(rentals);
                       return (
                         <>
-                          <BookingSection title="Aktive" items={active} variant="host" />
-                          <BookingSection title="Kommende" items={upcoming} variant="host" />
+                          <BookingSection title="Aktive" items={active} variant="host" onCancel={handleCancelRental} />
+                          <BookingSection title="Kommende" items={upcoming} variant="host" onCancel={handleCancelRental} />
                           <BookingSection title="Tidligere" items={past} variant="host" />
                         </>
                       );

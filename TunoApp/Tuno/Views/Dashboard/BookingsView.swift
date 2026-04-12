@@ -32,7 +32,11 @@ struct BookingsView: View {
                 ScrollView {
                     LazyVStack(spacing: 16) {
                         ForEach(bookings) { booking in
-                            BookingCard(booking: booking)
+                            BookingCard(booking: booking, onCancelled: { updated in
+                                if let idx = bookings.firstIndex(where: { $0.id == updated.id }) {
+                                    bookings[idx] = updated
+                                }
+                            })
                         }
                     }
                     .padding(16)
@@ -70,10 +74,19 @@ struct BookingsView: View {
 
 struct BookingCard: View {
     let booking: Booking
+    var onCancelled: ((Booking) -> Void)?
+    @State private var showCancelConfirm = false
+    @State private var cancelling = false
+    @State private var previewText: String?
+    @State private var previewAmount: Int?
+    @State private var cancelError: String?
+
+    private var canCancel: Bool {
+        booking.status == .pending || booking.status == .confirmed
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Listing image + title
             if let listing = booking.listing {
                 HStack(spacing: 12) {
                     AsyncImage(url: URL(string: listing.images.first ?? "")) { phase in
@@ -100,7 +113,6 @@ struct BookingCard: View {
                 }
             }
 
-            // Dates + status
             HStack {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(booking.checkIn) → \(booking.checkOut)")
@@ -114,11 +126,140 @@ struct BookingCard: View {
 
                 StatusBadge(status: booking.status)
             }
+
+            if booking.status == .cancelled, let refund = booking.refundAmount, refund > 0 {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.uturn.backward.circle.fill")
+                        .foregroundStyle(.orange)
+                        .font(.system(size: 14))
+                    Text("Refundert \(refund) kr")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.neutral600)
+                }
+            }
+
+            if canCancel {
+                if !showCancelConfirm {
+                    Button {
+                        Task { await loadPreview() }
+                        showCancelConfirm = true
+                    } label: {
+                        Text("Kanseller bestilling")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.red)
+                    }
+                } else {
+                    VStack(alignment: .leading, spacing: 10) {
+                        if let text = previewText {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundStyle(.orange)
+                                    .font(.system(size: 16))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(text)
+                                        .font(.system(size: 13, weight: .medium))
+                                    if let amt = previewAmount {
+                                        Text("Refusjon: \(amt) kr av \(booking.totalPrice) kr")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(.neutral500)
+                                    }
+                                }
+                            }
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.orange.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+
+                        if let err = cancelError {
+                            Text(err)
+                                .font(.system(size: 13))
+                                .foregroundStyle(.red)
+                        }
+
+                        HStack(spacing: 12) {
+                            Button {
+                                Task { await performCancel() }
+                            } label: {
+                                Text(cancelling ? "Kansellerer..." : "Bekreft kansellering")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 8)
+                                    .background(Color.red)
+                                    .clipShape(Capsule())
+                            }
+                            .disabled(cancelling)
+
+                            Button("Avbryt") {
+                                showCancelConfirm = false
+                                previewText = nil
+                                previewAmount = nil
+                                cancelError = nil
+                            }
+                            .font(.system(size: 14))
+                            .foregroundStyle(.neutral500)
+                        }
+                    }
+                }
+            }
         }
         .padding(16)
         .background(.white)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
+        .opacity(booking.status == .cancelled ? 0.6 : 1)
+    }
+
+    private func loadPreview() async {
+        guard let token = try? await supabase.auth.session.accessToken else { return }
+        guard let url = URL(string: "\(AppConfig.siteURL)/api/bookings/cancel") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "bookingId": booking.id,
+            "preview": true,
+        ])
+        guard let (data, _) = try? await URLSession.shared.data(for: req),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        previewText = json["policyLabel"] as? String
+        previewAmount = json["refundAmount"] as? Int
+    }
+
+    private func performCancel() async {
+        cancelling = true
+        cancelError = nil
+        guard let token = try? await supabase.auth.session.accessToken else {
+            cancelError = "Ikke innlogget"
+            cancelling = false
+            return
+        }
+        guard let url = URL(string: "\(AppConfig.siteURL)/api/bookings/cancel") else { return }
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "bookingId": booking.id,
+        ])
+        guard let (data, _) = try? await URLSession.shared.data(for: req),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            cancelError = "Noe gikk galt"
+            cancelling = false
+            return
+        }
+        if let error = json["error"] as? String {
+            cancelError = error
+            cancelling = false
+            return
+        }
+        var updated = booking
+        updated.status = .cancelled
+        updated.refundAmount = json["refundAmount"] as? Int
+        onCancelled?(updated)
+        cancelling = false
     }
 }
 

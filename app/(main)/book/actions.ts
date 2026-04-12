@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { getAvailableSpots } from "@/lib/supabase/listings";
 import { SERVICE_FEE_RATE } from "@/lib/config";
+import { computeRefund, type CancelledBy } from "@/lib/cancellation";
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -42,11 +43,9 @@ export async function createBookingAction(data: {
   try {
     const { supabase, user } = await getAuthUser();
 
-    // Check availability before creating booking
     const available = await getAvailableSpots(data.listingId, data.checkIn, data.checkOut);
     if (available <= 0) return { error: "Ingen ledige plasser for valgte datoer" };
 
-    // Get listing to find host
     const { data: listing } = await supabase
       .from("listings")
       .select("host_id, title")
@@ -55,7 +54,6 @@ export async function createBookingAction(data: {
 
     if (!listing) return { error: "Annonse ikke funnet" };
 
-    // Verify host has Stripe Connect
     const { data: hostProfile } = await supabase
       .from("profiles")
       .select("stripe_account_id, stripe_onboarding_complete")
@@ -66,7 +64,6 @@ export async function createBookingAction(data: {
       return { error: "Utleier har ikke satt opp utbetalinger ennå. Prøv igjen senere." };
     }
 
-    // Insert booking with pending status
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
       .insert({
@@ -86,7 +83,6 @@ export async function createBookingAction(data: {
 
     if (bookingError) return { error: bookingError.message };
 
-    // Create Stripe PaymentIntent (amount in øre)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: data.totalPrice * 100,
       currency: "nok",
@@ -100,7 +96,6 @@ export async function createBookingAction(data: {
       },
     });
 
-    // Save payment intent ID to booking
     await supabase
       .from("bookings")
       .update({ payment_intent_id: paymentIntent.id })
@@ -116,28 +111,37 @@ export async function createBookingAction(data: {
   }
 }
 
-export async function cancelBookingAction(bookingId: string): Promise<{ error?: string }> {
+export async function cancelBookingAction(
+  bookingId: string,
+  reason?: string
+): Promise<{ error?: string; refundAmount?: number }> {
   try {
     const { supabase, user } = await getAuthUser();
 
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, user_id, payment_intent_id, payment_status, transfer_status, stripe_transfer_id")
+      .select("id, user_id, host_id, check_in, total_price, payment_intent_id, payment_status, transfer_status, stripe_transfer_id, status")
       .eq("id", bookingId)
       .single();
 
     if (!booking) return { error: "Bestilling ikke funnet" };
-    if (booking.user_id !== user.id) return { error: "Ikke tilgang" };
+    if (booking.status === "cancelled") return { error: "Allerede kansellert" };
 
-    // Reverse transfer if already paid out to host
+    const isGuest = booking.user_id === user.id;
+    const isHost = booking.host_id === user.id;
+    if (!isGuest && !isHost) return { error: "Ikke tilgang" };
+
+    const cancelledBy: CancelledBy = isHost ? "host" : "guest";
+    const result = computeRefund(booking.total_price, booking.check_in, cancelledBy);
+
     if (booking.transfer_status === "transferred" && booking.stripe_transfer_id) {
       await stripe.transfers.createReversal(booking.stripe_transfer_id);
     }
 
-    // Refund if paid
-    if (booking.payment_status === "paid" && booking.payment_intent_id) {
+    if (result.refundAmount > 0 && booking.payment_status === "paid" && booking.payment_intent_id) {
       await stripe.refunds.create({
         payment_intent: booking.payment_intent_id,
+        amount: result.refundAmountOre,
       });
     }
 
@@ -145,12 +149,43 @@ export async function cancelBookingAction(bookingId: string): Promise<{ error?: 
       .from("bookings")
       .update({
         status: "cancelled",
-        payment_status: "refunded",
+        payment_status: result.refundAmount > 0 ? "refunded" : booking.payment_status,
         transfer_status: booking.transfer_status === "transferred" ? "reversed" : "not_applicable",
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: cancelledBy,
+        cancellation_reason: reason || null,
+        refund_amount: result.refundAmount,
       })
       .eq("id", bookingId);
 
-    return {};
+    return { refundAmount: result.refundAmount };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
+}
+
+export async function getCancellationPreviewAction(bookingId: string): Promise<{
+  refundAmount?: number;
+  policyLabel?: string;
+  error?: string;
+}> {
+  try {
+    const { supabase, user } = await getAuthUser();
+
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("id, user_id, host_id, check_in, total_price, status")
+      .eq("id", bookingId)
+      .single();
+
+    if (!booking) return { error: "Bestilling ikke funnet" };
+    if (booking.status === "cancelled") return { error: "Allerede kansellert" };
+
+    const isHost = booking.host_id === user.id;
+    const cancelledBy: CancelledBy = isHost ? "host" : "guest";
+    const result = computeRefund(booking.total_price, booking.check_in, cancelledBy);
+
+    return { refundAmount: result.refundAmount, policyLabel: result.policyLabel };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Noe gikk galt" };
   }

@@ -224,7 +224,7 @@ struct Booking: Codable, Identifiable {
     let checkIn: String
     let checkOut: String
     let totalPrice: Int
-    let status: BookingStatus
+    var status: BookingStatus
     let paymentStatus: PaymentStatus
     let transferStatus: TransferStatus?
     let paymentIntentId: String?
@@ -232,6 +232,10 @@ struct Booking: Codable, Identifiable {
     let licensePlate: String?
     let isRentalCar: Bool?
     let createdAt: String?
+    let cancelledAt: String?
+    let cancelledBy: String?
+    let cancellationReason: String?
+    var refundAmount: Int?
 
     // Joined data
     let listing: BookingListing?
@@ -251,6 +255,10 @@ struct Booking: Codable, Identifiable {
         case licensePlate = "license_plate"
         case isRentalCar = "is_rental_car"
         case createdAt = "created_at"
+        case cancelledAt = "cancelled_at"
+        case cancelledBy = "cancelled_by"
+        case cancellationReason = "cancellation_reason"
+        case refundAmount = "refund_amount"
     }
 }
 

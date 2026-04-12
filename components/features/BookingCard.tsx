@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import { CalendarDays, MapPin, Car, Tent, Star, User, ChevronDown, Clock, CreditCard, Navigation, Mail, CarFront } from "lucide-react";
+import { CalendarDays, MapPin, Car, Tent, Star, User, ChevronDown, Clock, CreditCard, Navigation, Mail, CarFront, AlertCircle } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ReviewForm from "@/components/features/ReviewForm";
+import { getCancellationPreviewAction } from "@/app/(main)/book/actions";
 import { Booking } from "@/types";
 
 interface BookingCardProps {
   booking: Booking;
   variant?: "guest" | "host";
-  onCancel?: (bookingId: string) => Promise<void>;
+  onCancel?: (bookingId: string, reason?: string) => Promise<void>;
 }
 
 export default function BookingCard({ booking, variant = "guest", onCancel }: BookingCardProps) {
@@ -20,6 +21,8 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
   const [showReview, setShowReview] = useState(false);
   const [reviewed, setReviewed] = useState(false);
   const [expanded, setExpanded] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [refundPreview, setRefundPreview] = useState<{ refundAmount: number; policyLabel: string } | null>(null);
   const CategoryIcon = booking.listingCategory === "parking" ? Car : Tent;
   const checkIn = new Date(booking.checkIn).toLocaleDateString("nb-NO");
   const checkOut = new Date(booking.checkOut).toLocaleDateString("nb-NO");
@@ -27,10 +30,18 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
   const isPast = new Date(booking.checkOut) < new Date();
   const canReview = booking.status === "confirmed" && isPast && !reviewed;
 
+  useEffect(() => {
+    if (showConfirm && !refundPreview) {
+      getCancellationPreviewAction(booking.id).then((r) => {
+        if (!r.error) setRefundPreview({ refundAmount: r.refundAmount!, policyLabel: r.policyLabel! });
+      });
+    }
+  }, [showConfirm, booking.id, refundPreview]);
+
   const handleCancel = async () => {
     if (!onCancel) return;
     setCancelling(true);
-    await onCancel(booking.id);
+    await onCancel(booking.id, cancelReason || undefined);
     setCancelling(false);
     setShowConfirm(false);
   };
@@ -39,8 +50,10 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
     ? `https://www.google.com/maps/dir/?api=1&destination=${booking.listingLat},${booking.listingLng}`
     : undefined;
 
+  const isCancelled = booking.status === "cancelled";
+
   return (
-    <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white transition-shadow hover:shadow-sm">
+    <div className={`overflow-hidden rounded-xl border border-neutral-200 bg-white transition-shadow hover:shadow-sm ${isCancelled ? "opacity-60" : ""}`}>
       {/* Main row — always visible */}
       <button
         type="button"
@@ -165,7 +178,7 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
                   {booking.totalPrice} kr
                   {booking.paymentStatus === "paid" && " — betalt"}
                   {booking.paymentStatus === "pending" && " — venter"}
-                  {booking.paymentStatus === "refunded" && " — refundert"}
+                  {booking.paymentStatus === "refunded" && ` — refundert${booking.refundAmount ? ` (${booking.refundAmount} kr)` : ""}`}
                   {booking.paymentStatus === "failed" && " — feilet"}
                 </p>
               </div>
@@ -191,6 +204,21 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
                 </div>
               </div>
             )}
+
+            {/* Cancellation info */}
+            {isCancelled && booking.cancelledBy && (
+              <div className="flex items-start gap-2 text-sm sm:col-span-2">
+                <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
+                <div>
+                  <p className="font-medium text-red-600">
+                    Kansellert av {booking.cancelledBy === "host" ? "utleier" : "gjest"}
+                  </p>
+                  {booking.cancellationReason && (
+                    <p className="text-neutral-500">{booking.cancellationReason}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -204,7 +232,7 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
                 Skriv anmeldelse
               </button>
             )}
-            {variant === "guest" && canCancel && onCancel && !canReview && (
+            {canCancel && onCancel && !canReview && (
               <>
                 {!showConfirm ? (
                   <button
@@ -214,23 +242,42 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
                     Kanseller bestilling
                   </button>
                 ) : (
-                  <div className="flex items-center gap-2">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="bg-red-600 text-white hover:bg-red-700 hover:text-white text-xs"
-                      onClick={handleCancel}
-                      disabled={cancelling}
-                    >
-                      {cancelling ? "Kansellerer..." : "Bekreft kansellering"}
-                    </Button>
-                    <button
-                      onClick={() => setShowConfirm(false)}
-                      className="text-sm text-neutral-500 hover:text-neutral-700"
-                      disabled={cancelling}
-                    >
-                      Avbryt
-                    </button>
+                  <div className="w-full space-y-3">
+                    {refundPreview && (
+                      <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm">
+                        <p className="font-medium text-amber-800">{refundPreview.policyLabel}</p>
+                        <p className="text-amber-700">
+                          Refusjon: {refundPreview.refundAmount} kr av {booking.totalPrice} kr
+                        </p>
+                      </div>
+                    )}
+                    {variant === "host" && (
+                      <input
+                        type="text"
+                        placeholder="Årsak til kansellering (valgfritt)"
+                        value={cancelReason}
+                        onChange={(e) => setCancelReason(e.target.value)}
+                        className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                      />
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="bg-red-600 text-white hover:bg-red-700 hover:text-white text-xs"
+                        onClick={handleCancel}
+                        disabled={cancelling}
+                      >
+                        {cancelling ? "Kansellerer..." : "Bekreft kansellering"}
+                      </Button>
+                      <button
+                        onClick={() => { setShowConfirm(false); setRefundPreview(null); }}
+                        className="text-sm text-neutral-500 hover:text-neutral-700"
+                        disabled={cancelling}
+                      >
+                        Avbryt
+                      </button>
+                    </div>
                   </div>
                 )}
               </>
