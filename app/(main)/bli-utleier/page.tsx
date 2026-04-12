@@ -2,11 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Smartphone } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import ListingFormWizard from "@/components/features/listing-form/ListingFormWizard";
-import Button from "@/components/ui/Button";
-import Container from "@/components/ui/Container";
+import HostOnboardingWizard from "@/components/features/HostOnboardingWizard";
 import { createListingAction } from "./actions";
 
 export default function BliUtleierPage() {
@@ -24,7 +22,6 @@ export default function BliUtleierPage() {
       }
       setUserId(data.user.id);
 
-      // Check if host has Stripe Connect set up
       const { data: profile } = await supabase
         .from("profiles")
         .select("stripe_onboarding_complete")
@@ -46,20 +43,11 @@ export default function BliUtleierPage() {
 
   if (!stripeReady) {
     return (
-      <Container className="py-16">
-        <div className="mx-auto max-w-md text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-primary-50">
-            <Smartphone className="h-8 w-8 text-primary-600" />
-          </div>
-          <h1 className="mt-6 text-2xl font-bold text-neutral-900">
-            Kom i gang i Tuno-appen
-          </h1>
-          <p className="mt-3 text-neutral-600">
-            Utleier-registrering er foreløpig kun tilgjengelig i Tuno-appen.
-            Last ned appen for å sette opp utbetalinger og opprette din første annonse.
-          </p>
-        </div>
-      </Container>
+      <HostOnboardingWizard
+        onComplete={() => {
+          setStripeReady(true);
+        }}
+      />
     );
   }
 
