@@ -1,8 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { adminDeleteListingAction, adminCancelBookingAction, adminToggleListingAction } from "./actions";
+import { adminDeleteListingAction, adminCancelBookingAction, adminToggleListingAction, loadAdminDataAction, loadMessagesAction } from "./actions";
 import {
   CalendarCheck,
   Users,
@@ -93,38 +92,13 @@ export default function AdminPage() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    const supabase = createClient();
-
-    async function load() {
-      const [bookingRes, userRes, listingRes, convoRes] = await Promise.all([
-        supabase
-          .from("bookings")
-          .select("*, guest:user_id(full_name), host:host_id(full_name), listing:listing_id(title)")
-          .order("created_at", { ascending: false })
-          .limit(200),
-        supabase
-          .from("profiles")
-          .select("id, full_name, email, avatar_url, is_admin, created_at, stripe_account_id, stripe_onboarding_complete")
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("listings")
-          .select("id, title, city, region, price, category, vehicle_type, is_active, created_at, images, host:host_id(full_name)")
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("conversations")
-          .select("id, created_at, last_message_at, guest:guest_id(full_name), host:host_id(full_name), listing:listing_id(title)")
-          .order("last_message_at", { ascending: false })
-          .limit(100),
-      ]);
-
-      if (bookingRes.data) setBookings(bookingRes.data as unknown as AdminBooking[]);
-      if (userRes.data) setUsers(userRes.data as unknown as AdminUser[]);
-      if (listingRes.data) setListings(listingRes.data as unknown as AdminListing[]);
-      if (convoRes.data) setConversations(convoRes.data as unknown as AdminConversation[]);
+    loadAdminDataAction().then((data) => {
+      setBookings(data.bookings as unknown as AdminBooking[]);
+      setUsers(data.users as unknown as AdminUser[]);
+      setListings(data.listings as unknown as AdminListing[]);
+      setConversations(data.conversations as unknown as AdminConversation[]);
       setLoaded(true);
-    }
-
-    load();
+    });
   }, []);
 
   const loadMessages = async (convoId: string) => {
@@ -132,15 +106,10 @@ export default function AdminPage() {
       setExpandedConvo(null);
       return;
     }
-    const supabase = createClient();
-    const { data } = await supabase
-      .from("messages")
-      .select("id, content, created_at, sender:sender_id(full_name)")
-      .eq("conversation_id", convoId)
-      .order("created_at", { ascending: true });
+    const data = await loadMessagesAction(convoId);
 
     setConversations((prev) =>
-      prev.map((c) => c.id === convoId ? { ...c, messages: (data || []) as unknown as AdminMessage[] } : c)
+      prev.map((c) => c.id === convoId ? { ...c, messages: data as unknown as AdminMessage[] } : c)
     );
     setExpandedConvo(convoId);
   };
