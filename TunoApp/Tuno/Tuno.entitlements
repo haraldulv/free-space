@@ -15,5 +15,7 @@
 		<string>applinks:tuno.no</string>
 		<string>applinks:www.tuno.no</string>
 	</array>
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>

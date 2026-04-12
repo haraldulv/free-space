@@ -1,5 +1,6 @@
 import SwiftUI
 import Supabase
+import UIKit
 
 @MainActor
 final class DeepLinkManager: ObservableObject {
@@ -7,8 +8,21 @@ final class DeepLinkManager: ObservableObject {
     @Published var pendingListingId: String?
 }
 
+class AppDelegate: NSObject, UIApplicationDelegate {
+    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        Task { @MainActor in
+            PushNotificationManager.shared.handleToken(deviceToken)
+        }
+    }
+
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        print("❌ Push registration failed: \(error)")
+    }
+}
+
 @main
 struct TunoApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @StateObject private var authManager = AuthManager()
     @StateObject private var favoritesService = FavoritesService()
     @StateObject private var deepLinkManager = DeepLinkManager.shared
@@ -35,6 +49,7 @@ struct TunoApp: App {
                 Task {
                     if authManager.isAuthenticated, let userId = authManager.currentUser?.id {
                         await favoritesService.loadFavorites(userId: userId.uuidString)
+                        PushNotificationManager.shared.requestPermission()
                     } else {
                         favoritesService.favoriteIds = []
                     }

@@ -41,6 +41,7 @@
 		D419BBEA241B1C886CA82778 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 177959CBC6EFAB9035701BA2 /* Supabase */; };
 		D66A3C676F36A7AC0C7FA620 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF829CF95A92CC9F95F9C3E /* ProfileView.swift */; };
 		E280A497623DB50EB8DB28E0 /* HostOnboardingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54806C1D2B79947D8E8CE6C9 /* HostOnboardingService.swift */; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E2D3C4B5A6978869504132 /* PushNotificationManager.swift */; };
 		E42A18E39C3758AF4E6127C8 /* EditListingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D99627256D695D60592DC8 /* EditListingView.swift */; };
 		E8FCDD1039F52B14AC220A3D /* BookingConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB14096D1AEF4406960194CB /* BookingConfirmationView.swift */; };
 		E8FF6FAF3613994C8CBC367C /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20335764277C2E44F7825D2 /* LoginView.swift */; };
@@ -71,6 +72,7 @@
 		4D9B33BBC5E75BE977852EBE /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		5416B142A121192B7EDCA9A2 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		54806C1D2B79947D8E8CE6C9 /* HostOnboardingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingService.swift; sourceTree = "<group>"; };
+		F1E2D3C4B5A6978869504132 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
 		5C5065BE9CC3C749754F554F /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
 		64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingViewModel.swift; sourceTree = "<group>"; };
 		6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingFlowView.swift; sourceTree = "<group>"; };
@@ -131,6 +133,7 @@
 				8CF2C4D557CBB8DCF564CD2A /* ChatService.swift */,
 				AF4ECC50EF60CAE563B7D668 /* FavoritesService.swift */,
 				54806C1D2B79947D8E8CE6C9 /* HostOnboardingService.swift */,
+				F1E2D3C4B5A6978869504132 /* PushNotificationManager.swift */,
 				E9E57AB4DC338617AB61C3E7 /* ListingService.swift */,
 				5416B142A121192B7EDCA9A2 /* LocationManager.swift */,
 				3CB173E040FBC726599E7A89 /* PlacesService.swift */,
@@ -382,6 +385,7 @@
 				4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */,
 				C25D7B4AA951AAD25EF7FD36 /* HostOnboardingFlowView.swift in Sources */,
 				E280A497623DB50EB8DB28E0 /* HostOnboardingService.swift in Sources */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* PushNotificationManager.swift in Sources */,
 				F633782D650F9CAF614C16E2 /* HostOnboardingViewModel.swift in Sources */,
 				694752864F4B0F93CA8B6433 /* InputField.swift in Sources */,
 				EA6ED6282BB3420E464B2A4D /* LaunchScreen.swift in Sources */,

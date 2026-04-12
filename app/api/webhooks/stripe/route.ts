@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendBookingConfirmation, sendBookingNotificationToHost } from "@/lib/email";
+import { sendPushToUser } from "@/lib/push";
 
 // Use service role for webhook (no user auth context)
 const supabase = createClient(
@@ -92,6 +93,12 @@ export async function POST(request: NextRequest) {
           body: `Din bestilling av ${listingTitle} er bekreftet og betalt.`,
           metadata: { bookingId },
         });
+
+        // Send push notifications
+        if (booking.host_id) {
+          sendPushToUser(booking.host_id, "Ny bestilling!", `${guestName} har booket ${listingTitle}`);
+        }
+        sendPushToUser(booking.user_id, "Booking bekreftet", `Din booking av ${listingTitle} er bekreftet`);
 
         // Send branded emails
         if (guestEmail) {
