@@ -13,6 +13,10 @@ import {
   MessageCircle,
   Settings,
   Inbox,
+  TrendingUp,
+  DollarSign,
+  Clock,
+  ArrowUpRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/(main)/bli-utleier/actions";
@@ -27,11 +31,12 @@ import ConversationList from "@/components/features/ConversationList";
 import ChatView from "@/components/features/ChatView";
 import { Booking, Listing, Conversation } from "@/types";
 
-type Tab = "bookings" | "rentals" | "favorites" | "listings" | "messages" | "settings";
+type Tab = "bookings" | "rentals" | "earnings" | "favorites" | "listings" | "messages" | "settings";
 
 const allSidebarItems: { key: Tab; label: string; icon: React.ElementType; hostOnly?: boolean }[] = [
   { key: "bookings", label: "Mine bestillinger", icon: CalendarCheck },
   { key: "rentals", label: "Utleie", icon: Inbox, hostOnly: true },
+  { key: "earnings", label: "Inntekter", icon: TrendingUp, hostOnly: true },
   { key: "favorites", label: "Favoritter", icon: Heart },
   { key: "messages", label: "Meldinger", icon: MessageCircle },
   { key: "listings", label: "Mine annonser", icon: Megaphone },
@@ -125,6 +130,7 @@ export default function DashboardPage() {
   const initialTab: Tab =
     tabParam === "listings" || tabParam === "annonser" ? "listings"
     : tabParam === "rentals" ? "rentals"
+    : tabParam === "earnings" || tabParam === "inntekter" ? "earnings"
     : tabParam === "favoritter" ? "favorites"
     : tabParam === "meldinger" || tabParam === "messages" || conversationIdParam ? "messages"
     : tabParam === "settings" ? "settings"
@@ -512,6 +518,9 @@ export default function DashboardPage() {
               </>
             )}
 
+            {/* Earnings */}
+            {tab === "earnings" && <EarningsTab rentals={rentals} listings={listings} />}
+
             {/* Favorites */}
             {tab === "favorites" && (
               <>
@@ -646,6 +655,186 @@ export default function DashboardPage() {
           </div>
         </div>
       </Container>
+    </div>
+  );
+}
+
+const SERVICE_FEE = 0.10;
+
+function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: Listing[] }) {
+  const confirmedRentals = rentals.filter((r) => r.status === "confirmed" && r.paymentStatus === "paid");
+  const transferredRentals = rentals.filter((r) => r.paymentStatus === "paid");
+
+  const totalRevenue = confirmedRentals.reduce((sum, r) => sum + r.totalPrice, 0);
+  const hostShare = Math.round(totalRevenue * (1 - SERVICE_FEE));
+  const platformFee = totalRevenue - hostShare;
+
+  const now = new Date();
+  const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const thisMonthEarnings = confirmedRentals
+    .filter((r) => r.createdAt?.startsWith(thisMonth))
+    .reduce((sum, r) => sum + Math.round(r.totalPrice * (1 - SERVICE_FEE)), 0);
+
+  // Monthly earnings (last 6 months)
+  const months: { label: string; key: string }[] = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.push({
+      label: d.toLocaleDateString("nb-NO", { month: "short" }),
+      key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
+    });
+  }
+  const monthlyData = months.map((m) => {
+    const mRentals = confirmedRentals.filter((r) => r.createdAt?.startsWith(m.key));
+    const earnings = mRentals.reduce((sum, r) => sum + Math.round(r.totalPrice * (1 - SERVICE_FEE)), 0);
+    return { ...m, earnings, count: mRentals.length };
+  });
+  const maxEarnings = Math.max(...monthlyData.map((m) => m.earnings), 1);
+
+  // Per-listing breakdown
+  const listingEarnings = new Map<string, { title: string; image: string; earnings: number; count: number }>();
+  for (const r of confirmedRentals) {
+    const existing = listingEarnings.get(r.listingId) || { title: r.listingTitle, image: r.listingImage || "", earnings: 0, count: 0 };
+    existing.earnings += Math.round(r.totalPrice * (1 - SERVICE_FEE));
+    existing.count += 1;
+    listingEarnings.set(r.listingId, existing);
+  }
+  const listingBreakdown = Array.from(listingEarnings.entries())
+    .sort((a, b) => b[1].earnings - a[1].earnings);
+
+  return (
+    <div className="mt-4 lg:mt-0 space-y-6">
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-600">
+              <DollarSign className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500">Totalt tjent</p>
+              <p className="text-lg font-bold text-neutral-900">{hostShare.toLocaleString("nb-NO")} kr</p>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-neutral-400">{platformFee.toLocaleString("nb-NO")} kr i plattformavgift</p>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary-50 text-primary-600">
+              <TrendingUp className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500">Denne måneden</p>
+              <p className="text-lg font-bold text-neutral-900">{thisMonthEarnings.toLocaleString("nb-NO")} kr</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-green-50 text-green-600">
+              <ArrowUpRight className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500">Bookings</p>
+              <p className="text-lg font-bold text-neutral-900">{confirmedRentals.length}</p>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-xl border border-neutral-200 bg-white p-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-50 text-amber-600">
+              <Clock className="h-5 w-5" />
+            </div>
+            <div>
+              <p className="text-xs text-neutral-500">Aktive annonser</p>
+              <p className="text-lg font-bold text-neutral-900">{listings.filter((l) => l.isActive).length}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Monthly chart */}
+      <div className="rounded-xl border border-neutral-200 bg-white p-5">
+        <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-700">
+          <TrendingUp className="h-4 w-4 text-primary-600" />
+          Månedlig inntekt
+        </h3>
+        <div className="mt-4 flex items-end gap-3 h-44">
+          {monthlyData.map((m) => (
+            <div key={m.key} className="flex flex-1 flex-col items-center gap-1">
+              <span className="text-xs font-medium text-neutral-700">
+                {m.earnings > 0 ? `${m.earnings.toLocaleString("nb-NO")}` : ""}
+              </span>
+              <div
+                className="w-full max-w-10 rounded-t-md bg-primary-500 transition-all"
+                style={{ height: `${Math.max((m.earnings / maxEarnings) * 120, m.earnings > 0 ? 4 : 0)}px` }}
+              />
+              <span className="text-xs text-neutral-400">{m.label}</span>
+              {m.count > 0 && <span className="text-[10px] text-neutral-300">{m.count} booking{m.count > 1 ? "s" : ""}</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Per-listing breakdown */}
+      <div className="rounded-xl border border-neutral-200 bg-white p-5">
+        <h3 className="text-sm font-semibold text-neutral-700">Inntekt per annonse</h3>
+        <div className="mt-4 space-y-4">
+          {listingBreakdown.length === 0 ? (
+            <p className="text-sm text-neutral-400">Ingen inntekter ennå</p>
+          ) : (
+            listingBreakdown.map(([id, data]) => (
+              <div key={id} className="flex items-center gap-4">
+                {data.image ? (
+                  <img src={data.image} alt="" className="h-12 w-12 rounded-lg object-cover" />
+                ) : (
+                  <div className="h-12 w-12 rounded-lg bg-neutral-100" />
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-neutral-700 truncate">{data.title}</p>
+                  <p className="text-xs text-neutral-400">{data.count} booking{data.count > 1 ? "s" : ""}</p>
+                  <div className="mt-1 h-1.5 w-full rounded-full bg-neutral-100">
+                    <div
+                      className="h-1.5 rounded-full bg-primary-500"
+                      style={{ width: `${(data.earnings / (listingBreakdown[0]?.[1]?.earnings || 1)) * 100}%` }}
+                    />
+                  </div>
+                </div>
+                <span className="text-sm font-bold text-neutral-900">{data.earnings.toLocaleString("nb-NO")} kr</span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Recent payouts */}
+      <div className="rounded-xl border border-neutral-200 bg-white p-5">
+        <h3 className="text-sm font-semibold text-neutral-700">Siste bookings</h3>
+        <div className="mt-3 divide-y divide-neutral-100">
+          {transferredRentals.slice(0, 10).map((r) => {
+            const hostAmount = Math.round(r.totalPrice * (1 - SERVICE_FEE));
+            return (
+              <div key={r.id} className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium text-neutral-700">{r.listingTitle}</p>
+                  <p className="text-xs text-neutral-400">
+                    {r.guestName || "Gjest"} · {new Date(r.checkIn).toLocaleDateString("nb-NO")} – {new Date(r.checkOut).toLocaleDateString("nb-NO")}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-sm font-semibold">{hostAmount.toLocaleString("nb-NO")} kr</p>
+                  <span className={`text-xs ${r.status === "confirmed" ? "text-green-600" : "text-red-500"}`}>
+                    {r.status === "confirmed" ? "Bekreftet" : "Kansellert"}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+          {transferredRentals.length === 0 && (
+            <p className="py-4 text-sm text-neutral-400">Ingen bookings ennå</p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
