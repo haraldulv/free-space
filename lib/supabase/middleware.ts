@@ -34,12 +34,27 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   // Auth guard for protected routes — redirect to login with return URL
-  if (!user && (request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/bli-utleier") || request.nextUrl.pathname.startsWith("/settings"))) {
+  if (!user && (request.nextUrl.pathname.startsWith("/dashboard") || request.nextUrl.pathname.startsWith("/bli-utleier") || request.nextUrl.pathname.startsWith("/settings") || request.nextUrl.pathname.startsWith("/admin"))) {
     const url = request.nextUrl.clone();
     const returnTo = request.nextUrl.pathname + request.nextUrl.search;
     url.pathname = "/login";
     url.searchParams.set("redirectTo", returnTo);
     return NextResponse.redirect(url);
+  }
+
+  // Admin guard — check is_admin flag
+  if (user && request.nextUrl.pathname.startsWith("/admin")) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("is_admin")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile?.is_admin) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
   }
 
   return supabaseResponse;
