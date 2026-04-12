@@ -136,6 +136,9 @@ export interface Booking {
   cancelledBy?: "guest" | "host";
   cancellationReason?: string;
   refundAmount?: number;
+  hostName?: string;
+  hostPhone?: string;
+  conversationId?: string;
 }
 
 export interface Review {

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { CalendarDays, MapPin, Car, Tent, Star, User, ChevronDown, Clock, CreditCard, Navigation, Mail, CarFront, AlertCircle } from "lucide-react";
+import Link from "next/link";
+import { CalendarDays, MapPin, Car, Tent, Star, User, ChevronDown, Clock, CreditCard, Navigation, Mail, CarFront, AlertCircle, Phone, MessageCircle } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ReviewForm from "@/components/features/ReviewForm";
@@ -184,6 +185,27 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
               </div>
             </div>
 
+            {/* Host info (guest view) */}
+            {variant === "guest" && booking.hostName && (
+              <div className="flex items-start gap-2 text-sm">
+                <User className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
+                <div>
+                  <p className="font-medium text-neutral-700">Utleier</p>
+                  <p className="text-neutral-500">{booking.hostName}</p>
+                  {booking.hostPhone && (
+                    <a
+                      href={`tel:${booking.hostPhone}`}
+                      className="mt-0.5 inline-flex items-center gap-1 text-primary-600 hover:text-primary-700"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <Phone className="h-3.5 w-3.5" />
+                      {booking.hostPhone}
+                    </a>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Guest info (host view) */}
             {variant === "host" && (
               <div className="flex items-start gap-2 text-sm">
@@ -223,6 +245,16 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
 
           {/* Actions */}
           <div className="flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-3">
+            {booking.conversationId && (
+              <Link
+                href={`/dashboard?tab=messages&conversation=${booking.conversationId}`}
+                className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <MessageCircle className="h-3.5 w-3.5" />
+                Chat
+              </Link>
+            )}
             {variant === "guest" && canReview && (
               <button
                 onClick={() => setShowReview(!showReview)}

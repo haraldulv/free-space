@@ -20,6 +20,8 @@ export async function getProfileAction(): Promise<{
     joinedYear: number;
     stripeOnboardingComplete?: boolean;
     stripeAccountId?: string;
+    phone: string;
+    showPhone: boolean;
   };
   error?: string;
 }> {
@@ -28,7 +30,7 @@ export async function getProfileAction(): Promise<{
 
     const { data: profile } = await supabase
       .from("profiles")
-      .select("full_name, avatar_url, response_rate, response_time, joined_year, stripe_account_id, stripe_onboarding_complete")
+      .select("full_name, avatar_url, response_rate, response_time, joined_year, stripe_account_id, stripe_onboarding_complete, phone, show_phone")
       .eq("id", user.id)
       .single();
 
@@ -43,6 +45,8 @@ export async function getProfileAction(): Promise<{
         joinedYear: profile?.joined_year || new Date().getFullYear(),
         stripeOnboardingComplete: profile?.stripe_onboarding_complete || false,
         stripeAccountId: profile?.stripe_account_id ? `****${profile.stripe_account_id.slice(-4)}` : undefined,
+        phone: profile?.phone || "",
+        showPhone: profile?.show_phone || false,
       },
     };
   } catch (err) {
@@ -52,13 +56,19 @@ export async function getProfileAction(): Promise<{
 
 export async function updateProfileAction(data: {
   fullName: string;
+  phone?: string;
+  showPhone?: boolean;
 }): Promise<{ error?: string }> {
   try {
     const { supabase, user } = await getAuthUser();
 
+    const updates: Record<string, unknown> = { full_name: data.fullName };
+    if (data.phone !== undefined) updates.phone = data.phone || null;
+    if (data.showPhone !== undefined) updates.show_phone = data.showPhone;
+
     const { error } = await supabase
       .from("profiles")
-      .update({ full_name: data.fullName })
+      .update(updates)
       .eq("id", user.id);
 
     if (error) return { error: error.message };

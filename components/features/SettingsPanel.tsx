@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Camera, LogOut, Trash2, User, Mail, Calendar, Check, CreditCard, CheckCircle2, Smartphone } from "lucide-react";
+import { Camera, LogOut, Trash2, User, Mail, Calendar, Check, CreditCard, CheckCircle2, Smartphone, Phone } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -23,11 +23,15 @@ interface ProfileData {
   joinedYear: number;
   stripeOnboardingComplete?: boolean;
   stripeAccountId?: string;
+  phone: string;
+  showPhone: boolean;
 }
 
 export default function SettingsPanel() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [showPhone, setShowPhone] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -41,6 +45,8 @@ export default function SettingsPanel() {
       if (result.profile) {
         setProfile(result.profile);
         setFullName(result.profile.fullName);
+        setPhone(result.profile.phone);
+        setShowPhone(result.profile.showPhone);
       }
     });
   }, []);
@@ -51,12 +57,12 @@ export default function SettingsPanel() {
     setError("");
     setSaved(false);
 
-    const result = await updateProfileAction({ fullName: fullName.trim() });
+    const result = await updateProfileAction({ fullName: fullName.trim(), phone: phone.trim(), showPhone });
     if (result.error) {
       setError(result.error);
     } else {
       setSaved(true);
-      setProfile((prev) => prev ? { ...prev, fullName: fullName.trim() } : null);
+      setProfile((prev) => prev ? { ...prev, fullName: fullName.trim(), phone: phone.trim(), showPhone } : null);
       setTimeout(() => setSaved(false), 2000);
     }
     setSaving(false);
@@ -175,6 +181,26 @@ export default function SettingsPanel() {
               {profile.email}
             </div>
           </div>
+          <Input
+            id="phone"
+            label="Telefonnummer"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="+47 123 45 678"
+            type="tel"
+          />
+          <label className="flex items-center gap-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showPhone}
+              onChange={(e) => setShowPhone(e.target.checked)}
+              className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
+            />
+            <div>
+              <span className="text-sm font-medium text-neutral-700">Vis telefonnummer for gjester</span>
+              <p className="text-xs text-neutral-500">Gjester med aktive bookinger kan se nummeret ditt</p>
+            </div>
+          </label>
         </div>
 
         {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
@@ -182,7 +208,7 @@ export default function SettingsPanel() {
         <Button
           className="mt-5"
           onClick={handleSave}
-          disabled={saving || fullName.trim() === profile.fullName}
+          disabled={saving || (fullName.trim() === profile.fullName && phone.trim() === profile.phone && showPhone === profile.showPhone)}
         >
           {saving ? "Lagrer..." : saved ? (
             <span className="inline-flex items-center gap-1.5"><Check className="h-4 w-4" /> Lagret</span>

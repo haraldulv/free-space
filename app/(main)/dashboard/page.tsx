@@ -147,7 +147,7 @@ export default function DashboardPage() {
       // Fetch bookings from Supabase
       const { data: bookingRows } = await supabase
         .from("bookings")
-        .select("*, listings(title, images, category, city, region, address, lat, lng, check_in_time, check_out_time)")
+        .select("*, listings(title, images, category, city, region, address, lat, lng, check_in_time, check_out_time), host:host_id(full_name, phone, show_phone)")
         .eq("user_id", data.user.id)
         .order("created_at", { ascending: false });
 
@@ -192,8 +192,24 @@ export default function DashboardPage() {
               cancelledBy: row.cancelled_by,
               cancellationReason: row.cancellation_reason,
               refundAmount: row.refund_amount,
+              hostName: (row.host as Record<string, unknown>)?.full_name as string || "",
+              hostPhone: (row.host as Record<string, unknown>)?.show_phone ? (row.host as Record<string, unknown>)?.phone as string || "" : "",
             }))
         );
+
+        // Look up conversations for guest bookings
+        const { data: convoRows } = await supabase
+          .from("conversations")
+          .select("id, listing_id")
+          .eq("guest_id", data.user.id);
+        if (convoRows) {
+          const convoMap = new Map<string, string>();
+          for (const c of convoRows) convoMap.set(c.listing_id, c.id);
+          setBookings((prev) => prev.map((b) => ({
+            ...b,
+            conversationId: convoMap.get(b.listingId) || undefined,
+          })));
+        }
       }
 
       // Fetch host rentals (bookings on user's listings)
