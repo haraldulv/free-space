@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
-import { X, ChevronLeft, ChevronRight } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, ImageOff } from "lucide-react";
 
 interface ImageGalleryProps {
   images: string[];
@@ -12,6 +12,11 @@ interface ImageGalleryProps {
 export default function ImageGallery({ images, alt }: ImageGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [failedImages, setFailedImages] = useState<Set<number>>(new Set());
+
+  const handleImageError = useCallback((index: number) => {
+    setFailedImages((prev) => new Set(prev).add(index));
+  }, []);
 
   const openLightbox = (index: number) => {
     setActiveIndex(index);
@@ -34,14 +39,21 @@ export default function ImageGallery({ images, alt }: ImageGalleryProps) {
           }`}
           onClick={() => openLightbox(0)}
         >
-          <Image
-            src={images[0]}
-            alt={alt}
-            fill
-            className="object-cover transition-transform hover:scale-105"
-            sizes="(max-width: 640px) 100vw, 50vw"
-            priority
-          />
+          {failedImages.has(0) ? (
+            <div className="flex h-full w-full items-center justify-center bg-neutral-100">
+              <ImageOff className="h-12 w-12 text-neutral-300" />
+            </div>
+          ) : (
+            <Image
+              src={images[0]}
+              alt={alt}
+              fill
+              className="object-cover transition-transform hover:scale-105"
+              sizes="(max-width: 640px) 100vw, 50vw"
+              priority
+              onError={() => handleImageError(0)}
+            />
+          )}
         </div>
         {images.slice(1, 5).map((img, i) => (
           <div
@@ -49,13 +61,20 @@ export default function ImageGallery({ images, alt }: ImageGalleryProps) {
             className="relative hidden aspect-[4/3] cursor-pointer overflow-hidden rounded-xl sm:block"
             onClick={() => openLightbox(i + 1)}
           >
-            <Image
-              src={img}
-              alt={`${alt} ${i + 2}`}
-              fill
-              className="object-cover transition-transform hover:scale-105"
-              sizes="25vw"
-            />
+            {failedImages.has(i + 1) ? (
+              <div className="flex h-full w-full items-center justify-center bg-neutral-100">
+                <ImageOff className="h-8 w-8 text-neutral-300" />
+              </div>
+            ) : (
+              <Image
+                src={img}
+                alt={`${alt} ${i + 2}`}
+                fill
+                className="object-cover transition-transform hover:scale-105"
+                sizes="25vw"
+                onError={() => handleImageError(i + 1)}
+              />
+            )}
           </div>
         ))}
       </div>

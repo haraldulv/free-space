@@ -33,8 +33,9 @@ struct EditListingView: View {
     @State private var hideExactLocation: Bool = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var isUploadingImages = false
+    @State private var selectedExtras: [ListingExtra] = []
 
-    private let tabs = ["Detaljer", "Lokasjon", "Bilder", "Fasiliteter", "Pris", "Tilgjengelighet"]
+    private let tabs = ["Detaljer", "Lokasjon", "Bilder", "Fasiliteter", "Tillegg", "Pris", "Tilgjengelighet"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -90,8 +91,9 @@ struct EditListingView: View {
                 locationTab.tag(1)
                 imagesTab.tag(2)
                 amenitiesTab.tag(3)
-                pricingTab.tag(4)
-                availabilityTab.tag(5)
+                extrasTab.tag(4)
+                pricingTab.tag(5)
+                availabilityTab.tag(6)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -370,6 +372,111 @@ struct EditListingView: View {
         }
     }
 
+    private var extrasTab: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Tilby ekstra tjenester mot betaling.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral500)
+
+                let available = ExtraType.available(for: listing.category ?? .camping)
+
+                VStack(spacing: 10) {
+                    ForEach(available, id: \.rawValue) { extra in
+                        let isSelected = selectedExtras.contains(where: { $0.id == extra.rawValue })
+                        let selectedExtra = selectedExtras.first(where: { $0.id == extra.rawValue })
+
+                        VStack(spacing: 0) {
+                            Button {
+                                if let index = selectedExtras.firstIndex(where: { $0.id == extra.rawValue }) {
+                                    selectedExtras.remove(at: index)
+                                } else {
+                                    selectedExtras.append(ListingExtra(
+                                        id: extra.rawValue,
+                                        name: extra.name,
+                                        price: extra.defaultPrice,
+                                        perNight: extra.perNight
+                                    ))
+                                }
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: extra.icon)
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(isSelected ? .primary600 : .neutral400)
+                                        .frame(width: 24)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(extra.name)
+                                            .font(.system(size: 15, weight: isSelected ? .medium : .regular))
+                                            .foregroundStyle(isSelected ? .neutral900 : .neutral600)
+                                        Text(extra.perNight ? "per natt" : "engangspris")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.neutral400)
+                                    }
+
+                                    Spacer()
+
+                                    ZStack {
+                                        RoundedRectangle(cornerRadius: 4)
+                                            .stroke(isSelected ? Color.primary600 : Color.neutral300, lineWidth: 2)
+                                            .frame(width: 22, height: 22)
+                                        if isSelected {
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .fill(Color.primary600)
+                                                .frame(width: 22, height: 22)
+                                            Image(systemName: "checkmark")
+                                                .font(.system(size: 12, weight: .bold))
+                                                .foregroundStyle(.white)
+                                        }
+                                    }
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 12)
+                            }
+
+                            if isSelected, let currentExtra = selectedExtra {
+                                Divider().padding(.horizontal, 14)
+
+                                HStack(spacing: 12) {
+                                    Text("Pris (kr)")
+                                        .font(.system(size: 14, weight: .medium))
+                                        .foregroundStyle(.neutral600)
+
+                                    TextField("Pris", value: Binding(
+                                        get: { currentExtra.price },
+                                        set: { newPrice in
+                                            if let idx = selectedExtras.firstIndex(where: { $0.id == extra.rawValue }) {
+                                                selectedExtras[idx].price = max(0, newPrice)
+                                            }
+                                        }
+                                    ), format: .number)
+                                    .textFieldStyle(.roundedBorder)
+                                    .keyboardType(.numberPad)
+                                    .frame(width: 100)
+
+                                    Text(extra.perNight ? "kr/natt" : "kr")
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(.neutral400)
+
+                                    Spacer()
+                                }
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                            }
+                        }
+                        .background(isSelected ? Color.primary50 : Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 2 : 1)
+                        )
+                    }
+                }
+            }
+            .padding()
+        }
+    }
+
     private var pricingTab: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -442,6 +549,7 @@ struct EditListingView: View {
         imageURLs = listing.images ?? []
         blockedDates = Set(listing.blockedDates ?? [])
         hideExactLocation = listing.hideExactLocation ?? false
+        selectedExtras = listing.extras ?? []
     }
 
     // Proxy form model for AvailabilityStepView reuse
@@ -464,6 +572,10 @@ struct EditListingView: View {
                     return obj
                 }
 
+                let extrasArray = selectedExtras.map { extra -> [String: Any] in
+                    ["id": extra.id, "name": extra.name, "price": extra.price, "perNight": extra.perNight]
+                }
+
                 let updates: [String: Any] = [
                     "title": title,
                     "description": description,
@@ -483,6 +595,7 @@ struct EditListingView: View {
                     "blocked_dates": Array(blockedDates).sorted(),
                     "hide_exact_location": hideExactLocation,
                     "spot_markers": spotMarkersArray,
+                    "extras": extrasArray,
                 ]
 
                 let jsonData = try JSONSerialization.data(withJSONObject: updates)

@@ -354,6 +354,7 @@ export async function updateListing(id: string, input: Partial<CreateListingData
   if (input.blockedDates !== undefined) updateData.blocked_dates = input.blockedDates;
   if (input.checkInTime !== undefined) updateData.check_in_time = input.checkInTime;
   if (input.checkOutTime !== undefined) updateData.check_out_time = input.checkOutTime;
+  if (input.extras !== undefined) updateData.extras = input.extras;
 
   const { error } = await supabase
     .from("listings")

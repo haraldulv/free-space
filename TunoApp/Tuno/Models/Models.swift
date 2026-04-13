@@ -27,6 +27,7 @@ struct Listing: Codable, Identifiable, Hashable {
     let checkInTime: String?
     let checkOutTime: String?
     let isActive: Bool?
+    let extras: [ListingExtra]?
     let rating: Double?
     let reviewCount: Int?
     let hostName: String?
@@ -51,6 +52,7 @@ struct Listing: Codable, Identifiable, Hashable {
         case checkInTime = "check_in_time"
         case checkOutTime = "check_out_time"
         case isActive = "is_active"
+        case extras
         case reviewCount = "review_count"
         case hostName = "host_name"
         case hostAvatar = "host_avatar"
@@ -105,8 +107,98 @@ enum VehicleType: String, Codable, CaseIterable {
         switch self {
         case .car: return "car.fill"
         case .campervan: return "bus.fill"
-        case .motorhome: return "truck.box.fill"
+        case .motorhome: return "bus.fill"
         }
+    }
+}
+
+// MARK: - Listing Extra
+
+struct ListingExtra: Codable, Hashable, Identifiable {
+    let id: String
+    let name: String
+    var price: Int
+    let perNight: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, price
+        case perNight = "perNight"
+    }
+}
+
+enum ExtraType: String, CaseIterable {
+    case evCharging = "ev_charging"
+    case powerHookup = "power_hookup"
+    case septicDisposal = "septic_disposal"
+    case sauna
+    case firewood
+    case kayak
+    case bikeRental = "bike_rental"
+    case fishingGear = "fishing_gear"
+    case bedding
+    case grill
+
+    var name: String {
+        switch self {
+        case .evCharging: return "Elbil-lading"
+        case .powerHookup: return "Strømtilkobling"
+        case .septicDisposal: return "Septiktømming"
+        case .sauna: return "Badstue"
+        case .firewood: return "Ved"
+        case .kayak: return "Kajakk"
+        case .bikeRental: return "Sykkelutleie"
+        case .fishingGear: return "Fiskeutstyr"
+        case .bedding: return "Sengetøy"
+        case .grill: return "Grillpakke"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .evCharging: return "bolt.fill"
+        case .powerHookup: return "powerplug.fill"
+        case .septicDisposal: return "drop.fill"
+        case .sauna: return "flame.fill"
+        case .firewood: return "leaf.fill"
+        case .kayak: return "sailboat.fill"
+        case .bikeRental: return "bicycle"
+        case .fishingGear: return "fish.fill"
+        case .bedding: return "bed.double.fill"
+        case .grill: return "frying.pan.fill"
+        }
+    }
+
+    var defaultPrice: Int {
+        switch self {
+        case .evCharging: return 50
+        case .powerHookup: return 75
+        case .septicDisposal: return 150
+        case .sauna: return 200
+        case .firewood: return 100
+        case .kayak: return 150
+        case .bikeRental: return 100
+        case .fishingGear: return 75
+        case .bedding: return 100
+        case .grill: return 50
+        }
+    }
+
+    var perNight: Bool {
+        switch self {
+        case .evCharging, .powerHookup, .kayak, .bikeRental, .fishingGear: return true
+        case .septicDisposal, .sauna, .firewood, .bedding, .grill: return false
+        }
+    }
+
+    var categories: [ListingCategory] {
+        switch self {
+        case .evCharging: return [.parking, .camping]
+        default: return [.camping]
+        }
+    }
+
+    static func available(for category: ListingCategory) -> [ExtraType] {
+        allCases.filter { $0.categories.contains(category) }
     }
 }
 

@@ -46,9 +46,9 @@ export default function ListingMap({ lat, lng, spotMarkers = [], hideExactLocati
           map,
           center: { lat, lng },
           radius: 500,
-          fillColor: "#1a4fd6",
+          fillColor: "#46C185",
           fillOpacity: 0.1,
-          strokeColor: "#1a4fd6",
+          strokeColor: "#46C185",
           strokeOpacity: 0.3,
           strokeWeight: 2,
         });
@@ -58,7 +58,7 @@ export default function ListingMap({ lat, lng, spotMarkers = [], hideExactLocati
           const el = document.createElement("div");
           el.style.cssText = `
             width: 30px; height: 30px; border-radius: 50%;
-            background: #1a4fd6; color: white; font-size: 13px; font-weight: 700;
+            background: #46C185; color: white; font-size: 13px; font-weight: 700;
             display: flex; align-items: center; justify-content: center;
             border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
           `;

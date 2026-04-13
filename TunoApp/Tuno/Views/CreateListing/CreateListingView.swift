@@ -38,9 +38,10 @@ struct CreateListingView: View {
                 LocationStepView(form: form, placesService: placesService).tag(2)
                 ImageUploadStepView(form: form).tag(3)
                 AmenitiesStepView(form: form).tag(4)
-                PricingStepView(form: form).tag(5)
-                AvailabilityStepView(form: form).tag(6)
-                ReviewStepView(form: form).tag(7)
+                ExtrasStepView(form: form).tag(5)
+                PricingStepView(form: form).tag(6)
+                AvailabilityStepView(form: form).tag(7)
+                ReviewStepView(form: form).tag(8)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut(duration: 0.3), value: form.currentStep)
@@ -714,7 +715,136 @@ struct AmenitiesStepView: View {
     }
 }
 
-// MARK: - Step 5: Pricing
+// MARK: - Step 5: Extras
+
+struct ExtrasStepView: View {
+    @ObservedObject var form: ListingFormModel
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                Text("Tilleggstjenester")
+                    .font(.system(size: 22, weight: .bold))
+
+                Text("Tilby ekstra tjenester mot betaling. Du bestemmer prisen selv.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral500)
+
+                let available = ExtraType.available(for: form.category ?? .camping)
+
+                if available.isEmpty {
+                    Text("Ingen tilleggstjenester tilgjengelig for denne kategorien")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.neutral400)
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(available, id: \.rawValue) { extra in
+                            let isSelected = form.selectedExtras.contains(where: { $0.id == extra.rawValue })
+                            let selectedExtra = form.selectedExtras.first(where: { $0.id == extra.rawValue })
+
+                            VStack(spacing: 0) {
+                                Button {
+                                    toggleExtra(extra)
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: extra.icon)
+                                            .font(.system(size: 18))
+                                            .foregroundStyle(isSelected ? .primary600 : .neutral400)
+                                            .frame(width: 24)
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(extra.name)
+                                                .font(.system(size: 15, weight: isSelected ? .medium : .regular))
+                                                .foregroundStyle(isSelected ? .neutral900 : .neutral600)
+                                            Text(extra.perNight ? "per natt" : "engangspris")
+                                                .font(.system(size: 12))
+                                                .foregroundStyle(.neutral400)
+                                        }
+
+                                        Spacer()
+
+                                        // Checkbox
+                                        ZStack {
+                                            RoundedRectangle(cornerRadius: 4)
+                                                .stroke(isSelected ? Color.primary600 : Color.neutral300, lineWidth: 2)
+                                                .frame(width: 22, height: 22)
+                                            if isSelected {
+                                                RoundedRectangle(cornerRadius: 4)
+                                                    .fill(Color.primary600)
+                                                    .frame(width: 22, height: 22)
+                                                Image(systemName: "checkmark")
+                                                    .font(.system(size: 12, weight: .bold))
+                                                    .foregroundStyle(.white)
+                                            }
+                                        }
+                                    }
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 12)
+                                }
+
+                                // Price input when selected
+                                if isSelected, let currentExtra = selectedExtra {
+                                    Divider()
+                                        .padding(.horizontal, 14)
+
+                                    HStack(spacing: 12) {
+                                        Text("Pris (kr)")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(.neutral600)
+
+                                        TextField("Pris", value: Binding(
+                                            get: { currentExtra.price },
+                                            set: { newPrice in updateExtraPrice(extra.rawValue, price: newPrice) }
+                                        ), format: .number)
+                                        .textFieldStyle(.roundedBorder)
+                                        .keyboardType(.numberPad)
+                                        .frame(width: 100)
+
+                                        Text(extra.perNight ? "kr/natt" : "kr")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(.neutral400)
+
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 10)
+                                }
+                            }
+                            .background(isSelected ? Color.primary50 : Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 2 : 1)
+                            )
+                        }
+                    }
+                }
+            }
+            .padding()
+        }
+    }
+
+    private func toggleExtra(_ extra: ExtraType) {
+        if let index = form.selectedExtras.firstIndex(where: { $0.id == extra.rawValue }) {
+            form.selectedExtras.remove(at: index)
+        } else {
+            form.selectedExtras.append(ListingExtra(
+                id: extra.rawValue,
+                name: extra.name,
+                price: extra.defaultPrice,
+                perNight: extra.perNight
+            ))
+        }
+    }
+
+    private func updateExtraPrice(_ extraId: String, price: Int) {
+        if let index = form.selectedExtras.firstIndex(where: { $0.id == extraId }) {
+            form.selectedExtras[index].price = max(0, price)
+        }
+    }
+}
+
+// MARK: - Step 6: Pricing
 
 struct PricingStepView: View {
     @ObservedObject var form: ListingFormModel
@@ -926,7 +1056,7 @@ struct AvailabilityStepView: View {
     }
 }
 
-// MARK: - Step 7: Review
+// MARK: - Step 8: Review
 
 struct ReviewStepView: View {
     @ObservedObject var form: ListingFormModel
@@ -1025,6 +1155,30 @@ struct ReviewStepView: View {
                                     .background(Color.neutral100)
                                     .clipShape(Capsule())
                                 }
+                            }
+                        }
+                    }
+
+                    // Extras
+                    if !form.selectedExtras.isEmpty {
+                        Divider()
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Tilleggstjenester")
+                                .font(.system(size: 13, weight: .semibold))
+                                .foregroundStyle(.neutral700)
+                            ForEach(form.selectedExtras) { extra in
+                                HStack(spacing: 6) {
+                                    if let type = ExtraType(rawValue: extra.id) {
+                                        Image(systemName: type.icon)
+                                            .font(.system(size: 12))
+                                    }
+                                    Text(extra.name)
+                                    Spacer()
+                                    Text("\(extra.price) kr\(extra.perNight ? "/natt" : "")")
+                                        .fontWeight(.medium)
+                                }
+                                .font(.system(size: 13))
+                                .foregroundStyle(.neutral600)
                             }
                         }
                     }
@@ -1181,7 +1335,7 @@ struct LocationPickerMapView: UIViewRepresentable {
     private func createNumberedPin(number: Int) -> UIView {
         let size: CGFloat = 30
         let view = UIView(frame: CGRect(x: 0, y: 0, width: size, height: size))
-        view.backgroundColor = UIColor(red: 0.102, green: 0.310, blue: 0.839, alpha: 1)
+        view.backgroundColor = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1) // #46C185
         view.layer.cornerRadius = size / 2
         view.layer.borderWidth = 2
         view.layer.borderColor = UIColor.white.cgColor

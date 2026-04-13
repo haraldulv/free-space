@@ -14,10 +14,14 @@ export default function HostCard({ host, listingId }: HostCardProps) {
       <div className="flex items-center gap-4">
         <Avatar src={host.avatar} alt={host.name} size="lg" />
         <div>
-          <h3 className="font-semibold text-neutral-900">Utleid av {host.name}</h3>
-          <p className="text-sm text-neutral-500">
-            Medlem siden {host.joinedYear} &middot; {host.listingsCount} annonse{host.listingsCount !== 1 ? "r" : ""}
-          </p>
+          <h3 className="font-semibold text-neutral-900">Utleid av {host.name || "Anonym utleier"}</h3>
+          {host.joinedYear ? (
+            <p className="text-sm text-neutral-500">
+              Medlem siden {host.joinedYear} &middot; {host.listingsCount} annonse{host.listingsCount !== 1 ? "r" : ""}
+            </p>
+          ) : (
+            <p className="text-sm text-neutral-500">Utleier</p>
+          )}
         </div>
       </div>
       <div className="mt-4 grid grid-cols-2 gap-4">

@@ -8,7 +8,7 @@ final class ListingFormModel: ObservableObject {
     @Published var isSubmitting = false
     @Published var error: String?
 
-    let totalSteps = 8
+    let totalSteps = 9
 
     // MARK: - Step 0: Category & Vehicle Type
     @Published var category: ListingCategory?
@@ -39,18 +39,21 @@ final class ListingFormModel: ObservableObject {
     // MARK: - Step 4: Amenities
     @Published var selectedAmenities: Set<String> = []
 
-    // MARK: - Step 5: Pricing
+    // MARK: - Step 5: Extras
+    @Published var selectedExtras: [ListingExtra] = []
+
+    // MARK: - Step 6: Pricing
     @Published var price = ""
     @Published var priceUnit: PriceUnit = .natt
     @Published var instantBooking = false
 
-    // MARK: - Step 6: Availability
+    // MARK: - Step 7: Availability
     @Published var blockedDates: Set<String> = []
 
     // MARK: - Validation
 
     var stepLabels: [String] {
-        ["Kategori", "Detaljer", "Lokasjon", "Bilder", "Fasiliteter", "Pris", "Kalender", "Publiser"]
+        ["Kategori", "Detaljer", "Lokasjon", "Bilder", "Fasiliteter", "Tillegg", "Pris", "Kalender", "Publiser"]
     }
 
     func validateCurrentStep() -> String? {
@@ -67,7 +70,7 @@ final class ListingFormModel: ObservableObject {
             if lat == 0 && lng == 0 { return "Velg en lokasjon fra forslagene" }
         case 3:
             if imageURLs.isEmpty { return "Legg til minst 1 bilde" }
-        case 5:
+        case 6:
             if let p = Int(price), p < 1 { return "Pris må være minst 1 kr" }
             if Int(price) == nil { return "Skriv inn en gyldig pris" }
         default:
@@ -134,6 +137,7 @@ final class ListingFormModel: ObservableObject {
             maxVehicleLength: category == .camping ? maxVehicleLength : nil,
             checkInTime: checkInTime,
             checkOutTime: checkOutTime,
+            extras: selectedExtras,
             hostName: profile?.fullName ?? "",
             hostAvatar: profile?.avatarUrl ?? "",
             isActive: true
@@ -167,12 +171,13 @@ struct CreateListingInput: Encodable {
     let maxVehicleLength: Int?
     let checkInTime: String
     let checkOutTime: String
+    let extras: [ListingExtra]
     let hostName: String
     let hostAvatar: String
     let isActive: Bool
 
     enum CodingKeys: String, CodingKey {
-        case id, title, description, category, city, region, address, lat, lng, price, spots, images, amenities
+        case id, title, description, category, city, region, address, lat, lng, price, spots, images, amenities, extras
         case hostId = "host_id"
         case vehicleType = "vehicle_type"
         case priceUnit = "price_unit"
