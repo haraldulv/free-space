@@ -58,6 +58,7 @@ struct TunoApp: App {
             .task {
                 if authManager.isAuthenticated, let userId = authManager.currentUser?.id {
                     await favoritesService.loadFavorites(userId: userId.uuidString)
+                    PushNotificationManager.shared.requestPermission()
                 }
             }
             .onOpenURL { url in
