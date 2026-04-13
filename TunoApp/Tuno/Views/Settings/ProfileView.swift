@@ -252,6 +252,15 @@ struct MyListingsView: View {
                                 // Action buttons
                                 HStack(spacing: 12) {
                                     Button {
+                                        toggleActive(listing)
+                                    } label: {
+                                        Image(systemName: listing.isActive == true ? "eye.fill" : "eye.slash.fill")
+                                            .font(.system(size: 16))
+                                            .foregroundStyle(listing.isActive == true ? .green : .neutral400)
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    Button {
                                         qrTarget = listing
                                     } label: {
                                         Image(systemName: "qrcode")

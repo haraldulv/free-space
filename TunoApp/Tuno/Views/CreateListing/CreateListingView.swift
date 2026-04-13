@@ -188,7 +188,7 @@ struct CategoryStepView: View {
                         .font(.system(size: 17, weight: .semibold))
 
                     HStack(spacing: 10) {
-                        ForEach([VehicleType.motorhome, .campervan, .car], id: \.self) { type in
+                        ForEach([VehicleType.motorhome, .car], id: \.self) { type in
                             vehicleButton(type: type)
                         }
                     }
