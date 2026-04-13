@@ -6,37 +6,66 @@ struct HomeView: View {
     @StateObject private var listingService = ListingService()
     @State private var searchText = ""
     @State private var showSearch = false
+    @State private var selectedVehicle: VehicleType = .motorhome
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 32) {
-                // Hero
-                VStack(spacing: 16) {
-                    Image("TunoLogo")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(height: 40)
-
+            VStack(spacing: 24) {
+                // Search bar + vehicle picker
+                VStack(spacing: 14) {
                     // Search bar
                     Button {
                         showSearch = true
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "magnifyingglass")
-                                .foregroundStyle(.neutral400)
+                                .font(.system(size: 16, weight: .medium))
+                                .foregroundStyle(.neutral500)
                             Text("Hvor skal du?")
+                                .font(.system(size: 15))
                                 .foregroundStyle(.neutral400)
                             Spacer()
                         }
-                        .padding(16)
+                        .padding(14)
                         .background(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .shadow(color: .black.opacity(0.08), radius: 12, y: 4)
+                        .clipShape(RoundedRectangle(cornerRadius: 32))
+                        .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
                     }
-                    .padding(.top, 8)
+
+                    // Vehicle type picker
+                    HStack(spacing: 0) {
+                        ForEach([VehicleType.motorhome, .car], id: \.self) { type in
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    selectedVehicle = type
+                                }
+                                Task { await listingService.fetchHomeListings(vehicleType: type) }
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Image(systemName: type.icon)
+                                        .font(.system(size: 20))
+                                    Text(type.displayName)
+                                        .font(.system(size: 12, weight: .medium))
+                                }
+                                .foregroundStyle(selectedVehicle == type ? .primary600 : .neutral400)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                            }
+                        }
+                    }
+                    .overlay(alignment: .bottom) {
+                        GeometryReader { geo in
+                            Rectangle()
+                                .fill(Color.primary600)
+                                .frame(width: geo.size.width / 2, height: 2)
+                                .offset(x: selectedVehicle == .motorhome ? 0 : geo.size.width / 2)
+                                .animation(.easeInOut(duration: 0.2), value: selectedVehicle)
+                        }
+                        .frame(height: 2)
+                    }
                 }
                 .padding(.horizontal, 20)
-                .padding(.top, 20)
+                .padding(.top, 12)
 
                 if listingService.isLoading {
                     ProgressView()
@@ -85,7 +114,7 @@ struct HomeView: View {
             SearchView()
         }
         .task {
-            await listingService.fetchHomeListings()
+            await listingService.fetchHomeListings(vehicleType: selectedVehicle)
         }
     }
 }
@@ -108,7 +137,7 @@ struct ListingSection: View {
                 .padding(.horizontal, 20)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 16) {
+                LazyHStack(spacing: 12) {
                     ForEach(listings) { listing in
                         NavigationLink(value: listing) {
                             ListingCard(
@@ -116,7 +145,7 @@ struct ListingSection: View {
                                 isFavorited: favoritesService.favoriteIds.contains(listing.id),
                                 onFavoriteToggle: { _ in toggleFavorite(listing.id) }
                             )
-                            .frame(width: 280)
+                            .frame(width: 200)
                         }
                         .buttonStyle(.plain)
                     }

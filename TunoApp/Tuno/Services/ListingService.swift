@@ -8,13 +8,26 @@ final class ListingService: ObservableObject {
     @Published var searchResults: [Listing] = []
     @Published var isLoading = false
 
-    func fetchByTag(_ tag: String, limit: Int = 12) async -> [Listing] {
+    func fetchByTag(_ tag: String, vehicleType: VehicleType? = nil, limit: Int = 12) async -> [Listing] {
         do {
-            let listings: [Listing] = try await supabase
+            var request = supabase
                 .from("listings")
                 .select()
                 .or("is_active.eq.true,is_active.is.null")
                 .contains("tags", value: [tag])
+
+            if let vehicleType {
+                switch vehicleType {
+                case .car:
+                    request = request.in("vehicle_type", values: ["car", "campervan", "motorhome"])
+                case .campervan:
+                    request = request.in("vehicle_type", values: ["campervan", "motorhome"])
+                case .motorhome:
+                    request = request.in("vehicle_type", values: ["motorhome"])
+                }
+            }
+
+            let listings: [Listing] = try await request
                 .limit(limit)
                 .execute()
                 .value
@@ -54,12 +67,12 @@ final class ListingService: ObservableObject {
         }
     }
 
-    func fetchHomeListings() async {
+    func fetchHomeListings(vehicleType: VehicleType? = nil) async {
         isLoading = true
 
-        async let popular = fetchByTag("popular", limit: 20)
-        async let featured = fetchByTag("featured", limit: 20)
-        async let available = fetchByTag("available_today", limit: 20)
+        async let popular = fetchByTag("popular", vehicleType: vehicleType, limit: 20)
+        async let featured = fetchByTag("featured", vehicleType: vehicleType, limit: 20)
+        async let available = fetchByTag("available_today", vehicleType: vehicleType, limit: 20)
 
         popularListings = await popular
         featuredListings = await featured
@@ -77,7 +90,8 @@ final class ListingService: ObservableObject {
         radiusKm: Double = 20,
         checkIn: String? = nil,
         checkOut: String? = nil,
-        amenities: Set<AmenityType>? = nil
+        amenities: Set<AmenityType>? = nil,
+        instantOnly: Bool = false
     ) async {
         isLoading = true
         do {
@@ -144,6 +158,11 @@ final class ListingService: ObservableObject {
                     guard let listingAmenities = listing.amenities else { return false }
                     return requiredKeys.allSatisfy { listingAmenities.contains($0) }
                 }
+            }
+
+            // Filter by instant booking
+            if instantOnly {
+                listings = listings.filter { $0.instantBooking == true }
             }
 
             searchResults = listings

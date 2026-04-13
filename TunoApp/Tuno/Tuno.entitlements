@@ -6,16 +6,14 @@
 	<array>
 		<string>Default</string>
 	</array>
-	<key>com.apple.developer.in-app-payments</key>
-	<array>
-		<string>merchant.no.tuno.app</string>
-	</array>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
 		<string>applinks:tuno.no</string>
 		<string>applinks:www.tuno.no</string>
 	</array>
-	<key>aps-environment</key>
-	<string>development</string>
+	<key>com.apple.developer.in-app-payments</key>
+	<array>
+		<string>merchant.no.tuno.app</string>
+	</array>
 </dict>
 </plist>

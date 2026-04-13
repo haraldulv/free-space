@@ -96,6 +96,11 @@ struct ProfileView: View {
                     } label: {
                         Label("Mine annonser", systemImage: "house.fill")
                     }
+                    NavigationLink {
+                        EarningsView()
+                    } label: {
+                        Label("Inntekter", systemImage: "chart.line.uptrend.xyaxis")
+                    }
                 } else {
                     NavigationLink {
                         BecomeHostView()

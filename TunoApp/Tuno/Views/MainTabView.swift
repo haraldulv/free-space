@@ -7,38 +7,41 @@ struct MainTabView: View {
     @State private var homeNavPath = NavigationPath()
 
     var body: some View {
-        TabView(selection: $selectedTab) {
-            Tab("Utforsk", systemImage: "magnifyingglass", value: 0) {
-                NavigationStack(path: $homeNavPath) {
-                    HomeView()
+        ZStack(alignment: .bottom) {
+            // Content area
+            Group {
+                switch selectedTab {
+                case 0:
+                    NavigationStack(path: $homeNavPath) {
+                        HomeView()
+                    }
+                case 1:
+                    NavigationStack {
+                        FavoritesView()
+                    }
+                case 2:
+                    NavigationStack {
+                        BookingsView()
+                    }
+                case 3:
+                    NavigationStack {
+                        MessagesListView()
+                    }
+                case 4:
+                    NavigationStack {
+                        ProfileView()
+                    }
+                default:
+                    EmptyView()
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.bottom, 56)
 
-            Tab("Favoritter", systemImage: "heart", value: 1) {
-                NavigationStack {
-                    FavoritesView()
-                }
-            }
-
-            Tab("Bestillinger", systemImage: "calendar.badge.checkmark", value: 2) {
-                NavigationStack {
-                    BookingsView()
-                }
-            }
-
-            Tab("Meldinger", systemImage: "bubble.left", value: 3) {
-                NavigationStack {
-                    MessagesListView()
-                }
-            }
-
-            Tab("Profil", systemImage: "person.crop.circle", value: 4) {
-                NavigationStack {
-                    ProfileView()
-                }
-            }
+            // Custom tab bar
+            CustomTabBar(selectedTab: $selectedTab)
         }
-        .tint(.primary600)
+        .ignoresSafeArea(.keyboard)
         .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
             selectedTab = 2
             homeNavPath = NavigationPath()

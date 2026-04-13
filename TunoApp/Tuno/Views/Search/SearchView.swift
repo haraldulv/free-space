@@ -30,6 +30,7 @@ struct SearchView: View {
     @State private var selectedAmenities: Set<AmenityType> = []
     @State private var showAmenityFilter = false
     @State private var hasInitialLocation = false
+    @State private var instantOnly = false
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -89,9 +90,9 @@ struct SearchView: View {
                     searchLng = loc.longitude
                     searchZoom = 12
                     hasInitialLocation = true
-                    await listingService.search(vehicleType: selectedVehicle, lat: loc.latitude, lng: loc.longitude, radiusKm: 30)
+                    await listingService.search(vehicleType: selectedVehicle, lat: loc.latitude, lng: loc.longitude, radiusKm: 30, instantOnly: instantOnly)
                 } else {
-                    await listingService.search(vehicleType: selectedVehicle)
+                    await listingService.search(vehicleType: selectedVehicle, instantOnly: instantOnly)
                 }
             }
             .onReceive(locationManager.$userLocation) { newLoc in
@@ -213,7 +214,7 @@ struct SearchView: View {
             // Vehicle chips + filter button
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(VehicleType.allCases, id: \.self) { type in
+                    ForEach([VehicleType.motorhome, .car], id: \.self) { type in
                         FilterChip(
                             label: type.displayName,
                             icon: type.icon,
@@ -230,6 +231,29 @@ struct SearchView: View {
                         .fill(Color.neutral200)
                         .frame(width: 1, height: 20)
                         .padding(.horizontal, 2)
+
+                    // Instant booking toggle
+                    Button {
+                        hideKeyboard()
+                        instantOnly.toggle()
+                        performSearch()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 11))
+                            Text("Direkte")
+                                .font(.system(size: 12, weight: .medium))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 7)
+                        .background(instantOnly ? Color.primary600 : .white)
+                        .foregroundStyle(instantOnly ? .white : .neutral700)
+                        .clipShape(Capsule())
+                        .overlay(
+                            Capsule()
+                                .stroke(instantOnly ? Color.clear : Color.neutral200, lineWidth: 1)
+                        )
+                    }
 
                     // Amenity filter button
                     Button {
@@ -471,7 +495,8 @@ struct SearchView: View {
                 radiusKm: searchLat != nil ? 30 : 20,
                 checkIn: checkIn.map { df.string(from: $0) },
                 checkOut: checkOut.map { df.string(from: $0) },
-                amenities: selectedAmenities.isEmpty ? nil : selectedAmenities
+                amenities: selectedAmenities.isEmpty ? nil : selectedAmenities,
+                instantOnly: instantOnly
             )
         }
     }
@@ -504,7 +529,8 @@ struct SearchView: View {
                     radiusKm: 30,
                     checkIn: checkIn.map { df.string(from: $0) },
                     checkOut: checkOut.map { df.string(from: $0) },
-                    amenities: selectedAmenities.isEmpty ? nil : selectedAmenities
+                    amenities: selectedAmenities.isEmpty ? nil : selectedAmenities,
+                    instantOnly: instantOnly
                 )
                 if !showMap {
                     withAnimation { showMap = true }
@@ -524,7 +550,8 @@ struct SearchView: View {
                 radiusKm: radius,
                 checkIn: checkIn.map { df.string(from: $0) },
                 checkOut: checkOut.map { df.string(from: $0) },
-                amenities: selectedAmenities.isEmpty ? nil : selectedAmenities
+                amenities: selectedAmenities.isEmpty ? nil : selectedAmenities,
+                instantOnly: instantOnly
             )
         }
     }
