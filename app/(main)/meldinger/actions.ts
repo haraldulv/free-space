@@ -1,6 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
+import { sendPushToUser } from "@/lib/push";
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -98,6 +99,14 @@ export async function sendMessageAction(data: {
     if (notifError) {
       console.error("Notification insert error:", notifError.message, "recipientId:", recipientId);
     }
+
+    // Send push notification to recipient's device
+    const senderName = profile?.full_name || "Noen";
+    await sendPushToUser(
+      recipientId,
+      "Ny melding",
+      `${senderName}: ${data.content.slice(0, 100)}`,
+    );
 
     return {};
   } catch (err) {

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct CustomTabBar: View {
     @Binding var selectedTab: Int
+    var unreadMessages: Int = 0
 
     private let tabs: [(index: Int, icon: String, label: String)] = [
         (0, "magnifyingglass", "Utforsk"),
@@ -25,9 +26,23 @@ struct CustomTabBar: View {
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 24, height: 24)
                         } else {
-                            Image(systemName: tab.icon)
-                                .font(.system(size: 20))
-                                .frame(height: 22)
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: tab.icon)
+                                    .font(.system(size: 20))
+                                    .frame(height: 22)
+
+                                // Badge for Meldinger tab
+                                if tab.index == 3 && unreadMessages > 0 {
+                                    Text(unreadMessages > 99 ? "99+" : "\(unreadMessages)")
+                                        .font(.system(size: 10, weight: .bold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 4)
+                                        .frame(minWidth: 16, minHeight: 16)
+                                        .background(Color.red)
+                                        .clipShape(Capsule())
+                                        .offset(x: 10, y: -6)
+                                }
+                            }
                         }
                         Text(tab.label)
                             .font(.system(size: 10))

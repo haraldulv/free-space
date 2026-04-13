@@ -45,5 +45,14 @@ class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCen
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
         completionHandler([.banner, .badge, .sound])
+
+        // Notify the app to refresh unread counts
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .newPushNotification, object: nil)
+        }
     }
+}
+
+extension Notification.Name {
+    static let newPushNotification = Notification.Name("newPushNotification")
 }
