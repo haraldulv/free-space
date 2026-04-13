@@ -8,7 +8,8 @@ class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCen
 
     func requestPermission() {
         UNUserNotificationCenter.current().delegate = self
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, _ in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            print("[Push] Permission granted: \(granted), error: \(error?.localizedDescription ?? "none")")
             if granted {
                 DispatchQueue.main.async {
                     UIApplication.shared.registerForRemoteNotifications()
@@ -19,13 +20,20 @@ class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCen
 
     func handleToken(_ deviceToken: Data) {
         let token = deviceToken.map { String(format: "%02.2hhx", $0) }.joined()
+        print("[Push] Got device token: \(token.prefix(12))...")
         self.deviceToken = token
         Task { await registerToken(token) }
     }
 
     func registerToken(_ token: String) async {
-        guard let accessToken = try? await supabase.auth.session.accessToken else { return }
-        guard let url = URL(string: "\(AppConfig.siteURL)/api/push/register") else { return }
+        guard let accessToken = try? await supabase.auth.session.accessToken else {
+            print("[Push] No auth session — cannot register token")
+            return
+        }
+        guard let url = URL(string: "\(AppConfig.siteURL)/api/push/register") else {
+            print("[Push] Invalid URL")
+            return
+        }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -36,7 +44,14 @@ class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCen
             "platform": "ios",
         ])
 
-        _ = try? await URLSession.shared.data(for: request)
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            let body = String(data: data, encoding: .utf8) ?? ""
+            print("[Push] Register response: \(status) — \(body)")
+        } catch {
+            print("[Push] Register failed: \(error.localizedDescription)")
+        }
     }
 
     nonisolated func userNotificationCenter(

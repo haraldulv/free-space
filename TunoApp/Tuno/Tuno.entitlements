@@ -15,5 +15,7 @@
 	<array>
 		<string>merchant.no.tuno.app</string>
 	</array>
+	<key>aps-environment</key>
+	<string>development</string>
 </dict>
 </plist>
