@@ -88,7 +88,11 @@ export async function sendPushNotification(
     .select("token")
     .eq("user_id", userId);
 
-  if (!tokens || tokens.length === 0) return;
+  if (!tokens || tokens.length === 0) {
+    console.log(`[Push] No device tokens found for user ${userId.slice(0, 8)}...`);
+    return;
+  }
+  console.log(`[Push] Found ${tokens.length} device token(s) for user ${userId.slice(0, 8)}...`);
 
   const payload = {
     aps: {
@@ -104,8 +108,9 @@ export async function sendPushNotification(
 
 export async function sendPushToUser(userId: string, title: string, body: string) {
   try {
+    console.log(`[Push] Sending to user ${userId.slice(0, 8)}...: "${title}" — "${body.slice(0, 50)}"`);
     await sendPushNotification(userId, title, body);
-  } catch {
-    // Push errors should not block other operations
+  } catch (err) {
+    console.error("[Push] sendPushToUser error:", err);
   }
 }

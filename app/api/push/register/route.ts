@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Token påkrevd" }, { status: 400 });
     }
 
-    await supabase
+    const { error: upsertError } = await supabase
       .from("device_tokens")
       .upsert({
         user_id: user.id,
@@ -32,6 +32,12 @@ export async function POST(request: NextRequest) {
         updated_at: new Date().toISOString(),
       }, { onConflict: "token" });
 
+    if (upsertError) {
+      console.error("[Push Register] Upsert error:", upsertError.message);
+      return NextResponse.json({ error: upsertError.message }, { status: 500 });
+    }
+
+    console.log(`[Push Register] Token registered for user ${user.id.slice(0, 8)}...: ${token.slice(0, 12)}...`);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return NextResponse.json(
