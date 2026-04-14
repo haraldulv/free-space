@@ -347,13 +347,14 @@ function ChatLink({ booking, variant }: { booking: Booking; variant: "guest" | "
 
   // Fallback: bare gjest-variant kan opprette on-demand (serveren sjekker host_id)
   if (variant !== "guest" || !booking.hostId) return null;
+  const hostId = booking.hostId;
 
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
     setOpening(true);
     const result = await getOrCreateConversationAction({
       listingId: booking.listingId,
-      hostId: booking.hostId,
+      hostId,
     });
     setOpening(false);
     if (result.conversationId) {
