@@ -9,16 +9,18 @@ import BasicInfoStep from "@/components/features/listing-form/steps/BasicInfoSte
 import LocationStep from "@/components/features/listing-form/steps/LocationStep";
 import ImageUploadStep from "@/components/features/listing-form/steps/ImageUploadStep";
 import AmenitiesStep from "@/components/features/listing-form/steps/AmenitiesStep";
+import ExtrasStep from "@/components/features/listing-form/steps/ExtrasStep";
 import AvailabilityEditor from "@/components/features/listing-form/AvailabilityEditor";
 import Button from "@/components/ui/Button";
 import type { CreateListingData } from "@/lib/supabase/listings";
-import type { Listing, Amenity, SpotMarker } from "@/types";
+import type { Listing, Amenity, SpotMarker, ListingExtra } from "@/types";
 
 const TABS = [
   { id: "info", label: "Detaljer", icon: FileText },
   { id: "location", label: "Lokasjon", icon: MapPin },
   { id: "images", label: "Bilder", icon: ImageIcon },
   { id: "amenities", label: "Fasiliteter", icon: Sparkles },
+  { id: "extras", label: "Felles tillegg", icon: Sparkles },
   { id: "availability", label: "Tilgjengelighet", icon: CalendarDays },
 ] as const;
 
@@ -80,6 +82,7 @@ export default function EditListingPage() {
         checkInTime: row.check_in_time || "15:00",
         checkOutTime: row.check_out_time || "11:00",
         checkinMessage: row.checkin_message || "",
+        extras: row.extras || [],
         perSpotPricing: Array.isArray(row.spot_markers) && (row.spot_markers as SpotMarker[]).some((s) => s.price != null),
         perSpotCheckinMessage: Array.isArray(row.spot_markers) && (row.spot_markers as SpotMarker[]).some((s) => s.checkinMessage),
       });
@@ -231,6 +234,14 @@ export default function EditListingPage() {
             category={formData.category}
             selected={(formData.amenities || []) as Amenity[]}
             onChange={(amenities) => updateField("amenities", amenities)}
+          />
+        )}
+
+        {tab === "extras" && formData.category && (
+          <ExtrasStep
+            category={formData.category}
+            extras={(formData.extras || []) as ListingExtra[]}
+            onChange={(extras) => updateField("extras", extras)}
           />
         )}
 
