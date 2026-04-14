@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Loader2, FileText, MapPin, Image as ImageIcon, Sparkles, Banknote, CalendarDays } from "lucide-react";
+import { Loader2, FileText, MapPin, Image as ImageIcon, Sparkles, CalendarDays } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { updateListingAction, updateBlockedDatesAction } from "../../actions";
 import BasicInfoStep from "@/components/features/listing-form/steps/BasicInfoStep";
 import LocationStep from "@/components/features/listing-form/steps/LocationStep";
 import ImageUploadStep from "@/components/features/listing-form/steps/ImageUploadStep";
 import AmenitiesStep from "@/components/features/listing-form/steps/AmenitiesStep";
-import PricingStep from "@/components/features/listing-form/steps/PricingStep";
 import AvailabilityEditor from "@/components/features/listing-form/AvailabilityEditor";
 import Button from "@/components/ui/Button";
 import type { CreateListingData } from "@/lib/supabase/listings";
@@ -20,7 +19,6 @@ const TABS = [
   { id: "location", label: "Lokasjon", icon: MapPin },
   { id: "images", label: "Bilder", icon: ImageIcon },
   { id: "amenities", label: "Fasiliteter", icon: Sparkles },
-  { id: "pricing", label: "Pris", icon: Banknote },
   { id: "availability", label: "Tilgjengelighet", icon: CalendarDays },
 ] as const;
 
@@ -81,6 +79,7 @@ export default function EditListingPage() {
         hideExactLocation: row.hide_exact_location || false,
         checkInTime: row.check_in_time || "15:00",
         checkOutTime: row.check_out_time || "11:00",
+        perSpotPricing: Array.isArray(row.spot_markers) && (row.spot_markers as SpotMarker[]).some((s) => s.price != null),
       });
       setBlockedDates(row.blocked_dates || []);
       setLoading(false);
@@ -189,6 +188,7 @@ export default function EditListingPage() {
             category={formData.category}
             checkInTime={formData.checkInTime}
             checkOutTime={formData.checkOutTime}
+            instantBooking={formData.instantBooking ?? false}
             onChange={updateField}
             errors={errors}
           />
@@ -204,6 +204,10 @@ export default function EditListingPage() {
             spotMarkers={(formData.spotMarkers || []) as SpotMarker[]}
             hideExactLocation={formData.hideExactLocation || false}
             spots={formData.spots || 1}
+            category={formData.category || "camping"}
+            defaultPrice={formData.price || 0}
+            perSpotPricing={formData.perSpotPricing || false}
+            priceUnit={formData.priceUnit || "natt"}
             onChange={updateField}
             errors={errors}
           />
@@ -223,16 +227,6 @@ export default function EditListingPage() {
             category={formData.category}
             selected={(formData.amenities || []) as Amenity[]}
             onChange={(amenities) => updateField("amenities", amenities)}
-          />
-        )}
-
-        {tab === "pricing" && (
-          <PricingStep
-            price={formData.price || 0}
-            priceUnit={formData.priceUnit || "time"}
-            instantBooking={formData.instantBooking || false}
-            onChange={updateField}
-            errors={errors}
           />
         )}
 

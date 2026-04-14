@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { MapPin, Users, Clock } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
 import { getListingById, getAllListingIds } from "@/lib/supabase/listings";
 import { getListingReviews } from "@/lib/supabase/reviews";
 import Container from "@/components/ui/Container";
@@ -26,6 +27,10 @@ export default async function ListingPage({
     getListingReviews(id),
   ]);
   if (!listing) notFound();
+
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  const isOwner = user?.id === listing.host.id;
 
   return (
     <Container className="py-8">
@@ -118,7 +123,13 @@ export default async function ListingPage({
         </div>
 
         <div className="lg:col-span-1">
-          <BookingForm listing={listing} />
+          {isOwner ? (
+            <div className="lg:sticky lg:top-24 rounded-xl border border-neutral-200 bg-neutral-50 p-6 text-sm text-neutral-600">
+              Dette er din egen annonse. Bruk "Mine annonser" for å redigere den.
+            </div>
+          ) : (
+            <BookingForm listing={listing} />
+          )}
         </div>
       </div>
     </Container>

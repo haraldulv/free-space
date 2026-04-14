@@ -3,11 +3,14 @@ import PhotosUI
 import GoogleMaps
 
 struct CreateListingView: View {
+    var onCreated: ((Listing) -> Void)? = nil
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var form = ListingFormModel()
     @StateObject private var placesService = PlacesService()
     @Environment(\.dismiss) private var dismiss
     @State private var showSuccess = false
+    @State private var showBackAlert = false
+    @State private var keyboardVisible = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,14 +42,14 @@ struct CreateListingView: View {
                 ImageUploadStepView(form: form).tag(3)
                 AmenitiesStepView(form: form).tag(4)
                 ExtrasStepView(form: form).tag(5)
-                PricingStepView(form: form).tag(6)
-                AvailabilityStepView(form: form).tag(7)
-                ReviewStepView(form: form).tag(8)
+                AvailabilityStepView(form: form).tag(6)
+                ReviewStepView(form: form).tag(7)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut(duration: 0.3), value: form.currentStep)
 
-            // Navigation buttons
+            // Navigation buttons — skjult når tastaturet er oppe, siden "Ferdig" i keyboard-toolbar tar den plassen
+            if !keyboardVisible {
             HStack(spacing: 12) {
                 if form.currentStep > 0 {
                     Button {
@@ -93,13 +96,38 @@ struct CreateListingView: View {
             }
             .padding(.horizontal)
             .padding(.bottom, 8)
+            } // end if !keyboardVisible
         }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardVisible = false }
         .navigationTitle("Ny annonse")
         .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Avbryt") { dismiss() }
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    showBackAlert = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.left")
+                        Text("Avbryt")
+                    }
+                    .foregroundStyle(Color.primary600)
+                }
             }
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Ferdig") {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+                .fontWeight(.semibold)
+            }
+        }
+        .alert("Forkast ny annonse?", isPresented: $showBackAlert) {
+            Button("Forkast", role: .destructive) { dismiss() }
+            Button("Fortsett å redigere", role: .cancel) {}
+        } message: {
+            Text("Du mister alt du har skrevet inn.")
         }
         .alert("Annonse opprettet!", isPresented: $showSuccess) {
             Button("Flott") { dismiss() }
@@ -116,14 +144,19 @@ struct CreateListingView: View {
         Task {
             do {
                 let input = form.buildInput(hostId: userId.uuidString.lowercased(), profile: authManager.profile)
-                try await supabase
+                let inserted: [Listing] = try await supabase
                     .from("listings")
                     .insert(input)
+                    .select()
                     .execute()
+                    .value
 
                 // Reload profile to update isHost if needed
                 await authManager.loadProfile()
                 form.isSubmitting = false
+                if let newListing = inserted.first {
+                    onCreated?(newListing)
+                }
                 showSuccess = true
             } catch {
                 form.error = "Kunne ikke opprette annonse: \(error.localizedDescription)"
@@ -171,14 +204,14 @@ struct CategoryStepView: View {
                 // Category cards
                 HStack(spacing: 12) {
                     categoryCard(
-                        category: .parking,
-                        icon: "car.fill",
-                        title: "Parkering"
-                    )
-                    categoryCard(
                         category: .camping,
                         icon: "tent.fill",
                         title: "Camping / Bobil"
+                    )
+                    categoryCard(
+                        category: .parking,
+                        icon: "car.fill",
+                        title: "Parkering"
                     )
                 }
 
@@ -319,6 +352,17 @@ struct BasicInfoStepView: View {
                             .keyboardType(.numbersAndPunctuation)
                     }
                 }
+
+                Toggle(isOn: $form.instantBooking) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Umiddelbar booking")
+                            .font(.system(size: 15, weight: .medium))
+                        Text("Gjester kan reservere uten å vente på bekreftelse fra deg.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.neutral500)
+                    }
+                }
+                .tint(.primary600)
             }
             .padding()
         }
@@ -452,39 +496,22 @@ struct LocationStepView: View {
                         .frame(height: 300)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                        // Spot markers list
-                        if !form.spotMarkers.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 8) {
-                                    ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { index, _ in
-                                        HStack(spacing: 6) {
-                                            Circle()
-                                                .fill(Color.primary600)
-                                                .frame(width: 22, height: 22)
-                                                .overlay(
-                                                    Text("\(index + 1)")
-                                                        .font(.system(size: 11, weight: .bold))
-                                                        .foregroundStyle(.white)
-                                                )
-                                            Text("Plass \(index + 1)")
-                                                .font(.system(size: 13, weight: .medium))
-                                            Button {
-                                                form.spotMarkers.remove(at: index)
-                                                mapUpdateTrigger = UUID()
-                                            } label: {
-                                                Image(systemName: "xmark")
-                                                    .font(.system(size: 10, weight: .bold))
-                                                    .foregroundStyle(.neutral400)
-                                            }
-                                        }
-                                        .padding(.horizontal, 10)
-                                        .padding(.vertical, 6)
-                                        .background(Color.neutral50)
-                                        .clipShape(Capsule())
-                                        .overlay(Capsule().stroke(Color.neutral200))
-                                    }
-                                }
-                            }
+                    }
+                }
+
+                // Pris-seksjon — settes sammen med plassene
+                if form.lat != 0 || form.lng != 0 {
+                    pricingSection
+                }
+
+                // Utbrettede plass-editors
+                if !form.spotMarkers.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Plasser (\(form.spotMarkers.count))")
+                            .font(.system(size: 18, weight: .semibold))
+
+                        ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { index, _ in
+                            inlineSpotCard(index: index)
                         }
                     }
                 }
@@ -502,6 +529,324 @@ struct LocationStepView: View {
                 .tint(.primary600)
             }
             .padding()
+        }
+    }
+
+    // MARK: - Pricing section
+
+    private var pricingSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Pris")
+                .font(.system(size: 18, weight: .semibold))
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(form.perSpotPricing ? "Standardpris per natt" : "Pris per natt")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.neutral600)
+                HStack(spacing: 8) {
+                    TextField("F.eks. 150", text: $form.price)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
+                    Text("kr")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.neutral500)
+                }
+                if form.perSpotPricing {
+                    Text("Brukes som standard hvis en plass ikke har egen pris.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                pricingModeRow(
+                    title: "Samme pris for alle plasser",
+                    subtitle: "Enkelt: alle plasser koster det samme.",
+                    isSelected: !form.perSpotPricing,
+                    onSelect: { setPerSpotPricing(false) }
+                )
+                pricingModeRow(
+                    title: "Individuell pris per plass",
+                    subtitle: "Sett ulik pris for ulike plasser (f.eks. sjøutsikt vs bakrekke).",
+                    isSelected: form.perSpotPricing,
+                    onSelect: { setPerSpotPricing(true) }
+                )
+            }
+        }
+    }
+
+    private func pricingModeRow(title: String, subtitle: String, isSelected: Bool, onSelect: @escaping () -> Void) -> some View {
+        Button(action: onSelect) {
+            HStack(spacing: 12) {
+                ZStack {
+                    Circle()
+                        .stroke(isSelected ? Color.primary600 : Color.neutral300, lineWidth: 2)
+                        .frame(width: 20, height: 20)
+                    if isSelected {
+                        Circle().fill(Color.primary600).frame(width: 10, height: 10)
+                    }
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.neutral900)
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+            }
+            .padding(12)
+            .background(isSelected ? Color.primary50 : Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10)
+                .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 2 : 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func setPerSpotPricing(_ enabled: Bool) {
+        form.perSpotPricing = enabled
+        let defaultPrice = Int(form.price)
+        if enabled {
+            // Pre-fyll alle spots med listing.price om de ikke har egen
+            for i in form.spotMarkers.indices where form.spotMarkers[i].price == nil {
+                form.spotMarkers[i].price = defaultPrice
+            }
+        } else {
+            // Clear alle individuelle priser — fall tilbake til listing.price
+            for i in form.spotMarkers.indices {
+                form.spotMarkers[i].price = nil
+            }
+        }
+    }
+
+    // MARK: - Inline spot card
+
+    private func inlineSpotCard(index: Int) -> some View {
+        let spot = form.spotMarkers[index]
+        let spotId = spot.id ?? ""
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(Color.primary600)
+                    .frame(width: 28, height: 28)
+                    .overlay(Text("\(index + 1)").font(.system(size: 13, weight: .bold)).foregroundStyle(.white))
+                TextField("Navn på plassen", text: Binding(
+                    get: { form.spotMarkers[index].label ?? "" },
+                    set: { form.spotMarkers[index].label = $0.isEmpty ? nil : $0 }
+                ))
+                .textFieldStyle(.roundedBorder)
+                Button {
+                    form.spotMarkers.remove(at: index)
+                    mapUpdateTrigger = UUID()
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+            }
+
+            if form.perSpotPricing {
+                HStack(spacing: 8) {
+                    Text("Pris")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.neutral600)
+                        .frame(width: 60, alignment: .leading)
+                    TextField("", value: Binding(
+                        get: { form.spotMarkers[index].price ?? Int(form.price) ?? 0 },
+                        set: { form.spotMarkers[index].price = max(0, $0) }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.numberPad)
+                    .frame(width: 100)
+                    Text("kr/natt")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                    Spacer()
+                }
+            }
+
+            let siteSpecific = ExtraType.available(for: form.category ?? .camping, scope: .siteSpecific)
+            if !siteSpecific.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Tillegg på denne plassen")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.neutral700)
+                    ForEach(siteSpecific, id: \.rawValue) { preset in
+                        siteExtraToggleRow(preset: preset, spotIndex: index)
+                    }
+                }
+            }
+
+            customSpotExtrasSection(spotIndex: index, spotId: spotId)
+
+            SpotBlockedDatesSection(
+                spotId: spotId,
+                blockedDates: Binding(
+                    get: { form.spotMarkers[index].blockedDates ?? [] },
+                    set: { form.spotMarkers[index].blockedDates = $0.isEmpty ? nil : $0 }
+                )
+            )
+        }
+        .padding(14)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+    }
+
+    private func siteExtraToggleRow(preset: ExtraType, spotIndex: Int) -> some View {
+        let current = form.spotMarkers[spotIndex].extras ?? []
+        let isSelected = current.contains(where: { $0.id == preset.rawValue })
+
+        return VStack(spacing: 0) {
+            Button {
+                var extras = form.spotMarkers[spotIndex].extras ?? []
+                if let idx = extras.firstIndex(where: { $0.id == preset.rawValue }) {
+                    extras.remove(at: idx)
+                } else {
+                    extras.append(ListingExtra(
+                        id: preset.rawValue,
+                        name: preset.name,
+                        price: preset.defaultPrice,
+                        perNight: preset.perNight
+                    ))
+                }
+                form.spotMarkers[spotIndex].extras = extras.isEmpty ? nil : extras
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: preset.icon)
+                        .foregroundStyle(isSelected ? Color.primary600 : Color.neutral400)
+                        .frame(width: 20)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(preset.name).font(.system(size: 13, weight: isSelected ? .medium : .regular))
+                            .foregroundStyle(.neutral900)
+                        Text(preset.perNight ? "per natt" : "engangspris")
+                            .font(.system(size: 10)).foregroundStyle(.neutral400)
+                    }
+                    Spacer()
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(isSelected ? Color.primary600 : Color.neutral300, lineWidth: 2)
+                            .frame(width: 18, height: 18)
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 4).fill(Color.primary600).frame(width: 18, height: 18)
+                            Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)).foregroundStyle(.white)
+                        }
+                    }
+                }
+                .padding(.horizontal, 10).padding(.vertical, 8)
+            }
+            .buttonStyle(.plain)
+
+            if isSelected,
+               let extras = form.spotMarkers[spotIndex].extras,
+               let idx = extras.firstIndex(where: { $0.id == preset.rawValue }) {
+                Divider().padding(.horizontal, 10)
+                HStack(spacing: 8) {
+                    Text("Pris").font(.system(size: 12)).foregroundStyle(.neutral600)
+                    TextField("", value: Binding(
+                        get: { extras[idx].price },
+                        set: { newVal in
+                            var updated = form.spotMarkers[spotIndex].extras ?? []
+                            if let i = updated.firstIndex(where: { $0.id == preset.rawValue }) {
+                                updated[i].price = max(0, newVal)
+                                form.spotMarkers[spotIndex].extras = updated
+                            }
+                        }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.numberPad)
+                    .frame(width: 80)
+                    Text(preset.perNight ? "kr/natt" : "kr").font(.system(size: 11)).foregroundStyle(.neutral400)
+                    Spacer()
+                }
+                .padding(.horizontal, 10).padding(.vertical, 6)
+            }
+        }
+        .background(isSelected ? Color.primary50 : Color.neutral50)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    @State private var customSpotExtraName: [String: String] = [:]
+    @State private var customSpotExtraPrice: [String: String] = [:]
+    @State private var customSpotExtraPerNight: [String: Bool] = [:]
+
+    @ViewBuilder
+    private func customSpotExtrasSection(spotIndex: Int, spotId: String) -> some View {
+        let presetIds = Set(ExtraType.allCases.map { $0.rawValue })
+        let customExtras = (form.spotMarkers[spotIndex].extras ?? []).filter { !presetIds.contains($0.id) }
+
+        VStack(alignment: .leading, spacing: 6) {
+            if !customExtras.isEmpty {
+                ForEach(customExtras) { extra in
+                    HStack(spacing: 8) {
+                        Image(systemName: "sparkles").foregroundStyle(.primary600).font(.system(size: 12))
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(extra.name).font(.system(size: 12, weight: .medium))
+                            Text("\(extra.price) \(extra.perNight ? "kr/natt" : "kr")")
+                                .font(.system(size: 10)).foregroundStyle(.neutral500)
+                        }
+                        Spacer()
+                        Button {
+                            var updated = form.spotMarkers[spotIndex].extras ?? []
+                            updated.removeAll { $0.id == extra.id }
+                            form.spotMarkers[spotIndex].extras = updated.isEmpty ? nil : updated
+                        } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.neutral400)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(8)
+                    .background(Color.primary50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            }
+
+            HStack(spacing: 6) {
+                TextField("Egendefinert tillegg", text: Binding(
+                    get: { customSpotExtraName[spotId] ?? "" },
+                    set: { customSpotExtraName[spotId] = $0 }
+                ))
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 12))
+                TextField("Pris", text: Binding(
+                    get: { customSpotExtraPrice[spotId] ?? "" },
+                    set: { customSpotExtraPrice[spotId] = $0 }
+                ))
+                .textFieldStyle(.roundedBorder)
+                .keyboardType(.numberPad)
+                .frame(width: 60)
+                .font(.system(size: 12))
+                Toggle("", isOn: Binding(
+                    get: { customSpotExtraPerNight[spotId] ?? false },
+                    set: { customSpotExtraPerNight[spotId] = $0 }
+                )).labelsHidden().scaleEffect(0.8)
+                Button {
+                    let name = (customSpotExtraName[spotId] ?? "").trimmingCharacters(in: .whitespaces)
+                    guard !name.isEmpty, let price = Int(customSpotExtraPrice[spotId] ?? ""), price > 0 else { return }
+                    let perNight = customSpotExtraPerNight[spotId] ?? false
+                    var updated = form.spotMarkers[spotIndex].extras ?? []
+                    updated.append(ListingExtra(
+                        id: UUID().uuidString.lowercased(),
+                        name: name, price: price, perNight: perNight
+                    ))
+                    form.spotMarkers[spotIndex].extras = updated
+                    customSpotExtraName[spotId] = ""
+                    customSpotExtraPrice[spotId] = ""
+                    customSpotExtraPerNight[spotId] = false
+                } label: {
+                    Text("+").font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background(Color.primary600)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 
@@ -573,17 +918,8 @@ struct ImageUploadStepView: View {
                     uploadPhotos(newItems)
                 }
 
-                if form.isUploadingImages {
-                    HStack(spacing: 8) {
-                        ProgressView()
-                        Text("Laster opp bilder...")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.neutral500)
-                    }
-                }
-
                 // Image grid
-                if !form.imageURLs.isEmpty {
+                if !form.imageURLs.isEmpty || !form.uploadingPhotos.isEmpty {
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         ForEach(Array(form.imageURLs.enumerated()), id: \.offset) { index, url in
                             ZStack(alignment: .topTrailing) {
@@ -598,7 +934,6 @@ struct ImageUploadStepView: View {
                                 .frame(height: 100)
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                                // Remove button
                                 Button {
                                     form.imageURLs.remove(at: index)
                                 } label: {
@@ -609,7 +944,6 @@ struct ImageUploadStepView: View {
                                 }
                                 .padding(4)
 
-                                // First image label
                                 if index == 0 {
                                     Text("Forsidebilde")
                                         .font(.system(size: 10, weight: .semibold))
@@ -623,6 +957,25 @@ struct ImageUploadStepView: View {
                                 }
                             }
                         }
+
+                        ForEach(form.uploadingPhotos) { photo in
+                            ZStack {
+                                if let uiImage = UIImage(data: photo.data) {
+                                    Image(uiImage: uiImage)
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                        .frame(height: 100)
+                                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                                } else {
+                                    Rectangle().fill(Color.neutral100).frame(height: 100)
+                                }
+                                Rectangle()
+                                    .fill(Color.black.opacity(0.35))
+                                    .frame(height: 100)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                ProgressView().tint(.white)
+                            }
+                        }
                     }
                 }
             }
@@ -632,35 +985,48 @@ struct ImageUploadStepView: View {
 
     private func uploadPhotos(_ items: [PhotosPickerItem]) {
         guard !items.isEmpty else { return }
-        form.isUploadingImages = true
+        form.selectedPhotos = []
 
         Task {
-            guard let userId = try? await supabase.auth.session.user.id.uuidString.lowercased() else {
-                form.isUploadingImages = false
-                return
+            guard let userId = try? await supabase.auth.session.user.id.uuidString.lowercased() else { return }
+
+            // 1) Load data locally, compress (iPhone photos are >5 MB), show previews
+            var pending: [(UploadingPhoto, Data)] = []
+            for item in items {
+                guard let raw = try? await item.loadTransferable(type: Data.self) else { continue }
+                let compressed = ImageCompression.compressForUpload(raw) ?? raw
+                let photo = UploadingPhoto(data: compressed)
+                pending.append((photo, compressed))
+                form.uploadingPhotos.append(photo)
             }
 
-            for item in items {
-                guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+            // 2) Upload in parallel
+            await withTaskGroup(of: (UUID, String?).self) { group in
+                for (photo, data) in pending {
+                    group.addTask {
+                        let fileName = "\(userId)/\(UUID().uuidString.lowercased()).jpg"
+                        do {
+                            try await supabase.storage
+                                .from("listing-images")
+                                .upload(fileName, data: data, options: .init(contentType: "image/jpeg"))
+                            let publicURL = try supabase.storage
+                                .from("listing-images")
+                                .getPublicURL(path: fileName)
+                            return (photo.id, publicURL.absoluteString)
+                        } catch {
+                            print("Image upload failed: \(error)")
+                            return (photo.id, nil)
+                        }
+                    }
+                }
 
-                let fileName = "\(userId)/\(UUID().uuidString.lowercased()).jpg"
-                do {
-                    try await supabase.storage
-                        .from("listing-images")
-                        .upload(fileName, data: data, options: .init(contentType: "image/jpeg"))
-
-                    let publicURL = try supabase.storage
-                        .from("listing-images")
-                        .getPublicURL(path: fileName)
-
-                    form.imageURLs.append(publicURL.absoluteString)
-                } catch {
-                    print("Image upload failed: \(error)")
+                for await (photoId, url) in group {
+                    form.uploadingPhotos.removeAll { $0.id == photoId }
+                    if let url = url {
+                        form.imageURLs.append(url)
+                    }
                 }
             }
-
-            form.selectedPhotos = []
-            form.isUploadingImages = false
         }
     }
 }
@@ -719,18 +1085,21 @@ struct AmenitiesStepView: View {
 
 struct ExtrasStepView: View {
     @ObservedObject var form: ListingFormModel
+    @State private var customName: String = ""
+    @State private var customPrice: String = ""
+    @State private var customPerNight: Bool = false
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-                Text("Tilleggstjenester")
+                Text("Felles tillegg")
                     .font(.system(size: 22, weight: .bold))
 
-                Text("Tilby ekstra tjenester mot betaling. Du bestemmer prisen selv.")
-                    .font(.system(size: 14))
+                Text("Noe som er tilgjengelig for alle gjester, uansett hvilken plass de velger — f.eks. sauna, kajakk eller grillpakke. Plass-spesifikke tillegg (strøm, EV-lading, septik) setter du på hver enkelt plass i Lokasjon-steget.")
+                    .font(.system(size: 13))
                     .foregroundStyle(.neutral500)
 
-                let available = ExtraType.available(for: form.category ?? .camping)
+                let available = ExtraType.available(for: form.category ?? .camping, scope: .areaWide)
 
                 if available.isEmpty {
                     Text("Ingen tilleggstjenester tilgjengelig for denne kategorien")
@@ -819,9 +1188,94 @@ struct ExtrasStepView: View {
                         }
                     }
                 }
+
+                customExtrasSection
             }
             .padding()
         }
+    }
+
+    private var customExtrasSection: some View {
+        let presetIds = Set(ExtraType.allCases.map { $0.rawValue })
+        let customExtras = form.selectedExtras.filter { !presetIds.contains($0.id) }
+
+        return VStack(alignment: .leading, spacing: 12) {
+            Text("Egendefinert tillegg")
+                .font(.system(size: 16, weight: .semibold))
+                .padding(.top, 8)
+
+            Text("Har du noe unikt du vil tilby? Gi det et navn og sett pris.")
+                .font(.system(size: 13))
+                .foregroundStyle(.neutral500)
+
+            ForEach(customExtras) { extra in
+                HStack(spacing: 10) {
+                    Image(systemName: "sparkles")
+                        .foregroundStyle(.primary600)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(extra.name).font(.system(size: 14, weight: .medium))
+                        Text("\(extra.price) \(extra.perNight ? "kr/natt" : "kr")")
+                            .font(.system(size: 12)).foregroundStyle(.neutral500)
+                    }
+                    Spacer()
+                    Button {
+                        form.selectedExtras.removeAll { $0.id == extra.id }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.neutral400)
+                    }
+                }
+                .padding(10)
+                .background(Color.primary50)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            HStack(spacing: 8) {
+                TextField("Navn (f.eks. Vedfyrt badstue)", text: $customName)
+                    .textFieldStyle(.roundedBorder)
+                TextField("Pris", text: $customPrice)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.numberPad)
+                    .frame(width: 80)
+            }
+            HStack {
+                Toggle("Per natt", isOn: $customPerNight).labelsHidden()
+                Text(customPerNight ? "per natt" : "engangspris")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
+                Spacer()
+                Button {
+                    addCustomExtra()
+                } label: {
+                    Text("Legg til")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(canAddCustom ? Color.primary600 : Color.neutral300)
+                        .clipShape(Capsule())
+                }
+                .disabled(!canAddCustom)
+            }
+        }
+    }
+
+    private var canAddCustom: Bool {
+        !customName.trimmingCharacters(in: .whitespaces).isEmpty && Int(customPrice) ?? 0 > 0
+    }
+
+    private func addCustomExtra() {
+        let name = customName.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty, let price = Int(customPrice), price > 0 else { return }
+        form.selectedExtras.append(ListingExtra(
+            id: UUID().uuidString.lowercased(),
+            name: name,
+            price: price,
+            perNight: customPerNight
+        ))
+        customName = ""
+        customPrice = ""
+        customPerNight = false
     }
 
     private func toggleExtra(_ extra: ExtraType) {
@@ -1370,9 +1824,12 @@ struct LocationPickerMapView: UIViewRepresentable {
             if isSpotMode {
                 let count = spotMarkersBinding?.wrappedValue.count ?? 0
                 let newSpot = SpotMarker(
+                    id: UUID().uuidString.lowercased(),
                     lat: coordinate.latitude,
                     lng: coordinate.longitude,
-                    label: "\(count + 1)"
+                    label: "\(count + 1)",
+                    price: nil,
+                    extras: nil
                 )
                 spotMarkersBinding?.wrappedValue.append(newSpot)
             } else {
@@ -1387,12 +1844,381 @@ struct LocationPickerMapView: UIViewRepresentable {
                 lngBinding?.wrappedValue = marker.position.longitude
             } else if let index = spotMarkerMap[marker] {
                 guard let binding = spotMarkersBinding, index < binding.wrappedValue.count else { return }
+                var existing = binding.wrappedValue[index]
                 binding.wrappedValue[index] = SpotMarker(
+                    id: existing.id ?? UUID().uuidString.lowercased(),
                     lat: marker.position.latitude,
                     lng: marker.position.longitude,
-                    label: binding.wrappedValue[index].label
+                    label: existing.label,
+                    price: existing.price,
+                    extras: existing.extras
                 )
             }
+        }
+    }
+}
+
+// MARK: - Blokkerte datoer per plass
+
+struct SpotBlockedDatesSection: View {
+    let spotId: String
+    @Binding var blockedDates: [String]
+    @State private var expanded = false
+    @State private var displayedMonth = Date()
+
+    private let calendar = Calendar.current
+    private let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f
+    }()
+    private let monthFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "nb_NO")
+        f.dateFormat = "MMMM yyyy"
+        return f
+    }()
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation { expanded.toggle() }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "calendar")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                    Text("Blokkerte datoer")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.neutral700)
+                    if !blockedDates.isEmpty {
+                        Text("(\(blockedDates.count))")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color(hex: "#dc2626"))
+                    }
+                    Spacer()
+                    Image(systemName: expanded ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral400)
+                }
+            }
+            .buttonStyle(.plain)
+
+            if expanded {
+                HStack {
+                    Button { moveMonth(-1) } label: {
+                        Image(systemName: "chevron.left").foregroundStyle(.neutral600)
+                    }
+                    Spacer()
+                    Text(monthFormatter.string(from: displayedMonth).capitalized)
+                        .font(.system(size: 14, weight: .semibold))
+                    Spacer()
+                    Button { moveMonth(1) } label: {
+                        Image(systemName: "chevron.right").foregroundStyle(.neutral600)
+                    }
+                }
+
+                let weekdays = ["Ma", "Ti", "On", "To", "Fr", "Lo", "So"]
+                HStack(spacing: 0) {
+                    ForEach(weekdays, id: \.self) { day in
+                        Text(day)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.neutral500)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+
+                let days = daysInMonth()
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 2) {
+                    ForEach(Array(days.enumerated()), id: \.offset) { _, day in
+                        if let day {
+                            let dateStr = dateFormatter.string(from: day)
+                            let isBlocked = blockedDates.contains(dateStr)
+                            let isPast = day < calendar.startOfDay(for: Date())
+                            Button {
+                                guard !isPast else { return }
+                                if isBlocked {
+                                    blockedDates.removeAll { $0 == dateStr }
+                                } else {
+                                    blockedDates.append(dateStr)
+                                }
+                            } label: {
+                                Text("\(calendar.component(.day, from: day))")
+                                    .font(.system(size: 12, weight: isBlocked ? .bold : .regular))
+                                    .foregroundStyle(isPast ? Color.neutral300 : isBlocked ? Color(hex: "#dc2626") : Color.neutral800)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 30)
+                                    .background(isBlocked ? Color(hex: "#fee2e2") : Color.clear)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                            }
+                            .disabled(isPast)
+                        } else {
+                            Color.clear.frame(height: 30)
+                        }
+                    }
+                }
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    private func moveMonth(_ delta: Int) {
+        if let newMonth = calendar.date(byAdding: .month, value: delta, to: displayedMonth) {
+            displayedMonth = newMonth
+        }
+    }
+
+    private func daysInMonth() -> [Date?] {
+        let comps = calendar.dateComponents([.year, .month], from: displayedMonth)
+        guard let firstDay = calendar.date(from: comps),
+              let range = calendar.range(of: .day, in: .month, for: firstDay) else { return [] }
+        var weekday = calendar.component(.weekday, from: firstDay)
+        weekday = weekday == 1 ? 7 : weekday - 1
+        var days: [Date?] = Array(repeating: nil, count: weekday - 1)
+        for day in range {
+            if let date = calendar.date(byAdding: .day, value: day - 1, to: firstDay) {
+                days.append(date)
+            }
+        }
+        return days
+    }
+}
+
+// MARK: - SpotEditor (inline — lives here fordi Xcode-target ikke auto-inkluderer nye filer)
+
+struct IndexWrapper: Identifiable, Hashable {
+    let id: Int
+}
+
+extension Array {
+    subscript(safe index: Int) -> Element? {
+        indices.contains(index) ? self[index] : nil
+    }
+}
+
+struct SpotEditorSheet: View {
+    @Binding var spot: SpotMarker
+    let category: ListingCategory
+    let defaultPrice: Int?
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var label: String = ""
+    @State private var priceText: String = ""
+    @State private var extras: [ListingExtra] = []
+    @State private var customName: String = ""
+    @State private var customPrice: String = ""
+    @State private var customPerNight: Bool = false
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 20) {
+                    spotEditorField("Navn / label") {
+                        TextField("F.eks. Plass 1", text: $label)
+                            .textFieldStyle(.roundedBorder)
+                    }
+
+                    spotEditorField("Pris per natt (valgfritt)") {
+                        HStack(spacing: 8) {
+                            TextField(defaultPriceHint, text: $priceText)
+                                .textFieldStyle(.roundedBorder)
+                                .keyboardType(.numberPad)
+                            Text("kr")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.neutral500)
+                        }
+                        Text("La stå tomt for å bruke annonsens standardpris.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral500)
+                    }
+
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Tilgjengelig på denne plassen")
+                            .font(.system(size: 15, weight: .semibold))
+
+                        ForEach(ExtraType.available(for: category), id: \.rawValue) { preset in
+                            spotEditorExtraToggleRow(preset)
+                        }
+
+                        spotEditorCustomExtrasSection
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Rediger plass")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Avbryt") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Lagre") {
+                        commit()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                }
+            }
+            .onAppear(perform: populate)
+        }
+    }
+
+    private var defaultPriceHint: String {
+        if let dp = defaultPrice { return "\(dp) (standard)" }
+        return "F.eks. 200"
+    }
+
+    @ViewBuilder
+    private func spotEditorField<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.neutral600)
+            content()
+        }
+    }
+
+    private func spotEditorExtraToggleRow(_ preset: ExtraType) -> some View {
+        let isSelected = extras.contains(where: { $0.id == preset.rawValue })
+
+        return VStack(spacing: 0) {
+            Button {
+                if let idx = extras.firstIndex(where: { $0.id == preset.rawValue }) {
+                    extras.remove(at: idx)
+                } else {
+                    extras.append(ListingExtra(
+                        id: preset.rawValue,
+                        name: preset.name,
+                        price: preset.defaultPrice,
+                        perNight: preset.perNight
+                    ))
+                }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: preset.icon)
+                        .foregroundStyle(isSelected ? Color.primary600 : Color.neutral400)
+                        .frame(width: 22)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(preset.name).font(.system(size: 14, weight: isSelected ? .medium : .regular))
+                        Text(preset.perNight ? "per natt" : "engangspris")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.neutral400)
+                    }
+                    Spacer()
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(isSelected ? Color.primary600 : Color.neutral300, lineWidth: 2)
+                            .frame(width: 20, height: 20)
+                        if isSelected {
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color.primary600).frame(width: 20, height: 20)
+                            Image(systemName: "checkmark").font(.system(size: 10, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+            }
+
+            if isSelected, let currentIdx = extras.firstIndex(where: { $0.id == preset.rawValue }) {
+                Divider().padding(.horizontal, 12)
+                HStack(spacing: 10) {
+                    Text("Pris").font(.system(size: 13)).foregroundStyle(.neutral600)
+                    TextField("", value: Binding(
+                        get: { extras[currentIdx].price },
+                        set: { newVal in extras[currentIdx].price = max(0, newVal) }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.numberPad)
+                    .frame(width: 80)
+                    Text(preset.perNight ? "kr/natt" : "kr")
+                        .font(.system(size: 12)).foregroundStyle(.neutral400)
+                    Spacer()
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+        }
+        .background(isSelected ? Color.primary50 : Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10)
+            .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 2 : 1))
+    }
+
+    private var spotEditorCustomExtrasSection: some View {
+        let presetIds = Set(ExtraType.allCases.map { $0.rawValue })
+        let customExtras = extras.filter { !presetIds.contains($0.id) }
+
+        return VStack(alignment: .leading, spacing: 8) {
+            if !customExtras.isEmpty {
+                ForEach(customExtras) { extra in
+                    HStack(spacing: 10) {
+                        Image(systemName: "sparkles").foregroundStyle(.primary600)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(extra.name).font(.system(size: 13, weight: .medium))
+                            Text("\(extra.price) \(extra.perNight ? "kr/natt" : "kr")")
+                                .font(.system(size: 11)).foregroundStyle(.neutral500)
+                        }
+                        Spacer()
+                        Button {
+                            extras.removeAll { $0.id == extra.id }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.neutral400)
+                        }
+                    }
+                    .padding(10)
+                    .background(Color.primary50)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+            }
+
+            HStack(spacing: 6) {
+                TextField("Egendefinert navn", text: $customName)
+                    .textFieldStyle(.roundedBorder)
+                TextField("Pris", text: $customPrice)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.numberPad)
+                    .frame(width: 70)
+            }
+            HStack {
+                Toggle("Per natt", isOn: $customPerNight).labelsHidden()
+                Text(customPerNight ? "per natt" : "engangspris")
+                    .font(.system(size: 12)).foregroundStyle(.neutral500)
+                Spacer()
+                Button {
+                    let name = customName.trimmingCharacters(in: .whitespaces)
+                    guard !name.isEmpty, let price = Int(customPrice), price > 0 else { return }
+                    extras.append(ListingExtra(
+                        id: UUID().uuidString.lowercased(),
+                        name: name, price: price, perNight: customPerNight
+                    ))
+                    customName = ""
+                    customPrice = ""
+                    customPerNight = false
+                } label: {
+                    Text("Legg til")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12).padding(.vertical, 6)
+                        .background(Color.primary600).clipShape(Capsule())
+                }
+            }
+        }
+    }
+
+    private func populate() {
+        label = spot.label ?? ""
+        priceText = spot.price.map { "\($0)" } ?? ""
+        extras = spot.extras ?? []
+    }
+
+    private func commit() {
+        spot.label = label.isEmpty ? nil : label
+        spot.price = Int(priceText)
+        spot.extras = extras.isEmpty ? nil : extras
+        if spot.id == nil {
+            spot.id = UUID().uuidString.lowercased()
         }
     }
 }

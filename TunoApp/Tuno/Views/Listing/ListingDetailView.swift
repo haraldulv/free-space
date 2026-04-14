@@ -222,7 +222,7 @@ struct ListingDetailView: View {
                     HStack {
                         VStack(alignment: .leading, spacing: 2) {
                             HStack(spacing: 4) {
-                                Text("\(listing.price ?? 0) kr")
+                                Text("\(listing.displayPriceText) kr")
                                     .font(.system(size: 18, weight: .bold))
                                 Text("/ \(listing.priceUnit?.displayName ?? "natt")")
                                     .font(.system(size: 14))
@@ -242,16 +242,28 @@ struct ListingDetailView: View {
                         Spacer()
 
                         if authManager.isAuthenticated {
-                            NavigationLink {
-                                BookingView(listing: listing)
-                            } label: {
-                                Text("Bestill")
-                                    .font(.system(size: 16, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 32)
+                            if let userId = authManager.currentUser?.id.uuidString.lowercased(),
+                               let hostId = listing.hostId?.lowercased(),
+                               userId == hostId {
+                                Text("Din annonse")
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(.neutral500)
+                                    .padding(.horizontal, 16)
                                     .padding(.vertical, 14)
-                                    .background(Color.primary600)
+                                    .background(Color.neutral100)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
+                            } else {
+                                NavigationLink {
+                                    BookingView(listing: listing)
+                                } label: {
+                                    Text("Bestill")
+                                        .font(.system(size: 16, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .padding(.horizontal, 32)
+                                        .padding(.vertical, 14)
+                                        .background(Color.primary600)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                }
                             }
                         } else {
                             Button {

@@ -240,8 +240,9 @@ struct MyListingsView: View {
                                             .font(.system(size: 13))
                                             .foregroundStyle(.neutral500)
                                     }
-                                    if let price = listing.price {
-                                        Text("\(price) kr/\(listing.priceUnit?.displayName ?? "natt")")
+                                    let range = listing.displayPriceRange
+                                    if range.max > 0 {
+                                        Text("\(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "natt")")
                                             .font(.system(size: 13))
                                             .foregroundStyle(.primary600)
                                     }
@@ -251,15 +252,6 @@ struct MyListingsView: View {
 
                                 // Action buttons
                                 HStack(spacing: 12) {
-                                    Button {
-                                        toggleActive(listing)
-                                    } label: {
-                                        Image(systemName: listing.isActive == true ? "eye.fill" : "eye.slash.fill")
-                                            .font(.system(size: 16))
-                                            .foregroundStyle(listing.isActive == true ? .green : .neutral400)
-                                    }
-                                    .buttonStyle(.plain)
-
                                     Button {
                                         qrTarget = listing
                                     } label: {
@@ -287,17 +279,6 @@ struct MyListingsView: View {
                                 Label("Slett", systemImage: "trash")
                             }
                         }
-                        .swipeActions(edge: .leading) {
-                            Button {
-                                toggleActive(listing)
-                            } label: {
-                                Label(
-                                    listing.isActive == true ? "Deaktiver" : "Aktiver",
-                                    systemImage: listing.isActive == true ? "eye.slash" : "eye"
-                                )
-                            }
-                            .tint(listing.isActive == true ? .orange : .green)
-                        }
                     }
                 }
                 .listStyle(.plain)
@@ -313,18 +294,20 @@ struct MyListingsView: View {
                 }
             }
         }
-        .sheet(isPresented: $showCreateListing, onDismiss: { Task { await loadListings() } }) {
-            NavigationStack {
-                CreateListingView()
-            }
+        .navigationDestination(isPresented: $showCreateListing) {
+            CreateListingView(onCreated: { newListing in
+                listings.insert(newListing, at: 0)
+            })
         }
         .sheet(item: $qrTarget) { listing in
             QRCodeModal(listing: listing)
         }
-        .sheet(item: $editTarget, onDismiss: { Task { await loadListings() } }) { listing in
-            NavigationStack {
-                EditListingView(listing: listing)
-            }
+        .navigationDestination(item: $editTarget) { listing in
+            EditListingView(listing: listing, onSaved: { updated in
+                if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
+                    listings[idx] = updated
+                }
+            })
         }
         .alert("Slett annonse?", isPresented: .init(
             get: { deleteTarget != nil },
@@ -344,6 +327,7 @@ struct MyListingsView: View {
         }
     }
 
+    @MainActor
     private func loadListings() async {
         guard let userId = authManager.currentUser?.id else {
             isLoading = false
@@ -361,18 +345,6 @@ struct MyListingsView: View {
             print("Failed to load listings: \(error)")
         }
         isLoading = false
-    }
-
-    private func toggleActive(_ listing: Listing) {
-        let newState = !(listing.isActive ?? true)
-        Task {
-            try? await supabase
-                .from("listings")
-                .update(["is_active": newState])
-                .eq("id", value: listing.id)
-                .execute()
-            await loadListings()
-        }
     }
 
     private func deleteListing(_ listing: Listing) {

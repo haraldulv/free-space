@@ -71,17 +71,19 @@ export type ExtraId =
   | "bedding"
   | "grill";
 
-export const AVAILABLE_EXTRAS: { id: ExtraId; name: string; defaultPrice: number; perNight: boolean; category: ListingCategory[] }[] = [
-  { id: "ev_charging", name: "Elbil-lading", defaultPrice: 50, perNight: true, category: ["parking", "camping"] },
-  { id: "power_hookup", name: "Strømtilkobling", defaultPrice: 75, perNight: true, category: ["camping"] },
-  { id: "septic_disposal", name: "Septiktømming", defaultPrice: 150, perNight: false, category: ["camping"] },
-  { id: "sauna", name: "Badstue", defaultPrice: 200, perNight: false, category: ["camping"] },
-  { id: "firewood", name: "Ved", defaultPrice: 100, perNight: false, category: ["camping"] },
-  { id: "kayak", name: "Kajakk", defaultPrice: 150, perNight: true, category: ["camping"] },
-  { id: "bike_rental", name: "Sykkelutleie", defaultPrice: 100, perNight: true, category: ["camping"] },
-  { id: "fishing_gear", name: "Fiskeutstyr", defaultPrice: 75, perNight: true, category: ["camping"] },
-  { id: "bedding", name: "Sengetøy", defaultPrice: 100, perNight: false, category: ["camping"] },
-  { id: "grill", name: "Grillpakke", defaultPrice: 50, perNight: false, category: ["camping"] },
+export type ExtraScope = "site" | "area";
+
+export const AVAILABLE_EXTRAS: { id: ExtraId; name: string; defaultPrice: number; perNight: boolean; category: ListingCategory[]; scope: ExtraScope }[] = [
+  { id: "ev_charging", name: "Elbil-lading", defaultPrice: 50, perNight: true, category: ["parking", "camping"], scope: "site" },
+  { id: "power_hookup", name: "Strømtilkobling", defaultPrice: 75, perNight: true, category: ["camping"], scope: "site" },
+  { id: "septic_disposal", name: "Septiktømming", defaultPrice: 150, perNight: false, category: ["camping"], scope: "site" },
+  { id: "sauna", name: "Badstue", defaultPrice: 200, perNight: false, category: ["camping"], scope: "area" },
+  { id: "firewood", name: "Ved", defaultPrice: 100, perNight: false, category: ["camping"], scope: "area" },
+  { id: "kayak", name: "Kajakk", defaultPrice: 150, perNight: true, category: ["camping"], scope: "area" },
+  { id: "bike_rental", name: "Sykkelutleie", defaultPrice: 100, perNight: true, category: ["camping"], scope: "area" },
+  { id: "fishing_gear", name: "Fiskeutstyr", defaultPrice: 75, perNight: true, category: ["camping"], scope: "area" },
+  { id: "bedding", name: "Sengetøy", defaultPrice: 100, perNight: false, category: ["camping"], scope: "area" },
+  { id: "grill", name: "Grillpakke", defaultPrice: 50, perNight: false, category: ["camping"], scope: "area" },
 ];
 
 export const AMENITIES_BY_CATEGORY: Record<ListingCategory, Amenity[]> = {
@@ -100,10 +102,47 @@ export interface Host {
 }
 
 export interface SpotMarker {
+  id?: string;
   lat: number;
   lng: number;
   label?: string;
+  price?: number;
+  extras?: ListingExtra[];
+  blockedDates?: string[];
 }
+
+/**
+ * Returns display price range for a listing — (min, max) basert på individuelle
+ * spot-priser hvis satt, ellers fall tilbake til listing.price.
+ */
+export function getDisplayPriceRange(listing: Pick<Listing, "price" | "spotMarkers">): { min: number; max: number } {
+  const spotPrices = (listing.spotMarkers || [])
+    .map((s) => s.price)
+    .filter((p): p is number => p != null && p > 0);
+  if (spotPrices.length > 0) {
+    return { min: Math.min(...spotPrices), max: Math.max(...spotPrices) };
+  }
+  return { min: listing.price, max: listing.price };
+}
+
+/** "150" for uniform, "150–300" for individuell med spread. */
+export function getDisplayPriceText(listing: Pick<Listing, "price" | "spotMarkers">): string {
+  const { min, max } = getDisplayPriceRange(listing);
+  return min === max ? `${min}` : `${min}–${max}`;
+}
+
+export type SelectedExtraEntry = {
+  id: string;
+  name: string;
+  price: number;
+  perNight: boolean;
+  quantity: number;
+};
+
+export type SelectedExtras = {
+  listing?: SelectedExtraEntry[];
+  spots?: Record<string, SelectedExtraEntry[]>;
+};
 
 export interface Listing {
   id: string;
@@ -172,7 +211,8 @@ export interface Booking {
   hostName?: string;
   hostPhone?: string;
   conversationId?: string;
-  selectedExtras?: { id: string; name: string; price: number; quantity: number }[];
+  selectedSpotIds?: string[];
+  selectedExtras?: SelectedExtras;
 }
 
 export interface Review {

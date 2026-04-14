@@ -2,6 +2,48 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe";
 import { SERVICE_FEE_RATE } from "@/lib/config";
+import type { SpotMarker, ListingExtra, SelectedExtras } from "@/types";
+
+function computeTotal(args: {
+  listingPrice: number;
+  spotMarkers: SpotMarker[] | null;
+  listingExtras: ListingExtra[] | null;
+  checkIn: string;
+  checkOut: string;
+  selectedSpotIds?: string[];
+  selectedExtras?: SelectedExtras;
+}): number {
+  const start = new Date(args.checkIn);
+  const end = new Date(args.checkOut);
+  const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+
+  const selectedSpots = (args.spotMarkers || []).filter(
+    (s) => s.id && args.selectedSpotIds?.includes(s.id),
+  );
+
+  const baseTotal = selectedSpots.length > 0
+    ? selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * nights, 0)
+    : args.listingPrice * nights;
+
+  let extrasTotal = 0;
+  for (const entry of args.selectedExtras?.listing || []) {
+    const canonical = (args.listingExtras || []).find((e) => e.id === entry.id);
+    if (!canonical) continue;
+    extrasTotal += canonical.price * (canonical.perNight ? nights : 1) * entry.quantity;
+  }
+  for (const [spotId, entries] of Object.entries(args.selectedExtras?.spots || {})) {
+    const spot = selectedSpots.find((s) => s.id === spotId);
+    if (!spot) continue;
+    for (const entry of entries) {
+      const canonical = (spot.extras || []).find((e) => e.id === entry.id);
+      if (!canonical) continue;
+      extrasTotal += canonical.price * (canonical.perNight ? nights : 1) * entry.quantity;
+    }
+  }
+
+  const subtotal = baseTotal + extrasTotal;
+  return subtotal + Math.round(subtotal * SERVICE_FEE_RATE);
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -23,23 +65,32 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { listingId, checkIn, checkOut, totalPrice, licensePlate, isRentalCar } = body as {
+    const {
+      listingId,
+      checkIn,
+      checkOut,
+      licensePlate,
+      isRentalCar,
+      selectedSpotIds,
+      selectedExtras,
+    } = body as {
       listingId: string;
       checkIn: string;
       checkOut: string;
-      totalPrice: number;
       licensePlate?: string;
       isRentalCar?: boolean;
+      selectedSpotIds?: string[];
+      selectedExtras?: SelectedExtras;
     };
 
-    if (!listingId || !checkIn || !checkOut || !totalPrice) {
+    if (!listingId || !checkIn || !checkOut) {
       return NextResponse.json({ error: "Mangler påkrevde felt" }, { status: 400 });
     }
 
     // Check availability
     const { data: listing } = await supabase
       .from("listings")
-      .select("spots, host_id, title")
+      .select("spots, host_id, title, price, spot_markers, extras")
       .eq("id", listingId)
       .single();
 
@@ -47,17 +98,69 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Annonse ikke funnet" }, { status: 404 });
     }
 
-    const { count } = await supabase
+    if (listing.host_id === user.id) {
+      return NextResponse.json({ error: "Du kan ikke booke din egen annonse" }, { status: 400 });
+    }
+
+    // Rekalkulér totalen autoritativt server-side — klient sender ikke lenger beløp.
+    const totalPrice = computeTotal({
+      listingPrice: listing.price,
+      spotMarkers: listing.spot_markers as SpotMarker[] | null,
+      listingExtras: listing.extras as ListingExtra[] | null,
+      checkIn,
+      checkOut,
+      selectedSpotIds,
+      selectedExtras,
+    });
+
+    const { data: overlappingBookings } = await supabase
       .from("bookings")
-      .select("id", { count: "exact", head: true })
+      .select("selected_spot_ids")
       .eq("listing_id", listingId)
       .in("status", ["confirmed", "pending"])
       .lt("check_in", checkOut)
       .gt("check_out", checkIn);
 
-    const available = listing.spots - (count || 0);
+    const bookedCount = (overlappingBookings || []).reduce((sum, row) => {
+      const ids = row.selected_spot_ids as string[] | null;
+      return sum + (ids && ids.length > 0 ? ids.length : 1);
+    }, 0);
+
+    const available = listing.spots - bookedCount;
     if (available <= 0) {
       return NextResponse.json({ error: "Ingen ledige plasser for valgte datoer" });
+    }
+
+    // Sjekk per-spot-konflikt
+    if (selectedSpotIds && selectedSpotIds.length > 0) {
+      const alreadyBooked = new Set<string>();
+      for (const row of overlappingBookings || []) {
+        const ids = row.selected_spot_ids as string[] | null;
+        (ids || []).forEach((id) => alreadyBooked.add(id));
+      }
+      const conflict = selectedSpotIds.find((id) => alreadyBooked.has(id));
+      if (conflict) {
+        return NextResponse.json({ error: "En eller flere av de valgte plassene er allerede booket. Velg andre plasser." });
+      }
+
+      // Sjekk manuelt blokkerte datoer per plass
+      const spotMarkers = (listing.spot_markers as SpotMarker[] | null) || [];
+      const datesInRange: string[] = [];
+      const cursor = new Date(checkIn);
+      const end = new Date(checkOut);
+      while (cursor < end) {
+        const y = cursor.getFullYear();
+        const m = String(cursor.getMonth() + 1).padStart(2, "0");
+        const d = String(cursor.getDate()).padStart(2, "0");
+        datesInRange.push(`${y}-${m}-${d}`);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      for (const spotId of selectedSpotIds) {
+        const spot = spotMarkers.find((s) => s.id === spotId);
+        if (spot?.blockedDates?.some((d) => datesInRange.includes(d))) {
+          return NextResponse.json({ error: `Plass "${spot.label ?? spotId}" er ikke tilgjengelig for valgte datoer.` });
+        }
+      }
     }
 
     // Verify host has Stripe Connect
@@ -85,6 +188,10 @@ export async function POST(request: NextRequest) {
         host_id: listing.host_id,
         license_plate: licensePlate || null,
         is_rental_car: isRentalCar || false,
+        selected_spot_ids: selectedSpotIds && selectedSpotIds.length > 0 ? selectedSpotIds : null,
+        selected_extras: selectedExtras && (selectedExtras.listing?.length || Object.keys(selectedExtras.spots || {}).length)
+          ? selectedExtras
+          : null,
       })
       .select("id")
       .single();

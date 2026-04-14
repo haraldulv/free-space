@@ -1,6 +1,7 @@
 "use client";
 
-import { Zap, Plug, Droplets, Flame, TreePine, Ship, Bike, Fish, BedDouble, UtensilsCrossed } from "lucide-react";
+import { useState } from "react";
+import { Zap, Plug, Droplets, Flame, TreePine, Ship, Bike, Fish, BedDouble, UtensilsCrossed, Sparkles, X } from "lucide-react";
 import { AVAILABLE_EXTRAS, type ListingCategory, type ListingExtra, type ExtraId } from "@/types";
 import Input from "@/components/ui/Input";
 
@@ -24,7 +25,26 @@ interface ExtrasStepProps {
 }
 
 export default function ExtrasStep({ category, extras, onChange }: ExtrasStepProps) {
-  const available = AVAILABLE_EXTRAS.filter((e) => e.category.includes(category));
+  const available = AVAILABLE_EXTRAS.filter((e) => e.category.includes(category) && e.scope === "area");
+  const presetIds = new Set(AVAILABLE_EXTRAS.map((e) => e.id));
+  const customExtras = extras.filter((e) => !presetIds.has(e.id as ExtraId));
+
+  const [customName, setCustomName] = useState("");
+  const [customPrice, setCustomPrice] = useState("");
+  const [customPerNight, setCustomPerNight] = useState(false);
+
+  const addCustom = () => {
+    const name = customName.trim();
+    const price = Number(customPrice);
+    if (!name || !price || price <= 0) return;
+    onChange([
+      ...extras,
+      { id: crypto.randomUUID(), name, price, perNight: customPerNight },
+    ]);
+    setCustomName("");
+    setCustomPrice("");
+    setCustomPerNight(false);
+  };
 
   const toggle = (extraId: ExtraId) => {
     const existing = extras.find((e) => e.id === extraId);
@@ -43,8 +63,8 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-neutral-900">Tilleggstjenester</h2>
-        <p className="mt-1 text-sm text-neutral-500">Tilby ekstra tjenester mot betaling. Du bestemmer prisen selv.</p>
+        <h2 className="text-xl font-bold text-neutral-900">Felles tillegg</h2>
+        <p className="mt-1 text-sm text-neutral-500">Noe som er tilgjengelig for alle gjester, uansett hvilken plass de velger — f.eks. sauna, kajakk eller grillpakke. Plass-spesifikke tillegg (strøm, EV-lading, septik) setter du på hver enkelt plass i Lokasjon-steget.</p>
       </div>
 
       <div className="space-y-3">
@@ -96,6 +116,68 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
       {available.length === 0 && (
         <p className="text-sm text-neutral-400">Ingen tilleggstjenester tilgjengelig for denne kategorien</p>
       )}
+
+      <div className="space-y-3 pt-4 border-t border-neutral-200">
+        <div>
+          <h3 className="text-base font-semibold text-neutral-900">Egendefinert tillegg</h3>
+          <p className="mt-1 text-xs text-neutral-500">Har du noe unikt du vil tilby? Gi det et navn og sett pris.</p>
+        </div>
+
+        {customExtras.map((extra) => (
+          <div key={extra.id} className="flex items-center gap-3 rounded-lg bg-primary-50 px-3 py-2">
+            <Sparkles className="h-4 w-4 text-primary-600" />
+            <div className="flex-1">
+              <div className="text-sm font-medium text-neutral-900">{extra.name}</div>
+              <div className="text-xs text-neutral-500">
+                {extra.price} {extra.perNight ? "kr/natt" : "kr (engangspris)"}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => onChange(extras.filter((e) => e.id !== extra.id))}
+              className="text-neutral-400 hover:text-neutral-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={customName}
+            onChange={(e) => setCustomName(e.target.value)}
+            placeholder="Navn (f.eks. Vedfyrt badstue)"
+            className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+          />
+          <input
+            type="number"
+            value={customPrice}
+            onChange={(e) => setCustomPrice(e.target.value)}
+            placeholder="Pris"
+            className="w-24 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
+          />
+        </div>
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-neutral-600">
+            <input
+              type="checkbox"
+              checked={customPerNight}
+              onChange={(e) => setCustomPerNight(e.target.checked)}
+              className="h-4 w-4 rounded border-neutral-300"
+            />
+            Per natt
+          </label>
+          <button
+            type="button"
+            onClick={addCustom}
+            disabled={!customName.trim() || Number(customPrice) <= 0}
+            className="ml-auto rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300"
+          >
+            Legg til
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

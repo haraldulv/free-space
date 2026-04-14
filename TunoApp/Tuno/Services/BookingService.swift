@@ -8,9 +8,10 @@ struct CreateBookingRequest: Encodable {
     let listingId: String
     let checkIn: String
     let checkOut: String
-    let totalPrice: Int
     let licensePlate: String?
     let isRentalCar: Bool
+    let selectedSpotIds: [String]?
+    let selectedExtras: SelectedExtras?
 }
 
 struct CreateBookingResponse: Decodable {
@@ -46,7 +47,9 @@ final class BookingService: ObservableObject {
             urlRequest.httpMethod = "POST"
             urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-            urlRequest.httpBody = try JSONEncoder().encode(request)
+            let bodyData = try JSONEncoder().encode(request)
+            urlRequest.httpBody = bodyData
+            print("📤 Request body: \(String(data: bodyData, encoding: .utf8) ?? "nil")")
 
             let (data, response) = try await URLSession.shared.data(for: urlRequest)
 

@@ -109,13 +109,51 @@ struct BookingView: View {
     @State private var showCardForm = false
     @State private var applePayHandler: ApplePayHandler?
     @State private var isApplePayLoading = false
+    @State private var selectedSpotIds: Set<String> = []
+    @State private var listingExtrasQty: [String: Int] = [:]
+    @State private var spotExtrasQty: [String: [String: Int]] = [:]
+
+    private var hasSpotLevelPricing: Bool {
+        (listing.spotMarkers ?? []).contains { $0.price != nil || !($0.extras?.isEmpty ?? true) }
+    }
+
+    private var selectedSpots: [SpotMarker] {
+        (listing.spotMarkers ?? []).filter { spot in
+            guard let id = spot.id else { return false }
+            return selectedSpotIds.contains(id)
+        }
+    }
 
     private var nights: Int {
         max(1, Calendar.current.dateComponents([.day], from: checkIn, to: checkOut).day ?? 1)
     }
 
+    private var baseTotal: Int {
+        if hasSpotLevelPricing && !selectedSpots.isEmpty {
+            return selectedSpots.reduce(0) { $0 + ($1.price ?? listing.price ?? 0) * nights }
+        }
+        return nights * (listing.price ?? 0)
+    }
+
+    private var listingExtrasTotal: Int {
+        (listing.extras ?? []).reduce(0) { sum, extra in
+            let qty = listingExtrasQty[extra.id] ?? 0
+            return sum + extra.price * (extra.perNight ? nights : 1) * qty
+        }
+    }
+
+    private var spotExtrasTotal: Int {
+        selectedSpots.reduce(0) { sum, spot in
+            guard let sid = spot.id, let map = spotExtrasQty[sid] else { return sum }
+            let perSpot = (spot.extras ?? []).reduce(0) { acc, extra in
+                acc + extra.price * (extra.perNight ? nights : 1) * (map[extra.id] ?? 0)
+            }
+            return sum + perSpot
+        }
+    }
+
     private var subtotal: Int {
-        nights * (listing.price ?? 0)
+        baseTotal + listingExtrasTotal + spotExtrasTotal
     }
 
     private var serviceFee: Int {
@@ -127,7 +165,9 @@ struct BookingView: View {
     }
 
     private var isFormValid: Bool {
-        checkOut > checkIn && (isRentalCar || !licensePlate.trimmingCharacters(in: .whitespaces).isEmpty)
+        let vehicleOK = isRentalCar || !licensePlate.trimmingCharacters(in: .whitespaces).isEmpty
+        let spotOK = !hasSpotLevelPricing || !selectedSpotIds.isEmpty
+        return checkOut > checkIn && vehicleOK && spotOK
     }
 
     var body: some View {
@@ -140,7 +180,7 @@ struct BookingView: View {
                 vehicleSection
                 Divider()
 
-                if let available = availableSpots, let total = totalSpots {
+                if !hasSpotLevelPricing, let available = availableSpots, let total = totalSpots {
                     HStack(spacing: 6) {
                         Image(systemName: available > 0 ? "checkmark.circle.fill" : "xmark.circle.fill")
                             .foregroundStyle(available > 0 ? .green : .red)
@@ -148,6 +188,16 @@ struct BookingView: View {
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(available > 0 ? .neutral700 : .red)
                     }
+                }
+
+                if hasSpotLevelPricing {
+                    spotPickerSection
+                    Divider()
+                }
+
+                if !(listing.extras ?? []).isEmpty {
+                    listingExtrasSection
+                    Divider()
                 }
 
                 priceBreakdown
@@ -258,12 +308,24 @@ struct BookingView: View {
             }
             showCardForm = false
             bookingService.clientSecret = nil
+            deselectBlockedSpots()
             Task { await checkAvailability() }
         }
         .onChange(of: checkOut) {
             showCardForm = false
             bookingService.clientSecret = nil
+            deselectBlockedSpots()
             Task { await checkAvailability() }
+        }
+    }
+
+    private func deselectBlockedSpots() {
+        let stillOk = selectedSpotIds.filter { id in
+            guard let spot = (listing.spotMarkers ?? []).first(where: { $0.id == id }) else { return false }
+            return !isSpotBlockedByDates(spot)
+        }
+        if stillOk.count != selectedSpotIds.count {
+            selectedSpotIds = Set(stillOk)
         }
     }
 
@@ -293,7 +355,7 @@ struct BookingView: View {
                         .foregroundStyle(.neutral500)
                 }
                 HStack(spacing: 4) {
-                    Text("\(listing.price ?? 0) kr")
+                    Text("\(listing.displayPriceText) kr")
                         .font(.system(size: 14, weight: .bold))
                     Text("/ \(listing.priceUnit?.displayName ?? "natt")")
                         .font(.system(size: 13))
@@ -363,10 +425,16 @@ struct BookingView: View {
     private var priceBreakdown: some View {
         VStack(spacing: 10) {
             HStack {
-                Text("\(listing.price ?? 0) kr × \(nights) \(nights == 1 ? "natt" : "netter")")
-                    .font(.system(size: 14)).foregroundStyle(.neutral600)
+                Text(baseLineLabel).font(.system(size: 14)).foregroundStyle(.neutral600)
                 Spacer()
-                Text("\(subtotal) kr").font(.system(size: 14)).foregroundStyle(.neutral600)
+                Text("\(baseTotal) kr").font(.system(size: 14)).foregroundStyle(.neutral600)
+            }
+            if listingExtrasTotal + spotExtrasTotal > 0 {
+                HStack {
+                    Text("Tilleggstjenester").font(.system(size: 14)).foregroundStyle(.neutral600)
+                    Spacer()
+                    Text("\(listingExtrasTotal + spotExtrasTotal) kr").font(.system(size: 14)).foregroundStyle(.neutral600)
+                }
             }
             HStack {
                 Text("Serviceavgift").font(.system(size: 14)).foregroundStyle(.neutral600)
@@ -385,6 +453,155 @@ struct BookingView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    private var baseLineLabel: String {
+        if hasSpotLevelPricing && !selectedSpots.isEmpty {
+            return "\(selectedSpots.count) plass\(selectedSpots.count > 1 ? "er" : "") × \(nights) \(nights == 1 ? "natt" : "netter")"
+        }
+        return "\(listing.price ?? 0) kr × \(nights) \(nights == 1 ? "natt" : "netter")"
+    }
+
+    private var spotPickerSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Velg plasser").font(.system(size: 18, weight: .semibold))
+            ForEach(Array((listing.spotMarkers ?? []).enumerated()), id: \.offset) { idx, spot in
+                if let sid = spot.id {
+                    spotRow(spot: spot, index: idx, spotId: sid)
+                }
+            }
+        }
+    }
+
+    private func isSpotBlockedByDates(_ spot: SpotMarker) -> Bool {
+        guard let blocked = spot.blockedDates, !blocked.isEmpty else { return false }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        var cursor = Calendar.current.startOfDay(for: checkIn)
+        let end = Calendar.current.startOfDay(for: checkOut)
+        while cursor < end {
+            if blocked.contains(fmt.string(from: cursor)) { return true }
+            guard let next = Calendar.current.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return false
+    }
+
+    private func spotRow(spot: SpotMarker, index: Int, spotId: String) -> some View {
+        let isSelected = selectedSpotIds.contains(spotId)
+        let price = spot.price ?? listing.price ?? 0
+        let isBlocked = isSpotBlockedByDates(spot)
+
+        return VStack(spacing: 0) {
+            Button {
+                guard !isBlocked else { return }
+                if isSelected { selectedSpotIds.remove(spotId) }
+                else { selectedSpotIds.insert(spotId) }
+            } label: {
+                HStack(spacing: 12) {
+                    ZStack {
+                        Circle().fill(isBlocked ? Color.neutral100 : isSelected ? Color.primary600 : Color.neutral100).frame(width: 32, height: 32)
+                        Image(systemName: "mappin.and.ellipse")
+                            .foregroundStyle(isBlocked ? .neutral400 : isSelected ? .white : .neutral500)
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(spot.label ?? "Plass \(index + 1)")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(isBlocked ? .neutral400 : .neutral900)
+                        Text(isBlocked ? "Ikke tilgjengelig for disse datoene" : "\(price) kr/natt")
+                            .font(.system(size: 12)).foregroundStyle(.neutral500)
+                    }
+                    Spacer()
+                    if !isBlocked {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 4)
+                                .stroke(isSelected ? Color.primary600 : Color.neutral300, lineWidth: 2)
+                                .frame(width: 20, height: 20)
+                            if isSelected {
+                                RoundedRectangle(cornerRadius: 4).fill(Color.primary600).frame(width: 20, height: 20)
+                                Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
+                            }
+                        }
+                    }
+                }
+                .padding(12)
+            }
+            .buttonStyle(.plain)
+            .disabled(isBlocked)
+            .opacity(isBlocked ? 0.6 : 1.0)
+
+            if isSelected, let extras = spot.extras, !extras.isEmpty {
+                Divider().padding(.horizontal, 12)
+                VStack(spacing: 8) {
+                    ForEach(extras) { extra in
+                        extraQtyRow(
+                            name: extra.name,
+                            price: extra.price,
+                            perNight: extra.perNight,
+                            qty: spotExtrasQty[spotId]?[extra.id] ?? 0,
+                            onChange: { delta in
+                                var map = spotExtrasQty[spotId] ?? [:]
+                                let next = max(0, (map[extra.id] ?? 0) + delta)
+                                if next == 0 { map.removeValue(forKey: extra.id) }
+                                else { map[extra.id] = next }
+                                if map.isEmpty { spotExtrasQty.removeValue(forKey: spotId) }
+                                else { spotExtrasQty[spotId] = map }
+                            }
+                        )
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+            }
+        }
+        .background(isSelected ? Color.primary50 : Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 2 : 1))
+    }
+
+    private var listingExtrasSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Tilleggstjenester").font(.system(size: 18, weight: .semibold))
+            ForEach(listing.extras ?? []) { extra in
+                extraQtyRow(
+                    name: extra.name,
+                    price: extra.price,
+                    perNight: extra.perNight,
+                    qty: listingExtrasQty[extra.id] ?? 0,
+                    onChange: { delta in
+                        let next = max(0, (listingExtrasQty[extra.id] ?? 0) + delta)
+                        if next == 0 { listingExtrasQty.removeValue(forKey: extra.id) }
+                        else { listingExtrasQty[extra.id] = next }
+                    }
+                )
+            }
+        }
+    }
+
+    private func extraQtyRow(name: String, price: Int, perNight: Bool, qty: Int, onChange: @escaping (Int) -> Void) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(name).font(.system(size: 14)).foregroundStyle(.neutral700)
+                Text("\(price) kr\(perNight ? "/natt" : "")")
+                    .font(.system(size: 11)).foregroundStyle(.neutral500)
+            }
+            Spacer()
+            if qty > 0 {
+                Text("\(price * (perNight ? nights : 1) * qty) kr")
+                    .font(.system(size: 12)).foregroundStyle(.neutral500)
+            }
+            Button { onChange(-1) } label: {
+                Image(systemName: "minus.circle").foregroundStyle(qty == 0 ? .neutral300 : .neutral500)
+            }
+            .disabled(qty == 0)
+            .buttonStyle(.plain)
+            Text("\(qty)").font(.system(size: 14, weight: .medium)).frame(width: 20)
+            Button { onChange(1) } label: {
+                Image(systemName: "plus.circle").foregroundStyle(.neutral500)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 4)
+    }
+
     // MARK: - Actions
 
     private func checkAvailability() async {
@@ -399,6 +616,39 @@ struct BookingView: View {
         totalSpots = result.total
     }
 
+    private func buildSelectedExtrasPayload() -> SelectedExtras? {
+        var listingEntries: [SelectedExtraEntry] = []
+        for extra in (listing.extras ?? []) {
+            let qty = listingExtrasQty[extra.id] ?? 0
+            if qty > 0 {
+                listingEntries.append(SelectedExtraEntry(
+                    id: extra.id, name: extra.name, price: extra.price,
+                    perNight: extra.perNight, quantity: qty
+                ))
+            }
+        }
+
+        var spotEntries: [String: [SelectedExtraEntry]] = [:]
+        for spot in selectedSpots {
+            guard let sid = spot.id, let map = spotExtrasQty[sid] else { continue }
+            let items = (spot.extras ?? []).compactMap { extra -> SelectedExtraEntry? in
+                let qty = map[extra.id] ?? 0
+                guard qty > 0 else { return nil }
+                return SelectedExtraEntry(
+                    id: extra.id, name: extra.name, price: extra.price,
+                    perNight: extra.perNight, quantity: qty
+                )
+            }
+            if !items.isEmpty { spotEntries[sid] = items }
+        }
+
+        if listingEntries.isEmpty && spotEntries.isEmpty { return nil }
+        return SelectedExtras(
+            listing: listingEntries.isEmpty ? nil : listingEntries,
+            spots: spotEntries.isEmpty ? nil : spotEntries
+        )
+    }
+
     private func createBookingIfNeeded() async {
         guard bookingService.clientSecret == nil else { return }
 
@@ -409,9 +659,10 @@ struct BookingView: View {
             listingId: listing.id,
             checkIn: formatter.string(from: checkIn),
             checkOut: formatter.string(from: checkOut),
-            totalPrice: total,
             licensePlate: isRentalCar ? nil : licensePlate.trimmingCharacters(in: .whitespaces).uppercased(),
-            isRentalCar: isRentalCar
+            isRentalCar: isRentalCar,
+            selectedSpotIds: selectedSpotIds.isEmpty ? nil : Array(selectedSpotIds),
+            selectedExtras: buildSelectedExtrasPayload()
         )
 
         _ = await bookingService.createBooking(request: request)

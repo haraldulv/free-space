@@ -179,7 +179,7 @@ struct ListingCard: View {
                     .lineLimit(1)
 
                 HStack(spacing: 4) {
-                    Text("\(listing.price ?? 0) kr")
+                    Text("\(listing.displayPriceText) kr")
                         .font(.system(size: 14, weight: .bold))
                     Text("/ \(listing.priceUnit?.displayName ?? "natt")")
                         .font(.system(size: 12))

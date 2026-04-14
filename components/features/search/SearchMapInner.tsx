@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
-import { Listing } from "@/types";
+import { Listing, getDisplayPriceText } from "@/types";
 import { isNative } from "@/lib/capacitor";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
@@ -59,7 +59,7 @@ function ensureOverlayClass() {
       const zap = listing.instantBooking ? '<svg style="width:12px;height:12px;fill:#16a34a;display:inline;vertical-align:-1px;margin-right:2px" viewBox="0 0 24 24" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' : "";
       const spotsLabel = listing.availableSpots !== undefined ? `${listing.availableSpots}/${listing.spots}p` : `${listing.spots}p`;
       const spots = listing.spots > 1 ? `<span style="margin-left:4px;opacity:0.5;font-weight:500;font-size:11px">${spotsLabel}</span>` : "";
-      el.innerHTML = `${zap}${listing.price} kr${spots}`;
+      el.innerHTML = `${zap}${getDisplayPriceText(listing)} kr${spots}`;
       el.style.cssText = `
         border-radius: 9999px;
         padding: 6px 14px;
@@ -332,7 +332,7 @@ export default function SearchMapInner({
               </div>
               <p style="color:#737373;font-size:12px;margin:2px 0 0">${listing.location.city}, ${listing.location.region}</p>
               <div style="display:flex;align-items:center;justify-content:space-between;margin:5px 0 0">
-                <p style="font-size:14px;margin:0"><span style="font-weight:700">${listing.price} kr</span> <span style="color:#737373;font-weight:400">/ ${unit}</span></p>
+                <p style="font-size:14px;margin:0"><span style="font-weight:700">${getDisplayPriceText(listing)} kr</span> <span style="color:#737373;font-weight:400">/ ${unit}</span></p>
                 <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#737373">
                   ${listing.instantBooking ? '<svg style="width:13px;height:13px;fill:#16a34a" viewBox="0 0 24 24" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' : ""}
                   ${listing.spots > 1 ? `<span style="display:flex;align-items:center;gap:2px"><svg style="width:12px;height:12px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>${listing.availableSpots !== undefined ? `${listing.availableSpots}/${listing.spots}` : listing.spots}</span>` : ""}

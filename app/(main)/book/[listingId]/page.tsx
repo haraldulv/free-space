@@ -11,8 +11,21 @@ import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingSummary from "@/components/features/BookingSummary";
 import { ShieldCheck, Loader2, Car } from "lucide-react";
-import type { Listing } from "@/types";
+import type { Listing, SpotMarker, SelectedExtras } from "@/types";
 import { SERVICE_FEE_RATE } from "@/lib/config";
+
+function parseExtrasParam(raw: string | null): { listing: Record<string, number>; spots: Record<string, Record<string, number>> } {
+  if (!raw) return { listing: {}, spots: {} };
+  try {
+    const parsed = JSON.parse(decodeURIComponent(raw));
+    return {
+      listing: parsed.listing || {},
+      spots: parsed.spots || {},
+    };
+  } catch {
+    return { listing: {}, spots: {} };
+  }
+}
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
@@ -110,6 +123,8 @@ export default function BookPage() {
             tags: data.tags,
             checkInTime: data.check_in_time || "15:00",
             checkOutTime: data.check_out_time || "11:00",
+            spotMarkers: data.spot_markers || [],
+            extras: data.extras || [],
           });
         }
         setLoading(false);
@@ -122,9 +137,70 @@ export default function BookPage() {
   const nights = !isNaN(checkIn.getTime()) && !isNaN(checkOut.getTime())
     ? differenceInDays(checkOut, checkIn)
     : 0;
-  const subtotal = listing ? listing.price * nights : 0;
+
+  const selectedSpotIds = (searchParams.get("spots") || "").split(",").filter(Boolean);
+  const extrasFromUrl = parseExtrasParam(searchParams.get("extras"));
+
+  const selectedSpots: SpotMarker[] = (listing?.spotMarkers || []).filter(
+    (s) => s.id && selectedSpotIds.includes(s.id),
+  );
+
+  const baseTotal = listing
+    ? selectedSpots.length > 0
+      ? selectedSpots.reduce((sum, s) => sum + (s.price ?? listing.price) * nights, 0)
+      : listing.price * nights
+    : 0;
+
+  const listingExtrasTotal = listing
+    ? (listing.extras || []).reduce((sum, extra) => {
+        const qty = extrasFromUrl.listing[extra.id] || 0;
+        return sum + extra.price * (extra.perNight ? nights : 1) * qty;
+      }, 0)
+    : 0;
+
+  const spotExtrasTotal = selectedSpots.reduce((sum, spot) => {
+    const spotQtys = extrasFromUrl.spots[spot.id!] || {};
+    return sum + (spot.extras || []).reduce((acc, extra) => {
+      const qty = spotQtys[extra.id] || 0;
+      return acc + extra.price * (extra.perNight ? nights : 1) * qty;
+    }, 0);
+  }, 0);
+
+  const subtotal = baseTotal + listingExtrasTotal + spotExtrasTotal;
   const serviceFee = Math.round(subtotal * SERVICE_FEE_RATE);
   const total = subtotal + serviceFee;
+
+  // Build structured selectedExtras for server
+  const buildSelectedExtras = (): SelectedExtras => {
+    const listingEntries = Object.entries(extrasFromUrl.listing)
+      .filter(([, qty]) => qty > 0)
+      .map(([id, qty]) => {
+        const extra = (listing?.extras || []).find((e) => e.id === id);
+        if (!extra) return null;
+        return { id: extra.id, name: extra.name, price: extra.price, perNight: extra.perNight, quantity: qty };
+      })
+      .filter((x): x is NonNullable<typeof x> => x !== null);
+
+    const spotEntries: Record<string, ReturnType<typeof Object>> = {};
+    Object.entries(extrasFromUrl.spots).forEach(([spotId, qtys]) => {
+      const spot = selectedSpots.find((s) => s.id === spotId);
+      if (!spot) return;
+      const entries = Object.entries(qtys as Record<string, number>)
+        .filter(([, qty]) => qty > 0)
+        .map(([id, qty]) => {
+          const extra = (spot.extras || []).find((e) => e.id === id);
+          if (!extra) return null;
+          return { id: extra.id, name: extra.name, price: extra.price, perNight: extra.perNight, quantity: qty };
+        })
+        .filter((x): x is NonNullable<typeof x> => x !== null);
+      if (entries.length > 0) spotEntries[spotId] = entries;
+    });
+
+    return {
+      listing: listingEntries.length > 0 ? listingEntries : undefined,
+      spots: Object.keys(spotEntries).length > 0 ? (spotEntries as SelectedExtras["spots"]) : undefined,
+    };
+  };
 
   // Create booking + payment intent once vehicle info is submitted
   useEffect(() => {
@@ -147,6 +223,8 @@ export default function BookPage() {
       totalPrice: total,
       licensePlate: isRentalCar ? undefined : licensePlate.trim().toUpperCase(),
       isRentalCar,
+      selectedSpotIds: selectedSpotIds.length > 0 ? selectedSpotIds : undefined,
+      selectedExtras: buildSelectedExtras(),
     }).then((result) => {
       if (result.error) {
         setError(result.error);

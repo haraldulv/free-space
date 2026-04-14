@@ -25,6 +25,8 @@ export interface CreateListingData {
   checkInTime?: string;
   checkOutTime?: string;
   extras?: { id: string; name: string; price: number; perNight: boolean }[];
+  /** UI-only flag — bestemmer om pris settes per-plass eller uniform. Persisteres ikke. */
+  perSpotPricing?: boolean;
 }
 
 /** Convert a Supabase row to our Listing type */
@@ -144,7 +146,7 @@ async function getBookedSpotsCounts(
 ): Promise<Map<string, number>> {
   const { data } = await supabase
     .from("bookings")
-    .select("listing_id")
+    .select("listing_id, selected_spot_ids")
     .in("listing_id", listingIds)
     .in("status", ["confirmed", "pending"])
     .lt("check_in", checkOut)
@@ -153,7 +155,9 @@ async function getBookedSpotsCounts(
   const counts = new Map<string, number>();
   for (const row of data || []) {
     const id = row.listing_id as string;
-    counts.set(id, (counts.get(id) || 0) + 1);
+    const spotIds = row.selected_spot_ids as string[] | null;
+    const increment = spotIds && spotIds.length > 0 ? spotIds.length : 1;
+    counts.set(id, (counts.get(id) || 0) + increment);
   }
   return counts;
 }
@@ -174,15 +178,47 @@ export async function getAvailableSpots(
 
   if (!listing) return 0;
 
-  const { count } = await supabase
+  const { data: overlapping } = await supabase
     .from("bookings")
-    .select("id", { count: "exact", head: true })
+    .select("selected_spot_ids")
     .eq("listing_id", listingId)
     .in("status", ["confirmed", "pending"])
     .lt("check_in", checkOut)
     .gt("check_out", checkIn);
 
-  return listing.spots - (count || 0);
+  const bookedCount = (overlapping || []).reduce((sum, row) => {
+    const ids = row.selected_spot_ids as string[] | null;
+    return sum + (ids && ids.length > 0 ? ids.length : 1);
+  }, 0);
+
+  return listing.spots - bookedCount;
+}
+
+/**
+ * Hent hvilke spot-IDer som allerede er booket for en gitt annonse + datorange.
+ * Returneres som Set. Legacy bookings (null selected_spot_ids) returneres ikke her —
+ * de blokkerer hele annonsen via getAvailableSpots-kalkulasjonen istedenfor.
+ */
+export async function getBookedSpotIds(
+  listingId: string,
+  checkIn: string,
+  checkOut: string,
+): Promise<Set<string>> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("bookings")
+    .select("selected_spot_ids")
+    .eq("listing_id", listingId)
+    .in("status", ["confirmed", "pending"])
+    .lt("check_in", checkOut)
+    .gt("check_out", checkIn);
+
+  const booked = new Set<string>();
+  for (const row of data || []) {
+    const ids = row.selected_spot_ids as string[] | null;
+    (ids || []).forEach((id) => booked.add(id));
+  }
+  return booked;
 }
 
 /** Calculate distance between two coordinates in km */

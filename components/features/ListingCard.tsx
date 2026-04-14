@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Star } from "lucide-react";
-import { Listing } from "@/types";
+import { Listing, getDisplayPriceText } from "@/types";
 
 interface ListingCardProps {
   listing: Listing;
@@ -36,7 +36,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
             {listing.location.city}, {listing.location.region}
           </p>
           <p className="mt-0.5 text-sm text-neutral-900">
-            <span className="font-semibold">{listing.price} kr</span>
+            <span className="font-semibold">{getDisplayPriceText(listing)} kr</span>
             <span className="font-normal text-neutral-500">
               {" "}/ {listing.priceUnit === "time" ? "dag" : "natt"}
             </span>

@@ -11,7 +11,6 @@ import LocationStep from "./steps/LocationStep";
 import ImageUploadStep from "./steps/ImageUploadStep";
 import AmenitiesStep from "./steps/AmenitiesStep";
 import ExtrasStep from "./steps/ExtrasStep";
-import PricingStep from "./steps/PricingStep";
 import ReviewStep from "./steps/ReviewStep";
 import AvailabilityEditor from "./AvailabilityEditor";
 import { listingStepSchemas } from "@/lib/utils/validation";
@@ -26,7 +25,7 @@ interface ListingFormWizardProps {
   onSubmit: (data: CreateListingData) => Promise<string | void>;
 }
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 8;
 
 export default function ListingFormWizard({
   userId,
@@ -42,7 +41,7 @@ export default function ListingFormWizard({
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const [formData, setFormData] = useState<Partial<CreateListingData>>({
-    category: undefined,
+    category: "camping",
     vehicleType: "motorhome",
     title: "",
     description: "",
@@ -60,6 +59,7 @@ export default function ListingFormWizard({
     instantBooking: false,
     spotMarkers: [],
     hideExactLocation: false,
+    perSpotPricing: false,
     blockedDates: [],
     extras: [],
     ...initialData,
@@ -149,6 +149,7 @@ export default function ListingFormWizard({
             category={formData.category}
             checkInTime={formData.checkInTime}
             checkOutTime={formData.checkOutTime}
+            instantBooking={formData.instantBooking ?? false}
             onChange={updateField}
             errors={errors}
           />
@@ -164,6 +165,10 @@ export default function ListingFormWizard({
             spotMarkers={formData.spotMarkers || []}
             hideExactLocation={formData.hideExactLocation || false}
             spots={formData.spots || 1}
+            category={formData.category || "camping"}
+            defaultPrice={formData.price || 0}
+            perSpotPricing={formData.perSpotPricing || false}
+            priceUnit={formData.priceUnit || "natt"}
             onChange={updateField}
             errors={errors}
           />
@@ -195,23 +200,13 @@ export default function ListingFormWizard({
         )}
 
         {step === 6 && (
-          <PricingStep
-            price={formData.price || 0}
-            priceUnit={formData.priceUnit || "time"}
-            instantBooking={formData.instantBooking || false}
-            onChange={updateField}
-            errors={errors}
-          />
-        )}
-
-        {step === 7 && (
           <AvailabilityEditor
             blockedDates={(formData.blockedDates || []) as string[]}
             onChange={(dates) => updateField("blockedDates", dates)}
           />
         )}
 
-        {step === 8 && <ReviewStep data={formData} />}
+        {step === 7 && <ReviewStep data={formData} />}
       </div>
 
       {/* Navigation */}

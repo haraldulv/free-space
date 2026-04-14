@@ -172,7 +172,7 @@ struct SearchMapView: UIViewRepresentable {
         }
 
         text.append(NSAttributedString(
-            string: "\(listing.price ?? 0) kr",
+            string: "\(listing.displayPriceText) kr",
             attributes: [.font: UIFont.systemFont(ofSize: 13, weight: .bold), .foregroundColor: textColor]
         ))
 

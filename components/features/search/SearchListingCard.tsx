@@ -3,7 +3,7 @@
 import { useEffect, useRef } from "react";
 import Link from "next/link";
 import { Star, Zap } from "lucide-react";
-import { Listing } from "@/types";
+import { Listing, getDisplayPriceText } from "@/types";
 import ImageCarousel from "@/components/features/ImageCarousel";
 import FavoriteButton from "@/components/features/FavoriteButton";
 
@@ -81,7 +81,7 @@ export default function SearchListingCard({
           </p>
           <div className="mt-1 flex items-center justify-between">
             <p className="text-sm text-neutral-900">
-              <span className="font-semibold">{listing.price} kr</span>
+              <span className="font-semibold">{getDisplayPriceText(listing)} kr</span>
               <span className="font-normal text-neutral-500">
                 {" "}/ {listing.priceUnit === "time" ? "time" : "natt"}
               </span>

@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Pencil, Trash2, Zap, Users, Eye, EyeOff, QrCode } from "lucide-react";
-import { Listing } from "@/types";
+import { Listing, getDisplayPriceText } from "@/types";
 import Badge from "@/components/ui/Badge";
 import QrCodeModal from "@/components/features/QrCodeModal";
 
@@ -73,7 +73,7 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
         </div>
         <div className="flex items-center gap-3 text-xs text-neutral-500">
           <span className="font-semibold text-neutral-900">
-            {listing.price} kr / {listing.priceUnit === "time" ? "time" : "natt"}
+            {getDisplayPriceText(listing)} kr / {listing.priceUnit === "time" ? "time" : "natt"}
           </span>
           <span className="flex items-center gap-0.5">
             <Users className="h-3 w-3" />

@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import UIKit
 
 @MainActor
 final class ListingFormModel: ObservableObject {
@@ -8,10 +9,10 @@ final class ListingFormModel: ObservableObject {
     @Published var isSubmitting = false
     @Published var error: String?
 
-    let totalSteps = 9
+    let totalSteps = 8
 
     // MARK: - Step 0: Category & Vehicle Type
-    @Published var category: ListingCategory?
+    @Published var category: ListingCategory? = .camping
     @Published var vehicleType: VehicleType = .motorhome
 
     // MARK: - Step 1: Basic Info
@@ -30,11 +31,12 @@ final class ListingFormModel: ObservableObject {
     @Published var lng: Double = 0
     @Published var spotMarkers: [SpotMarker] = []
     @Published var hideExactLocation = false
+    @Published var perSpotPricing: Bool = false
 
     // MARK: - Step 3: Images
     @Published var selectedPhotos: [PhotosPickerItem] = []
     @Published var imageURLs: [String] = []
-    @Published var isUploadingImages = false
+    @Published var uploadingPhotos: [UploadingPhoto] = []
 
     // MARK: - Step 4: Amenities
     @Published var selectedAmenities: Set<String> = []
@@ -53,7 +55,7 @@ final class ListingFormModel: ObservableObject {
     // MARK: - Validation
 
     var stepLabels: [String] {
-        ["Kategori", "Detaljer", "Lokasjon", "Bilder", "Fasiliteter", "Tillegg", "Pris", "Kalender", "Publiser"]
+        ["Kategori", "Detaljer", "Lokasjon", "Bilder", "Fasiliteter", "Felles tillegg", "Kalender", "Publiser"]
     }
 
     func validateCurrentStep() -> String? {
@@ -68,11 +70,18 @@ final class ListingFormModel: ObservableObject {
             if address.trimmingCharacters(in: .whitespaces).isEmpty { return "Adresse er påkrevd" }
             if city.trimmingCharacters(in: .whitespaces).isEmpty { return "By er påkrevd" }
             if lat == 0 && lng == 0 { return "Velg en lokasjon fra forslagene" }
+            if perSpotPricing {
+                if spotMarkers.isEmpty { return "Marker minst én plass på kartet" }
+                for (i, spot) in spotMarkers.enumerated() {
+                    let p = spot.price ?? 0
+                    if p < 1 { return "Plass \(i + 1): sett pris" }
+                }
+            } else {
+                if Int(price) == nil { return "Skriv inn en gyldig pris" }
+                if let p = Int(price), p < 1 { return "Pris må være minst 1 kr" }
+            }
         case 3:
             if imageURLs.isEmpty { return "Legg til minst 1 bilde" }
-        case 6:
-            if let p = Int(price), p < 1 { return "Pris må være minst 1 kr" }
-            if Int(price) == nil { return "Skriv inn en gyldig pris" }
         default:
             break
         }
@@ -142,6 +151,46 @@ final class ListingFormModel: ObservableObject {
             hostAvatar: profile?.avatarUrl ?? "",
             isActive: true
         )
+    }
+}
+
+// MARK: - Uploading photo (local preview + in-flight upload)
+
+struct UploadingPhoto: Identifiable, Equatable {
+    let id = UUID()
+    let data: Data
+}
+
+// MARK: - Image compression helper
+
+enum ImageCompression {
+    /// Resize to max 2048px longest side (ved scale=1 så det er faktisk 2048px),
+    /// re-enkod som JPEG og komprimér aggressivt hvis resultatet fortsatt
+    /// overskrider Supabase sitt 5 MB-tak.
+    static func compressForUpload(_ data: Data) -> Data? {
+        guard let image = UIImage(data: data) else { return nil }
+        let maxDimension: CGFloat = 2048
+        let largestSide = max(image.size.width, image.size.height)
+        let scale = largestSide > maxDimension ? maxDimension / largestSide : 1.0
+        let newSize = CGSize(width: image.size.width * scale, height: image.size.height * scale)
+
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1  // Tving 1x slik at 2048 pixel = 2048 pixel, ikke 6144
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: newSize, format: format)
+        let resized = renderer.image { _ in
+            image.draw(in: CGRect(origin: .zero, size: newSize))
+        }
+
+        // Start på 0.8 og reduser til vi er under 4 MB (trygt under 5 MB-taket)
+        let maxBytes = 4 * 1024 * 1024
+        for quality in stride(from: 0.8, through: 0.3, by: -0.1) {
+            if let jpeg = resized.jpegData(compressionQuality: CGFloat(quality)),
+               jpeg.count <= maxBytes {
+                return jpeg
+            }
+        }
+        return resized.jpegData(compressionQuality: 0.3)
     }
 }
 

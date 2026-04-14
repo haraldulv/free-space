@@ -2,6 +2,7 @@
 
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
+import Toggle from "@/components/ui/Toggle";
 import type { ListingCategory } from "@/types";
 
 interface BasicInfoStepProps {
@@ -12,7 +13,8 @@ interface BasicInfoStepProps {
   category?: ListingCategory;
   checkInTime?: string;
   checkOutTime?: string;
-  onChange: (field: string, value: string | number | undefined) => void;
+  instantBooking: boolean;
+  onChange: (field: string, value: string | number | boolean | undefined) => void;
   errors: Record<string, string>;
 }
 
@@ -24,6 +26,7 @@ export default function BasicInfoStep({
   category,
   checkInTime,
   checkOutTime,
+  instantBooking,
   onChange,
   errors,
 }: BasicInfoStepProps) {
@@ -99,6 +102,15 @@ export default function BasicInfoStep({
           value={checkOutTime || "11:00"}
           onChange={(e) => onChange("checkOutTime", e.target.value)}
           error={errors.checkOutTime}
+        />
+      </div>
+
+      <div className="rounded-xl border border-neutral-200 p-4">
+        <Toggle
+          checked={instantBooking}
+          onChange={(v) => onChange("instantBooking", v)}
+          label="Umiddelbar booking"
+          description="Gjester kan reservere uten å vente på bekreftelse fra deg."
         />
       </div>
     </div>

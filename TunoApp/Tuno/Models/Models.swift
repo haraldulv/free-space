@@ -62,20 +62,50 @@ struct Listing: Codable, Identifiable, Hashable {
         case hostListingsCount = "host_listings_count"
         case createdAt = "created_at"
     }
+}
 
-    func hash(into hasher: inout Hasher) {
-        hasher.combine(id)
+extension Listing {
+    /// Pris som skal vises i kort / detalj / booking-summary.
+    /// Returnerer (min, max) basert på individuelle spot-priser hvis satt,
+    /// ellers fall tilbake til listing.price.
+    var displayPriceRange: (min: Int, max: Int) {
+        let spotPrices = (spotMarkers ?? []).compactMap { $0.price }.filter { $0 > 0 }
+        if !spotPrices.isEmpty {
+            return (spotPrices.min()!, spotPrices.max()!)
+        }
+        let fallback = price ?? 0
+        return (fallback, fallback)
     }
 
-    static func == (lhs: Listing, rhs: Listing) -> Bool {
-        lhs.id == rhs.id
+    /// Formatert pris-streng: "150" for uniform, "150–300" for individuell med spread.
+    var displayPriceText: String {
+        let range = displayPriceRange
+        if range.min == range.max { return "\(range.min)" }
+        return "\(range.min)–\(range.max)"
     }
 }
 
 struct SpotMarker: Codable, Hashable {
+    var id: String?
     let lat: Double
     let lng: Double
-    let label: String?
+    var label: String?
+    var price: Int?
+    var extras: [ListingExtra]?
+    var blockedDates: [String]?
+}
+
+struct SelectedExtraEntry: Codable, Hashable {
+    let id: String
+    let name: String
+    let price: Int
+    let perNight: Bool
+    let quantity: Int
+}
+
+struct SelectedExtras: Codable, Hashable {
+    var listing: [SelectedExtraEntry]?
+    var spots: [String: [SelectedExtraEntry]]?
 }
 
 enum ListingCategory: String, Codable, CaseIterable {
@@ -124,6 +154,11 @@ struct ListingExtra: Codable, Hashable, Identifiable {
         case id, name, price
         case perNight = "perNight"
     }
+}
+
+enum ExtraScope: String, Codable, Hashable {
+    case siteSpecific  // hører til én spesifikk plass (strøm, EV, septik)
+    case areaWide      // felles for hele anlegget (sauna, ved, kajakk...)
 }
 
 enum ExtraType: String, CaseIterable {
@@ -197,8 +232,19 @@ enum ExtraType: String, CaseIterable {
         }
     }
 
+    var scope: ExtraScope {
+        switch self {
+        case .evCharging, .powerHookup, .septicDisposal: return .siteSpecific
+        case .sauna, .firewood, .kayak, .bikeRental, .fishingGear, .bedding, .grill: return .areaWide
+        }
+    }
+
     static func available(for category: ListingCategory) -> [ExtraType] {
         allCases.filter { $0.categories.contains(category) }
+    }
+
+    static func available(for category: ListingCategory, scope: ExtraScope) -> [ExtraType] {
+        available(for: category).filter { $0.scope == scope }
     }
 }
 
@@ -328,6 +374,8 @@ struct Booking: Codable, Identifiable {
     let cancelledBy: String?
     let cancellationReason: String?
     var refundAmount: Int?
+    let selectedSpotIds: [String]?
+    let selectedExtras: SelectedExtras?
 
     // Joined data
     let listing: BookingListing?
@@ -351,6 +399,8 @@ struct Booking: Codable, Identifiable {
         case cancelledBy = "cancelled_by"
         case cancellationReason = "cancellation_reason"
         case refundAmount = "refund_amount"
+        case selectedSpotIds = "selected_spot_ids"
+        case selectedExtras = "selected_extras"
     }
 }
 

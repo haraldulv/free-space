@@ -4,7 +4,7 @@ const STEP_LABELS = [
   "Lokasjon",
   "Bilder",
   "Fasiliteter",
-  "Pris",
+  "Felles tillegg",
   "Kalender",
   "Publiser",
 ];
