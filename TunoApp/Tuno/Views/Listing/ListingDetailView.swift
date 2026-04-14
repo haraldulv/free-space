@@ -130,6 +130,45 @@ struct ListingDetailView: View {
                                 Divider()
                             }
 
+                            // Tillegg (felles + per plass)
+                            let listingExtras = listing.extras ?? []
+                            let spotsWithExtras = (listing.spotMarkers ?? []).enumerated().filter { !($0.element.extras ?? []).isEmpty }
+                            if !listingExtras.isEmpty || !spotsWithExtras.isEmpty {
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text("Tillegg")
+                                        .font(.system(size: 18, weight: .semibold))
+
+                                    if !listingExtras.isEmpty {
+                                        VStack(alignment: .leading, spacing: 8) {
+                                            Text("Felles tillegg")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundStyle(.neutral700)
+                                            extrasChips(listingExtras)
+                                        }
+                                    }
+
+                                    if !spotsWithExtras.isEmpty {
+                                        VStack(alignment: .leading, spacing: 10) {
+                                            Text("Per plass")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundStyle(.neutral700)
+                                            ForEach(spotsWithExtras, id: \.offset) { idx, spot in
+                                                VStack(alignment: .leading, spacing: 8) {
+                                                    Text(spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false ? spot.label! : "Plass \(idx + 1)")
+                                                        .font(.system(size: 14, weight: .semibold))
+                                                        .foregroundStyle(.neutral900)
+                                                    extrasChips(spot.extras ?? [])
+                                                }
+                                                .padding(10)
+                                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.neutral200, lineWidth: 1))
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Divider()
+                            }
+
                             // Map
                             if let lat = listing.lat, let lng = listing.lng {
                                 VStack(alignment: .leading, spacing: 8) {
@@ -327,6 +366,28 @@ struct ListingDetailView: View {
             let service = ListingService()
             listing = await service.fetchListing(id: listingId)
             isLoading = false
+        }
+    }
+
+    @ViewBuilder
+    private func extrasChips(_ extras: [ListingExtra]) -> some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 6) {
+            ForEach(extras, id: \.id) { ex in
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ex.name)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.neutral800)
+                    Text("\(ex.price) kr\(ex.perNight ? "/natt" : "")")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.neutral200, lineWidth: 1))
+            }
         }
     }
 }
