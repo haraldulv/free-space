@@ -17,7 +17,7 @@ import type { Listing, Amenity, SpotMarker, ListingExtra } from "@/types";
 
 const TABS = [
   { id: "info", label: "Detaljer", icon: FileText },
-  { id: "location", label: "Lokasjon", icon: MapPin },
+  { id: "location", label: "Plasser", icon: MapPin },
   { id: "images", label: "Bilder", icon: ImageIcon },
   { id: "amenities", label: "Fasiliteter", icon: Sparkles },
   { id: "extras", label: "Felles tillegg", icon: Sparkles },

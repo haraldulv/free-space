@@ -57,7 +57,7 @@ final class ListingFormModel: ObservableObject {
     // MARK: - Validation
 
     var stepLabels: [String] {
-        ["Kategori", "Detaljer", "Lokasjon", "Bilder", "Fasiliteter", "Felles tillegg", "Kalender", "Publiser"]
+        ["Kategori", "Detaljer", "Plasser", "Bilder", "Fasiliteter", "Felles tillegg", "Kalender", "Publiser"]
     }
 
     func validateCurrentStep() -> String? {

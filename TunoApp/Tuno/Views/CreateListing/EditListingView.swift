@@ -48,7 +48,7 @@ struct EditListingView: View {
     @State private var customExtraPrice: String = ""
     @State private var customExtraPerNight: Bool = false
 
-    private let tabs = ["Detaljer", "Lokasjon", "Bilder", "Fasiliteter", "Felles tillegg", "Tilgjengelighet"]
+    private let tabs = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Felles tillegg", "Tilgjengelighet"]
 
     var body: some View {
         VStack(spacing: 0) {
