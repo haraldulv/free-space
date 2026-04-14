@@ -13,7 +13,6 @@ interface BasicInfoStepProps {
   category?: ListingCategory;
   checkInTime?: string;
   checkOutTime?: string;
-  checkinMessage?: string;
   instantBooking: boolean;
   onChange: (field: string, value: string | number | boolean | undefined) => void;
   errors: Record<string, string>;
@@ -27,7 +26,6 @@ export default function BasicInfoStep({
   category,
   checkInTime,
   checkOutTime,
-  checkinMessage,
   instantBooking,
   onChange,
   errors,
@@ -114,21 +112,6 @@ export default function BasicInfoStep({
           label="Umiddelbar booking"
           description="Gjester kan reservere uten å vente på bekreftelse fra deg."
         />
-      </div>
-
-      <div className="space-y-1">
-        <Textarea
-          id="checkinMessage"
-          label="Velkomstmelding ved innsjekk (valgfritt)"
-          placeholder="F.eks. Hei! Port-kode er 1234. Plassen din er ved ladepunktet. God tur!"
-          rows={4}
-          value={checkinMessage || ""}
-          onChange={(e) => onChange("checkinMessage", e.target.value)}
-          error={errors.checkinMessage}
-        />
-        <p className="text-xs text-neutral-500">
-          Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.
-        </p>
       </div>
     </div>
   );

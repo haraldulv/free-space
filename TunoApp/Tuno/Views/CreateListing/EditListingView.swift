@@ -27,6 +27,7 @@ struct EditListingView: View {
     @State private var isSpotMode = false
     @State private var mapUpdateTrigger = UUID()
     @State private var perSpotPricing: Bool = false
+    @State private var perSpotCheckinMessage: Bool = false
     @State private var customSpotExtraName: [String: String] = [:]
     @State private var customSpotExtraPrice: [String: String] = [:]
     @State private var customSpotExtraPerNight: [String: Bool] = [:]
@@ -231,19 +232,6 @@ struct EditListingView: View {
                     }
                 }
                 .tint(.primary600)
-
-                field("Velkomstmelding ved innsjekk (valgfritt)") {
-                    VStack(alignment: .leading, spacing: 4) {
-                        TextEditor(text: $checkinMessage)
-                            .frame(minHeight: 90)
-                            .padding(8)
-                            .background(Color.neutral50)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                        Text("Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.neutral500)
-                    }
-                }
             }
             .padding()
         }
@@ -309,6 +297,9 @@ struct EditListingView: View {
 
                 // Pris-seksjon
                 editLocationPricingSection
+
+                // Velkomstmelding-seksjon
+                editCheckinMessageSection
 
                 // Utbrettede plass-kort
                 if !spotMarkers.isEmpty {
@@ -416,6 +407,56 @@ struct EditListingView: View {
         }
     }
 
+    private var editCheckinMessageSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Velkomstmelding ved innsjekk")
+                    .font(.system(size: 18, weight: .semibold))
+                Text("Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                editPricingModeRow(
+                    title: "Samme melding for alle plasser",
+                    subtitle: "Én felles velkomstmelding til alle gjester.",
+                    isSelected: !perSpotCheckinMessage,
+                    onSelect: { setEditPerSpotCheckinMessage(false) }
+                )
+                editPricingModeRow(
+                    title: "Individuell melding per plass",
+                    subtitle: "Sett ulik melding per plass (f.eks. ulike port-koder).",
+                    isSelected: perSpotCheckinMessage,
+                    onSelect: { setEditPerSpotCheckinMessage(true) }
+                )
+            }
+
+            if !perSpotCheckinMessage {
+                TextEditor(text: $checkinMessage)
+                    .frame(minHeight: 90)
+                    .padding(8)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                Text("Skriv individuell melding på hver plass nedenfor.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+            }
+        }
+    }
+
+    private func setEditPerSpotCheckinMessage(_ enabled: Bool) {
+        perSpotCheckinMessage = enabled
+        if enabled {
+            checkinMessage = ""
+        } else {
+            for i in spotMarkers.indices {
+                spotMarkers[i].checkinMessage = nil
+            }
+        }
+    }
+
     private func editInlineSpotCard(index: Int) -> some View {
         let spot = spotMarkers[index]
         let spotId = spot.id ?? ""
@@ -472,21 +513,20 @@ struct EditListingView: View {
 
             editCustomSpotExtrasSection(spotIndex: index, spotId: spotId)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Velkomstmelding for denne plassen")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.neutral700)
-                TextEditor(text: Binding(
-                    get: { spotMarkers[index].checkinMessage ?? "" },
-                    set: { spotMarkers[index].checkinMessage = $0.isEmpty ? nil : $0 }
-                ))
-                .frame(minHeight: 60)
-                .padding(6)
-                .background(Color.neutral50)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                Text("Legges til velkomstmeldingen ved innsjekk — f.eks. port-kode eller plasseringsbeskrivelse.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.neutral500)
+            if perSpotCheckinMessage {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Velkomstmelding for denne plassen")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.neutral700)
+                    TextEditor(text: Binding(
+                        get: { spotMarkers[index].checkinMessage ?? "" },
+                        set: { spotMarkers[index].checkinMessage = $0.isEmpty ? nil : $0 }
+                    ))
+                    .frame(minHeight: 60)
+                    .padding(6)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
             }
 
             SpotBlockedDatesSection(
@@ -999,6 +1039,8 @@ struct EditListingView: View {
         isActive = listing.isActive ?? true
         // Set perSpotPricing om noen spot har egen pris
         perSpotPricing = (listing.spotMarkers ?? []).contains { $0.price != nil }
+        // Set perSpotCheckinMessage om noen spot har egen melding
+        perSpotCheckinMessage = (listing.spotMarkers ?? []).contains { ($0.checkinMessage?.isEmpty == false) }
     }
 
     // Proxy form model for AvailabilityStepView reuse

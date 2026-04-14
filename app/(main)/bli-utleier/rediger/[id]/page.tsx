@@ -81,6 +81,7 @@ export default function EditListingPage() {
         checkOutTime: row.check_out_time || "11:00",
         checkinMessage: row.checkin_message || "",
         perSpotPricing: Array.isArray(row.spot_markers) && (row.spot_markers as SpotMarker[]).some((s) => s.price != null),
+        perSpotCheckinMessage: Array.isArray(row.spot_markers) && (row.spot_markers as SpotMarker[]).some((s) => s.checkinMessage),
       });
       setBlockedDates(row.blocked_dates || []);
       setLoading(false);
@@ -189,7 +190,6 @@ export default function EditListingPage() {
             category={formData.category}
             checkInTime={formData.checkInTime}
             checkOutTime={formData.checkOutTime}
-            checkinMessage={formData.checkinMessage}
             instantBooking={formData.instantBooking ?? false}
             onChange={updateField}
             errors={errors}
@@ -210,6 +210,8 @@ export default function EditListingPage() {
             defaultPrice={formData.price || 0}
             perSpotPricing={formData.perSpotPricing || false}
             priceUnit={formData.priceUnit || "natt"}
+            checkinMessage={formData.checkinMessage}
+            perSpotCheckinMessage={formData.perSpotCheckinMessage || false}
             onChange={updateField}
             errors={errors}
           />

@@ -60,6 +60,7 @@ export default function ListingFormWizard({
     spotMarkers: [],
     hideExactLocation: false,
     perSpotPricing: false,
+    perSpotCheckinMessage: false,
     blockedDates: [],
     extras: [],
     ...initialData,
@@ -149,7 +150,6 @@ export default function ListingFormWizard({
             category={formData.category}
             checkInTime={formData.checkInTime}
             checkOutTime={formData.checkOutTime}
-            checkinMessage={formData.checkinMessage}
             instantBooking={formData.instantBooking ?? false}
             onChange={updateField}
             errors={errors}
@@ -170,6 +170,8 @@ export default function ListingFormWizard({
             defaultPrice={formData.price || 0}
             perSpotPricing={formData.perSpotPricing || false}
             priceUnit={formData.priceUnit || "natt"}
+            checkinMessage={formData.checkinMessage}
+            perSpotCheckinMessage={formData.perSpotCheckinMessage || false}
             onChange={updateField}
             errors={errors}
           />

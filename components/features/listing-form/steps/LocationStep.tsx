@@ -22,6 +22,8 @@ interface LocationStepProps {
   defaultPrice: number;
   perSpotPricing: boolean;
   priceUnit: "time" | "natt";
+  checkinMessage?: string;
+  perSpotCheckinMessage: boolean;
   onChange: (field: string, value: unknown) => void;
   errors: Record<string, string>;
 }
@@ -39,9 +41,22 @@ export default function LocationStep({
   defaultPrice,
   perSpotPricing,
   priceUnit,
+  checkinMessage,
+  perSpotCheckinMessage,
   onChange,
   errors,
 }: LocationStepProps) {
+  const setPerSpotCheckinMessage = (enabled: boolean) => {
+    onChange("perSpotCheckinMessage", enabled);
+    if (enabled) {
+      // Individuell: fjern listing-nivå-meldingen.
+      onChange("checkinMessage", "");
+    } else {
+      // Uniform: fjern alle per-plass-meldinger.
+      const next = spotMarkers.map((s) => ({ ...s, checkinMessage: undefined }));
+      onChange("spotMarkers", next);
+    }
+  };
   // Ikke lenger toggle-basert — plasser vises alltid utbrettet
   const setPerSpotPricing = (enabled: boolean) => {
     onChange("perSpotPricing", enabled);
@@ -357,6 +372,60 @@ export default function LocationStep({
         </div>
       )}
 
+      {/* Velkomstmelding */}
+      {(lat !== 0 || lng !== 0) && (
+        <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-4">
+          <div>
+            <h3 className="text-base font-semibold text-neutral-900">Velkomstmelding ved innsjekk</h3>
+            <p className="mt-0.5 text-xs text-neutral-500">
+              Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => setPerSpotCheckinMessage(false)}
+              className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${!perSpotCheckinMessage ? "border-primary-600 bg-primary-50" : "border-neutral-200 bg-white"}`}
+            >
+              <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${!perSpotCheckinMessage ? "border-primary-600" : "border-neutral-300"}`}>
+                {!perSpotCheckinMessage && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-neutral-900">Samme melding for alle plasser</div>
+                <div className="text-xs text-neutral-500">Én felles velkomstmelding til alle gjester.</div>
+              </div>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPerSpotCheckinMessage(true)}
+              className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${perSpotCheckinMessage ? "border-primary-600 bg-primary-50" : "border-neutral-200 bg-white"}`}
+            >
+              <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${perSpotCheckinMessage ? "border-primary-600" : "border-neutral-300"}`}>
+                {perSpotCheckinMessage && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
+              </div>
+              <div className="flex-1">
+                <div className="text-sm font-medium text-neutral-900">Individuell melding per plass</div>
+                <div className="text-xs text-neutral-500">Sett ulik melding per plass (f.eks. ulike port-koder).</div>
+              </div>
+            </button>
+          </div>
+
+          {!perSpotCheckinMessage && (
+            <textarea
+              value={checkinMessage ?? ""}
+              onChange={(e) => onChange("checkinMessage", e.target.value)}
+              placeholder="F.eks. Hei! Port-kode er 1234. Plassen din er ved ladepunktet."
+              rows={4}
+              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm placeholder:text-neutral-400"
+            />
+          )}
+          {perSpotCheckinMessage && (
+            <p className="text-xs text-neutral-500">Skriv individuell melding på hver plass nedenfor.</p>
+          )}
+        </div>
+      )}
+
       {/* Plasser (utbrettet) */}
       {spotMarkers.length > 0 && (
         <div>
@@ -372,6 +441,7 @@ export default function LocationStep({
                 category={category}
                 defaultPrice={defaultPrice}
                 showPrice={perSpotPricing}
+                showCheckinMessage={perSpotCheckinMessage}
                 onChange={(updated) => {
                   const next = [...spotMarkers];
                   next[i] = { ...updated, id: updated.id ?? crypto.randomUUID() };
@@ -408,11 +478,12 @@ interface SpotInlineCardProps {
   category: ListingCategory;
   defaultPrice: number;
   showPrice: boolean;
+  showCheckinMessage: boolean;
   onChange: (updated: SpotMarker) => void;
   onRemove: () => void;
 }
 
-function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, onChange, onRemove }: SpotInlineCardProps) {
+function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, showCheckinMessage, onChange, onRemove }: SpotInlineCardProps) {
   const [customName, setCustomName] = useState("");
   const [customPrice, setCustomPrice] = useState("");
   const [customPerNight, setCustomPerNight] = useState(false);
@@ -564,17 +635,18 @@ function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, onChan
         </div>
       </div>
 
-      <div className="space-y-1 pt-2 border-t border-neutral-100">
-        <label className="text-xs font-semibold text-neutral-700">Velkomstmelding for denne plassen (valgfritt)</label>
-        <textarea
-          value={spot.checkinMessage ?? ""}
-          onChange={(e) => onChange({ ...spot, checkinMessage: e.target.value || undefined })}
-          placeholder="F.eks. port-kode, GPS-koordinater, plasseringsbeskrivelse..."
-          rows={2}
-          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm placeholder:text-neutral-400"
-        />
-        <p className="text-[11px] text-neutral-500">Sendes sammen med velkomstmeldingen ved innsjekk.</p>
-      </div>
+      {showCheckinMessage && (
+        <div className="space-y-1 pt-2 border-t border-neutral-100">
+          <label className="text-xs font-semibold text-neutral-700">Velkomstmelding for denne plassen</label>
+          <textarea
+            value={spot.checkinMessage ?? ""}
+            onChange={(e) => onChange({ ...spot, checkinMessage: e.target.value || undefined })}
+            placeholder="F.eks. port-kode, GPS-koordinater, plasseringsbeskrivelse..."
+            rows={2}
+            className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm placeholder:text-neutral-400"
+          />
+        </div>
+      )}
 
       <SpotBlockedDates
         blockedDates={spot.blockedDates ?? []}

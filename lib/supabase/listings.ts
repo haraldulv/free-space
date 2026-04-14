@@ -28,6 +28,8 @@ export interface CreateListingData {
   extras?: { id: string; name: string; price: number; perNight: boolean }[];
   /** UI-only flag — bestemmer om pris settes per-plass eller uniform. Persisteres ikke. */
   perSpotPricing?: boolean;
+  /** UI-only flag — bestemmer om velkomstmelding settes per-plass eller uniform. Persisteres ikke. */
+  perSpotCheckinMessage?: boolean;
 }
 
 /** Convert a Supabase row to our Listing type */

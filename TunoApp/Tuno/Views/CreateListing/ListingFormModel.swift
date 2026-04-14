@@ -33,6 +33,7 @@ final class ListingFormModel: ObservableObject {
     @Published var spotMarkers: [SpotMarker] = []
     @Published var hideExactLocation = false
     @Published var perSpotPricing: Bool = false
+    @Published var perSpotCheckinMessage: Bool = false
 
     // MARK: - Step 3: Images
     @Published var selectedPhotos: [PhotosPickerItem] = []

@@ -363,20 +363,6 @@ struct BasicInfoStepView: View {
                     }
                 }
                 .tint(.primary600)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Velkomstmelding ved innsjekk (valgfritt)")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.neutral600)
-                    TextEditor(text: $form.checkinMessage)
-                        .frame(minHeight: 90)
-                        .padding(8)
-                        .background(Color.neutral50)
-                        .clipShape(RoundedRectangle(cornerRadius: 8))
-                    Text("Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
-                }
             }
             .padding()
         }
@@ -518,6 +504,11 @@ struct LocationStepView: View {
                     pricingSection
                 }
 
+                // Velkomstmelding-seksjon
+                if form.lat != 0 || form.lng != 0 {
+                    checkinMessageSection
+                }
+
                 // Utbrettede plass-editors
                 if !form.spotMarkers.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
@@ -636,6 +627,58 @@ struct LocationStepView: View {
         }
     }
 
+    // MARK: - Check-in message section
+
+    private var checkinMessageSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Velkomstmelding ved innsjekk")
+                    .font(.system(size: 18, weight: .semibold))
+                Text("Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+            }
+
+            VStack(alignment: .leading, spacing: 10) {
+                pricingModeRow(
+                    title: "Samme melding for alle plasser",
+                    subtitle: "Én felles velkomstmelding til alle gjester.",
+                    isSelected: !form.perSpotCheckinMessage,
+                    onSelect: { setPerSpotCheckinMessage(false) }
+                )
+                pricingModeRow(
+                    title: "Individuell melding per plass",
+                    subtitle: "Sett ulik melding per plass (f.eks. ulike port-koder).",
+                    isSelected: form.perSpotCheckinMessage,
+                    onSelect: { setPerSpotCheckinMessage(true) }
+                )
+            }
+
+            if !form.perSpotCheckinMessage {
+                TextEditor(text: $form.checkinMessage)
+                    .frame(minHeight: 90)
+                    .padding(8)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                Text("Skriv individuell melding på hver plass nedenfor.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+            }
+        }
+    }
+
+    private func setPerSpotCheckinMessage(_ enabled: Bool) {
+        form.perSpotCheckinMessage = enabled
+        if enabled {
+            form.checkinMessage = ""
+        } else {
+            for i in form.spotMarkers.indices {
+                form.spotMarkers[i].checkinMessage = nil
+            }
+        }
+    }
+
     // MARK: - Inline spot card
 
     private func inlineSpotCard(index: Int) -> some View {
@@ -698,21 +741,20 @@ struct LocationStepView: View {
 
             customSpotExtrasSection(spotIndex: index, spotId: spotId)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Velkomstmelding for denne plassen")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.neutral700)
-                TextEditor(text: Binding(
-                    get: { form.spotMarkers[index].checkinMessage ?? "" },
-                    set: { form.spotMarkers[index].checkinMessage = $0.isEmpty ? nil : $0 }
-                ))
-                .frame(minHeight: 60)
-                .padding(6)
-                .background(Color.neutral50)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                Text("Legges til velkomstmeldingen ved innsjekk — f.eks. port-kode eller plasseringsbeskrivelse.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.neutral500)
+            if form.perSpotCheckinMessage {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Velkomstmelding for denne plassen")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.neutral700)
+                    TextEditor(text: Binding(
+                        get: { form.spotMarkers[index].checkinMessage ?? "" },
+                        set: { form.spotMarkers[index].checkinMessage = $0.isEmpty ? nil : $0 }
+                    ))
+                    .frame(minHeight: 60)
+                    .padding(6)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
             }
 
             SpotBlockedDatesSection(
