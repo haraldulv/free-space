@@ -83,12 +83,68 @@ export default async function ListingPage({
             </p>
           </div>
 
-          <div className="mt-6 border-t border-neutral-100 pt-6">
-            <h2 className="mb-4 text-lg font-semibold text-neutral-900">
-              Fasiliteter
-            </h2>
-            <AmenityList amenities={listing.amenities} />
-          </div>
+          {listing.amenities.length > 0 && (
+            <div className="mt-6 border-t border-neutral-100 pt-6">
+              <h2 className="mb-4 text-lg font-semibold text-neutral-900">
+                Fasiliteter
+              </h2>
+              <AmenityList amenities={listing.amenities} />
+            </div>
+          )}
+
+          {(() => {
+            const listingExtras = listing.extras ?? [];
+            const spotsWithExtras = (listing.spotMarkers ?? []).filter((s) => (s.extras ?? []).length > 0);
+            if (listingExtras.length === 0 && spotsWithExtras.length === 0) return null;
+            return (
+              <div className="mt-6 border-t border-neutral-100 pt-6">
+                <h2 className="mb-4 text-lg font-semibold text-neutral-900">Tillegg</h2>
+                {listingExtras.length > 0 && (
+                  <div className="mb-5">
+                    <p className="mb-2 text-sm font-medium text-neutral-700">Felles tillegg</p>
+                    <div className="flex flex-wrap gap-2">
+                      {listingExtras.map((ex) => (
+                        <div
+                          key={ex.id}
+                          className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm text-neutral-700"
+                        >
+                          {ex.name}{" "}
+                          <span className="text-neutral-500">
+                            · {ex.price} kr{ex.perNight ? "/natt" : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {spotsWithExtras.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm font-medium text-neutral-700">Per plass</p>
+                    {spotsWithExtras.map((spot, idx) => (
+                      <div key={spot.id ?? idx} className="rounded-lg border border-neutral-200 p-3">
+                        <p className="mb-2 text-sm font-semibold text-neutral-900">
+                          {spot.label?.trim() || `Plass ${idx + 1}`}
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {(spot.extras ?? []).map((ex) => (
+                            <div
+                              key={ex.id}
+                              className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm text-neutral-700"
+                            >
+                              {ex.name}{" "}
+                              <span className="text-neutral-500">
+                                · {ex.price} kr{ex.perNight ? "/natt" : ""}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })()}
 
           <div className="mt-6 border-t border-neutral-100 pt-6">
             <h2 className="mb-4 text-lg font-semibold text-neutral-900">
