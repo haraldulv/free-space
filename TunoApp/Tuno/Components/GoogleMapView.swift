@@ -94,14 +94,48 @@ struct SearchMapView: UIViewRepresentable {
     var onSelect: ((String?) -> Void)? = nil
     var onRegionChanged: ((_ lat: Double, _ lng: Double, _ radiusKm: Double) -> Void)? = nil
 
+    private static let stateKey = "tuno.searchMap.state"
+    private static let stateTTL: TimeInterval = 30 * 60 // 30 min
+
+    private static func searchKey(lat: Double?, lng: Double?, zoom: Float?) -> String {
+        guard let lat, let lng else { return "default" }
+        let z = zoom ?? 11
+        return String(format: "%.4f,%.4f,%.1f", lat, lng, z)
+    }
+
+    private static func readSavedCamera(searchKey: String) -> (lat: Double, lng: Double, zoom: Float)? {
+        guard let data = UserDefaults.standard.dictionary(forKey: stateKey) else { return nil }
+        guard let savedKey = data["key"] as? String, savedKey == searchKey else { return nil }
+        guard let ts = data["ts"] as? Double, Date().timeIntervalSince1970 - ts < stateTTL else { return nil }
+        guard let lat = data["lat"] as? Double, let lng = data["lng"] as? Double, let zoom = data["zoom"] as? Double else { return nil }
+        return (lat, lng, Float(zoom))
+    }
+
+    private static func saveCamera(searchKey: String, lat: Double, lng: Double, zoom: Float) {
+        UserDefaults.standard.set([
+            "key": searchKey,
+            "lat": lat,
+            "lng": lng,
+            "zoom": Double(zoom),
+            "ts": Date().timeIntervalSince1970,
+        ], forKey: stateKey)
+    }
+
     func makeCoordinator() -> Coordinator {
-        Coordinator(onSelect: onSelect, onRegionChanged: onRegionChanged)
+        let key = Self.searchKey(lat: centerLat, lng: centerLng, zoom: centerZoom)
+        let saver: (Double, Double, Float) -> Void = { lat, lng, zoom in
+            Self.saveCamera(searchKey: key, lat: lat, lng: lng, zoom: zoom)
+        }
+        return Coordinator(onSelect: onSelect, onRegionChanged: onRegionChanged, onCameraIdle: saver)
     }
 
     func makeUIView(context: Context) -> GMSMapView {
-        let lat = centerLat ?? 64.5
-        let lng = centerLng ?? 14.0
-        let zoom: Float = centerZoom ?? (centerLat != nil ? 11 : 4)
+        let key = Self.searchKey(lat: centerLat, lng: centerLng, zoom: centerZoom)
+        let saved = Self.readSavedCamera(searchKey: key)
+
+        let lat = saved?.lat ?? centerLat ?? 64.5
+        let lng = saved?.lng ?? centerLng ?? 14.0
+        let zoom: Float = saved?.zoom ?? centerZoom ?? (centerLat != nil ? 11 : 4)
         let camera = GMSCameraPosition(latitude: lat, longitude: lng, zoom: zoom)
         let options = GMSMapViewOptions()
         options.camera = camera
@@ -198,6 +232,7 @@ struct SearchMapView: UIViewRepresentable {
     class Coordinator: NSObject, GMSMapViewDelegate {
         let onSelect: ((String?) -> Void)?
         nonisolated(unsafe) let onRegionChanged: ((_ lat: Double, _ lng: Double, _ radiusKm: Double) -> Void)?
+        nonisolated(unsafe) let onCameraIdle: ((_ lat: Double, _ lng: Double, _ zoom: Float) -> Void)?
         var markerToId: [GMSMarker: String] = [:]
         var selectedMarker: GMSMarker?
         weak var mapView: GMSMapView?
@@ -206,9 +241,14 @@ struct SearchMapView: UIViewRepresentable {
         var userMovedMap = false
         var debounceWorkItem: DispatchWorkItem?
 
-        init(onSelect: ((String?) -> Void)?, onRegionChanged: ((_ lat: Double, _ lng: Double, _ radiusKm: Double) -> Void)?) {
+        init(
+            onSelect: ((String?) -> Void)?,
+            onRegionChanged: ((_ lat: Double, _ lng: Double, _ radiusKm: Double) -> Void)?,
+            onCameraIdle: ((_ lat: Double, _ lng: Double, _ zoom: Float) -> Void)? = nil
+        ) {
             self.onSelect = onSelect
             self.onRegionChanged = onRegionChanged
+            self.onCameraIdle = onCameraIdle
         }
 
         func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
@@ -231,6 +271,9 @@ struct SearchMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
+            // Persister kamera-state (også om bruker ikke har pannet — får fitBounds-resultat etter første render)
+            onCameraIdle?(position.target.latitude, position.target.longitude, position.zoom)
+
             guard userMovedMap else { return }
             userMovedMap = false
 
