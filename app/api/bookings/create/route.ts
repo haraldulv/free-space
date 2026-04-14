@@ -113,6 +113,14 @@ export async function POST(request: NextRequest) {
       selectedExtras,
     });
 
+    // Stripe krever minst kr 3 for NOK-betalinger.
+    if (totalPrice < 3) {
+      return NextResponse.json(
+        { error: "Bestillingen må være på minst 3 kr." },
+        { status: 400 },
+      );
+    }
+
     const { data: overlappingBookings } = await supabase
       .from("bookings")
       .select("selected_spot_ids")

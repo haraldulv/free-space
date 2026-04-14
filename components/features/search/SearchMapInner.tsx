@@ -8,6 +8,44 @@ import { isNative } from "@/lib/capacitor";
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 let loaderInitialized = false;
 
+const MAP_STATE_KEY = "tuno_search_map_state";
+const MAP_STATE_TTL_MS = 30 * 60 * 1000; // 30 min
+
+function currentSearchKey(): string {
+  if (typeof window === "undefined") return "";
+  return window.location.pathname + window.location.search;
+}
+
+function readSavedMapState(): { lat: number; lng: number; zoom: number } | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(MAP_STATE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as { lat: number; lng: number; zoom: number; ts: number; key: string };
+    if (Date.now() - parsed.ts > MAP_STATE_TTL_MS) return null;
+    if (parsed.key !== currentSearchKey()) return null;
+    if (typeof parsed.lat !== "number" || typeof parsed.lng !== "number" || typeof parsed.zoom !== "number") return null;
+    return { lat: parsed.lat, lng: parsed.lng, zoom: parsed.zoom };
+  } catch {
+    return null;
+  }
+}
+
+function saveMapState(map: google.maps.Map) {
+  if (typeof window === "undefined") return;
+  const center = map.getCenter();
+  const zoom = map.getZoom();
+  if (!center || zoom === undefined) return;
+  try {
+    sessionStorage.setItem(
+      MAP_STATE_KEY,
+      JSON.stringify({ lat: center.lat(), lng: center.lng(), zoom, ts: Date.now(), key: currentSearchKey() }),
+    );
+  } catch {
+    // ignore quota errors
+  }
+}
+
 export interface MapBounds {
   north: number;
   south: number;
@@ -179,7 +217,14 @@ export default function SearchMapInner({
 
       let center = { lat: 64.5, lng: 14 };
       let zoom = 4;
-      if (listings.length > 0) {
+      // Forsøk å gjenopprette kart-state fra forrige besøk (< 30 min gammelt)
+      const restored = readSavedMapState();
+      let restoredFromSession = false;
+      if (restored) {
+        center = { lat: restored.lat, lng: restored.lng };
+        zoom = restored.zoom;
+        restoredFromSession = true;
+      } else if (listings.length > 0) {
         const bounds = new google.maps.LatLngBounds();
         listings.forEach((l) => bounds.extend({ lat: l.location.lat, lng: l.location.lng }));
         center = { lat: bounds.getCenter().lat(), lng: bounds.getCenter().lng() };
@@ -216,7 +261,10 @@ export default function SearchMapInner({
         ],
       });
 
-      map.addListener("idle", reportBounds);
+      map.addListener("idle", () => {
+        reportBounds();
+        saveMapState(map);
+      });
       map.addListener("click", () => onSelect(null));
       mapRef.current = map;
       readyRef.current = true;
@@ -225,7 +273,7 @@ export default function SearchMapInner({
       createMarkers(map, listings);
       listingIdsRef.current = listings.map((l) => l.id).sort().join(",");
 
-      if (listings.length > 0) {
+      if (!restoredFromSession && listings.length > 0) {
         const bounds = new google.maps.LatLngBounds();
         listings.forEach((l) => bounds.extend({ lat: l.location.lat, lng: l.location.lng }));
         // Trigger resize first so the map knows its true container size

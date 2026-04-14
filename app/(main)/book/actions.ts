@@ -164,6 +164,11 @@ export async function createBookingAction(data: {
       selectedExtras: data.selectedExtras as SelectedExtrasClient | undefined,
     });
 
+    // Stripe krever minst kr 3 for NOK-betalinger.
+    if (authoritativeTotal < 3) {
+      return { error: "Bestillingen må være på minst 3 kr." };
+    }
+
     const { data: hostProfile } = await supabase
       .from("profiles")
       .select("stripe_account_id, stripe_onboarding_complete")
