@@ -163,10 +163,16 @@ struct SearchMapView: UIViewRepresentable {
         context.coordinator.lastCenterLat = centerLat
         context.coordinator.lastCenterLng = centerLng
 
-        // Update markers (don't move camera unless center explicitly changed)
-        mapView.clear()
-        context.coordinator.markerToId.removeAll()
-        addMarkers(to: mapView, coordinator: context.coordinator)
+        // Diff markers — kun rebygg om listings faktisk endret seg, ellers
+        // får vi flikker hver gang utenforstående state oppdaterer (f.eks.
+        // tap på pin → mapSelectedListing → re-render).
+        let newIdsKey = listings.compactMap { $0.lat != nil && $0.lng != nil ? $0.id : nil }.sorted().joined(separator: ",")
+        if newIdsKey != context.coordinator.lastListingIdsKey {
+            mapView.clear()
+            context.coordinator.markerToId.removeAll()
+            addMarkers(to: mapView, coordinator: context.coordinator)
+            context.coordinator.lastListingIdsKey = newIdsKey
+        }
 
         if centerChanged, let lat = centerLat, let lng = centerLng {
             let zoom: Float = centerZoom ?? 11
@@ -238,6 +244,7 @@ struct SearchMapView: UIViewRepresentable {
         weak var mapView: GMSMapView?
         var lastCenterLat: Double?
         var lastCenterLng: Double?
+        var lastListingIdsKey: String = ""
         var userMovedMap = false
         var debounceWorkItem: DispatchWorkItem?
 
