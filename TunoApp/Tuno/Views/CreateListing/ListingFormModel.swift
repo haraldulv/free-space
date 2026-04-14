@@ -22,6 +22,7 @@ final class ListingFormModel: ObservableObject {
     @Published var maxVehicleLength: Int?
     @Published var checkInTime = "15:00"
     @Published var checkOutTime = "11:00"
+    @Published var checkinMessage = ""
 
     // MARK: - Step 2: Location
     @Published var address = ""
@@ -146,6 +147,7 @@ final class ListingFormModel: ObservableObject {
             maxVehicleLength: category == .camping ? maxVehicleLength : nil,
             checkInTime: checkInTime,
             checkOutTime: checkOutTime,
+            checkinMessage: checkinMessage.trimmingCharacters(in: .whitespaces).isEmpty ? nil : checkinMessage,
             extras: selectedExtras,
             hostName: profile?.fullName ?? "",
             hostAvatar: profile?.avatarUrl ?? "",
@@ -220,6 +222,7 @@ struct CreateListingInput: Encodable {
     let maxVehicleLength: Int?
     let checkInTime: String
     let checkOutTime: String
+    let checkinMessage: String?
     let extras: [ListingExtra]
     let hostName: String
     let hostAvatar: String
@@ -237,6 +240,7 @@ struct CreateListingInput: Encodable {
         case maxVehicleLength = "max_vehicle_length"
         case checkInTime = "check_in_time"
         case checkOutTime = "check_out_time"
+        case checkinMessage = "checkin_message"
         case hostName = "host_name"
         case hostAvatar = "host_avatar"
         case isActive = "is_active"

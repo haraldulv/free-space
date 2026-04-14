@@ -24,6 +24,7 @@ export interface CreateListingData {
   blockedDates?: string[];
   checkInTime?: string;
   checkOutTime?: string;
+  checkinMessage?: string;
   extras?: { id: string; name: string; price: number; perNight: boolean }[];
   /** UI-only flag — bestemmer om pris settes per-plass eller uniform. Persisteres ikke. */
   perSpotPricing?: boolean;
@@ -69,6 +70,7 @@ function rowToListing(row: Record<string, unknown>): Listing {
     blockedDates: row.blocked_dates as string[] | undefined,
     checkInTime: (row.check_in_time as string) || "15:00",
     checkOutTime: (row.check_out_time as string) || "11:00",
+    checkinMessage: row.checkin_message as string | undefined,
     extras: (row.extras as Listing["extras"]) || [],
   };
 }
@@ -352,6 +354,7 @@ export async function createListing(input: CreateListingData, hostId: string): P
     blocked_dates: input.blockedDates || [],
     check_in_time: input.checkInTime || "15:00",
     check_out_time: input.checkOutTime || "11:00",
+    checkin_message: input.checkinMessage || null,
     extras: input.extras || [],
     host_name: profile?.full_name || "Anonym",
     host_avatar: profile?.avatar_url || "",
@@ -390,6 +393,7 @@ export async function updateListing(id: string, input: Partial<CreateListingData
   if (input.blockedDates !== undefined) updateData.blocked_dates = input.blockedDates;
   if (input.checkInTime !== undefined) updateData.check_in_time = input.checkInTime;
   if (input.checkOutTime !== undefined) updateData.check_out_time = input.checkOutTime;
+  if (input.checkinMessage !== undefined) updateData.checkin_message = input.checkinMessage || null;
   if (input.extras !== undefined) updateData.extras = input.extras;
 
   const { error } = await supabase

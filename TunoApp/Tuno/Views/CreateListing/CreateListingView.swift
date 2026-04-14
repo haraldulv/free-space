@@ -363,6 +363,20 @@ struct BasicInfoStepView: View {
                     }
                 }
                 .tint(.primary600)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Velkomstmelding ved innsjekk (valgfritt)")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.neutral600)
+                    TextEditor(text: $form.checkinMessage)
+                        .frame(minHeight: 90)
+                        .padding(8)
+                        .background(Color.neutral50)
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+                    Text("Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
             }
             .padding()
         }
@@ -683,6 +697,23 @@ struct LocationStepView: View {
             }
 
             customSpotExtrasSection(spotIndex: index, spotId: spotId)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Velkomstmelding for denne plassen")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.neutral700)
+                TextEditor(text: Binding(
+                    get: { form.spotMarkers[index].checkinMessage ?? "" },
+                    set: { form.spotMarkers[index].checkinMessage = $0.isEmpty ? nil : $0 }
+                ))
+                .frame(minHeight: 60)
+                .padding(6)
+                .background(Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                Text("Legges til velkomstmeldingen ved innsjekk — f.eks. port-kode eller plasseringsbeskrivelse.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral500)
+            }
 
             SpotBlockedDatesSection(
                 spotId: spotId,

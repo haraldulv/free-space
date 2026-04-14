@@ -109,6 +109,7 @@ export interface SpotMarker {
   price?: number;
   extras?: ListingExtra[];
   blockedDates?: string[];
+  checkinMessage?: string;
 }
 
 /**
@@ -176,6 +177,7 @@ export interface Listing {
   checkInTime?: string;
   checkOutTime?: string;
   extras?: ListingExtra[];
+  checkinMessage?: string;
 }
 
 export interface Booking {

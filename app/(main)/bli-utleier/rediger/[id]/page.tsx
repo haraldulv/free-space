@@ -79,6 +79,7 @@ export default function EditListingPage() {
         hideExactLocation: row.hide_exact_location || false,
         checkInTime: row.check_in_time || "15:00",
         checkOutTime: row.check_out_time || "11:00",
+        checkinMessage: row.checkin_message || "",
         perSpotPricing: Array.isArray(row.spot_markers) && (row.spot_markers as SpotMarker[]).some((s) => s.price != null),
       });
       setBlockedDates(row.blocked_dates || []);
@@ -188,6 +189,7 @@ export default function EditListingPage() {
             category={formData.category}
             checkInTime={formData.checkInTime}
             checkOutTime={formData.checkOutTime}
+            checkinMessage={formData.checkinMessage}
             instantBooking={formData.instantBooking ?? false}
             onChange={updateField}
             errors={errors}

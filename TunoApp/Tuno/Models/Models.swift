@@ -26,6 +26,7 @@ struct Listing: Codable, Identifiable, Hashable {
     let blockedDates: [String]?
     let checkInTime: String?
     let checkOutTime: String?
+    let checkinMessage: String?
     let isActive: Bool?
     let extras: [ListingExtra]?
     let rating: Double?
@@ -51,6 +52,7 @@ struct Listing: Codable, Identifiable, Hashable {
         case blockedDates = "blocked_dates"
         case checkInTime = "check_in_time"
         case checkOutTime = "check_out_time"
+        case checkinMessage = "checkin_message"
         case isActive = "is_active"
         case extras
         case reviewCount = "review_count"
@@ -93,6 +95,7 @@ struct SpotMarker: Codable, Hashable {
     var price: Int?
     var extras: [ListingExtra]?
     var blockedDates: [String]?
+    var checkinMessage: String?
 }
 
 struct SelectedExtraEntry: Codable, Hashable {

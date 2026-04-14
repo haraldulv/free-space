@@ -17,6 +17,7 @@ struct EditListingView: View {
     @State private var maxVehicleLength: Int?
     @State private var checkInTime: String = "15:00"
     @State private var checkOutTime: String = "11:00"
+    @State private var checkinMessage: String = ""
     @State private var address: String = ""
     @State private var city: String = ""
     @State private var region: String = ""
@@ -230,6 +231,19 @@ struct EditListingView: View {
                     }
                 }
                 .tint(.primary600)
+
+                field("Velkomstmelding ved innsjekk (valgfritt)") {
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextEditor(text: $checkinMessage)
+                            .frame(minHeight: 90)
+                            .padding(8)
+                            .background(Color.neutral50)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        Text("Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral500)
+                    }
+                }
             }
             .padding()
         }
@@ -457,6 +471,23 @@ struct EditListingView: View {
             }
 
             editCustomSpotExtrasSection(spotIndex: index, spotId: spotId)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Velkomstmelding for denne plassen")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.neutral700)
+                TextEditor(text: Binding(
+                    get: { spotMarkers[index].checkinMessage ?? "" },
+                    set: { spotMarkers[index].checkinMessage = $0.isEmpty ? nil : $0 }
+                ))
+                .frame(minHeight: 60)
+                .padding(6)
+                .background(Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                Text("Legges til velkomstmeldingen ved innsjekk — f.eks. port-kode eller plasseringsbeskrivelse.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral500)
+            }
 
             SpotBlockedDatesSection(
                 spotId: spotId,
@@ -950,6 +981,7 @@ struct EditListingView: View {
         maxVehicleLength = listing.maxVehicleLength.map { Int($0) }
         checkInTime = listing.checkInTime ?? "15:00"
         checkOutTime = listing.checkOutTime ?? "11:00"
+        checkinMessage = listing.checkinMessage ?? ""
         address = listing.address ?? ""
         city = listing.city ?? ""
         region = listing.region ?? ""
@@ -989,6 +1021,7 @@ struct EditListingView: View {
                     spots: spots,
                     checkInTime: checkInTime,
                     checkOutTime: checkOutTime,
+                    checkinMessage: checkinMessage.trimmingCharacters(in: .whitespaces).isEmpty ? nil : checkinMessage,
                     address: address,
                     city: city,
                     region: region,
@@ -1088,6 +1121,7 @@ private struct UpdateListingInput: Encodable {
     let spots: Int
     let checkInTime: String
     let checkOutTime: String
+    let checkinMessage: String?
     let address: String
     let city: String
     let region: String
@@ -1109,6 +1143,7 @@ private struct UpdateListingInput: Encodable {
         case title, description, spots, address, city, region, lat, lng, price, amenities, images, extras
         case checkInTime = "check_in_time"
         case checkOutTime = "check_out_time"
+        case checkinMessage = "checkin_message"
         case priceUnit = "price_unit"
         case instantBooking = "instant_booking"
         case blockedDates = "blocked_dates"

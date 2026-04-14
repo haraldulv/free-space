@@ -564,6 +564,18 @@ function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, onChan
         </div>
       </div>
 
+      <div className="space-y-1 pt-2 border-t border-neutral-100">
+        <label className="text-xs font-semibold text-neutral-700">Velkomstmelding for denne plassen (valgfritt)</label>
+        <textarea
+          value={spot.checkinMessage ?? ""}
+          onChange={(e) => onChange({ ...spot, checkinMessage: e.target.value || undefined })}
+          placeholder="F.eks. port-kode, GPS-koordinater, plasseringsbeskrivelse..."
+          rows={2}
+          className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm placeholder:text-neutral-400"
+        />
+        <p className="text-[11px] text-neutral-500">Sendes sammen med velkomstmeldingen ved innsjekk.</p>
+      </div>
+
       <SpotBlockedDates
         blockedDates={spot.blockedDates ?? []}
         onChange={(dates) => onChange({ ...spot, blockedDates: dates.length ? dates : undefined })}

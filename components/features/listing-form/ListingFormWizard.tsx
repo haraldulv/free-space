@@ -149,6 +149,7 @@ export default function ListingFormWizard({
             category={formData.category}
             checkInTime={formData.checkInTime}
             checkOutTime={formData.checkOutTime}
+            checkinMessage={formData.checkinMessage}
             instantBooking={formData.instantBooking ?? false}
             onChange={updateField}
             errors={errors}
