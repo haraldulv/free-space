@@ -83,7 +83,9 @@ struct SearchView: View {
                 .presentationDetents([.medium])
             }
             .task {
-                // Go to user location on launch
+                // Kjør kun på første mount — hindrer at navigasjon tilbake fra
+                // detaljside resetter søke-state og kart-posisjon.
+                if hasInitialLocation { return }
                 locationManager.requestPermission()
                 if let loc = locationManager.userLocation {
                     searchLat = loc.latitude
