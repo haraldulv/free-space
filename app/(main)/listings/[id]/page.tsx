@@ -7,6 +7,7 @@ import Container from "@/components/ui/Container";
 import Badge from "@/components/ui/Badge";
 import ImageGallery from "@/components/features/ImageGallery";
 import AmenityList from "@/components/features/AmenityList";
+import ExtraList from "@/components/features/ExtraList";
 import HostCard from "@/components/features/HostCard";
 import BookingForm from "@/components/features/BookingForm";
 import ListingFavoriteButton from "@/components/features/ListingFavoriteButton";
@@ -102,42 +103,18 @@ export default async function ListingPage({
                 {listingExtras.length > 0 && (
                   <div className="mb-5">
                     <p className="mb-2 text-sm font-medium text-neutral-700">Felles tillegg</p>
-                    <div className="flex flex-wrap gap-2">
-                      {listingExtras.map((ex) => (
-                        <div
-                          key={ex.id}
-                          className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm text-neutral-700"
-                        >
-                          {ex.name}{" "}
-                          <span className="text-neutral-500">
-                            · {ex.price} kr{ex.perNight ? "/natt" : ""}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                    <ExtraList extras={listingExtras} />
                   </div>
                 )}
                 {spotsWithExtras.length > 0 && (
                   <div className="space-y-3">
                     <p className="text-sm font-medium text-neutral-700">Per plass</p>
                     {spotsWithExtras.map((spot, idx) => (
-                      <div key={spot.id ?? idx} className="rounded-lg border border-neutral-200 p-3">
-                        <p className="mb-2 text-sm font-semibold text-neutral-900">
+                      <div key={spot.id ?? idx} className="rounded-lg border border-neutral-200 p-4">
+                        <p className="mb-3 text-sm font-semibold text-neutral-900">
                           {spot.label?.trim() || `Plass ${idx + 1}`}
                         </p>
-                        <div className="flex flex-wrap gap-2">
-                          {(spot.extras ?? []).map((ex) => (
-                            <div
-                              key={ex.id}
-                              className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm text-neutral-700"
-                            >
-                              {ex.name}{" "}
-                              <span className="text-neutral-500">
-                                · {ex.price} kr{ex.perNight ? "/natt" : ""}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                        <ExtraList extras={spot.extras ?? []} />
                       </div>
                     ))}
                   </div>

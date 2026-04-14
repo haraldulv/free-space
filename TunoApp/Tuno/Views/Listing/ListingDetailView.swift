@@ -371,20 +371,24 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func extrasChips(_ extras: [ListingExtra]) -> some View {
-        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], alignment: .leading, spacing: 6) {
+        VStack(spacing: 8) {
             ForEach(extras, id: \.id) { ex in
-                VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 10) {
+                    Image(systemName: ExtraType(rawValue: ex.id)?.icon ?? "sparkles")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.primary600)
+                        .frame(width: 20)
                     Text(ex.name)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.neutral800)
+                    Spacer()
                     Text("\(ex.price) kr\(ex.perNight ? "/natt" : "")")
-                        .font(.system(size: 12))
+                        .font(.system(size: 13))
                         .foregroundStyle(.neutral500)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 8)
-                .background(Color.neutral50)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.neutral200, lineWidth: 1))
             }
