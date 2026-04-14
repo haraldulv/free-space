@@ -8,6 +8,7 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ReviewForm from "@/components/features/ReviewForm";
 import { getCancellationPreviewAction } from "@/app/(main)/book/actions";
+import { getOrCreateConversationAction } from "@/app/(main)/meldinger/actions";
 import { Booking } from "@/types";
 
 interface BookingCardProps {
@@ -245,16 +246,7 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
 
           {/* Actions */}
           <div className="flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-3">
-            {booking.conversationId && (
-              <Link
-                href={`/dashboard?tab=messages&conversation=${booking.conversationId}`}
-                className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <MessageCircle className="h-3.5 w-3.5" />
-                Chat
-              </Link>
-            )}
+            <ChatLink booking={booking} variant={variant} />
             {variant === "guest" && canReview && (
               <button
                 onClick={() => setShowReview(!showReview)}
@@ -331,5 +323,54 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
         </div>
       )}
     </div>
+  );
+}
+
+function ChatLink({ booking, variant }: { booking: Booking; variant: "guest" | "host" }) {
+  const [opening, setOpening] = useState(false);
+
+  const label = variant === "host" ? "Chat med gjest" : "Chat med utleier";
+
+  // Hvis conversation allerede finnes, direkte-link
+  if (booking.conversationId) {
+    return (
+      <Link
+        href={`/dashboard?tab=messages&conversation=${booking.conversationId}`}
+        className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <MessageCircle className="h-3.5 w-3.5" />
+        {label}
+      </Link>
+    );
+  }
+
+  // Fallback: bare gjest-variant kan opprette on-demand (serveren sjekker host_id)
+  if (variant !== "guest" || !booking.hostId) return null;
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpening(true);
+    const result = await getOrCreateConversationAction({
+      listingId: booking.listingId,
+      hostId: booking.hostId,
+    });
+    setOpening(false);
+    if (result.conversationId) {
+      window.location.href = `/dashboard?tab=messages&conversation=${result.conversationId}`;
+    } else if (result.error) {
+      alert(result.error);
+    }
+  };
+
+  return (
+    <button
+      onClick={handleClick}
+      disabled={opening}
+      className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors disabled:opacity-50"
+    >
+      <MessageCircle className="h-3.5 w-3.5" />
+      {opening ? "Åpner..." : label}
+    </button>
   );
 }

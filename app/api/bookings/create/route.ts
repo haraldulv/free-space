@@ -200,6 +200,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: bookingError.message }, { status: 500 });
     }
 
+    // Sørg for at det finnes en samtale mellom gjest og host — ingen dead links.
+    await supabase
+      .from("conversations")
+      .upsert(
+        {
+          listing_id: listingId,
+          guest_id: user.id,
+          host_id: listing.host_id,
+          booking_id: booking.id,
+        },
+        { onConflict: "listing_id,guest_id", ignoreDuplicates: true },
+      );
+
     // Create Stripe PaymentIntent (amount in øre)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalPrice * 100,

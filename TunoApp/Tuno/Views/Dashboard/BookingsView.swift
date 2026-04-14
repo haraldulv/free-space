@@ -75,14 +75,35 @@ struct BookingsView: View {
 struct BookingCard: View {
     let booking: Booking
     var onCancelled: ((Booking) -> Void)?
+    @EnvironmentObject var authManager: AuthManager
+    @StateObject private var chatService = ChatService()
     @State private var showCancelConfirm = false
     @State private var cancelling = false
     @State private var previewText: String?
     @State private var previewAmount: Int?
     @State private var cancelError: String?
+    @State private var openingChat = false
+    @State private var chatConversationId: String?
+    @State private var reviewRating: Int = 0
+    @State private var reviewComment: String = ""
+    @State private var reviewSubmitting = false
+    @State private var reviewSubmitted = false
+    @State private var hasExistingReview: Bool?
+    @State private var reviewError: String?
 
     private var canCancel: Bool {
         booking.status == .pending || booking.status == .confirmed
+    }
+
+    private var isPastCheckout: Bool {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        guard let checkOutDate = fmt.date(from: booking.checkOut) else { return false }
+        return checkOutDate < Calendar.current.startOfDay(for: Date())
+    }
+
+    private var canReview: Bool {
+        booking.status == .confirmed && isPastCheckout && hasExistingReview == false && !reviewSubmitted
     }
 
     var body: some View {
@@ -135,6 +156,39 @@ struct BookingCard: View {
                     Text("Refundert \(refund) kr")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.neutral600)
+                }
+            }
+
+            HStack(spacing: 16) {
+                Button {
+                    Task { await openChatWithHost() }
+                } label: {
+                    HStack(spacing: 6) {
+                        if openingChat {
+                            ProgressView().scaleEffect(0.7)
+                        } else {
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                .font(.system(size: 13))
+                        }
+                        Text("Send melding til utleier")
+                            .font(.system(size: 14, weight: .medium))
+                    }
+                    .foregroundStyle(Color.primary600)
+                }
+                .disabled(openingChat)
+
+                Spacer()
+            }
+
+            if canReview {
+                reviewSection
+            }
+
+            if reviewSubmitted || hasExistingReview == true {
+                HStack(spacing: 6) {
+                    Image(systemName: "star.fill").foregroundStyle(.yellow).font(.system(size: 12))
+                    Text("Anmeldelse sendt")
+                        .font(.system(size: 13)).foregroundStyle(.neutral500)
                 }
             }
 
@@ -209,6 +263,122 @@ struct BookingCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
         .opacity(booking.status == .cancelled ? 0.6 : 1)
+        .navigationDestination(item: $chatConversationId) { id in
+            ChatView(
+                conversationId: id,
+                otherUserName: "Utleier",
+                listingTitle: booking.listing?.title ?? ""
+            )
+        }
+        .task {
+            if isPastCheckout && booking.status == .confirmed {
+                await checkExistingReview()
+            }
+        }
+    }
+
+    private func openChatWithHost() async {
+        guard let userId = authManager.currentUser?.id.uuidString.lowercased(),
+              let listingId = booking.listing?.id else { return }
+        openingChat = true
+        let convoId = await chatService.getOrCreateConversation(
+            listingId: listingId,
+            guestId: userId,
+            hostId: booking.hostId
+        )
+        openingChat = false
+        if let convoId { chatConversationId = convoId }
+    }
+
+    private var reviewSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Divider().padding(.vertical, 2)
+            Text("Hvordan var oppholdet?")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.neutral900)
+
+            HStack(spacing: 6) {
+                ForEach(1...5, id: \.self) { star in
+                    Button {
+                        reviewRating = star
+                    } label: {
+                        Image(systemName: star <= reviewRating ? "star.fill" : "star")
+                            .font(.system(size: 24))
+                            .foregroundStyle(star <= reviewRating ? .yellow : .neutral300)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+
+            TextField("Kommentar (valgfritt)", text: $reviewComment, axis: .vertical)
+                .lineLimit(2...4)
+                .textFieldStyle(.plain)
+                .padding(10)
+                .background(Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            if let err = reviewError {
+                Text(err).font(.system(size: 12)).foregroundStyle(.red)
+            }
+
+            Button {
+                Task { await submitReview() }
+            } label: {
+                Text(reviewSubmitting ? "Sender..." : "Send anmeldelse")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(reviewRating > 0 ? Color.primary600 : Color.neutral300)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .disabled(reviewRating == 0 || reviewSubmitting)
+        }
+    }
+
+    private func checkExistingReview() async {
+        guard hasExistingReview == nil else { return }
+        do {
+            struct ReviewRow: Decodable { let id: String }
+            let rows: [ReviewRow] = try await supabase
+                .from("reviews")
+                .select("id")
+                .eq("booking_id", value: booking.id)
+                .execute()
+                .value
+            hasExistingReview = !rows.isEmpty
+        } catch {
+            hasExistingReview = false
+        }
+    }
+
+    private func submitReview() async {
+        guard reviewRating > 0,
+              let userId = authManager.currentUser?.id.uuidString.lowercased(),
+              let listingId = booking.listing?.id else { return }
+        reviewSubmitting = true
+        reviewError = nil
+        do {
+            struct ReviewInsert: Encodable {
+                let booking_id: String
+                let listing_id: String
+                let user_id: String
+                let rating: Int
+                let comment: String
+            }
+            let input = ReviewInsert(
+                booking_id: booking.id,
+                listing_id: listingId,
+                user_id: userId,
+                rating: reviewRating,
+                comment: reviewComment.trimmingCharacters(in: .whitespaces)
+            )
+            try await supabase.from("reviews").insert(input).execute()
+            reviewSubmitted = true
+        } catch {
+            reviewError = "Kunne ikke sende anmeldelse. Prøv igjen."
+        }
+        reviewSubmitting = false
     }
 
     private func loadPreview() async {

@@ -197,6 +197,20 @@ export async function createBookingAction(data: {
 
     if (bookingError) return { error: bookingError.message };
 
+    // Sørg for at det finnes en samtale mellom gjest og host — ingen dead links.
+    // Ikke-blokkende: feil her skal ikke stoppe booking.
+    await supabase
+      .from("conversations")
+      .upsert(
+        {
+          listing_id: data.listingId,
+          guest_id: user.id,
+          host_id: listing.host_id,
+          booking_id: booking.id,
+        },
+        { onConflict: "listing_id,guest_id", ignoreDuplicates: true },
+      );
+
     const paymentIntent = await stripe.paymentIntents.create({
       amount: authoritativeTotal * 100,
       currency: "nok",
