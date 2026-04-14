@@ -369,15 +369,6 @@ struct SearchView: View {
                 Spacer()
             }
 
-            // Loading indicator
-            if listingService.isLoading {
-                ProgressView()
-                    .padding(12)
-                    .background(.ultraThinMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                    .padding(.bottom, 80)
-            }
-
             // Selected listing card
             if let listing = mapSelectedListing {
                 MapListingCard(listing: listing) {
