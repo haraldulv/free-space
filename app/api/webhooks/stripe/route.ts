@@ -100,27 +100,41 @@ export async function POST(request: NextRequest) {
         }
         sendPushToUser(booking.user_id, "Booking bekreftet", `Din booking av ${listingTitle} er bekreftet`);
 
-        // Send branded emails
+        // Send branded emails (await så serverless ikke termineres før sendingen er ferdig)
+        const emailSends: Promise<unknown>[] = [];
         if (guestEmail) {
-          sendBookingConfirmation(guestEmail, {
-            guestName,
-            listingTitle,
-            checkIn: booking.check_in,
-            checkOut: booking.check_out,
-            totalPrice: booking.total_price,
-            bookingId,
-          }).catch(console.error);
+          console.log(`[Email] Sending booking confirmation to ${guestEmail}`);
+          emailSends.push(
+            sendBookingConfirmation(guestEmail, {
+              guestName,
+              listingTitle,
+              checkIn: booking.check_in,
+              checkOut: booking.check_out,
+              totalPrice: booking.total_price,
+              bookingId,
+            })
+              .then(() => console.log(`[Email] Booking confirmation sent to ${guestEmail}`))
+              .catch((err) => console.error(`[Email] Failed to send to ${guestEmail}:`, err)),
+          );
+        } else {
+          console.warn(`[Email] No guest email for booking ${bookingId}`);
         }
         if (hostEmail) {
-          sendBookingNotificationToHost(hostEmail, {
-            hostName,
-            guestName,
-            listingTitle,
-            checkIn: booking.check_in,
-            checkOut: booking.check_out,
-            totalPrice: booking.total_price,
-          }).catch(console.error);
+          console.log(`[Email] Sending host notification to ${hostEmail}`);
+          emailSends.push(
+            sendBookingNotificationToHost(hostEmail, {
+              hostName,
+              guestName,
+              listingTitle,
+              checkIn: booking.check_in,
+              checkOut: booking.check_out,
+              totalPrice: booking.total_price,
+            })
+              .then(() => console.log(`[Email] Host notification sent to ${hostEmail}`))
+              .catch((err) => console.error(`[Email] Failed to send to ${hostEmail}:`, err)),
+          );
         }
+        await Promise.all(emailSends);
       }
     }
   }
