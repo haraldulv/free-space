@@ -417,7 +417,7 @@ struct BookingView: View {
                     blockedDates: calendarBlockedDates,
                     minDate: Calendar.current.startOfDay(for: Date())
                 )
-                .frame(minHeight: 380)
+                .frame(height: 320)
                 .padding(.top, 4)
                 .transition(.opacity)
             }
