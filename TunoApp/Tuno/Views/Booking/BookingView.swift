@@ -97,8 +97,9 @@ struct BookingView: View {
     @StateObject private var bookingService = BookingService()
     @Environment(\.dismiss) var dismiss
 
-    @State private var checkIn: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86400)
-    @State private var checkOut: Date = Calendar.current.startOfDay(for: Date()).addingTimeInterval(86400 * 2)
+    @State private var checkIn: Date? = nil
+    @State private var checkOut: Date? = nil
+    @State private var showCalendar = false
     @State private var licensePlate = ""
     @State private var isRentalCar = false
     @State private var availableSpots: Int?
@@ -126,8 +127,11 @@ struct BookingView: View {
     }
 
     private var nights: Int {
-        max(1, Calendar.current.dateComponents([.day], from: checkIn, to: checkOut).day ?? 1)
+        guard let ci = checkIn, let co = checkOut else { return 0 }
+        return max(1, Calendar.current.dateComponents([.day], from: ci, to: co).day ?? 1)
     }
+
+    private var hasDates: Bool { checkIn != nil && checkOut != nil }
 
     private var baseTotal: Int {
         if hasSpotLevelPricing && !selectedSpots.isEmpty {
@@ -168,7 +172,7 @@ struct BookingView: View {
     private var isFormValid: Bool {
         let vehicleOK = isRentalCar || !licensePlate.trimmingCharacters(in: .whitespaces).isEmpty
         let spotOK = !hasSpotLevelPricing || !selectedSpotIds.isEmpty
-        return checkOut > checkIn && vehicleOK && spotOK && !isRangeFullyBlocked
+        return hasDates && vehicleOK && spotOK
     }
 
     var body: some View {
@@ -295,8 +299,8 @@ struct BookingView: View {
         .navigationDestination(isPresented: $showConfirmation) {
             BookingConfirmationView(
                 listing: listing,
-                checkIn: checkIn,
-                checkOut: checkOut,
+                checkIn: checkIn ?? Date(),
+                checkOut: checkOut ?? Date(),
                 total: total
             )
         }
@@ -307,9 +311,6 @@ struct BookingView: View {
             bookedDates = await booked
         }
         .onChange(of: checkIn) {
-            if checkOut <= checkIn {
-                checkOut = Calendar.current.date(byAdding: .day, value: 1, to: checkIn) ?? checkIn
-            }
             showCardForm = false
             bookingService.clientSecret = nil
             deselectBlockedSpots()
@@ -319,6 +320,9 @@ struct BookingView: View {
             showCardForm = false
             bookingService.clientSecret = nil
             deselectBlockedSpots()
+            if hasDates {
+                withAnimation(.easeInOut(duration: 0.2)) { showCalendar = false }
+            }
             Task { await checkAvailability() }
         }
     }
@@ -374,43 +378,85 @@ struct BookingView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Datoer")
                 .font(.system(size: 18, weight: .semibold))
-            HStack(spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Innsjekk")
-                        .font(.system(size: 12, weight: .medium))
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { showCalendar.toggle() }
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "calendar")
                         .foregroundStyle(.neutral500)
-                    DatePicker("", selection: $checkIn, in: Date()..., displayedComponents: .date)
-                        .datePickerStyle(.compact).labelsHidden()
-                        .environment(\.locale, Locale(identifier: "nb"))
+                    if let ci = checkIn, let co = checkOut {
+                        Text("\(formatShort(ci)) – \(formatShort(co))")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.neutral900)
+                    } else if let ci = checkIn {
+                        Text("Fra \(formatShort(ci)) — velg utsjekk")
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.neutral700)
+                    } else {
+                        Text("Velg datoer")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.neutral500)
+                    }
+                    Spacer()
+                    Image(systemName: showCalendar ? "chevron.up" : "chevron.down")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.neutral400)
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Utsjekk")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.neutral500)
-                    DatePicker("", selection: $checkOut,
-                               in: Calendar.current.date(byAdding: .day, value: 1, to: checkIn)!...,
-                               displayedComponents: .date)
-                        .datePickerStyle(.compact).labelsHidden()
-                        .environment(\.locale, Locale(identifier: "nb"))
-                }
-                Spacer()
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .background(Color.neutral50)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            Text("\(nights) \(nights == 1 ? "natt" : "netter")")
-                .font(.system(size: 14))
-                .foregroundStyle(.neutral500)
-            if isRangeFullyBlocked {
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundStyle(.red)
-                    Text("Én eller flere datoer i perioden er ikke tilgjengelig. Velg andre datoer.")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.red)
-                }
-                .padding(10)
-                .background(Color.red.opacity(0.08))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+            .buttonStyle(.plain)
+
+            if showCalendar {
+                BookingCalendarView(
+                    checkIn: $checkIn,
+                    checkOut: $checkOut,
+                    blockedDates: calendarBlockedDates,
+                    minDate: Calendar.current.startOfDay(for: Date())
+                )
+                .frame(minHeight: 380)
+                .padding(.top, 4)
+                .transition(.opacity)
+            }
+
+            if hasDates {
+                Text("\(nights) \(nights == 1 ? "natt" : "netter")")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral500)
             }
         }
+    }
+
+    private func formatShort(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "nb")
+        f.dateFormat = "d. MMM"
+        return f.string(from: date)
+    }
+
+    /// Datoer som skal vises greyed ut i kalenderen: listing.blockedDates,
+    /// datoer der kapasitet er full, og datoer der alle spots er blokkert.
+    private var calendarBlockedDates: Set<String> {
+        var set = Set(listing.blockedDates ?? [])
+        let totalSpots = listing.spots ?? 1
+        if let counts = bookedDates?.perDateCount {
+            for (date, count) in counts where count >= totalSpots {
+                set.insert(date)
+            }
+        }
+        let markers = listing.spotMarkers ?? []
+        if !markers.isEmpty {
+            let perSpot = markers.map { effectiveSpotBlockedDates($0) }
+            var candidates = Set<String>()
+            perSpot.forEach { $0.forEach { candidates.insert($0) } }
+            for d in candidates where perSpot.allSatisfy({ $0.contains(d) }) {
+                set.insert(d)
+            }
+        }
+        return set
     }
 
     private var vehicleSection: some View {
@@ -496,12 +542,13 @@ struct BookingView: View {
     }
 
     private func isSpotBlockedByDates(_ spot: SpotMarker) -> Bool {
+        guard let ci = checkIn, let co = checkOut else { return false }
         let blocked = effectiveSpotBlockedDates(spot)
         guard !blocked.isEmpty else { return false }
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
-        var cursor = Calendar.current.startOfDay(for: checkIn)
-        let end = Calendar.current.startOfDay(for: checkOut)
+        var cursor = Calendar.current.startOfDay(for: ci)
+        let end = Calendar.current.startOfDay(for: co)
         while cursor < end {
             if blocked.contains(fmt.string(from: cursor)) { return true }
             guard let next = Calendar.current.date(byAdding: .day, value: 1, to: cursor) else { break }
@@ -509,33 +556,6 @@ struct BookingView: View {
         }
         return false
     }
-
-    /// Returnerer datoer i valgt periode som er fullbooket eller manuelt blokkert.
-    private var blockedDatesInRange: [String] {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-        let listingBlocked = Set(listing.blockedDates ?? [])
-        let totalSpots = listing.spots ?? 1
-        let markers = listing.spotMarkers ?? []
-        let perSpotBlocked = markers.map { effectiveSpotBlockedDates($0) }
-
-        var hits: [String] = []
-        var cursor = Calendar.current.startOfDay(for: checkIn)
-        let end = Calendar.current.startOfDay(for: checkOut)
-        while cursor < end {
-            let d = fmt.string(from: cursor)
-            let capacityFull = (bookedDates?.perDateCount[d] ?? 0) >= totalSpots
-            let everySpotBlocked = !perSpotBlocked.isEmpty && perSpotBlocked.allSatisfy { $0.contains(d) }
-            if listingBlocked.contains(d) || capacityFull || everySpotBlocked {
-                hits.append(d)
-            }
-            guard let next = Calendar.current.date(byAdding: .day, value: 1, to: cursor) else { break }
-            cursor = next
-        }
-        return hits
-    }
-
-    private var isRangeFullyBlocked: Bool { !blockedDatesInRange.isEmpty }
 
     private func spotRow(spot: SpotMarker, index: Int, spotId: String) -> some View {
         let isSelected = selectedSpotIds.contains(spotId)
@@ -657,12 +677,17 @@ struct BookingView: View {
     // MARK: - Actions
 
     private func checkAvailability() async {
+        guard let ci = checkIn, let co = checkOut else {
+            availableSpots = nil
+            totalSpots = nil
+            return
+        }
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let result = await bookingService.checkAvailability(
             listingId: listing.id,
-            checkIn: formatter.string(from: checkIn),
-            checkOut: formatter.string(from: checkOut)
+            checkIn: formatter.string(from: ci),
+            checkOut: formatter.string(from: co)
         )
         availableSpots = result.available
         totalSpots = result.total
@@ -703,14 +728,15 @@ struct BookingView: View {
 
     private func createBookingIfNeeded() async {
         guard bookingService.clientSecret == nil else { return }
+        guard let ci = checkIn, let co = checkOut else { return }
 
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
 
         let request = CreateBookingRequest(
             listingId: listing.id,
-            checkIn: formatter.string(from: checkIn),
-            checkOut: formatter.string(from: checkOut),
+            checkIn: formatter.string(from: ci),
+            checkOut: formatter.string(from: co),
             licensePlate: isRentalCar ? nil : licensePlate.trimmingCharacters(in: .whitespaces).uppercased(),
             isRentalCar: isRentalCar,
             selectedSpotIds: selectedSpotIds.isEmpty ? nil : Array(selectedSpotIds),

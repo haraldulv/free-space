@@ -55,6 +55,7 @@ targets:
         com.apple.developer.associated-domains:
           - applinks:tuno.no
           - applinks:www.tuno.no
+        aps-environment: production
     settings:
       base:
         INFOPLIST_FILE: Tuno/Info.plist
