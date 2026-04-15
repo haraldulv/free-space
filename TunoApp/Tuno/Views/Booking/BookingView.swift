@@ -304,6 +304,9 @@ struct BookingView: View {
                 total: total
             )
         }
+        .sheet(isPresented: $showCalendar) {
+            calendarSheet
+        }
         .task {
             async let avail: () = checkAvailability()
             async let booked = bookingService.fetchBookedDates(listingId: listing.id)
@@ -320,9 +323,6 @@ struct BookingView: View {
             showCardForm = false
             bookingService.clientSecret = nil
             deselectBlockedSpots()
-            if hasDates {
-                withAnimation(.easeInOut(duration: 0.2)) { showCalendar = false }
-            }
             Task { await checkAvailability() }
         }
     }
@@ -379,7 +379,7 @@ struct BookingView: View {
             Text("Datoer")
                 .font(.system(size: 18, weight: .semibold))
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) { showCalendar.toggle() }
+                showCalendar = true
             } label: {
                 HStack(spacing: 12) {
                     Image(systemName: "calendar")
@@ -398,7 +398,7 @@ struct BookingView: View {
                             .foregroundStyle(.neutral500)
                     }
                     Spacer()
-                    Image(systemName: showCalendar ? "chevron.up" : "chevron.down")
+                    Image(systemName: "chevron.right")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.neutral400)
                 }
@@ -410,24 +410,59 @@ struct BookingView: View {
             }
             .buttonStyle(.plain)
 
-            if showCalendar {
-                BookingCalendarView(
-                    checkIn: $checkIn,
-                    checkOut: $checkOut,
-                    blockedDates: calendarBlockedDates,
-                    minDate: Calendar.current.startOfDay(for: Date())
-                )
-                .frame(height: 320)
-                .padding(.top, 4)
-                .transition(.opacity)
-            }
-
             if hasDates {
                 Text("\(nights) \(nights == 1 ? "natt" : "netter")")
                     .font(.system(size: 14))
                     .foregroundStyle(.neutral500)
             }
         }
+    }
+
+    private var calendarSheet: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                BookingCalendarView(
+                    checkIn: $checkIn,
+                    checkOut: $checkOut,
+                    blockedDates: calendarBlockedDates,
+                    minDate: Calendar.current.startOfDay(for: Date())
+                )
+                .padding(.horizontal, 8)
+                .padding(.top, 8)
+                Spacer(minLength: 0)
+                Divider()
+                HStack {
+                    Button("Nullstill") {
+                        checkIn = nil
+                        checkOut = nil
+                    }
+                    .disabled(checkIn == nil && checkOut == nil)
+                    .foregroundStyle(.neutral600)
+                    Spacer()
+                    Button {
+                        showCalendar = false
+                    } label: {
+                        Text(hasDates ? "Bekreft datoer" : "Lukk")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 18)
+                            .padding(.vertical, 10)
+                            .background(hasDates ? Color.primary600 : Color.neutral400)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+                .padding(16)
+            }
+            .navigationTitle("Velg datoer")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Lukk") { showCalendar = false }
+                }
+            }
+        }
+        .presentationDetents([.large])
+        .presentationDragIndicator(.visible)
     }
 
     private func formatShort(_ date: Date) -> String {
