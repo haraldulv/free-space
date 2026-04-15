@@ -136,6 +136,62 @@ final class BookingService: ObservableObject {
         }
     }
 
+    struct BookedDates {
+        let perSpot: [String: [String]]
+        let perDateCount: [String: Int]
+    }
+
+    /// Henter fremtidige bookede datoer for en annonse, gruppert per spot-ID og per dato.
+    func fetchBookedDates(listingId: String) async -> BookedDates {
+        struct Row: Decodable {
+            let check_in: String
+            let check_out: String
+            let selected_spot_ids: [String]?
+        }
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        fmt.timeZone = TimeZone(identifier: "UTC")
+        let today = fmt.string(from: Date())
+
+        do {
+            let rows: [Row] = try await supabase
+                .from("bookings")
+                .select("check_in, check_out, selected_spot_ids")
+                .eq("listing_id", value: listingId)
+                .in("status", values: ["confirmed", "pending"])
+                .gte("check_out", value: today)
+                .execute()
+                .value
+
+            var perSpot: [String: Set<String>] = [:]
+            var perDateCount: [String: Int] = [:]
+            for row in rows {
+                guard let start = fmt.date(from: row.check_in),
+                      let end = fmt.date(from: row.check_out) else { continue }
+                let occupies = (row.selected_spot_ids?.count ?? 0) > 0 ? row.selected_spot_ids!.count : 1
+                var cursor = start
+                while cursor < end {
+                    let d = fmt.string(from: cursor)
+                    perDateCount[d, default: 0] += occupies
+                    if let ids = row.selected_spot_ids, !ids.isEmpty {
+                        for sid in ids {
+                            perSpot[sid, default: []].insert(d)
+                        }
+                    }
+                    guard let next = Calendar.current.date(byAdding: .day, value: 1, to: cursor) else { break }
+                    cursor = next
+                }
+            }
+            return BookedDates(
+                perSpot: perSpot.mapValues { Array($0).sorted() },
+                perDateCount: perDateCount
+            )
+        } catch {
+            print("fetchBookedDates error: \(error)")
+            return BookedDates(perSpot: [:], perDateCount: [:])
+        }
+    }
+
     func checkAvailability(listingId: String, checkIn: String, checkOut: String) async -> (available: Int, total: Int) {
         do {
             struct ListingSpots: Decodable {

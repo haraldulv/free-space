@@ -112,6 +112,7 @@ struct BookingView: View {
     @State private var selectedSpotIds: Set<String> = []
     @State private var listingExtrasQty: [String: Int] = [:]
     @State private var spotExtrasQty: [String: [String: Int]] = [:]
+    @State private var bookedDates: BookingService.BookedDates?
 
     private var hasSpotLevelPricing: Bool {
         (listing.spotMarkers ?? []).contains { $0.price != nil || !($0.extras?.isEmpty ?? true) }
@@ -167,7 +168,7 @@ struct BookingView: View {
     private var isFormValid: Bool {
         let vehicleOK = isRentalCar || !licensePlate.trimmingCharacters(in: .whitespaces).isEmpty
         let spotOK = !hasSpotLevelPricing || !selectedSpotIds.isEmpty
-        return checkOut > checkIn && vehicleOK && spotOK
+        return checkOut > checkIn && vehicleOK && spotOK && !isRangeFullyBlocked
     }
 
     var body: some View {
@@ -300,7 +301,10 @@ struct BookingView: View {
             )
         }
         .task {
-            await checkAvailability()
+            async let avail: () = checkAvailability()
+            async let booked = bookingService.fetchBookedDates(listingId: listing.id)
+            _ = await avail
+            bookedDates = await booked
         }
         .onChange(of: checkIn) {
             if checkOut <= checkIn {
@@ -394,6 +398,18 @@ struct BookingView: View {
             Text("\(nights) \(nights == 1 ? "natt" : "netter")")
                 .font(.system(size: 14))
                 .foregroundStyle(.neutral500)
+            if isRangeFullyBlocked {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .foregroundStyle(.red)
+                    Text("Én eller flere datoer i perioden er ikke tilgjengelig. Velg andre datoer.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.red)
+                }
+                .padding(10)
+                .background(Color.red.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
         }
     }
 
@@ -471,8 +487,17 @@ struct BookingView: View {
         }
     }
 
+    private func effectiveSpotBlockedDates(_ spot: SpotMarker) -> Set<String> {
+        var set = Set(spot.blockedDates ?? [])
+        if let sid = spot.id, let booked = bookedDates?.perSpot[sid] {
+            booked.forEach { set.insert($0) }
+        }
+        return set
+    }
+
     private func isSpotBlockedByDates(_ spot: SpotMarker) -> Bool {
-        guard let blocked = spot.blockedDates, !blocked.isEmpty else { return false }
+        let blocked = effectiveSpotBlockedDates(spot)
+        guard !blocked.isEmpty else { return false }
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
         var cursor = Calendar.current.startOfDay(for: checkIn)
@@ -484,6 +509,33 @@ struct BookingView: View {
         }
         return false
     }
+
+    /// Returnerer datoer i valgt periode som er fullbooket eller manuelt blokkert.
+    private var blockedDatesInRange: [String] {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        let listingBlocked = Set(listing.blockedDates ?? [])
+        let totalSpots = listing.spots ?? 1
+        let markers = listing.spotMarkers ?? []
+        let perSpotBlocked = markers.map { effectiveSpotBlockedDates($0) }
+
+        var hits: [String] = []
+        var cursor = Calendar.current.startOfDay(for: checkIn)
+        let end = Calendar.current.startOfDay(for: checkOut)
+        while cursor < end {
+            let d = fmt.string(from: cursor)
+            let capacityFull = (bookedDates?.perDateCount[d] ?? 0) >= totalSpots
+            let everySpotBlocked = !perSpotBlocked.isEmpty && perSpotBlocked.allSatisfy { $0.contains(d) }
+            if listingBlocked.contains(d) || capacityFull || everySpotBlocked {
+                hits.append(d)
+            }
+            guard let next = Calendar.current.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return hits
+    }
+
+    private var isRangeFullyBlocked: Bool { !blockedDatesInRange.isEmpty }
 
     private func spotRow(spot: SpotMarker, index: Int, spotId: String) -> some View {
         let isSelected = selectedSpotIds.contains(spotId)
