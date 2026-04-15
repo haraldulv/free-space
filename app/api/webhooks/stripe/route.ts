@@ -96,11 +96,21 @@ export async function POST(request: NextRequest) {
           metadata: { bookingId },
         });
 
-        // Send push notifications
+        // Send push notifications (await så serverless ikke termineres før APNs fullfører)
+        const pushSends: Promise<unknown>[] = [];
         if (booking.host_id) {
-          sendPushToUser(booking.host_id, "Ny bestilling!", `${guestName} har booket ${listingTitle}`);
+          pushSends.push(
+            sendPushToUser(booking.host_id, "Ny bestilling!", `${guestName} har booket ${listingTitle}`)
+              .then(() => console.log(`[Push] Host notified: ${booking.host_id}`))
+              .catch((err) => console.error(`[Push] Failed to notify host ${booking.host_id}:`, err)),
+          );
         }
-        sendPushToUser(booking.user_id, "Booking bekreftet", `Din booking av ${listingTitle} er bekreftet`);
+        pushSends.push(
+          sendPushToUser(booking.user_id, "Booking bekreftet", `Din booking av ${listingTitle} er bekreftet`)
+            .then(() => console.log(`[Push] Guest notified: ${booking.user_id}`))
+            .catch((err) => console.error(`[Push] Failed to notify guest ${booking.user_id}:`, err)),
+        );
+        await Promise.all(pushSends);
 
         // Send branded emails (await så serverless ikke termineres før sendingen er ferdig)
         const emailSends: Promise<unknown>[] = [];

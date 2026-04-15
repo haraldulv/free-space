@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { MapPin, Users, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getListingById, getAllListingIds } from "@/lib/supabase/listings";
+import { getListingById, getAllListingIds, getFutureBookedDates } from "@/lib/supabase/listings";
 import { getListingReviews } from "@/lib/supabase/reviews";
 import Container from "@/components/ui/Container";
 import Badge from "@/components/ui/Badge";
@@ -23,9 +23,10 @@ export default async function ListingPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const [listing, reviews] = await Promise.all([
+  const [listing, reviews, bookedDates] = await Promise.all([
     getListingById(id),
     getListingReviews(id),
+    getFutureBookedDates(id),
   ]);
   if (!listing) notFound();
 
@@ -161,7 +162,7 @@ export default async function ListingPage({
               Dette er din egen annonse. Bruk "Mine annonser" for å redigere den.
             </div>
           ) : (
-            <BookingForm listing={listing} />
+            <BookingForm listing={listing} bookedDates={bookedDates} />
           )}
         </div>
       </div>

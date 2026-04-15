@@ -225,6 +225,57 @@ export async function getBookedSpotIds(
   return booked;
 }
 
+/**
+ * Hent alle fremtidige bookede datoer for en annonse.
+ * - perSpot: datoer bookede per spot-ID (for annonser med spot markers)
+ * - perDateCount: antall plasser booket per dato (for kapasitets-baserte annonser)
+ *   — en booking med selected_spot_ids=[a,b] teller som 2, null/tom teller som 1.
+ */
+export async function getFutureBookedDates(
+  listingId: string,
+): Promise<{ perSpot: Record<string, string[]>; perDateCount: Record<string, number> }> {
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+
+  const { data } = await supabase
+    .from("bookings")
+    .select("check_in, check_out, selected_spot_ids")
+    .eq("listing_id", listingId)
+    .in("status", ["confirmed", "pending"])
+    .gte("check_out", today);
+
+  const perSpot: Record<string, Set<string>> = {};
+  const perDateCount: Record<string, number> = {};
+
+  for (const row of data || []) {
+    const checkIn = row.check_in as string;
+    const checkOut = row.check_out as string;
+    const spotIds = row.selected_spot_ids as string[] | null;
+    const occupies = spotIds && spotIds.length > 0 ? spotIds.length : 1;
+
+    const cursor = new Date(checkIn + "T00:00:00");
+    const end = new Date(checkOut + "T00:00:00");
+    while (cursor < end) {
+      const d = cursor.toISOString().slice(0, 10);
+      perDateCount[d] = (perDateCount[d] || 0) + occupies;
+      if (spotIds && spotIds.length > 0) {
+        for (const sid of spotIds) {
+          if (!perSpot[sid]) perSpot[sid] = new Set();
+          perSpot[sid].add(d);
+        }
+      }
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+
+  return {
+    perSpot: Object.fromEntries(
+      Object.entries(perSpot).map(([k, v]) => [k, Array.from(v).sort()]),
+    ),
+    perDateCount,
+  };
+}
+
 /** Calculate distance between two coordinates in km */
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371;

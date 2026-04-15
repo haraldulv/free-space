@@ -13,9 +13,10 @@ import { checkAvailabilityAction } from "@/app/(main)/book/actions";
 
 interface BookingFormProps {
   listing: Listing;
+  bookedDates?: { perSpot: Record<string, string[]>; perDateCount: Record<string, number> };
 }
 
-export default function BookingForm({ listing }: BookingFormProps) {
+export default function BookingForm({ listing, bookedDates }: BookingFormProps) {
   const router = useRouter();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);
@@ -25,7 +26,16 @@ export default function BookingForm({ listing }: BookingFormProps) {
   const [spotExtras, setSpotExtras] = useState<Record<string, Record<string, number>>>({});
   const [selectedSpotIds, setSelectedSpotIds] = useState<string[]>([]);
 
-  const spotMarkers = useMemo(() => listing.spotMarkers || [], [listing.spotMarkers]);
+  const spotMarkers = useMemo<SpotMarker[]>(() => {
+    const base = listing.spotMarkers || [];
+    if (!bookedDates) return base;
+    return base.map((spot) => {
+      const existing = spot.blockedDates || [];
+      const fromBookings = spot.id ? (bookedDates.perSpot[spot.id] || []) : [];
+      const merged = Array.from(new Set([...existing, ...fromBookings]));
+      return { ...spot, blockedDates: merged };
+    });
+  }, [listing.spotMarkers, bookedDates]);
   const hasSpotLevelPricing = useMemo(
     () => spotMarkers.some((s) => s.price != null || (s.extras && s.extras.length > 0)),
     [spotMarkers],
@@ -122,7 +132,25 @@ export default function BookingForm({ listing }: BookingFormProps) {
   const serviceFee = Math.round(subtotal * SERVICE_FEE_RATE);
   const total = subtotal + serviceFee;
 
-  const disabledDates = (listing.blockedDates || []).map((d) => new Date(d + "T00:00:00"));
+  const disabledDates = useMemo(() => {
+    const set = new Set<string>(listing.blockedDates || []);
+    if (bookedDates) {
+      // Kapasitets-basert: dato fullbooket når booket antall ≥ totalt antall plasser
+      Object.entries(bookedDates.perDateCount).forEach(([d, count]) => {
+        if (count >= listing.spots) set.add(d);
+      });
+      // Per-spot: dato fullbooket hvis hver eneste spot har den i sin effektive blockedDates
+      if (spotMarkers.length > 0) {
+        const perSpotDates = spotMarkers.map((s) => new Set(s.blockedDates || []));
+        const candidates = new Set<string>();
+        perSpotDates.forEach((s) => s.forEach((d) => candidates.add(d)));
+        candidates.forEach((d) => {
+          if (perSpotDates.every((s) => s.has(d))) set.add(d);
+        });
+      }
+    }
+    return Array.from(set).map((d) => new Date(d + "T00:00:00"));
+  }, [listing.blockedDates, listing.spots, bookedDates, spotMarkers]);
 
   const toggleListingExtra = (id: string, delta: number) => {
     setListingExtras((prev) => {
