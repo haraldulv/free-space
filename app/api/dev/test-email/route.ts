@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
     await sendBookingConfirmation(to, {
       guestName: "Harald",
       listingTitle: "Test-annonse (dev)",
+      listingId: request.nextUrl.searchParams.get("listingId"),
+      listingImage: request.nextUrl.searchParams.get("img"),
       checkIn: "2026-04-20",
       checkOut: "2026-04-21",
       totalPrice: 100,

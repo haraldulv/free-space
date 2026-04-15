@@ -60,15 +60,17 @@ export async function POST(request: NextRequest) {
       // Get booking + profiles for notifications and emails
       const { data: booking } = await supabase
         .from("bookings")
-        .select("user_id, host_id, check_in, check_out, total_price")
+        .select("user_id, host_id, listing_id, check_in, check_out, total_price")
         .eq("id", bookingId)
         .single();
 
       if (booking) {
-        const [guestRes, hostRes] = await Promise.all([
+        const [guestRes, hostRes, listingRes] = await Promise.all([
           supabase.auth.admin.getUserById(booking.user_id),
           booking.host_id ? supabase.from("profiles").select("full_name").eq("id", booking.host_id).single() : null,
+          booking.listing_id ? supabase.from("listings").select("images").eq("id", booking.listing_id).single() : null,
         ]);
+        const listingImage = listingRes?.data?.images?.[0] ?? null;
         const guestEmail = guestRes.data.user?.email;
         const guestName = guestRes.data.user?.user_metadata?.full_name || "Gjest";
         const hostName = hostRes?.data?.full_name || "Utleier";
@@ -108,6 +110,8 @@ export async function POST(request: NextRequest) {
             sendBookingConfirmation(guestEmail, {
               guestName,
               listingTitle,
+              listingId: booking.listing_id,
+              listingImage,
               checkIn: booking.check_in,
               checkOut: booking.check_out,
               totalPrice: booking.total_price,
@@ -126,6 +130,8 @@ export async function POST(request: NextRequest) {
               hostName,
               guestName,
               listingTitle,
+              listingId: booking.listing_id,
+              listingImage,
               checkIn: booking.check_in,
               checkOut: booking.check_out,
               totalPrice: booking.total_price,

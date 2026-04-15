@@ -29,9 +29,40 @@ function btn(text: string, url: string) {
   return `<a href="${url}" style="display:inline-block;margin-top:16px;padding:12px 24px;background:#46C185;color:#fff;border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">${text}</a>`;
 }
 
+function listingCard(opts: {
+  listingId: string | null;
+  listingTitle: string;
+  listingImage: string | null;
+  checkIn: string;
+  checkOut: string;
+  bottomLine: string;
+}) {
+  const url = opts.listingId ? `https://tuno.no/listings/${opts.listingId}` : null;
+  const title = url
+    ? `<a href="${url}" style="color:#171717;text-decoration:none;"><strong>${opts.listingTitle}</strong></a>`
+    : `<strong>${opts.listingTitle}</strong>`;
+  const image = opts.listingImage
+    ? `<a href="${url ?? "#"}" style="display:block;text-decoration:none;">
+         <img src="${opts.listingImage}" alt="${opts.listingTitle}" width="512" style="display:block;width:100%;max-width:512px;height:auto;border-radius:8px;margin-bottom:12px;" />
+       </a>`
+    : "";
+  return `
+    <div style="margin:16px 0;">
+      ${image}
+      <div style="background:#f5f5f5;border-radius:8px;padding:16px;">
+        <p style="margin:0;font-size:14px;color:#525252;">${title}</p>
+        <p style="margin:4px 0 0;font-size:14px;color:#737373;">Innsjekk: ${opts.checkIn}</p>
+        <p style="margin:4px 0 0;font-size:14px;color:#737373;">Utsjekk: ${opts.checkOut}</p>
+        <p style="margin:8px 0 0;font-size:16px;font-weight:700;color:#171717;">${opts.bottomLine}</p>
+      </div>
+    </div>`;
+}
+
 export async function sendBookingConfirmation(to: string, data: {
   guestName: string;
   listingTitle: string;
+  listingId?: string | null;
+  listingImage?: string | null;
   checkIn: string;
   checkOut: string;
   totalPrice: number;
@@ -45,12 +76,14 @@ export async function sendBookingConfirmation(to: string, data: {
       <p style="color:#525252;font-size:14px;line-height:1.6;">
         Hei ${data.guestName}, din booking er bekreftet!
       </p>
-      <div style="background:#f5f5f5;border-radius:8px;padding:16px;margin:16px 0;">
-        <p style="margin:0;font-size:14px;color:#525252;"><strong>${data.listingTitle}</strong></p>
-        <p style="margin:4px 0 0;font-size:14px;color:#737373;">Innsjekk: ${data.checkIn}</p>
-        <p style="margin:4px 0 0;font-size:14px;color:#737373;">Utsjekk: ${data.checkOut}</p>
-        <p style="margin:8px 0 0;font-size:16px;font-weight:700;color:#171717;">${data.totalPrice} kr</p>
-      </div>
+      ${listingCard({
+        listingId: data.listingId ?? null,
+        listingTitle: data.listingTitle,
+        listingImage: data.listingImage ?? null,
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        bottomLine: `${data.totalPrice} kr`,
+      })}
       ${btn("Se bestillingen", `https://tuno.no/dashboard?tab=bookings`)}
     `),
   });
@@ -60,6 +93,8 @@ export async function sendBookingNotificationToHost(to: string, data: {
   hostName: string;
   guestName: string;
   listingTitle: string;
+  listingId?: string | null;
+  listingImage?: string | null;
   checkIn: string;
   checkOut: string;
   totalPrice: number;
@@ -73,12 +108,14 @@ export async function sendBookingNotificationToHost(to: string, data: {
       <p style="color:#525252;font-size:14px;line-height:1.6;">
         Hei ${data.hostName}, ${data.guestName} har booket plassen din.
       </p>
-      <div style="background:#f5f5f5;border-radius:8px;padding:16px;margin:16px 0;">
-        <p style="margin:0;font-size:14px;color:#525252;"><strong>${data.listingTitle}</strong></p>
-        <p style="margin:4px 0 0;font-size:14px;color:#737373;">Innsjekk: ${data.checkIn}</p>
-        <p style="margin:4px 0 0;font-size:14px;color:#737373;">Utsjekk: ${data.checkOut}</p>
-        <p style="margin:8px 0 0;font-size:16px;font-weight:700;color:#171717;">Din utbetaling: ${hostAmount} kr</p>
-      </div>
+      ${listingCard({
+        listingId: data.listingId ?? null,
+        listingTitle: data.listingTitle,
+        listingImage: data.listingImage ?? null,
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        bottomLine: `Din utbetaling: ${hostAmount} kr`,
+      })}
       ${btn("Se utleien", `https://tuno.no/dashboard?tab=rentals`)}
     `),
   });
