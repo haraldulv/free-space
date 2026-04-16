@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, useSearchParams, useParams } from "next/navigation";
+import { useSearchParams, useParams } from "next/navigation";
 import { differenceInDays } from "date-fns";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { createBookingAction } from "../actions";
 import Container from "@/components/ui/Container";
@@ -30,6 +32,7 @@ function parseExtrasParam(raw: string | null): { listing: Record<string, number>
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 function PaymentForm({ total, bookingId }: { total: number; bookingId: string }) {
+  const t = useTranslations("booking");
   const stripe = useStripe();
   const elements = useElements();
   const [processing, setProcessing] = useState(false);
@@ -50,7 +53,7 @@ function PaymentForm({ total, bookingId }: { total: number; bookingId: string })
     });
 
     if (submitError) {
-      setError(submitError.message || "Betalingen feilet");
+      setError(submitError.message || t("paymentFailedMsg"));
       setProcessing(false);
     }
   };
@@ -61,7 +64,7 @@ function PaymentForm({ total, bookingId }: { total: number; bookingId: string })
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       <div className="mt-6 flex items-center gap-2 rounded-lg bg-primary-50 p-3 text-sm text-primary-700">
         <ShieldCheck className="h-5 w-5 shrink-0" />
-        Din bestilling er beskyttet av Tuno-garantien.
+        {t("tunoGuarantee")}
       </div>
       <Button
         type="submit"
@@ -72,10 +75,10 @@ function PaymentForm({ total, bookingId }: { total: number; bookingId: string })
         {processing ? (
           <span className="inline-flex items-center gap-2">
             <Loader2 className="h-4 w-4 animate-spin" />
-            Behandler...
+            {t("processing")}
           </span>
         ) : (
-          `Betal - ${total} kr`
+          t("payAmount", { amount: total })
         )}
       </Button>
     </form>
@@ -83,6 +86,9 @@ function PaymentForm({ total, bookingId }: { total: number; bookingId: string })
 }
 
 export default function BookPage() {
+  const t = useTranslations("booking");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -239,7 +245,7 @@ export default function BookPage() {
   if (loading) {
     return (
       <Container className="py-10">
-        <p className="text-neutral-500">Laster...</p>
+        <p className="text-neutral-500">{tCommon("loading")}</p>
       </Container>
     );
   }
@@ -252,12 +258,12 @@ export default function BookPage() {
   if (nights <= 0) {
     return (
       <Container className="py-10">
-        <h1 className="text-2xl font-bold text-neutral-900">Ugyldig bestilling</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">{t("invalidBooking")}</h1>
         <p className="mt-4 text-neutral-500">
-          Check-in og check-out kan ikke være samme dato. Vennligst velg minst én natt.
+          {t("invalidDatesExplain")}
         </p>
         <Button className="mt-6" onClick={() => router.back()}>
-          Gå tilbake
+          {t("goBack")}
         </Button>
       </Container>
     );
@@ -266,7 +272,7 @@ export default function BookPage() {
   return (
     <Container className="py-10">
       <h1 className="text-2xl font-bold text-neutral-900">
-        Bekreft bestillingen din
+        {t("confirmBooking")}
       </h1>
       <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-2">
         <div>
@@ -287,16 +293,16 @@ export default function BookPage() {
           {!vehicleReady && (
             <div className="rounded-xl border border-neutral-200 bg-white p-6">
               <h2 className="text-lg font-semibold text-neutral-900">
-                Kjøretøy
+                {t("vehicle")}
               </h2>
               <p className="mt-1 text-sm text-neutral-500">
-                Utleier trenger registreringsnummeret for å identifisere bilen din.
+                {t("vehicleExplain")}
               </p>
               <div className="mt-4 space-y-4">
                 {!isRentalCar && (
                   <div>
                     <label htmlFor="licensePlate" className="mb-1.5 block text-sm font-medium text-neutral-700">
-                      Registreringsnummer
+                      {t("licensePlate")}
                     </label>
                     <div className="relative">
                       <Car className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
@@ -305,7 +311,7 @@ export default function BookPage() {
                         type="text"
                         value={licensePlate}
                         onChange={(e) => setLicensePlate(e.target.value.toUpperCase())}
-                        placeholder="F.eks. AB 12345"
+                        placeholder={t("licensePlatePlaceholder")}
                         className="w-full rounded-lg border border-neutral-200 py-2.5 pl-10 pr-3 text-sm uppercase tracking-wider placeholder:normal-case placeholder:tracking-normal focus:border-primary-500 focus:ring-1 focus:ring-primary-500 focus:outline-none"
                       />
                     </div>
@@ -319,7 +325,7 @@ export default function BookPage() {
                     className="h-4 w-4 rounded border-neutral-300 text-primary-600 focus:ring-primary-500"
                   />
                   <span className="text-sm text-neutral-600">
-                    Leiebil — jeg kjenner ikke registreringsnummeret ennå
+                    {t("rentalCarLabel")}
                   </span>
                 </label>
                 <Button
@@ -327,7 +333,7 @@ export default function BookPage() {
                   disabled={!isRentalCar && !licensePlate.trim()}
                   onClick={() => setVehicleReady(true)}
                 >
-                  Fortsett til betaling
+                  {t("continueToPayment")}
                 </Button>
               </div>
             </div>
@@ -336,7 +342,7 @@ export default function BookPage() {
           {/* Payment */}
           <div className={`rounded-xl border border-neutral-200 bg-white p-6 ${!vehicleReady ? "opacity-50 pointer-events-none" : ""}`}>
             <h2 className="text-lg font-semibold text-neutral-900">
-              Betaling
+              {t("payment")}
             </h2>
 
             {error && (
@@ -346,7 +352,7 @@ export default function BookPage() {
             {creatingPayment && !error && (
               <div className="mt-6 flex items-center justify-center gap-2 py-8 text-sm text-neutral-500">
                 <Loader2 className="h-5 w-5 animate-spin" />
-                Forbereder betaling...
+                {t("preparingPayment")}
               </div>
             )}
 
@@ -359,12 +365,12 @@ export default function BookPage() {
                     appearance: {
                       theme: "stripe",
                       variables: {
-                        colorPrimary: "#1a4fd6",
+                        colorPrimary: "#46C185",
                         fontFamily: "DM Sans, system-ui, sans-serif",
                         borderRadius: "8px",
                       },
                     },
-                    locale: "nb",
+                    locale: locale === "en" ? "en" : "nb",
                   }}
                 >
                   <PaymentForm total={total} bookingId={bookingId} />

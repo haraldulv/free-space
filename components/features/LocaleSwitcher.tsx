@@ -5,6 +5,7 @@ import { Languages, Check } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { routing, type Locale } from "@/i18n/routing";
+import { createClient } from "@/lib/supabase/client";
 
 const LOCALE_LABELS: Record<Locale, { native: string; flag: string }> = {
   nb: { native: "Norsk", flag: "🇳🇴" },
@@ -36,6 +37,21 @@ export default function LocaleSwitcher() {
     startTransition(() => {
       router.replace(pathname, { locale: next });
     });
+    // Lagre preferanse for innloggede brukere (best-effort, ignorer feil)
+    void (async () => {
+      try {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getUser();
+        if (data.user) {
+          await supabase
+            .from("profiles")
+            .update({ preferred_language: next })
+            .eq("id", data.user.id);
+        }
+      } catch {
+        // Ignorer — kolonnen kan mangle lokalt
+      }
+    })();
   };
 
   return (
