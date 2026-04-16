@@ -6,6 +6,7 @@ import { Search, X, Car, Caravan, Bus, MapPin } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { useLocale, useTranslations } from "next-intl";
+import { bcpLocale } from "@/lib/i18n-helpers";
 import DatePicker from "@/components/ui/DatePicker";
 import { VehicleType } from "@/types";
 
@@ -162,7 +163,7 @@ export default function SearchBar({
     window.location.href = qs ? `${prefix}/search?${qs}` : `${prefix}/search`;
   };
 
-  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
+  const dateLocale = bcpLocale(locale);
   const dateLabel =
     dateRange?.from && dateRange?.to
       ? `${dateRange.from.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })} – ${dateRange.to.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })}`

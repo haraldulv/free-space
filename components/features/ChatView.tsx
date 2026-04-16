@@ -2,9 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { nb, enGB } from "date-fns/locale";
 import { Send, ArrowLeft } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { dateFnsLocale } from "@/lib/i18n-helpers";
 import { getMessages, subscribeToMessages } from "@/lib/supabase/chat";
 import { sendMessageAction, markMessagesReadAction } from "@/app/[locale]/(main)/meldinger/actions";
 import type { Message } from "@/types";
@@ -26,7 +26,7 @@ export default function ChatView({
 }: ChatViewProps) {
   const t = useTranslations("messages");
   const locale = useLocale();
-  const dateLocale = locale === "en" ? enGB : nb;
+  const dateLocale = dateFnsLocale(locale);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);

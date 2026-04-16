@@ -16,6 +16,7 @@
 	<array>
 		<string>nb</string>
 		<string>en</string>
+		<string>de</string>
 	</array>
 	<key>CFBundleName</key>
 	<string>Tuno</string>

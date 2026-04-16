@@ -6,6 +6,7 @@ import { differenceInDays, format } from "date-fns";
 import { CalendarDays, Star, Users, Plus, Minus, MapPin, Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { bcpLocale } from "@/lib/i18n-helpers";
 import DatePicker from "@/components/ui/DatePicker";
 import Button from "@/components/ui/Button";
 import { Listing, SpotMarker, getDisplayPriceText } from "@/types";
@@ -22,7 +23,7 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
   const tListing = useTranslations("listing");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
+  const dateLocale = bcpLocale(locale);
   const router = useRouter();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);

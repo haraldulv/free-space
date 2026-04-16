@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 const LOCALE_LABELS: Record<Locale, { native: string; flag: string }> = {
   nb: { native: "Norsk", flag: "🇳🇴" },
   en: { native: "English", flag: "🇬🇧" },
+  de: { native: "Deutsch", flag: "🇩🇪" },
 };
 
 export default function LocaleSwitcher() {

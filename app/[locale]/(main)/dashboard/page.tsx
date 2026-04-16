@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { bcpLocale, numberLocale } from "@/lib/i18n-helpers";
 import { createClient } from "@/lib/supabase/client";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/[locale]/(main)/bli-utleier/actions";
 import { cancelBookingAction } from "@/app/[locale]/(main)/book/actions";
@@ -131,8 +132,8 @@ export default function DashboardPage() {
   const tListing = useTranslations("listing");
   const tNav = useTranslations("nav");
   const locale = useLocale();
-  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
-  const numberLocale = locale === "en" ? "en-US" : "nb-NO";
+  const dateLocale = bcpLocale(locale);
+  const numLocale = numberLocale(locale);
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const conversationIdParam = searchParams.get("conversation");
@@ -674,8 +675,8 @@ const SERVICE_FEE = 0.10;
 function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: Listing[] }) {
   const t = useTranslations("dashboard");
   const locale = useLocale();
-  const numberLocale = locale === "en" ? "en-US" : "nb-NO";
-  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
+  const numLocale = numberLocale(locale);
+  const dateLocale = bcpLocale(locale);
   const confirmedRentals = rentals.filter((r) => r.status === "confirmed" && r.paymentStatus === "paid");
   const transferredRentals = rentals.filter((r) => r.paymentStatus === "paid");
 
@@ -727,10 +728,10 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
             </div>
             <div>
               <p className="text-xs text-neutral-500">{t("totalEarned")}</p>
-              <p className="text-lg font-bold text-neutral-900">{hostShare.toLocaleString(numberLocale)} kr</p>
+              <p className="text-lg font-bold text-neutral-900">{hostShare.toLocaleString(numLocale)} kr</p>
             </div>
           </div>
-          <p className="mt-2 text-xs text-neutral-400">{t("platformFee", { amount: platformFee.toLocaleString(numberLocale) })}</p>
+          <p className="mt-2 text-xs text-neutral-400">{t("platformFee", { amount: platformFee.toLocaleString(numLocale) })}</p>
         </div>
         <div className="rounded-xl border border-neutral-200 bg-white p-4">
           <div className="flex items-center gap-3">
@@ -739,7 +740,7 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
             </div>
             <div>
               <p className="text-xs text-neutral-500">{t("thisMonth")}</p>
-              <p className="text-lg font-bold text-neutral-900">{thisMonthEarnings.toLocaleString(numberLocale)} kr</p>
+              <p className="text-lg font-bold text-neutral-900">{thisMonthEarnings.toLocaleString(numLocale)} kr</p>
             </div>
           </div>
         </div>
@@ -777,7 +778,7 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
           {monthlyData.map((m) => (
             <div key={m.key} className="flex flex-1 flex-col items-center gap-1">
               <span className="text-xs font-medium text-neutral-700">
-                {m.earnings > 0 ? `${m.earnings.toLocaleString(numberLocale)}` : ""}
+                {m.earnings > 0 ? `${m.earnings.toLocaleString(numLocale)}` : ""}
               </span>
               <div
                 className="w-full max-w-10 rounded-t-md bg-primary-500 transition-all"
@@ -814,7 +815,7 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
                     />
                   </div>
                 </div>
-                <span className="text-sm font-bold text-neutral-900">{data.earnings.toLocaleString(numberLocale)} kr</span>
+                <span className="text-sm font-bold text-neutral-900">{data.earnings.toLocaleString(numLocale)} kr</span>
               </div>
             ))
           )}
@@ -836,7 +837,7 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold">{hostAmount.toLocaleString(numberLocale)} kr</p>
+                  <p className="text-sm font-semibold">{hostAmount.toLocaleString(numLocale)} kr</p>
                   <span className={`text-xs ${r.status === "confirmed" ? "text-green-600" : "text-red-500"}`}>
                     {r.status === "confirmed" ? t("confirmed") : t("cancelled")}
                   </span>

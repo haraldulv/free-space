@@ -4,7 +4,7 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/src/style.css";
 import { CalendarX2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
-import { nb, enGB } from "date-fns/locale";
+import { dateFnsLocale } from "@/lib/i18n-helpers";
 
 interface AvailabilityEditorProps {
   blockedDates: string[];
@@ -15,7 +15,7 @@ interface AvailabilityEditorProps {
 export default function AvailabilityEditor({ blockedDates, onChange }: AvailabilityEditorProps) {
   const t = useTranslations("host.availability");
   const locale = useLocale();
-  const dfLocale = locale === "en" ? enGB : nb;
+  const dfLocale = dateFnsLocale(locale);
   const blocked = new Set(blockedDates);
 
   const blockedDateObjects = blockedDates.map((d) => new Date(d + "T00:00:00"));

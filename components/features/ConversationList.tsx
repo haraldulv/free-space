@@ -1,9 +1,9 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { nb, enGB } from "date-fns/locale";
 import { MessageCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { dateFnsLocale } from "@/lib/i18n-helpers";
 import type { Conversation } from "@/types";
 
 interface ConversationListProps {
@@ -19,7 +19,7 @@ export default function ConversationList({
 }: ConversationListProps) {
   const t = useTranslations("messages");
   const locale = useLocale();
-  const dateLocale = locale === "en" ? enGB : nb;
+  const dateLocale = dateFnsLocale(locale);
 
   if (conversations.length === 0) {
     return (

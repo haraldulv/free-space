@@ -84,6 +84,7 @@ targets:
         CFBundleLocalizations:
           - nb
           - en
+          - de
         UILaunchScreen:
           UIColorName: LaunchBackground
         UISupportedInterfaceOrientations:

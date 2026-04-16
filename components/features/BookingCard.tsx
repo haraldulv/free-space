@@ -5,6 +5,7 @@ import Image from "next/image";
 import { CalendarDays, MapPin, Car, Tent, Star, User, ChevronDown, Clock, CreditCard, Navigation, Mail, CarFront, AlertCircle, Phone, MessageCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
+import { bcpLocale } from "@/lib/i18n-helpers";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ReviewForm from "@/components/features/ReviewForm";
@@ -23,7 +24,7 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
   const tCategory = useTranslations("category");
   const tCommon = useTranslations("common");
   const locale = useLocale();
-  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
+  const dateLocale = bcpLocale(locale);
 
   const [cancelling, setCancelling] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);

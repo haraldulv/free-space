@@ -1,8 +1,8 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { nb, enGB } from "date-fns/locale";
 import { useLocale, useTranslations } from "next-intl";
+import { dateFnsLocale } from "@/lib/i18n-helpers";
 import type { Review } from "@/types";
 import StarRating from "./StarRating";
 
@@ -13,7 +13,7 @@ interface ReviewCardProps {
 export default function ReviewCard({ review }: ReviewCardProps) {
   const t = useTranslations("dashboard");
   const locale = useLocale();
-  const dateLocale = locale === "en" ? enGB : nb;
+  const dateLocale = dateFnsLocale(locale);
   return (
     <div className="border-b border-neutral-100 pb-5 last:border-0">
       <div className="flex items-center gap-3">

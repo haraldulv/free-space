@@ -7,6 +7,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
+import { stripeLocale } from "@/lib/i18n-helpers";
 import { createClient } from "@/lib/supabase/client";
 import { createBookingAction } from "../actions";
 import Container from "@/components/ui/Container";
@@ -370,7 +371,7 @@ export default function BookPage() {
                         borderRadius: "8px",
                       },
                     },
-                    locale: locale === "en" ? "en" : "nb",
+                    locale: stripeLocale(locale),
                   }}
                 >
                   <PaymentForm total={total} bookingId={bookingId} />

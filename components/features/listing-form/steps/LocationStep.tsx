@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { MapPin, Trash2, EyeOff, X, Sparkles } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { bcpLocale } from "@/lib/i18n-helpers";
 import Input from "@/components/ui/Input";
 import Toggle from "@/components/ui/Toggle";
 import { AVAILABLE_EXTRAS, type SpotMarker, type ListingCategory, type ListingExtra, type ExtraId } from "@/types";
@@ -658,7 +659,7 @@ interface SpotBlockedDatesProps {
 function SpotBlockedDates({ blockedDates, onChange }: SpotBlockedDatesProps) {
   const t = useTranslations("host.location");
   const locale = useLocale();
-  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
+  const dateLocale = bcpLocale(locale);
   const [expanded, setExpanded] = useState(false);
   const [displayedMonth, setDisplayedMonth] = useState(new Date());
 
