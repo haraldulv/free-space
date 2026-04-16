@@ -3,6 +3,7 @@ import SwiftUI
 struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var deepLinkManager: DeepLinkManager
+    @EnvironmentObject var pushRouter: PushRouter
     @StateObject private var chatService = ChatService()
     @State private var selectedTab = 0
     @State private var homeNavPath = NavigationPath()
@@ -59,6 +60,17 @@ struct MainTabView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .newPushNotification)) { _ in
             Task { await loadUnreadCount() }
+        }
+        .onChange(of: pushRouter.pendingBookingId) { _, newValue in
+            guard newValue != nil else { return }
+            // Bytt til bookings-tab ved tap på booking-relatert varsel
+            selectedTab = 2
+            homeNavPath = NavigationPath()
+            // BookingsView kan plukke opp ID-en selv når den laster
+        }
+        .onChange(of: pushRouter.pendingConversationId) { _, newValue in
+            guard newValue != nil else { return }
+            selectedTab = 3
         }
         .sheet(item: $deepLinkManager.pendingListingId) { listingId in
             NavigationStack {

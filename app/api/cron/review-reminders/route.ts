@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { sendReviewReminderEmail } from "@/lib/email";
+import { sendPushToUser } from "@/lib/push";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -53,11 +54,20 @@ export async function GET(request: NextRequest) {
       const name = authData.user?.user_metadata?.full_name || "Gjest";
 
       if (email) {
-        await sendReviewReminderEmail(email, {
-          guestName: name,
-          listingTitle: listing?.title || "plassen",
-          bookingId: booking.id,
-        });
+        const listingTitle = listing?.title || "plassen";
+        await Promise.all([
+          sendReviewReminderEmail(email, {
+            guestName: name,
+            listingTitle,
+            bookingId: booking.id,
+          }),
+          sendPushToUser(
+            booking.user_id,
+            "Hvordan var oppholdet?",
+            `Legg igjen en anmeldelse av ${listingTitle}.`,
+            { bookingId: booking.id, type: "review_reminder" },
+          ),
+        ]);
 
         await supabase
           .from("bookings")

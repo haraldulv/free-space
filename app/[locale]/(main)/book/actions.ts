@@ -6,6 +6,7 @@ import { getAvailableSpots, getBookedSpotIds } from "@/lib/supabase/listings";
 import { SERVICE_FEE_RATE } from "@/lib/config";
 import { computeRefund, type CancelledBy } from "@/lib/cancellation";
 import { sendCancellationEmail } from "@/lib/email";
+import { sendPushToUser } from "@/lib/push";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import type { SpotMarker, ListingExtra, SelectedExtras, SelectedExtraEntry } from "@/types";
 
@@ -309,12 +310,30 @@ export async function cancelBookingAction(
         refundAmount: result.refundAmount,
         cancelledBy,
       };
+      const listingTitle = listing?.title || "en plass";
+      const refundSuffix = result.refundAmount > 0 ? ` Refusjon: ${result.refundAmount} kr.` : "";
       if (guestEmail) sendCancellationEmail(guestEmail, { name: guestName, ...emailData }).catch(console.error);
       if (hostEmail && cancelledBy === "guest") {
         const { data: hostProfile } = await db.from("profiles").select("full_name").eq("id", booking.host_id).single();
         sendCancellationEmail(hostEmail, { name: hostProfile?.full_name || "Utleier", ...emailData }).catch(console.error);
       }
-    } catch { /* email errors should not block cancellation */ }
+      // Push til den motparten som ikke avbestilte selv.
+      if (cancelledBy === "host") {
+        sendPushToUser(
+          booking.user_id,
+          "Booking kansellert",
+          `Utleier har kansellert ${listingTitle}.${refundSuffix}`,
+          { bookingId: booking.id, type: "booking_cancelled" },
+        ).catch(console.error);
+      } else if (cancelledBy === "guest" && booking.host_id) {
+        sendPushToUser(
+          booking.host_id,
+          "Booking kansellert",
+          `Gjesten har kansellert bookingen av ${listingTitle}.`,
+          { bookingId: booking.id, type: "booking_cancelled" },
+        ).catch(console.error);
+      }
+    } catch { /* email/push errors should not block cancellation */ }
 
     return { refundAmount: result.refundAmount };
   } catch (err) {

@@ -100,13 +100,23 @@ export async function POST(request: NextRequest) {
         const pushSends: Promise<unknown>[] = [];
         if (booking.host_id) {
           pushSends.push(
-            sendPushToUser(booking.host_id, "Ny bestilling!", `${guestName} har booket ${listingTitle}`)
+            sendPushToUser(
+              booking.host_id,
+              "Ny bestilling!",
+              `${guestName} har booket ${listingTitle}`,
+              { bookingId, type: "booking_new" },
+            )
               .then(() => console.log(`[Push] Host notified: ${booking.host_id}`))
               .catch((err) => console.error(`[Push] Failed to notify host ${booking.host_id}:`, err)),
           );
         }
         pushSends.push(
-          sendPushToUser(booking.user_id, "Booking bekreftet", `Din booking av ${listingTitle} er bekreftet`)
+          sendPushToUser(
+            booking.user_id,
+            "Booking bekreftet",
+            `Din booking av ${listingTitle} er bekreftet`,
+            { bookingId, type: "booking_confirmed" },
+          )
             .then(() => console.log(`[Push] Guest notified: ${booking.user_id}`))
             .catch((err) => console.error(`[Push] Failed to notify guest ${booking.user_id}:`, err)),
         );

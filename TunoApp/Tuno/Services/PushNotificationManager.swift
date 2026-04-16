@@ -66,6 +66,56 @@ class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCen
             NotificationCenter.default.post(name: .newPushNotification, object: nil)
         }
     }
+
+    nonisolated func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let userInfo = response.notification.request.content.userInfo
+        let type = userInfo["type"] as? String
+        let bookingId = userInfo["bookingId"] as? String
+        let conversationId = userInfo["conversationId"] as? String
+
+        DispatchQueue.main.async {
+            NotificationCenter.default.post(name: .newPushNotification, object: nil)
+            switch type {
+            case "new_message":
+                if let id = conversationId {
+                    PushRouter.shared.pendingConversationId = id
+                }
+            case "booking_new", "booking_confirmed", "booking_cancelled",
+                 "review_reminder", "payout_sent", "checkin_message":
+                if let id = bookingId {
+                    PushRouter.shared.pendingBookingId = id
+                    PushRouter.shared.pendingBookingType = type
+                }
+            default:
+                break
+            }
+        }
+        completionHandler()
+    }
+}
+
+/// Holder deep-link-mål fra push-varsler. Views som MainTabView kan
+/// observere og navigere ved endring. Selve navigasjonshåndteringen
+/// kan utvides senere — foreløpig eksponeres rå ID-ene.
+@MainActor
+final class PushRouter: ObservableObject {
+    static let shared = PushRouter()
+    @Published var pendingBookingId: String?
+    @Published var pendingBookingType: String?
+    @Published var pendingConversationId: String?
+
+    func clearBooking() {
+        pendingBookingId = nil
+        pendingBookingType = nil
+    }
+
+    func clearConversation() {
+        pendingConversationId = nil
+    }
 }
 
 extension Notification.Name {

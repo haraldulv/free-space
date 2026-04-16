@@ -106,10 +106,15 @@ export async function sendPushNotification(
   await Promise.all(tokens.map((t) => sendApns(t.token, payload)));
 }
 
-export async function sendPushToUser(userId: string, title: string, body: string) {
+export async function sendPushToUser(
+  userId: string,
+  title: string,
+  body: string,
+  data?: Record<string, string>,
+) {
   try {
     console.log(`[Push] Sending to user ${userId.slice(0, 8)}...: "${title}" — "${body.slice(0, 50)}"`);
-    await sendPushNotification(userId, title, body);
+    await sendPushNotification(userId, title, body, data);
   } catch (err) {
     console.error("[Push] sendPushToUser error:", err);
   }
