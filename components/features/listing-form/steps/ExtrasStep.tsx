@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Zap, Plug, Droplets, Flame, TreePine, Ship, Bike, Fish, BedDouble, UtensilsCrossed, Sparkles, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { AVAILABLE_EXTRAS, type ListingCategory, type ListingExtra, type ExtraId } from "@/types";
 import Input from "@/components/ui/Input";
 
@@ -25,6 +26,8 @@ interface ExtrasStepProps {
 }
 
 export default function ExtrasStep({ category, extras, onChange }: ExtrasStepProps) {
+  const t = useTranslations("host.extras");
+  const te = useTranslations("extra");
   const available = AVAILABLE_EXTRAS.filter((e) => e.category.includes(category) && e.scope === "area");
   const presetIds = new Set(AVAILABLE_EXTRAS.map((e) => e.id));
   const customExtras = extras.filter((e) => !presetIds.has(e.id as ExtraId));
@@ -63,8 +66,8 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-neutral-900">Felles tillegg</h2>
-        <p className="mt-1 text-sm text-neutral-500">Noe som er tilgjengelig for alle gjester, uansett hvilken plass de velger — f.eks. sauna, kajakk eller grillpakke. Plass-spesifikke tillegg (strøm, EV-lading, septik) setter du på hver enkelt plass i Lokasjon-steget.</p>
+        <h2 className="text-xl font-bold text-neutral-900">{t("title")}</h2>
+        <p className="mt-1 text-sm text-neutral-500">{t("subtitle")}</p>
       </div>
 
       <div className="space-y-3">
@@ -83,10 +86,10 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
                 <Icon className={`h-5 w-5 shrink-0 ${isSelected ? "text-primary-600" : "text-neutral-400"}`} />
                 <div className="flex-1">
                   <span className={`text-sm ${isSelected ? "font-medium text-neutral-900" : "text-neutral-600"}`}>
-                    {extra.name}
+                    {te(extra.id)}
                   </span>
                   <span className="ml-2 text-xs text-neutral-400">
-                    {extra.perNight ? "per natt" : "engangspris"}
+                    {extra.perNight ? t("perNight") : t("oneTime")}
                   </span>
                 </div>
                 <div className={`flex h-5 w-5 items-center justify-center rounded border-2 ${isSelected ? "border-primary-600 bg-primary-600" : "border-neutral-300"}`}>
@@ -98,13 +101,13 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
                   <div className="flex items-center gap-3">
                     <Input
                       id={`price-${extra.id}`}
-                      label="Pris (kr)"
+                      label={t("priceLabel")}
                       type="number"
                       value={String(selected.price)}
                       onChange={(e) => updatePrice(extra.id, Math.max(0, Number(e.target.value)))}
                       className="w-32"
                     />
-                    <span className="mt-5 text-sm text-neutral-500">{extra.perNight ? "kr/natt" : "kr (engangspris)"}</span>
+                    <span className="mt-5 text-sm text-neutral-500">{extra.perNight ? t("pricePerNightUnit") : t("priceOneTimeUnit")}</span>
                   </div>
                 </div>
               )}
@@ -114,13 +117,13 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
       </div>
 
       {available.length === 0 && (
-        <p className="text-sm text-neutral-400">Ingen tilleggstjenester tilgjengelig for denne kategorien</p>
+        <p className="text-sm text-neutral-400">{t("noneAvailable")}</p>
       )}
 
       <div className="space-y-3 pt-4 border-t border-neutral-200">
         <div>
-          <h3 className="text-base font-semibold text-neutral-900">Egendefinert tillegg</h3>
-          <p className="mt-1 text-xs text-neutral-500">Har du noe unikt du vil tilby? Gi det et navn og sett pris.</p>
+          <h3 className="text-base font-semibold text-neutral-900">{t("customHeader")}</h3>
+          <p className="mt-1 text-xs text-neutral-500">{t("customSubtitle")}</p>
         </div>
 
         {customExtras.map((extra) => (
@@ -129,7 +132,7 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
             <div className="flex-1">
               <div className="text-sm font-medium text-neutral-900">{extra.name}</div>
               <div className="text-xs text-neutral-500">
-                {extra.price} {extra.perNight ? "kr/natt" : "kr (engangspris)"}
+                {extra.price} {extra.perNight ? t("pricePerNightUnit") : t("priceOneTimeUnit")}
               </div>
             </div>
             <button
@@ -147,14 +150,14 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
             type="text"
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
-            placeholder="Navn (f.eks. Vedfyrt badstue)"
+            placeholder={t("customNamePlaceholder")}
             className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
           />
           <input
             type="number"
             value={customPrice}
             onChange={(e) => setCustomPrice(e.target.value)}
-            placeholder="Pris"
+            placeholder={t("customPricePlaceholder")}
             className="w-24 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
           />
         </div>
@@ -166,7 +169,7 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
               onChange={(e) => setCustomPerNight(e.target.checked)}
               className="h-4 w-4 rounded border-neutral-300"
             />
-            Per natt
+            {t("customPerNightLabel")}
           </label>
           <button
             type="button"
@@ -174,7 +177,7 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
             disabled={!customName.trim() || Number(customPrice) <= 0}
             className="ml-auto rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white disabled:bg-neutral-300"
           >
-            Legg til
+            {t("addButton")}
           </button>
         </div>
       </div>

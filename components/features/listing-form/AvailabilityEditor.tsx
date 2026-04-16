@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/src/style.css";
-import { CalendarX2, Check } from "lucide-react";
-import Button from "@/components/ui/Button";
+import { CalendarX2 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { nb, enGB } from "date-fns/locale";
 
 interface AvailabilityEditorProps {
   blockedDates: string[];
@@ -12,7 +12,10 @@ interface AvailabilityEditorProps {
   saving?: boolean;
 }
 
-export default function AvailabilityEditor({ blockedDates, onChange, saving }: AvailabilityEditorProps) {
+export default function AvailabilityEditor({ blockedDates, onChange }: AvailabilityEditorProps) {
+  const t = useTranslations("host.availability");
+  const locale = useLocale();
+  const dfLocale = locale === "en" ? enGB : nb;
   const blocked = new Set(blockedDates);
 
   const blockedDateObjects = blockedDates.map((d) => new Date(d + "T00:00:00"));
@@ -31,9 +34,9 @@ export default function AvailabilityEditor({ blockedDates, onChange, saving }: A
   return (
     <div className="space-y-4">
       <div>
-        <h3 className="text-lg font-semibold text-neutral-900">Tilgjengelighet</h3>
+        <h3 className="text-lg font-semibold text-neutral-900">{t("title")}</h3>
         <p className="mt-1 text-sm text-neutral-500">
-          Klikk på datoer for å blokkere eller åpne dem. Blokkerte datoer vises i rødt.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -68,6 +71,7 @@ export default function AvailabilityEditor({ blockedDates, onChange, saving }: A
           disabled={{ before: new Date() }}
           numberOfMonths={2}
           weekStartsOn={1}
+          locale={dfLocale}
           modifiers={{ blocked: blockedDateObjects }}
           modifiersClassNames={{ blocked: "rdp-blocked" }}
         />
@@ -77,7 +81,7 @@ export default function AvailabilityEditor({ blockedDates, onChange, saving }: A
         <div className="flex items-start gap-2 rounded-lg bg-red-50 p-3">
           <CalendarX2 className="h-4 w-4 text-red-500 mt-0.5 shrink-0" />
           <p className="text-sm text-red-700">
-            {blocked.size} {blocked.size === 1 ? "dato" : "datoer"} blokkert
+            {t("blockedCount", { count: blocked.size })}
           </p>
         </div>
       )}

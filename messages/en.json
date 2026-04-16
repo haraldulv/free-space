@@ -75,6 +75,18 @@
     "parking": "Parking",
     "camping": "Camping"
   },
+  "extra": {
+    "ev_charging": "EV charging",
+    "power_hookup": "Power hookup",
+    "septic_disposal": "Septic disposal",
+    "sauna": "Sauna",
+    "firewood": "Firewood",
+    "kayak": "Kayak",
+    "bike_rental": "Bike rental",
+    "fishing_gear": "Fishing gear",
+    "bedding": "Bedding",
+    "grill": "Grill package"
+  },
   "amenity": {
     "ev_charging": "EV charging",
     "covered": "Covered",
@@ -422,6 +434,64 @@
       "parkingDesc": "Parking spot for cars, EVs or vans",
       "vehicleTitle": "Which vehicle type fits?",
       "vehicleSubtitle": "Choose the largest vehicle type the spot can accommodate"
+    },
+    "basicInfo": {
+      "title": "Tell us about your spot",
+      "subtitle": "Write a good description so guests know what to expect",
+      "titleLabel": "Title",
+      "titlePlaceholder": "E.g. Central parking near Oslo Central Station",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Describe the spot, access, and what makes it special...",
+      "spotsLabel": "Number of spots",
+      "maxVehicleLengthLabel": "Max vehicle length (meters)",
+      "maxVehicleLengthPlaceholder": "E.g. 10",
+      "checkInLabel": "Check-in from",
+      "checkOutLabel": "Check-out by",
+      "instantLabel": "Instant booking",
+      "instantDesc": "Guests can reserve without waiting for your confirmation."
+    },
+    "images": {
+      "title": "Add photos",
+      "subtitle": "Upload up to 10 photos. The first one will be the cover.",
+      "uploading": "Uploading...",
+      "dropHint": "Drag photos here or click to select",
+      "fileTypes": "JPG, PNG, WebP — up to 10 photos",
+      "coverBadge": "Cover photo",
+      "imageAlt": "Photo {number}",
+      "uploadErrorPrefix": "Upload error:",
+      "moderationBlocked": "The image was blocked by the content filter."
+    },
+    "extras": {
+      "title": "Shared extras",
+      "subtitle": "Things available to all guests regardless of which spot they choose — e.g. sauna, kayak or grill package. Spot-specific extras (power, EV charging, septic) are set per spot in the Location step.",
+      "perNight": "per night",
+      "oneTime": "one-time",
+      "priceLabel": "Price (NOK)",
+      "pricePerNightUnit": "NOK/night",
+      "priceOneTimeUnit": "NOK (one-time)",
+      "noneAvailable": "No extras available for this category",
+      "customHeader": "Custom extra",
+      "customSubtitle": "Got something unique to offer? Give it a name and set a price.",
+      "customNamePlaceholder": "Name (e.g. Wood-fired sauna)",
+      "customPricePlaceholder": "Price",
+      "customPerNightLabel": "Per night",
+      "addButton": "Add"
+    },
+    "pricing": {
+      "title": "Set price",
+      "subtitle": "You can change the price at any time",
+      "priceLabel": "Price (NOK)",
+      "pricePlaceholder": "E.g. 150",
+      "priceUnitLabel": "Price unit",
+      "perHour": "Per hour",
+      "perNight": "Per night",
+      "instantLabel": "Instant book",
+      "instantDesc": "Guests can book instantly without waiting for approval"
+    },
+    "availability": {
+      "title": "Availability",
+      "subtitle": "Click dates to block or open them. Blocked dates are shown in red.",
+      "blockedCount": "{count, plural, =1 {1 date blocked} other {# dates blocked}}"
     },
     "location": {
       "title": "Where is the spot?",

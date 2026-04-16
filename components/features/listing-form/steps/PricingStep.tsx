@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Input from "@/components/ui/Input";
 import Toggle from "@/components/ui/Toggle";
 
@@ -18,27 +19,28 @@ export default function PricingStep({
   onChange,
   errors,
 }: PricingStepProps) {
+  const t = useTranslations("host.pricing");
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-neutral-900">Sett pris</h2>
-        <p className="mt-1 text-sm text-neutral-500">Du kan alltid endre prisen senere</p>
+        <h2 className="text-xl font-bold text-neutral-900">{t("title")}</h2>
+        <p className="mt-1 text-sm text-neutral-500">{t("subtitle")}</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           id="price"
-          label="Pris (kr)"
+          label={t("priceLabel")}
           type="number"
           min={1}
-          placeholder="F.eks. 150"
+          placeholder={t("pricePlaceholder")}
           value={price || ""}
           onChange={(e) => onChange("price", parseInt(e.target.value) || 0)}
           error={errors.price}
         />
 
         <div className="space-y-1">
-          <label className="block text-sm font-medium text-neutral-700">Prisenhet</label>
+          <label className="block text-sm font-medium text-neutral-700">{t("priceUnitLabel")}</label>
           <div className="flex gap-2">
             {(["time", "natt"] as const).map((unit) => (
               <button
@@ -51,7 +53,7 @@ export default function PricingStep({
                     : "border-neutral-200 text-neutral-600 hover:border-neutral-300"
                 }`}
               >
-                Per {unit === "time" ? "time" : "natt"}
+                {unit === "time" ? t("perHour") : t("perNight")}
               </button>
             ))}
           </div>
@@ -62,8 +64,8 @@ export default function PricingStep({
         <Toggle
           checked={instantBooking}
           onChange={(val) => onChange("instantBooking", val)}
-          label="Direktebooking"
-          description="Gjester kan booke umiddelbart uten å vente på godkjenning"
+          label={t("instantLabel")}
+          description={t("instantDesc")}
         />
       </div>
     </div>

@@ -75,6 +75,18 @@
     "parking": "Parkering",
     "camping": "Campingplass"
   },
+  "extra": {
+    "ev_charging": "Elbil-lading",
+    "power_hookup": "Strømtilkobling",
+    "septic_disposal": "Septiktømming",
+    "sauna": "Badstue",
+    "firewood": "Ved",
+    "kayak": "Kajakk",
+    "bike_rental": "Sykkelutleie",
+    "fishing_gear": "Fiskeutstyr",
+    "bedding": "Sengetøy",
+    "grill": "Grillpakke"
+  },
   "amenity": {
     "ev_charging": "Elbil-lading",
     "covered": "Under tak",
@@ -422,6 +434,64 @@
       "parkingDesc": "Parkeringsplass for biler, el-biler eller varebiler",
       "vehicleTitle": "Hvilken kjøretøytype passer?",
       "vehicleSubtitle": "Velg den største kjøretøytypen plassen er egnet for"
+    },
+    "basicInfo": {
+      "title": "Fortell om plassen din",
+      "subtitle": "Gi en god beskrivelse slik at gjester vet hva de kan forvente",
+      "titleLabel": "Tittel",
+      "titlePlaceholder": "F.eks. Sentral parkering ved Oslo S",
+      "descriptionLabel": "Beskrivelse",
+      "descriptionPlaceholder": "Beskriv plassen, tilgang, og hva som gjør den spesiell...",
+      "spotsLabel": "Antall plasser",
+      "maxVehicleLengthLabel": "Maks kjøretøylengde (meter)",
+      "maxVehicleLengthPlaceholder": "F.eks. 10",
+      "checkInLabel": "Innsjekk fra",
+      "checkOutLabel": "Utsjekk innen",
+      "instantLabel": "Umiddelbar booking",
+      "instantDesc": "Gjester kan reservere uten å vente på bekreftelse fra deg."
+    },
+    "images": {
+      "title": "Legg til bilder",
+      "subtitle": "Last opp opptil 10 bilder. Første bilde blir forsidebildet.",
+      "uploading": "Laster opp...",
+      "dropHint": "Dra bilder hit eller klikk for å velge",
+      "fileTypes": "JPG, PNG, WebP — maks 10 bilder",
+      "coverBadge": "Forsidebilde",
+      "imageAlt": "Bilde {number}",
+      "uploadErrorPrefix": "Feil ved opplasting:",
+      "moderationBlocked": "Bildet ble blokkert av innholdsfilter."
+    },
+    "extras": {
+      "title": "Felles tillegg",
+      "subtitle": "Noe som er tilgjengelig for alle gjester, uansett hvilken plass de velger — f.eks. sauna, kajakk eller grillpakke. Plass-spesifikke tillegg (strøm, EV-lading, septik) setter du på hver enkelt plass i Lokasjon-steget.",
+      "perNight": "per natt",
+      "oneTime": "engangspris",
+      "priceLabel": "Pris (kr)",
+      "pricePerNightUnit": "kr/natt",
+      "priceOneTimeUnit": "kr (engangspris)",
+      "noneAvailable": "Ingen tilleggstjenester tilgjengelig for denne kategorien",
+      "customHeader": "Egendefinert tillegg",
+      "customSubtitle": "Har du noe unikt du vil tilby? Gi det et navn og sett pris.",
+      "customNamePlaceholder": "Navn (f.eks. Vedfyrt badstue)",
+      "customPricePlaceholder": "Pris",
+      "customPerNightLabel": "Per natt",
+      "addButton": "Legg til"
+    },
+    "pricing": {
+      "title": "Sett pris",
+      "subtitle": "Du kan alltid endre prisen senere",
+      "priceLabel": "Pris (kr)",
+      "pricePlaceholder": "F.eks. 150",
+      "priceUnitLabel": "Prisenhet",
+      "perHour": "Per time",
+      "perNight": "Per natt",
+      "instantLabel": "Direktebooking",
+      "instantDesc": "Gjester kan booke umiddelbart uten å vente på godkjenning"
+    },
+    "availability": {
+      "title": "Tilgjengelighet",
+      "subtitle": "Klikk på datoer for å blokkere eller åpne dem. Blokkerte datoer vises i rødt.",
+      "blockedCount": "{count, plural, =1 {1 dato blokkert} other {# datoer blokkert}}"
     },
     "location": {
       "title": "Hvor er plassen?",

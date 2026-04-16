@@ -3,6 +3,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Upload, X, GripVertical } from "lucide-react";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 import { uploadListingImage, deleteListingImage } from "@/lib/supabase/storage";
 
 async function moderateImage(imageUrl: string): Promise<{ approved: boolean; reason?: string }> {
@@ -22,6 +23,7 @@ interface ImageUploadStepProps {
 }
 
 export default function ImageUploadStep({ images, userId, onChange, error }: ImageUploadStepProps) {
+  const t = useTranslations("host.images");
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [moderationError, setModerationError] = useState("");
@@ -45,7 +47,7 @@ export default function ImageUploadStep({ images, userId, onChange, error }: Ima
           const result = await moderateImage(url);
           if (!result.approved) {
             await deleteListingImage(url);
-            setModerationError(result.reason || "Bildet ble blokkert av innholdsfilter.");
+            setModerationError(result.reason || t("moderationBlocked"));
             continue;
           }
 
@@ -58,12 +60,12 @@ export default function ImageUploadStep({ images, userId, onChange, error }: Ima
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         console.error("Upload error:", msg);
-        alert(`Feil ved opplasting: ${msg}`);
+        alert(`${t("uploadErrorPrefix")} ${msg}`);
       } finally {
         setUploading(false);
       }
     },
-    [images, userId, onChange],
+    [images, userId, onChange, t],
   );
 
   const handleDrop = useCallback(
@@ -93,9 +95,9 @@ export default function ImageUploadStep({ images, userId, onChange, error }: Ima
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-neutral-900">Legg til bilder</h2>
+        <h2 className="text-xl font-bold text-neutral-900">{t("title")}</h2>
         <p className="mt-1 text-sm text-neutral-500">
-          Last opp opptil 10 bilder. Første bilde blir forsidebildet.
+          {t("subtitle")}
         </p>
       </div>
 
@@ -121,9 +123,9 @@ export default function ImageUploadStep({ images, userId, onChange, error }: Ima
       >
         <Upload className={`h-8 w-8 ${dragOver ? "text-primary-500" : "text-neutral-400"}`} />
         <p className="mt-2 text-sm font-medium text-neutral-700">
-          {uploading ? "Laster opp..." : "Dra bilder hit eller klikk for å velge"}
+          {uploading ? t("uploading") : t("dropHint")}
         </p>
-        <p className="mt-1 text-xs text-neutral-400">JPG, PNG, WebP — maks 10 bilder</p>
+        <p className="mt-1 text-xs text-neutral-400">{t("fileTypes")}</p>
         <input
           ref={fileInputRef}
           type="file"
@@ -148,14 +150,14 @@ export default function ImageUploadStep({ images, userId, onChange, error }: Ima
             >
               <Image
                 src={url}
-                alt={`Bilde ${i + 1}`}
+                alt={t("imageAlt", { number: i + 1 })}
                 fill
                 className="object-cover"
                 sizes="150px"
               />
               {i === 0 && (
                 <span className="absolute top-1.5 left-1.5 rounded bg-neutral-900/70 px-1.5 py-0.5 text-[10px] font-medium text-white">
-                  Forsidebilde
+                  {t("coverBadge")}
                 </span>
               )}
               <div className="absolute inset-0 flex items-center justify-center gap-1 bg-black/0 opacity-0 transition-all group-hover:bg-black/20 group-hover:opacity-100">

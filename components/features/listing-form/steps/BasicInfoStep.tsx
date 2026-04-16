@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import Input from "@/components/ui/Input";
 import Textarea from "@/components/ui/Textarea";
 import Toggle from "@/components/ui/Toggle";
@@ -30,17 +31,18 @@ export default function BasicInfoStep({
   onChange,
   errors,
 }: BasicInfoStepProps) {
+  const t = useTranslations("host.basicInfo");
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-neutral-900">Fortell om plassen din</h2>
-        <p className="mt-1 text-sm text-neutral-500">Gi en god beskrivelse slik at gjester vet hva de kan forvente</p>
+        <h2 className="text-xl font-bold text-neutral-900">{t("title")}</h2>
+        <p className="mt-1 text-sm text-neutral-500">{t("subtitle")}</p>
       </div>
 
       <Input
         id="title"
-        label="Tittel"
-        placeholder="F.eks. Sentral parkering ved Oslo S"
+        label={t("titleLabel")}
+        placeholder={t("titlePlaceholder")}
         value={title}
         onChange={(e) => onChange("title", e.target.value)}
         error={errors.title}
@@ -48,8 +50,8 @@ export default function BasicInfoStep({
 
       <Textarea
         id="description"
-        label="Beskrivelse"
-        placeholder="Beskriv plassen, tilgang, og hva som gjør den spesiell..."
+        label={t("descriptionLabel")}
+        placeholder={t("descriptionPlaceholder")}
         rows={4}
         value={description}
         onChange={(e) => onChange("description", e.target.value)}
@@ -59,7 +61,7 @@ export default function BasicInfoStep({
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           id="spots"
-          label="Antall plasser"
+          label={t("spotsLabel")}
           type="number"
           min={1}
           max={100}
@@ -71,11 +73,11 @@ export default function BasicInfoStep({
         {category === "camping" && (
           <Input
             id="maxVehicleLength"
-            label="Maks kjøretøylengde (meter)"
+            label={t("maxVehicleLengthLabel")}
             type="number"
             min={1}
             max={30}
-            placeholder="F.eks. 10"
+            placeholder={t("maxVehicleLengthPlaceholder")}
             value={maxVehicleLength || ""}
             onChange={(e) => {
               const val = e.target.value ? parseInt(e.target.value) : undefined;
@@ -89,7 +91,7 @@ export default function BasicInfoStep({
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           id="checkInTime"
-          label="Innsjekk fra"
+          label={t("checkInLabel")}
           type="time"
           value={checkInTime || "15:00"}
           onChange={(e) => onChange("checkInTime", e.target.value)}
@@ -97,7 +99,7 @@ export default function BasicInfoStep({
         />
         <Input
           id="checkOutTime"
-          label="Utsjekk innen"
+          label={t("checkOutLabel")}
           type="time"
           value={checkOutTime || "11:00"}
           onChange={(e) => onChange("checkOutTime", e.target.value)}
@@ -109,8 +111,8 @@ export default function BasicInfoStep({
         <Toggle
           checked={instantBooking}
           onChange={(v) => onChange("instantBooking", v)}
-          label="Umiddelbar booking"
-          description="Gjester kan reservere uten å vente på bekreftelse fra deg."
+          label={t("instantLabel")}
+          description={t("instantDesc")}
         />
       </div>
     </div>
