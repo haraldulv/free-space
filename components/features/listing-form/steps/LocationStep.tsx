@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { MapPin, Trash2, EyeOff, X, Sparkles } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import Input from "@/components/ui/Input";
 import Toggle from "@/components/ui/Toggle";
 import { AVAILABLE_EXTRAS, type SpotMarker, type ListingCategory, type ListingExtra, type ExtraId } from "@/types";
@@ -46,18 +47,16 @@ export default function LocationStep({
   onChange,
   errors,
 }: LocationStepProps) {
+  const t = useTranslations("host.location");
   const setPerSpotCheckinMessage = (enabled: boolean) => {
     onChange("perSpotCheckinMessage", enabled);
     if (enabled) {
-      // Individuell: fjern listing-nivå-meldingen.
       onChange("checkinMessage", "");
     } else {
-      // Uniform: fjern alle per-plass-meldinger.
       const next = spotMarkers.map((s) => ({ ...s, checkinMessage: undefined }));
       onChange("spotMarkers", next);
     }
   };
-  // Ikke lenger toggle-basert — plasser vises alltid utbrettet
   const setPerSpotPricing = (enabled: boolean) => {
     onChange("perSpotPricing", enabled);
     const next = spotMarkers.map((s) => ({
@@ -66,7 +65,7 @@ export default function LocationStep({
     }));
     onChange("spotMarkers", next);
   };
-  const priceLabel = priceUnit === "natt" ? "kr/natt" : "kr/time";
+  const priceLabel = priceUnit === "natt" ? t("pricePerNight") : t("pricePerHour");
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const mainMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
@@ -87,7 +86,6 @@ export default function LocationStep({
     [onChange],
   );
 
-  // Create a numbered pin element for spot markers
   const createSpotPin = useCallback((index: number) => {
     const el = document.createElement("div");
     el.className = "spot-pin";
@@ -102,9 +100,7 @@ export default function LocationStep({
     return el;
   }, []);
 
-  // Sync spot markers on map
   const syncSpotMarkers = useCallback((markers: SpotMarker[]) => {
-    // Remove old markers
     spotMarkerRefs.current.forEach((m) => (m.map = null));
     spotMarkerRefs.current = [];
 
@@ -175,7 +171,6 @@ export default function LocationStep({
       mapInstanceRef.current = map;
       mainMarkerRef.current = marker;
 
-      // Autocomplete
       if (inputRef.current) {
         const autocomplete = new Autocomplete(inputRef.current, {
           types: ["address"],
@@ -210,21 +205,18 @@ export default function LocationStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Sync main marker if lat/lng change
   useEffect(() => {
     if (mapReady && lat && lng && mainMarkerRef.current) {
       mainMarkerRef.current.position = { lat, lng };
     }
   }, [lat, lng, mapReady]);
 
-  // Sync spot markers when they change
   useEffect(() => {
     if (mapReady) {
       syncSpotMarkers(spotMarkers);
     }
   }, [spotMarkers, mapReady, syncSpotMarkers]);
 
-  // Handle map click for placing spots
   useEffect(() => {
     if (!mapReady || !mapInstanceRef.current) return;
 
@@ -255,15 +247,15 @@ export default function LocationStep({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-neutral-900">Hvor er plassen?</h2>
-        <p className="mt-1 text-sm text-neutral-500">Søk etter adressen eller klikk på kartet</p>
+        <h2 className="text-xl font-bold text-neutral-900">{t("title")}</h2>
+        <p className="mt-1 text-sm text-neutral-500">{t("subtitle")}</p>
       </div>
 
       <Input
         ref={inputRef}
         id="address"
-        label="Adresse"
-        placeholder="Søk etter adresse..."
+        label={t("addressLabel")}
+        placeholder={t("addressPlaceholder")}
         value={address}
         onChange={(e) => onChange("address", e.target.value)}
         error={errors.address}
@@ -272,16 +264,16 @@ export default function LocationStep({
       <div className="grid gap-4 sm:grid-cols-2">
         <Input
           id="city"
-          label="By"
-          placeholder="Oslo"
+          label={t("cityLabel")}
+          placeholder={t("cityPlaceholder")}
           value={city}
           onChange={(e) => onChange("city", e.target.value)}
           error={errors.city}
         />
         <Input
           id="region"
-          label="Region"
-          placeholder="Oslo"
+          label={t("regionLabel")}
+          placeholder={t("regionPlaceholder")}
           value={region}
           onChange={(e) => onChange("region", e.target.value)}
           error={errors.region}
@@ -292,7 +284,7 @@ export default function LocationStep({
       <div>
         <div className="mb-2 flex items-center justify-between">
           <p className="text-sm font-medium text-neutral-700">
-            {placingSpots ? "Klikk på kartet for å plassere plasser" : "Dra markøren for å justere posisjon"}
+            {placingSpots ? t("mapHintPlacing") : t("mapHintDefault")}
           </p>
           <button
             type="button"
@@ -304,7 +296,7 @@ export default function LocationStep({
             }`}
           >
             <MapPin className="h-3.5 w-3.5" />
-            {placingSpots ? "Plasserer..." : "Marker plasser"}
+            {placingSpots ? t("placingSpots") : t("markSpots")}
           </button>
         </div>
         <div
@@ -317,25 +309,25 @@ export default function LocationStep({
       {/* Prising */}
       {(lat !== 0 || lng !== 0) && (
         <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-4">
-          <h3 className="text-base font-semibold text-neutral-900">Pris</h3>
+          <h3 className="text-base font-semibold text-neutral-900">{t("priceHeader")}</h3>
 
           <div>
             <label className="block text-sm font-medium text-neutral-700 mb-1.5">
-              {perSpotPricing ? `Standardpris ${priceLabel}` : `Pris ${priceLabel}`}
+              {perSpotPricing ? t("priceStandardLabel", { unit: priceLabel }) : t("priceUniformLabel", { unit: priceLabel })}
             </label>
             <div className="flex items-center gap-2">
               <input
                 type="number"
                 value={defaultPrice || ""}
                 onChange={(e) => onChange("price", Math.max(0, Number(e.target.value)))}
-                placeholder="F.eks. 150"
+                placeholder={t("pricePlaceholder")}
                 className="w-40 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
               />
-              <span className="text-sm text-neutral-500">kr</span>
+              <span className="text-sm text-neutral-500">{t("priceCurrency")}</span>
             </div>
             {perSpotPricing && (
               <p className="mt-1 text-xs text-neutral-500">
-                Brukes som standard hvis en plass ikke har egen pris.
+                {t("priceFallbackNote")}
               </p>
             )}
             {errors.price && <p className="mt-1 text-sm text-red-500">{errors.price}</p>}
@@ -351,8 +343,8 @@ export default function LocationStep({
                 {!perSpotPricing && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium text-neutral-900">Samme pris for alle plasser</div>
-                <div className="text-xs text-neutral-500">Enkelt: alle plasser koster det samme.</div>
+                <div className="text-sm font-medium text-neutral-900">{t("priceSameTitle")}</div>
+                <div className="text-xs text-neutral-500">{t("priceSameDesc")}</div>
               </div>
             </button>
             <button
@@ -364,8 +356,8 @@ export default function LocationStep({
                 {perSpotPricing && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium text-neutral-900">Individuell pris per plass</div>
-                <div className="text-xs text-neutral-500">Sett ulik pris for ulike plasser (f.eks. sjøutsikt vs bakrekke).</div>
+                <div className="text-sm font-medium text-neutral-900">{t("pricePerSpotTitle")}</div>
+                <div className="text-xs text-neutral-500">{t("pricePerSpotDesc")}</div>
               </div>
             </button>
           </div>
@@ -376,9 +368,9 @@ export default function LocationStep({
       {(lat !== 0 || lng !== 0) && (
         <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-4">
           <div>
-            <h3 className="text-base font-semibold text-neutral-900">Velkomstmelding ved innsjekk</h3>
+            <h3 className="text-base font-semibold text-neutral-900">{t("welcomeHeader")}</h3>
             <p className="mt-0.5 text-xs text-neutral-500">
-              Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.
+              {t("welcomeHelp")}
             </p>
           </div>
 
@@ -392,8 +384,8 @@ export default function LocationStep({
                 {!perSpotCheckinMessage && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium text-neutral-900">Samme melding for alle plasser</div>
-                <div className="text-xs text-neutral-500">Én felles velkomstmelding til alle gjester.</div>
+                <div className="text-sm font-medium text-neutral-900">{t("welcomeSameTitle")}</div>
+                <div className="text-xs text-neutral-500">{t("welcomeSameDesc")}</div>
               </div>
             </button>
             <button
@@ -405,8 +397,8 @@ export default function LocationStep({
                 {perSpotCheckinMessage && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
               </div>
               <div className="flex-1">
-                <div className="text-sm font-medium text-neutral-900">Individuell melding per plass</div>
-                <div className="text-xs text-neutral-500">Sett ulik melding per plass (f.eks. ulike port-koder).</div>
+                <div className="text-sm font-medium text-neutral-900">{t("welcomePerSpotTitle")}</div>
+                <div className="text-xs text-neutral-500">{t("welcomePerSpotDesc")}</div>
               </div>
             </button>
           </div>
@@ -415,13 +407,13 @@ export default function LocationStep({
             <textarea
               value={checkinMessage ?? ""}
               onChange={(e) => onChange("checkinMessage", e.target.value)}
-              placeholder="F.eks. Hei! Port-kode er 1234. Plassen din er ved ladepunktet."
+              placeholder={t("welcomePlaceholder")}
               rows={4}
               className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm placeholder:text-neutral-400"
             />
           )}
           {perSpotCheckinMessage && (
-            <p className="text-xs text-neutral-500">Skriv individuell melding på hver plass nedenfor.</p>
+            <p className="text-xs text-neutral-500">{t("welcomePerSpotNote")}</p>
           )}
         </div>
       )}
@@ -430,7 +422,9 @@ export default function LocationStep({
       {spotMarkers.length > 0 && (
         <div>
           <p className="text-sm font-medium text-neutral-700 mb-3">
-            Plasser ({spotMarkers.length}{spots > 0 ? ` av ${spots}` : ""})
+            {spots > 0
+              ? t("spotsHeaderOfTotal", { count: spotMarkers.length, total: spots })
+              : t("spotsHeader", { count: spotMarkers.length })}
           </p>
           <div className="space-y-4">
             {spotMarkers.map((spot, i) => (
@@ -462,8 +456,8 @@ export default function LocationStep({
             <Toggle
               checked={hideExactLocation}
               onChange={(v) => onChange("hideExactLocation", v)}
-              label="Skjul eksakt adresse"
-              description="Leietakere ser omtrentlig område, ikke nøyaktig posisjon. Eksakt adresse deles etter booking."
+              label={t("hideAddressLabel")}
+              description={t("hideAddressDesc")}
             />
           </div>
         </div>
@@ -484,6 +478,7 @@ interface SpotInlineCardProps {
 }
 
 function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, showCheckinMessage, onChange, onRemove }: SpotInlineCardProps) {
+  const t = useTranslations("host.location");
   const [customName, setCustomName] = useState("");
   const [customPrice, setCustomPrice] = useState("");
   const [customPerNight, setCustomPerNight] = useState(false);
@@ -491,7 +486,6 @@ function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, showCh
   const extras = spot.extras ?? [];
   const presetIds = new Set(AVAILABLE_EXTRAS.map((e) => e.id));
   const customExtras = extras.filter((e) => !presetIds.has(e.id as ExtraId));
-  // Kun site-specific her — felles tillegg settes i Felles tillegg-steget
   const sitePresets = AVAILABLE_EXTRAS.filter((e) => e.category.includes(category) && e.scope === "site");
 
   const setExtras = (next: ListingExtra[]) => {
@@ -527,7 +521,7 @@ function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, showCh
           type="text"
           value={spot.label ?? ""}
           onChange={(e) => onChange({ ...spot, label: e.target.value || undefined })}
-          placeholder="Navn på plassen"
+          placeholder={t("spotNamePlaceholder")}
           className="flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
         />
         <button
@@ -541,20 +535,20 @@ function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, showCh
 
       {showPrice && (
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-neutral-700 w-16">Pris</label>
+          <label className="text-sm font-medium text-neutral-700 w-16">{t("spotPriceLabel")}</label>
           <input
             type="number"
             value={spot.price ?? defaultPrice}
             onChange={(e) => onChange({ ...spot, price: Math.max(0, Number(e.target.value)) })}
             className="w-32 rounded-lg border border-neutral-300 px-3 py-2 text-sm"
           />
-          <span className="text-xs text-neutral-500">kr/natt</span>
+          <span className="text-xs text-neutral-500">{t("pricePerNight")}</span>
         </div>
       )}
 
       {sitePresets.length > 0 && (
         <div>
-          <p className="text-sm font-medium text-neutral-700 mb-2">Tillegg på denne plassen</p>
+          <p className="text-sm font-medium text-neutral-700 mb-2">{t("spotExtrasHeader")}</p>
           <div className="space-y-2">
             {sitePresets.map((preset) => {
               const selected = extras.find((e) => e.id === preset.id);
@@ -570,18 +564,18 @@ function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, showCh
                       {isSel && <svg className="h-3 w-3 text-white" viewBox="0 0 12 12"><path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                     </div>
                     <span className="flex-1">{preset.name}</span>
-                    <span className="text-xs text-neutral-500">{preset.perNight ? "per natt" : "engangspris"}</span>
+                    <span className="text-xs text-neutral-500">{preset.perNight ? t("perNight") : t("oneTime")}</span>
                   </button>
                   {isSel && selected && (
                     <div className="border-t border-primary-200 px-3 py-2 flex items-center gap-2">
-                      <label className="text-xs text-neutral-500">Pris</label>
+                      <label className="text-xs text-neutral-500">{t("extraPriceLabel")}</label>
                       <input
                         type="number"
                         value={selected.price}
                         onChange={(e) => setExtras(extras.map((x) => x.id === preset.id ? { ...x, price: Math.max(0, Number(e.target.value)) } : x))}
                         className="w-20 rounded border border-neutral-300 px-2 py-1 text-sm"
                       />
-                      <span className="text-xs text-neutral-500">{preset.perNight ? "kr/natt" : "kr"}</span>
+                      <span className="text-xs text-neutral-500">{preset.perNight ? t("pricePerNight") : t("priceCurrency")}</span>
                     </div>
                   )}
                 </div>
@@ -592,13 +586,13 @@ function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, showCh
       )}
 
       <div className="space-y-2 pt-2 border-t border-neutral-100">
-        <p className="text-xs font-semibold text-neutral-700">Egendefinert tillegg</p>
+        <p className="text-xs font-semibold text-neutral-700">{t("customExtraHeader")}</p>
         {customExtras.map((extra) => (
           <div key={extra.id} className="flex items-center gap-2 rounded-lg bg-primary-50 px-3 py-2">
             <Sparkles className="h-3.5 w-3.5 text-primary-600" />
             <div className="flex-1 text-xs">
               <div className="font-medium">{extra.name}</div>
-              <div className="text-neutral-500">{extra.price} {extra.perNight ? "kr/natt" : "kr"}</div>
+              <div className="text-neutral-500">{extra.price} {extra.perNight ? t("pricePerNight") : t("priceCurrency")}</div>
             </div>
             <button type="button" onClick={() => setExtras(extras.filter((e) => e.id !== extra.id))} className="text-neutral-400">
               <X className="h-3.5 w-3.5" />
@@ -610,19 +604,19 @@ function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, showCh
             type="text"
             value={customName}
             onChange={(e) => setCustomName(e.target.value)}
-            placeholder="Navn"
+            placeholder={t("customExtraName")}
             className="flex-1 rounded-lg border border-neutral-300 px-2 py-1.5 text-xs"
           />
           <input
             type="number"
             value={customPrice}
             onChange={(e) => setCustomPrice(e.target.value)}
-            placeholder="Pris"
+            placeholder={t("customExtraPrice")}
             className="w-20 rounded-lg border border-neutral-300 px-2 py-1.5 text-xs"
           />
           <label className="flex items-center gap-1 text-xs text-neutral-600">
             <input type="checkbox" checked={customPerNight} onChange={(e) => setCustomPerNight(e.target.checked)} className="h-3.5 w-3.5 rounded border-neutral-300" />
-            /natt
+            {t("customExtraPerNight")}
           </label>
           <button
             type="button"
@@ -637,11 +631,11 @@ function SpotInlineCard({ index, spot, category, defaultPrice, showPrice, showCh
 
       {showCheckinMessage && (
         <div className="space-y-1 pt-2 border-t border-neutral-100">
-          <label className="text-xs font-semibold text-neutral-700">Velkomstmelding for denne plassen</label>
+          <label className="text-xs font-semibold text-neutral-700">{t("spotWelcomeLabel")}</label>
           <textarea
             value={spot.checkinMessage ?? ""}
             onChange={(e) => onChange({ ...spot, checkinMessage: e.target.value || undefined })}
-            placeholder="F.eks. port-kode, GPS-koordinater, plasseringsbeskrivelse..."
+            placeholder={t("spotWelcomePlaceholder")}
             rows={2}
             className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm placeholder:text-neutral-400"
           />
@@ -662,6 +656,9 @@ interface SpotBlockedDatesProps {
 }
 
 function SpotBlockedDates({ blockedDates, onChange }: SpotBlockedDatesProps) {
+  const t = useTranslations("host.location");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
   const [expanded, setExpanded] = useState(false);
   const [displayedMonth, setDisplayedMonth] = useState(new Date());
 
@@ -675,7 +672,7 @@ function SpotBlockedDates({ blockedDates, onChange }: SpotBlockedDatesProps) {
     return `${y}-${m}-${day}`;
   };
 
-  const monthLabel = displayedMonth.toLocaleDateString("nb-NO", { month: "long", year: "numeric" });
+  const monthLabel = displayedMonth.toLocaleDateString(dateLocale, { month: "long", year: "numeric" });
 
   const moveMonth = (delta: number) => {
     const next = new Date(displayedMonth);
@@ -705,6 +702,16 @@ function SpotBlockedDates({ blockedDates, onChange }: SpotBlockedDatesProps) {
     }
   };
 
+  const weekdayLabels = [
+    t("weekdayMon"),
+    t("weekdayTue"),
+    t("weekdayWed"),
+    t("weekdayThu"),
+    t("weekdayFri"),
+    t("weekdaySat"),
+    t("weekdaySun"),
+  ];
+
   return (
     <div className="pt-2 border-t border-neutral-100 space-y-2">
       <button
@@ -713,7 +720,7 @@ function SpotBlockedDates({ blockedDates, onChange }: SpotBlockedDatesProps) {
         className="flex w-full items-center gap-2 text-xs"
       >
         <svg className="h-3.5 w-3.5 text-neutral-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-        <span className="font-semibold text-neutral-700">Blokkerte datoer</span>
+        <span className="font-semibold text-neutral-700">{t("blockedDatesHeader")}</span>
         {blockedDates.length > 0 && (
           <span className="text-red-600">({blockedDates.length})</span>
         )}
@@ -728,7 +735,7 @@ function SpotBlockedDates({ blockedDates, onChange }: SpotBlockedDatesProps) {
             <button type="button" onClick={() => moveMonth(1)} className="text-neutral-500 px-2">›</button>
           </div>
           <div className="grid grid-cols-7 text-center text-[10px] text-neutral-500 mb-1">
-            {["Ma","Ti","On","To","Fr","Lo","So"].map((d) => <div key={d}>{d}</div>)}
+            {weekdayLabels.map((d) => <div key={d}>{d}</div>)}
           </div>
           <div className="grid grid-cols-7 gap-0.5">
             {daysInMonth().map((d, i) => {
