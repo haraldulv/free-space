@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createReviewAction } from "@/app/(main)/reviews/actions";
+import { createReviewAction } from "@/app/[locale]/(main)/reviews/actions";
 import StarRating from "./StarRating";
 import Button from "@/components/ui/Button";
 

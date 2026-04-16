@@ -9,7 +9,7 @@ import DatePicker from "@/components/ui/DatePicker";
 import Button from "@/components/ui/Button";
 import { Listing, SpotMarker, getDisplayPriceText } from "@/types";
 import { SERVICE_FEE_RATE } from "@/lib/config";
-import { checkAvailabilityAction } from "@/app/(main)/book/actions";
+import { checkAvailabilityAction } from "@/app/[locale]/(main)/book/actions";
 
 interface BookingFormProps {
   listing: Listing;

@@ -5,7 +5,7 @@ import { formatDistanceToNow } from "date-fns";
 import { nb } from "date-fns/locale";
 import { Send, ArrowLeft } from "lucide-react";
 import { getMessages, subscribeToMessages } from "@/lib/supabase/chat";
-import { sendMessageAction, markMessagesReadAction } from "@/app/(main)/meldinger/actions";
+import { sendMessageAction, markMessagesReadAction } from "@/app/[locale]/(main)/meldinger/actions";
 import type { Message } from "@/types";
 
 interface ChatViewProps {

@@ -1,7 +1,8 @@
 "use client";
 
 import { Suspense, useEffect, useState } from "react";
-import { useSearchParams, usePathname, useRouter } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "@/i18n/navigation";
 import Navbar from "@/components/features/Navbar";
 import Footer from "@/components/features/Footer";
 import { createClient } from "@/lib/supabase/client";

@@ -1,0 +1,57 @@
+{
+  "nav": {
+    "becomeHost": "Bli utleier",
+    "myBookings": "Mine bestillinger",
+    "favorites": "Favoritter",
+    "messages": "Meldinger",
+    "myListings": "Mine annonser",
+    "explore": "Utforsk",
+    "login": "Logg inn",
+    "register": "Registrer deg",
+    "settings": "Innstillinger",
+    "logout": "Logg ut",
+    "myAccount": "Min konto",
+    "changeLanguage": "Endre språk"
+  },
+  "home": {
+    "popular": "Populære i Norge",
+    "featured": "Fremhevede i Norge",
+    "availableToday": "Tilgjengelig i dag"
+  },
+  "footer": {
+    "tagline": "Finn og book parkeringsplasser og campingplasser over hele Norge.",
+    "explore": "Utforsk",
+    "parking": "Parkering",
+    "camping": "Campingplass",
+    "company": "Selskap",
+    "about": "Om oss",
+    "contact": "Kontakt",
+    "legal": "Juridisk",
+    "terms": "Vilkår",
+    "privacy": "Personvern",
+    "hostTerms": "Utleiervilkår",
+    "copyright": "© {year} Tuno. Alle rettigheter reservert."
+  },
+  "common": {
+    "loading": "Laster...",
+    "save": "Lagre",
+    "cancel": "Avbryt",
+    "delete": "Slett",
+    "edit": "Rediger",
+    "close": "Lukk",
+    "back": "Tilbake",
+    "next": "Neste",
+    "continue": "Fortsett",
+    "search": "Søk",
+    "tryAgain": "Prøv igjen",
+    "somethingWrong": "Noe gikk galt",
+    "unexpectedError": "En uventet feil oppstod. Vennligst prøv igjen.",
+    "notFound": "Siden ble ikke funnet",
+    "notFoundDescription": "Siden du leter etter finnes ikke eller har blitt flyttet.",
+    "backToHome": "Tilbake til forsiden"
+  },
+  "metadata": {
+    "title": "Tuno",
+    "description": "Finn og book parkeringsplasser og campingplasser over hele Norge. Pendlerparkering og bobilturisme gjort enkelt."
+  }
+}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle } from "lucide-react";
-import { getOrCreateConversationAction } from "@/app/(main)/meldinger/actions";
+import { getOrCreateConversationAction } from "@/app/[locale]/(main)/meldinger/actions";
 import Button from "@/components/ui/Button";
 
 interface ContactHostButtonProps {

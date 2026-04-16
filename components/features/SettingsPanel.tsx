@@ -11,7 +11,7 @@ import {
   updateProfileAction,
   updateAvatarAction,
   deleteAccountAction,
-} from "@/app/(main)/settings/actions";
+} from "@/app/[locale]/(main)/settings/actions";
 
 interface ProfileData {
   id: string;

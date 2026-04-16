@@ -19,8 +19,8 @@ import {
   ArrowUpRight,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { deleteListingAction, toggleListingActiveAction } from "@/app/(main)/bli-utleier/actions";
-import { cancelBookingAction } from "@/app/(main)/book/actions";
+import { deleteListingAction, toggleListingActiveAction } from "@/app/[locale]/(main)/bli-utleier/actions";
+import { cancelBookingAction } from "@/app/[locale]/(main)/book/actions";
 import { getConversations } from "@/lib/supabase/chat";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";

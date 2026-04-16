@@ -1,0 +1,57 @@
+{
+  "nav": {
+    "becomeHost": "Become a host",
+    "myBookings": "My bookings",
+    "favorites": "Favorites",
+    "messages": "Messages",
+    "myListings": "My listings",
+    "explore": "Explore",
+    "login": "Log in",
+    "register": "Sign up",
+    "settings": "Settings",
+    "logout": "Log out",
+    "myAccount": "My account",
+    "changeLanguage": "Change language"
+  },
+  "home": {
+    "popular": "Popular in Norway",
+    "featured": "Featured in Norway",
+    "availableToday": "Available today"
+  },
+  "footer": {
+    "tagline": "Find and book parking spots and camping sites across Norway.",
+    "explore": "Explore",
+    "parking": "Parking",
+    "camping": "Camping",
+    "company": "Company",
+    "about": "About us",
+    "contact": "Contact",
+    "legal": "Legal",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "hostTerms": "Host terms",
+    "copyright": "© {year} Tuno. All rights reserved."
+  },
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "back": "Back",
+    "next": "Next",
+    "continue": "Continue",
+    "search": "Search",
+    "tryAgain": "Try again",
+    "somethingWrong": "Something went wrong",
+    "unexpectedError": "An unexpected error occurred. Please try again.",
+    "notFound": "Page not found",
+    "notFoundDescription": "The page you're looking for doesn't exist or has been moved.",
+    "backToHome": "Back to home"
+  },
+  "metadata": {
+    "title": "Tuno",
+    "description": "Find and book parking spots and camping sites across Norway. Commuter parking and motorhome tourism made simple."
+  }
+}

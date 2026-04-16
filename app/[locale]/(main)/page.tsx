@@ -1,9 +1,11 @@
+import { getTranslations } from "next-intl/server";
 import { getListingsByTag } from "@/lib/supabase/listings";
 import ListingSection from "@/components/features/ListingSection";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
+  const t = await getTranslations("home");
   const [popular, featured, availableToday] = await Promise.all([
     getListingsByTag("popular"),
     getListingsByTag("featured"),
@@ -12,9 +14,9 @@ export default async function HomePage() {
 
   return (
     <div className="pb-8">
-      <ListingSection title="Populære i Norge" listings={popular} />
-      <ListingSection title="Fremhevede i Norge" listings={featured} />
-      <ListingSection title="Tilgjengelig i dag" listings={availableToday} />
+      <ListingSection title={t("popular")} listings={popular} />
+      <ListingSection title={t("featured")} listings={featured} />
+      <ListingSection title={t("availableToday")} listings={availableToday} />
     </div>
   );
 }

@@ -7,8 +7,8 @@ import { CalendarDays, MapPin, Car, Tent, Star, User, ChevronDown, Clock, Credit
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ReviewForm from "@/components/features/ReviewForm";
-import { getCancellationPreviewAction } from "@/app/(main)/book/actions";
-import { getOrCreateConversationAction } from "@/app/(main)/meldinger/actions";
+import { getCancellationPreviewAction } from "@/app/[locale]/(main)/book/actions";
+import { getOrCreateConversationAction } from "@/app/[locale]/(main)/meldinger/actions";
 import { Booking } from "@/types";
 
 interface BookingCardProps {

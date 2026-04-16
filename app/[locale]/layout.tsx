@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import { DM_Sans } from "next/font/google";
+import { notFound } from "next/navigation";
+import { NextIntlClientProvider, hasLocale } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import PasswordGate from "@/components/PasswordGate";
-import "./globals.css";
+import { routing } from "@/i18n/routing";
+import "../globals.css";
 
 const dmSans = DM_Sans({
   variable: "--font-dm-sans",
@@ -9,22 +13,41 @@ const dmSans = DM_Sans({
   weight: ["400", "500", "600", "700"],
 });
 
-export const metadata: Metadata = {
-  title: "Tuno",
-  description:
-    "Finn og book parkeringsplasser og campingplasser over hele Norge. Pendlerparkering og bobilturisme gjort enkelt.",
-};
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: "metadata" });
+  return {
+    title: t("title"),
+    description: t("description"),
+  };
+}
 
-export default function RootLayout({
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({ locale }));
+}
+
+export default async function LocaleLayout({
   children,
-}: Readonly<{
+  params,
+}: {
   children: React.ReactNode;
-}>) {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+  setRequestLocale(locale);
+
   return (
-    <html lang="nb" className={`${dmSans.variable} h-full antialiased`}>
+    <html lang={locale} className={`${dmSans.variable} h-full antialiased`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#1a4fd6" />
+        <meta name="theme-color" content="#46C185" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <link rel="manifest" href="/manifest.json" />
@@ -32,19 +55,15 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: `
           window.addEventListener('load', function() {
             if (window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform()) {
-              // Hide splash screen
               if (window.Capacitor.Plugins.SplashScreen) {
                 window.Capacitor.Plugins.SplashScreen.hide();
               }
-              // Keyboard: show Done button above keyboard
               if (window.Capacitor.Plugins.Keyboard) {
                 window.Capacitor.Plugins.Keyboard.setAccessoryBarVisible({ isVisible: true });
               }
-              // Listen for deep links / app URL open events
               if (window.Capacitor.Plugins.App) {
                 window.Capacitor.Plugins.App.addListener('appUrlOpen', function(event) {
                   var url = event.url;
-                  // Handle auth callback deep links
                   if (url && url.indexOf('/auth/callback') !== -1) {
                     var path = url.replace(/^https?:\\/\\/[^/]+/, '');
                     window.location.href = path;
@@ -56,7 +75,9 @@ export default function RootLayout({
         `}} />
       </head>
       <body className="min-h-full flex flex-col font-sans">
-        <PasswordGate>{children}</PasswordGate>
+        <NextIntlClientProvider>
+          <PasswordGate>{children}</PasswordGate>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

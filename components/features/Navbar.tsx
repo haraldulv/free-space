@@ -1,11 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link, usePathname } from "@/i18n/navigation";
 import {
   Menu,
-  Languages,
   CalendarCheck,
   Heart,
   Megaphone,
@@ -19,6 +18,7 @@ import {
 } from "lucide-react";
 import SearchBar from "./SearchBar";
 import NotificationPanel from "./NotificationPanel";
+import LocaleSwitcher from "./LocaleSwitcher";
 import { ListingCategory, VehicleType } from "@/types";
 
 interface NavbarProps {
@@ -52,16 +52,15 @@ export default function Navbar({
   searchCheckIn,
   searchCheckOut,
 }: NavbarProps) {
+  const t = useTranslations("nav");
   const [menuOpen, setMenuOpen] = useState(false);
   const [avatarMenuOpen, setAvatarMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const avatarRef = useRef<HTMLDivElement>(null);
-  const router = useRouter();
   const pathname = usePathname();
   const isSearchPage = pathname === "/search";
   const isHome = pathname === "/";
-  const isDashboard = pathname === "/dashboard";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -129,16 +128,11 @@ export default function Navbar({
               href="/bli-utleier"
               className="hidden lg:block rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
             >
-              Bli utleier
+              {t("becomeHost")}
             </Link>
           )}
 
-          <button
-            className="flex items-center justify-center rounded-full border border-neutral-200 bg-white p-2 shadow-sm text-neutral-500 transition-all hover:shadow-md"
-            aria-label="Endre språk"
-          >
-            <Languages className="h-4 w-4" />
-          </button>
+          <LocaleSwitcher />
 
           {/* Notifications bell — logged in only */}
           {user?.id && (
@@ -164,15 +158,15 @@ export default function Navbar({
                   <>
                     <Link href="/dashboard" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <CalendarCheck className="h-4 w-4 text-neutral-400" />
-                      Mine bestillinger
+                      {t("myBookings")}
                     </Link>
-                    <Link href="/dashboard?tab=favoritter" className={menuItemClass} onClick={() => setMenuOpen(false)}>
+                    <Link href={{ pathname: "/dashboard", query: { tab: "favoritter" } }} className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <Heart className="h-4 w-4 text-neutral-400" />
-                      Favoritter
+                      {t("favorites")}
                     </Link>
-                    <Link href="/dashboard?tab=meldinger" className={menuItemClass} onClick={() => setMenuOpen(false)}>
+                    <Link href={{ pathname: "/dashboard", query: { tab: "meldinger" } }} className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <MessageCircle className="h-4 w-4 text-neutral-400" />
-                      Meldinger
+                      {t("messages")}
                       {unreadMessages > 0 && (
                         <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">
                           {unreadMessages}
@@ -180,36 +174,36 @@ export default function Navbar({
                       )}
                     </Link>
                     {isHost ? (
-                      <Link href="/dashboard?tab=annonser" className={menuItemClass} onClick={() => setMenuOpen(false)}>
+                      <Link href={{ pathname: "/dashboard", query: { tab: "annonser" } }} className={menuItemClass} onClick={() => setMenuOpen(false)}>
                         <Megaphone className="h-4 w-4 text-neutral-400" />
-                        Mine annonser
+                        {t("myListings")}
                       </Link>
                     ) : (
                       <Link href="/bli-utleier" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                         <PlusCircle className="h-4 w-4 text-neutral-400" />
-                        Bli utleier
+                        {t("becomeHost")}
                       </Link>
                     )}
                     <div className="my-1 border-t border-neutral-100" />
                     <Link href="/search" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <Search className="h-4 w-4 text-neutral-400" />
-                      Utforsk
+                      {t("explore")}
                     </Link>
                   </>
                 ) : (
                   <>
                     <Link href="/login" className={`${menuItemClass} font-medium`} onClick={() => setMenuOpen(false)}>
                       <LogIn className="h-4 w-4 text-neutral-400" />
-                      Logg inn
+                      {t("login")}
                     </Link>
                     <Link href="/register" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <UserPlus className="h-4 w-4 text-neutral-400" />
-                      Registrer deg
+                      {t("register")}
                     </Link>
                     <div className="my-1 border-t border-neutral-100" />
                     <Link href="/bli-utleier" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <PlusCircle className="h-4 w-4 text-neutral-400" />
-                      Bli utleier
+                      {t("becomeHost")}
                     </Link>
                   </>
                 )}
@@ -234,16 +228,16 @@ export default function Navbar({
               {avatarMenuOpen && (
                 <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-neutral-100 bg-white py-2 shadow-xl z-50">
                   <div className="px-4 py-2.5 border-b border-neutral-100">
-                    <p className="text-sm font-medium text-neutral-900">{user.fullName || "Min konto"}</p>
+                    <p className="text-sm font-medium text-neutral-900">{user.fullName || t("myAccount")}</p>
                     <p className="text-xs text-neutral-500 truncate">{user.email}</p>
                   </div>
-                  <Link href="/dashboard?tab=settings" className={menuItemClass} onClick={() => setAvatarMenuOpen(false)}>
+                  <Link href={{ pathname: "/dashboard", query: { tab: "settings" } }} className={menuItemClass} onClick={() => setAvatarMenuOpen(false)}>
                     <Settings className="h-4 w-4 text-neutral-400" />
-                    Innstillinger
+                    {t("settings")}
                   </Link>
                   <button onClick={() => { setAvatarMenuOpen(false); onSignOut?.(); }} className={`${menuItemClass} w-full text-left`}>
                     <LogOut className="h-4 w-4 text-neutral-400" />
-                    Logg ut
+                    {t("logout")}
                   </button>
                 </div>
               )}
