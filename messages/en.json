@@ -75,6 +75,24 @@
     "parking": "Parking",
     "camping": "Camping"
   },
+  "amenity": {
+    "ev_charging": "EV charging",
+    "covered": "Covered",
+    "security_camera": "Security camera",
+    "gated": "Gated access",
+    "lighting": "Lighting",
+    "toilets": "Toilets",
+    "showers": "Showers",
+    "electricity": "Electricity hookup",
+    "water": "Water hookup",
+    "wifi": "WiFi",
+    "campfire": "Campfire spot",
+    "lake_access": "Lake/sea access",
+    "mountain_view": "Mountain view",
+    "pets_allowed": "Pet-friendly",
+    "waste_disposal": "Septic disposal",
+    "handicap_accessible": "Wheelchair accessible"
+  },
   "listing": {
     "from": "From",
     "perNight": "per night",
@@ -119,7 +137,13 @@
     "saved": "Saved",
     "maxLength": "Max {length}m",
     "checkInOutTimes": "In {checkIn} / Out {checkOut}",
-    "ownerNotice": "This is your own listing. Use \"My listings\" to edit it."
+    "ownerNotice": "This is your own listing. Use \"My listings\" to edit it.",
+    "hostedBy": "Hosted by {name}",
+    "anonymousHost": "Anonymous host",
+    "memberSince": "Member since {year} · {count, plural, =1 {1 listing} other {# listings}}",
+    "hostLabel": "Host",
+    "responseRate": "{rate}% response rate",
+    "respondsIn": "Responds {time}"
   },
   "booking": {
     "title": "Booking",

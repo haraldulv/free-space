@@ -1,7 +1,7 @@
 "use client";
 
 import { AMENITIES_BY_CATEGORY, type Amenity, type ListingCategory } from "@/types";
-import { amenityConfig } from "@/components/features/AmenityList";
+import { useAmenityConfig } from "@/components/features/AmenityList";
 
 interface AmenitiesStepProps {
   category: ListingCategory;
@@ -10,6 +10,7 @@ interface AmenitiesStepProps {
 }
 
 export default function AmenitiesStep({ category, selected, onChange }: AmenitiesStepProps) {
+  const amenityConfig = useAmenityConfig();
   const available = AMENITIES_BY_CATEGORY[category] || [];
 
   const toggle = (amenity: Amenity) => {

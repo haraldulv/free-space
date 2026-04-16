@@ -75,6 +75,24 @@
     "parking": "Parkering",
     "camping": "Campingplass"
   },
+  "amenity": {
+    "ev_charging": "Elbil-lading",
+    "covered": "Under tak",
+    "security_camera": "Overvåkingskamera",
+    "gated": "Portadgang",
+    "lighting": "Belysning",
+    "toilets": "Toalett",
+    "showers": "Dusj",
+    "electricity": "Strøm (tilkobling)",
+    "water": "Vanntilkobling",
+    "wifi": "WiFi",
+    "campfire": "Bålplass",
+    "lake_access": "Sjø-/innsjøtilgang",
+    "mountain_view": "Fjellpanorama",
+    "pets_allowed": "Dyrevennlig",
+    "waste_disposal": "Septiktømming",
+    "handicap_accessible": "Tilgjengelig for rullestol"
+  },
   "listing": {
     "from": "Fra",
     "perNight": "per natt",
@@ -119,7 +137,13 @@
     "saved": "Lagret",
     "maxLength": "Max {length}m",
     "checkInOutTimes": "Inn {checkIn} / Ut {checkOut}",
-    "ownerNotice": "Dette er din egen annonse. Bruk \"Mine annonser\" for å redigere den."
+    "ownerNotice": "Dette er din egen annonse. Bruk \"Mine annonser\" for å redigere den.",
+    "hostedBy": "Utleid av {name}",
+    "anonymousHost": "Anonym utleier",
+    "memberSince": "Medlem siden {year} · {count, plural, =1 {1 annonse} other {# annonser}}",
+    "hostLabel": "Utleier",
+    "responseRate": "{rate}% svarprosent",
+    "respondsIn": "Svarer {time}"
   },
   "booking": {
     "title": "Bestilling",

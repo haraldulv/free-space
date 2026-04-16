@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Zap, MapPin, Bus, Caravan, Car, CalendarX2, Clock } from "lucide-react";
-import { amenityConfig } from "@/components/features/AmenityList";
+import { useAmenityConfig } from "@/components/features/AmenityList";
 import type { Amenity, ListingCategory, VehicleType } from "@/types";
 import { vehicleLabels } from "@/types";
 import Badge from "@/components/ui/Badge";
@@ -36,6 +36,7 @@ interface ReviewStepProps {
 }
 
 export default function ReviewStep({ data }: ReviewStepProps) {
+  const amenityConfig = useAmenityConfig();
   const unit = data.priceUnit === "time" ? "time" : "natt";
   const VIcon = data.vehicleType ? vehicleIcons[data.vehicleType] : Bus;
 

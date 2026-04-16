@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Zap,
   Plug,
@@ -11,6 +13,7 @@ import {
   UtensilsCrossed,
   Sparkles,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ExtraId, ListingExtra } from "@/types";
 
 const extraIconMap: Record<ExtraId, React.ElementType> = {
@@ -35,6 +38,7 @@ interface ExtraListProps {
 }
 
 export default function ExtraList({ extras }: ExtraListProps) {
+  const t = useTranslations("booking");
   if (extras.length === 0) return null;
   return (
     <div className="space-y-2">
@@ -50,7 +54,7 @@ export default function ExtraList({ extras }: ExtraListProps) {
               <span className="text-sm font-medium text-neutral-800">{ex.name}</span>
             </div>
             <span className="text-sm text-neutral-500 whitespace-nowrap">
-              {ex.price} kr{ex.perNight ? "/natt" : ""}
+              {ex.perNight ? t("pricePerNightShort", { price: ex.price }) : `${ex.price} kr`}
             </span>
           </div>
         );
