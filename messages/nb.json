@@ -413,6 +413,16 @@
     "publishListing": "Publiser annonse",
     "saveChanges": "Lagre endringer",
     "somethingWentWrong": "Noe gikk galt",
+    "category": {
+      "title": "Hva slags plass leier du ut?",
+      "subtitle": "Velg kategorien som passer best",
+      "campingLabel": "Camping / Bobil",
+      "campingDesc": "Camping-, bobil- eller oppstillingsplass med fasiliteter",
+      "parkingLabel": "Parkering",
+      "parkingDesc": "Parkeringsplass for biler, el-biler eller varebiler",
+      "vehicleTitle": "Hvilken kjøretøytype passer?",
+      "vehicleSubtitle": "Velg den største kjøretøytypen plassen er egnet for"
+    },
     "location": {
       "title": "Hvor er plassen?",
       "subtitle": "Søk etter adressen eller klikk på kartet",

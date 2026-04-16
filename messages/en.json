@@ -413,6 +413,16 @@
     "publishListing": "Publish listing",
     "saveChanges": "Save changes",
     "somethingWentWrong": "Something went wrong",
+    "category": {
+      "title": "What kind of spot are you renting out?",
+      "subtitle": "Pick the category that fits best",
+      "campingLabel": "Camping / Motorhome",
+      "campingDesc": "Camping, motorhome or pitch with facilities",
+      "parkingLabel": "Parking",
+      "parkingDesc": "Parking spot for cars, EVs or vans",
+      "vehicleTitle": "Which vehicle type fits?",
+      "vehicleSubtitle": "Choose the largest vehicle type the spot can accommodate"
+    },
     "location": {
       "title": "Where is the spot?",
       "subtitle": "Search for the address or click on the map",

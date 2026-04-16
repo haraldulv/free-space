@@ -1,8 +1,8 @@
 "use client";
 
 import { Car, Tent, Bus, Caravan } from "lucide-react";
+import { useTranslations } from "next-intl";
 import type { ListingCategory, VehicleType } from "@/types";
-import { vehicleLabels } from "@/types";
 
 interface CategoryStepProps {
   value?: ListingCategory;
@@ -13,19 +13,9 @@ interface CategoryStepProps {
   vehicleError?: string;
 }
 
-const categories: { id: ListingCategory; label: string; description: string; icon: React.ElementType }[] = [
-  {
-    id: "parking",
-    label: "Parkering",
-    description: "Parkeringsplass for biler, el-biler eller varebiler",
-    icon: Car,
-  },
-  {
-    id: "camping",
-    label: "Camping / Bobil",
-    description: "Camping-, bobil- eller oppstillingsplass med fasiliteter",
-    icon: Tent,
-  },
+const categoryMeta: { id: ListingCategory; icon: React.ElementType }[] = [
+  { id: "camping", icon: Tent },
+  { id: "parking", icon: Car },
 ];
 
 const vehicleOptions: { id: VehicleType; icon: React.ElementType }[] = [
@@ -35,18 +25,26 @@ const vehicleOptions: { id: VehicleType; icon: React.ElementType }[] = [
 ];
 
 export default function CategoryStep({ value, vehicleType, onChange, onVehicleChange, error, vehicleError }: CategoryStepProps) {
+  const t = useTranslations("host.category");
+  const tv = useTranslations("vehicle");
+
+  const labelFor = (id: ListingCategory) =>
+    id === "camping" ? t("campingLabel") : t("parkingLabel");
+  const descFor = (id: ListingCategory) =>
+    id === "camping" ? t("campingDesc") : t("parkingDesc");
+
   return (
     <div className="space-y-8">
       <div className="space-y-6">
         <div>
-          <h2 className="text-xl font-bold text-neutral-900">Hva slags plass leier du ut?</h2>
-          <p className="mt-1 text-sm text-neutral-500">Velg kategorien som passer best</p>
+          <h2 className="text-xl font-bold text-neutral-900">{t("title")}</h2>
+          <p className="mt-1 text-sm text-neutral-500">{t("subtitle")}</p>
         </div>
 
         {error && <p className="text-sm text-red-500">{error}</p>}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          {categories.map(({ id, label, description, icon: Icon }) => (
+          {categoryMeta.map(({ id, icon: Icon }) => (
             <button
               key={id}
               type="button"
@@ -59,8 +57,8 @@ export default function CategoryStep({ value, vehicleType, onChange, onVehicleCh
             >
               <Icon className={`h-8 w-8 ${value === id ? "text-primary-600" : "text-neutral-400"}`} />
               <div>
-                <h3 className="text-base font-semibold text-neutral-900">{label}</h3>
-                <p className="mt-0.5 text-sm text-neutral-500">{description}</p>
+                <h3 className="text-base font-semibold text-neutral-900">{labelFor(id)}</h3>
+                <p className="mt-0.5 text-sm text-neutral-500">{descFor(id)}</p>
               </div>
             </button>
           ))}
@@ -69,8 +67,8 @@ export default function CategoryStep({ value, vehicleType, onChange, onVehicleCh
 
       <div className="space-y-4">
         <div>
-          <h3 className="text-lg font-semibold text-neutral-900">Hvilken kjøretøystype passer?</h3>
-          <p className="mt-1 text-sm text-neutral-500">Velg den største kjøretøystypen plassen er egnet for</p>
+          <h3 className="text-lg font-semibold text-neutral-900">{t("vehicleTitle")}</h3>
+          <p className="mt-1 text-sm text-neutral-500">{t("vehicleSubtitle")}</p>
         </div>
 
         {vehicleError && <p className="text-sm text-red-500">{vehicleError}</p>}
@@ -91,7 +89,7 @@ export default function CategoryStep({ value, vehicleType, onChange, onVehicleCh
               >
                 <Icon className={`h-6 w-6 shrink-0 ${selected ? "text-primary-600" : "text-neutral-400"}`} />
                 <span className={`text-sm font-medium ${selected ? "text-neutral-900" : "text-neutral-600"}`}>
-                  {vehicleLabels[id]}
+                  {tv(id)}
                 </span>
               </button>
             );
