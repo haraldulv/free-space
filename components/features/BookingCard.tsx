@@ -2,8 +2,9 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { CalendarDays, MapPin, Car, Tent, Star, User, ChevronDown, Clock, CreditCard, Navigation, Mail, CarFront, AlertCircle, Phone, MessageCircle } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ReviewForm from "@/components/features/ReviewForm";
@@ -18,6 +19,12 @@ interface BookingCardProps {
 }
 
 export default function BookingCard({ booking, variant = "guest", onCancel }: BookingCardProps) {
+  const t = useTranslations("booking");
+  const tCategory = useTranslations("category");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
+
   const [cancelling, setCancelling] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showReview, setShowReview] = useState(false);
@@ -26,8 +33,8 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
   const [cancelReason, setCancelReason] = useState("");
   const [refundPreview, setRefundPreview] = useState<{ refundAmount: number; policyLabel: string } | null>(null);
   const CategoryIcon = booking.listingCategory === "parking" ? Car : Tent;
-  const checkIn = new Date(booking.checkIn).toLocaleDateString("nb-NO");
-  const checkOut = new Date(booking.checkOut).toLocaleDateString("nb-NO");
+  const checkIn = new Date(booking.checkIn).toLocaleDateString(dateLocale);
+  const checkOut = new Date(booking.checkOut).toLocaleDateString(dateLocale);
   const canCancel = booking.status === "pending" || booking.status === "confirmed";
   const isPast = new Date(booking.checkOut) < new Date();
   const canReview = booking.status === "confirmed" && isPast && !reviewed;
@@ -54,9 +61,21 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
 
   const isCancelled = booking.status === "cancelled";
 
+  const paymentStatusLabel = (() => {
+    switch (booking.paymentStatus) {
+      case "paid": return t("paid");
+      case "pending": return t("pendingPayment");
+      case "refunded":
+        return booking.refundAmount
+          ? t("refundedWithAmount", { amount: booking.refundAmount })
+          : t("refunded");
+      case "failed": return t("paymentFailed");
+      default: return "";
+    }
+  })();
+
   return (
     <div className={`overflow-hidden rounded-xl border border-neutral-200 bg-white transition-shadow hover:shadow-sm ${isCancelled ? "opacity-60" : ""}`}>
-      {/* Main row — always visible */}
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
@@ -80,7 +99,7 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
             <div className="flex items-center gap-2">
               <Badge variant="primary">
                 <CategoryIcon className="mr-1 h-3 w-3" />
-                {booking.listingCategory === "parking" ? "Parkering" : "Campingplass"}
+                {booking.listingCategory === "parking" ? tCategory("parking") : tCategory("camping")}
               </Badge>
               <Badge
                 variant={
@@ -89,9 +108,9 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
                   : "secondary"
                 }
               >
-                {booking.status === "confirmed" ? "Bekreftet"
-                  : booking.status === "pending" ? "Venter"
-                  : "Kansellert"}
+                {booking.status === "confirmed" ? t("statusConfirmed")
+                  : booking.status === "pending" ? t("statusPending")
+                  : t("statusCancelled")}
               </Badge>
             </div>
             <h3 className="mt-1 font-semibold text-neutral-900 line-clamp-1">
@@ -117,15 +136,13 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
         </div>
       </button>
 
-      {/* Expanded details */}
       {expanded && (
         <div className="border-t border-neutral-100 px-4 py-4 space-y-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {/* Location */}
             <div className="flex items-start gap-2 text-sm">
               <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
               <div>
-                <p className="font-medium text-neutral-700">Adresse</p>
+                <p className="font-medium text-neutral-700">{t("address")}</p>
                 <p className="text-neutral-500">{booking.listingAddress || booking.location}</p>
                 {variant === "guest" && directionsUrl && (
                   <a
@@ -136,62 +153,54 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Navigation className="h-3.5 w-3.5" />
-                    Veibeskrivelse
+                    {t("directions")}
                   </a>
                 )}
               </div>
             </div>
 
-            {/* Check-in / Check-out times */}
             <div className="flex items-start gap-2 text-sm">
               <Clock className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
               <div>
-                <p className="font-medium text-neutral-700">Tider</p>
+                <p className="font-medium text-neutral-700">{t("times")}</p>
                 <p className="text-neutral-500">
-                  Innsjekk fra {booking.checkInTime || "15:00"}
+                  {t("checkInFrom", { time: booking.checkInTime || "15:00" })}
                 </p>
                 <p className="text-neutral-500">
-                  Utsjekk innen {booking.checkOutTime || "11:00"}
+                  {t("checkOutBy", { time: booking.checkOutTime || "11:00" })}
                 </p>
               </div>
             </div>
 
-            {/* License plate */}
             <div className="flex items-start gap-2 text-sm">
               <CarFront className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
               <div>
-                <p className="font-medium text-neutral-700">Registreringsnummer</p>
+                <p className="font-medium text-neutral-700">{t("licensePlate")}</p>
                 {booking.licensePlate ? (
                   <p className="font-mono text-neutral-900 tracking-wider">{booking.licensePlate}</p>
                 ) : booking.isRentalCar ? (
-                  <p className="text-amber-600">Leiebil — ikke oppgitt ennå</p>
+                  <p className="text-amber-600">{t("rentalCarNotProvided")}</p>
                 ) : (
-                  <p className="text-neutral-400">Ikke oppgitt</p>
+                  <p className="text-neutral-400">{t("notProvided")}</p>
                 )}
               </div>
             </div>
 
-            {/* Payment status */}
             <div className="flex items-start gap-2 text-sm">
               <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
               <div>
-                <p className="font-medium text-neutral-700">Betaling</p>
+                <p className="font-medium text-neutral-700">{t("payment")}</p>
                 <p className="text-neutral-500">
-                  {booking.totalPrice} kr
-                  {booking.paymentStatus === "paid" && " — betalt"}
-                  {booking.paymentStatus === "pending" && " — venter"}
-                  {booking.paymentStatus === "refunded" && ` — refundert${booking.refundAmount ? ` (${booking.refundAmount} kr)` : ""}`}
-                  {booking.paymentStatus === "failed" && " — feilet"}
+                  {booking.totalPrice} kr{paymentStatusLabel}
                 </p>
               </div>
             </div>
 
-            {/* Host info (guest view) */}
             {variant === "guest" && booking.hostName && (
               <div className="flex items-start gap-2 text-sm">
                 <User className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
                 <div>
-                  <p className="font-medium text-neutral-700">Utleier</p>
+                  <p className="font-medium text-neutral-700">{t("host")}</p>
                   <p className="text-neutral-500">{booking.hostName}</p>
                   {booking.hostPhone && (
                     <a
@@ -207,13 +216,12 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
               </div>
             )}
 
-            {/* Guest info (host view) */}
             {variant === "host" && (
               <div className="flex items-start gap-2 text-sm">
                 <User className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
                 <div>
-                  <p className="font-medium text-neutral-700">Gjest</p>
-                  <p className="text-neutral-500">{booking.guestName || "Anonym"}</p>
+                  <p className="font-medium text-neutral-700">{t("guest")}</p>
+                  <p className="text-neutral-500">{booking.guestName || t("guest")}</p>
                   {booking.guestEmail && (
                     <a
                       href={`mailto:${booking.guestEmail}`}
@@ -228,13 +236,12 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
               </div>
             )}
 
-            {/* Cancellation info */}
             {isCancelled && booking.cancelledBy && (
               <div className="flex items-start gap-2 text-sm sm:col-span-2">
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-400" />
                 <div>
                   <p className="font-medium text-red-600">
-                    Kansellert av {booking.cancelledBy === "host" ? "utleier" : "gjest"}
+                    {booking.cancelledBy === "host" ? t("cancelledByHost") : t("cancelledByGuest")}
                   </p>
                   {booking.cancellationReason && (
                     <p className="text-neutral-500">{booking.cancellationReason}</p>
@@ -244,7 +251,6 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
             )}
           </div>
 
-          {/* Actions */}
           <div className="flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-3">
             <ChatLink booking={booking} variant={variant} />
             {variant === "guest" && canReview && (
@@ -253,7 +259,7 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
                 className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
               >
                 <Star className="h-3.5 w-3.5" />
-                Skriv anmeldelse
+                {t("writeReview")}
               </button>
             )}
             {canCancel && onCancel && !canReview && (
@@ -263,7 +269,7 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
                     onClick={() => setShowConfirm(true)}
                     className="text-sm text-red-500 hover:text-red-700 transition-colors"
                   >
-                    Kanseller bestilling
+                    {t("cancelBookingBtn")}
                   </button>
                 ) : (
                   <div className="w-full space-y-3">
@@ -271,14 +277,14 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
                       <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm">
                         <p className="font-medium text-amber-800">{refundPreview.policyLabel}</p>
                         <p className="text-amber-700">
-                          Refusjon: {refundPreview.refundAmount} kr av {booking.totalPrice} kr
+                          {t("refundInfo", { refund: refundPreview.refundAmount, total: booking.totalPrice })}
                         </p>
                       </div>
                     )}
                     {variant === "host" && (
                       <input
                         type="text"
-                        placeholder="Årsak til kansellering (valgfritt)"
+                        placeholder={t("cancellationReasonPlaceholder")}
                         value={cancelReason}
                         onChange={(e) => setCancelReason(e.target.value)}
                         className="w-full rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
@@ -292,14 +298,14 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
                         onClick={handleCancel}
                         disabled={cancelling}
                       >
-                        {cancelling ? "Kansellerer..." : "Bekreft kansellering"}
+                        {cancelling ? t("cancelling") : t("confirmCancellation")}
                       </Button>
                       <button
                         onClick={() => { setShowConfirm(false); setRefundPreview(null); }}
                         className="text-sm text-neutral-500 hover:text-neutral-700"
                         disabled={cancelling}
                       >
-                        Avbryt
+                        {tCommon("cancel")}
                       </button>
                     </div>
                   </div>
@@ -327,15 +333,15 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
 }
 
 function ChatLink({ booking, variant }: { booking: Booking; variant: "guest" | "host" }) {
+  const t = useTranslations("booking");
   const [opening, setOpening] = useState(false);
 
-  const label = variant === "host" ? "Chat med gjest" : "Chat med utleier";
+  const label = variant === "host" ? t("chatWithGuest") : t("chatWithHost");
 
-  // Hvis conversation allerede finnes, direkte-link
   if (booking.conversationId) {
     return (
       <Link
-        href={`/dashboard?tab=messages&conversation=${booking.conversationId}`}
+        href={{ pathname: "/dashboard", query: { tab: "messages", conversation: booking.conversationId } }}
         className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
         onClick={(e) => e.stopPropagation()}
       >
@@ -345,7 +351,6 @@ function ChatLink({ booking, variant }: { booking: Booking; variant: "guest" | "
     );
   }
 
-  // Fallback: bare gjest-variant kan opprette on-demand (serveren sjekker host_id)
   if (variant !== "guest" || !booking.hostId) return null;
   const hostId = booking.hostId;
 
@@ -371,7 +376,7 @@ function ChatLink({ booking, variant }: { booking: Booking; variant: "guest" | "
       className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors disabled:opacity-50"
     >
       <MessageCircle className="h-3.5 w-3.5" />
-      {opening ? "Åpner..." : label}
+      {opening ? t("opening") : label}
     </button>
   );
 }

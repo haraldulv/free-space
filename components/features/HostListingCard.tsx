@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { Pencil, Trash2, Zap, Users, Eye, EyeOff, QrCode } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Listing, getDisplayPriceText } from "@/types";
 import Badge from "@/components/ui/Badge";
 import QrCodeModal from "@/components/features/QrCodeModal";
@@ -15,6 +16,8 @@ interface HostListingCardProps {
 }
 
 export default function HostListingCard({ listing, onDelete, onToggleActive }: HostListingCardProps) {
+  const t = useTranslations("dashboard");
+  const tListing = useTranslations("listing");
   const [toggling, setToggling] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const isActive = listing.isActive !== false;
@@ -30,7 +33,6 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
     <div className={`flex gap-4 rounded-xl border bg-white p-3 transition-shadow hover:shadow-sm ${
       isActive ? "border-neutral-200" : "border-neutral-200 opacity-60"
     }`}>
-      {/* Image */}
       <Link href={`/listings/${listing.id}`} className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg">
         {listing.images[0] ? (
           <Image
@@ -42,17 +44,16 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-neutral-100 text-xs text-neutral-400">
-            Ingen bilde
+            {t("noImage")}
           </div>
         )}
         {!isActive && (
           <div className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-lg">
-            <span className="text-xs font-medium text-white">Inaktiv</span>
+            <span className="text-xs font-medium text-white">{t("inactive")}</span>
           </div>
         )}
       </Link>
 
-      {/* Info */}
       <Link href={`/listings/${listing.id}`} className="flex flex-1 flex-col justify-between min-w-0">
         <div>
           <div className="flex items-center gap-2">
@@ -60,11 +61,11 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
             {listing.instantBooking && (
               <Badge variant="primary">
                 <Zap className="mr-0.5 h-3 w-3" />
-                Direkte
+                {t("direct")}
               </Badge>
             )}
             {!isActive && (
-              <Badge variant="secondary">Inaktiv</Badge>
+              <Badge variant="secondary">{t("inactive")}</Badge>
             )}
           </div>
           <p className="text-xs text-neutral-500">
@@ -73,20 +74,19 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
         </div>
         <div className="flex items-center gap-3 text-xs text-neutral-500">
           <span className="font-semibold text-neutral-900">
-            {getDisplayPriceText(listing)} kr / {listing.priceUnit === "time" ? "time" : "natt"}
+            {getDisplayPriceText(listing)} kr / {listing.priceUnit === "time" ? tListing("hour") : tListing("night")}
           </span>
           <span className="flex items-center gap-0.5">
             <Users className="h-3 w-3" />
-            {listing.spots} {listing.spots === 1 ? "plass" : "plasser"}
+            {tListing("spotsAvailable", { count: listing.spots })}
           </span>
         </div>
       </Link>
 
-      {/* Actions */}
       <div className="flex shrink-0 flex-col gap-1.5">
         <button
           onClick={() => setShowQr(true)}
-          title="QR-koder"
+          title={t("qrCodes")}
           className="flex h-8 w-8 items-center justify-center rounded-lg border border-neutral-200 text-neutral-500 transition-colors hover:bg-neutral-50 hover:text-neutral-700"
         >
           <QrCode className="h-3.5 w-3.5" />
@@ -94,7 +94,7 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
         <button
           onClick={handleToggle}
           disabled={toggling}
-          title={isActive ? "Deaktiver annonse" : "Aktiver annonse"}
+          title={isActive ? t("deactivateListing") : t("activateListing")}
           className={`flex h-8 w-8 items-center justify-center rounded-lg border transition-colors disabled:opacity-50 ${
             isActive
               ? "border-neutral-200 text-neutral-500 hover:bg-neutral-50 hover:text-neutral-700"
@@ -111,7 +111,7 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
         </Link>
         <button
           onClick={() => {
-            if (confirm("Er du sikker på at du vil slette denne annonsen?")) {
+            if (confirm(t("deleteConfirm"))) {
               onDelete(listing.id);
             }
           }}

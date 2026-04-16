@@ -1,5 +1,8 @@
+"use client";
+
 import { formatDistanceToNow } from "date-fns";
-import { nb } from "date-fns/locale";
+import { nb, enGB } from "date-fns/locale";
+import { useLocale, useTranslations } from "next-intl";
 import type { Review } from "@/types";
 import StarRating from "./StarRating";
 
@@ -8,6 +11,9 @@ interface ReviewCardProps {
 }
 
 export default function ReviewCard({ review }: ReviewCardProps) {
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? enGB : nb;
   return (
     <div className="border-b border-neutral-100 pb-5 last:border-0">
       <div className="flex items-center gap-3">
@@ -23,9 +29,9 @@ export default function ReviewCard({ review }: ReviewCardProps) {
           </div>
         )}
         <div>
-          <p className="text-sm font-medium text-neutral-900">{review.userName || "Anonym"}</p>
+          <p className="text-sm font-medium text-neutral-900">{review.userName || t("anonymous")}</p>
           <p className="text-xs text-neutral-400">
-            {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: nb })}
+            {formatDistanceToNow(new Date(review.createdAt), { addSuffix: true, locale: dateLocale })}
           </p>
         </div>
       </div>

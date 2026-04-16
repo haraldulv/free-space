@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { nb } from "date-fns/locale";
+import { nb, enGB } from "date-fns/locale";
 import { Send, ArrowLeft } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { getMessages, subscribeToMessages } from "@/lib/supabase/chat";
 import { sendMessageAction, markMessagesReadAction } from "@/app/[locale]/(main)/meldinger/actions";
 import type { Message } from "@/types";
@@ -23,6 +24,9 @@ export default function ChatView({
   listingTitle,
   onBack,
 }: ChatViewProps) {
+  const t = useTranslations("messages");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? enGB : nb;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
@@ -35,7 +39,6 @@ export default function ChatView({
 
     const channel = subscribeToMessages(conversationId, (msg) => {
       setMessages((prev) => {
-        // Skip if we already have this message (optimistic or duplicate)
         if (prev.some((m) => m.content === msg.content && m.senderId === msg.senderId && Math.abs(new Date(m.createdAt).getTime() - new Date(msg.createdAt).getTime()) < 5000)) {
           return prev;
         }
@@ -64,7 +67,6 @@ export default function ChatView({
     setInput("");
     setSending(true);
 
-    // Optimistic update
     const optimistic: Message = {
       id: crypto.randomUUID(),
       conversationId,
@@ -86,14 +88,12 @@ export default function ChatView({
       e.preventDefault();
       e.stopPropagation();
       handleSend();
-      // Keep focus on input to prevent page scroll
       requestAnimationFrame(() => inputRef.current?.focus());
     }
   };
 
   return (
     <div className="flex h-full flex-col">
-      {/* Header */}
       <div className="flex items-center gap-3 border-b border-neutral-200 px-4 py-3">
         {onBack && (
           <button onClick={onBack} className="text-neutral-500 hover:text-neutral-700 lg:hidden">
@@ -106,10 +106,9 @@ export default function ChatView({
         </div>
       </div>
 
-      {/* Messages */}
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
         {messages.length === 0 && (
-          <p className="text-center text-sm text-neutral-400 mt-8">Ingen meldinger ennå. Start samtalen!</p>
+          <p className="text-center text-sm text-neutral-400 mt-8">{t("startConversation")}</p>
         )}
         {messages.map((msg) => {
           const isOwn = msg.senderId === currentUserId;
@@ -124,7 +123,7 @@ export default function ChatView({
               >
                 <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
                 <p className={`mt-1 text-[10px] ${isOwn ? "text-white/60" : "text-neutral-400"}`}>
-                  {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true, locale: nb })}
+                  {formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true, locale: dateLocale })}
                 </p>
               </div>
             </div>
@@ -132,7 +131,6 @@ export default function ChatView({
         })}
       </div>
 
-      {/* Input */}
       <div className="border-t border-neutral-200 p-3">
         <div className="flex items-end gap-2">
           <textarea
@@ -140,7 +138,7 @@ export default function ChatView({
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Skriv en melding..."
+            placeholder={t("typeMessage")}
             rows={1}
             className="flex-1 resize-none rounded-lg border border-neutral-300 px-3 py-2 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
           />

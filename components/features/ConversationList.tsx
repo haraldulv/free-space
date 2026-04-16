@@ -1,8 +1,9 @@
 "use client";
 
 import { formatDistanceToNow } from "date-fns";
-import { nb } from "date-fns/locale";
+import { nb, enGB } from "date-fns/locale";
 import { MessageCircle } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import type { Conversation } from "@/types";
 
 interface ConversationListProps {
@@ -16,15 +17,19 @@ export default function ConversationList({
   selectedId,
   onSelect,
 }: ConversationListProps) {
+  const t = useTranslations("messages");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? enGB : nb;
+
   if (conversations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
           <MessageCircle className="h-8 w-8 text-neutral-400" />
         </div>
-        <h2 className="mt-4 text-lg font-semibold text-neutral-700">Ingen meldinger ennå</h2>
+        <h2 className="mt-4 text-lg font-semibold text-neutral-700">{t("noConversations")}</h2>
         <p className="mt-1 text-sm text-neutral-500">
-          Start en samtale fra en annonse.
+          {t("noConversationsDescription")}
         </p>
       </div>
     );
@@ -55,11 +60,11 @@ export default function ConversationList({
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm font-medium text-neutral-900 truncate">{convo.otherUserName}</p>
               <span className="shrink-0 text-[10px] text-neutral-400">
-                {formatDistanceToNow(new Date(convo.lastMessageAt), { addSuffix: true, locale: nb })}
+                {formatDistanceToNow(new Date(convo.lastMessageAt), { addSuffix: true, locale: dateLocale })}
               </span>
             </div>
             <p className="text-xs text-neutral-500 truncate">{convo.listingTitle}</p>
-            <p className="mt-0.5 text-xs text-neutral-400 truncate">{convo.lastMessageText || "Ingen meldinger"}</p>
+            <p className="mt-0.5 text-xs text-neutral-400 truncate">{convo.lastMessageText || t("noMessages")}</p>
           </div>
           {(convo.unreadCount || 0) > 0 && (
             <span className="mt-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-600 px-1.5 text-[10px] font-bold text-white">
