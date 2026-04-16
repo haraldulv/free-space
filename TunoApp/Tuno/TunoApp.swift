@@ -26,6 +26,7 @@ struct TunoApp: App {
     @StateObject private var authManager = AuthManager()
     @StateObject private var favoritesService = FavoritesService()
     @StateObject private var deepLinkManager = DeepLinkManager.shared
+    @StateObject private var localizationManager = LocalizationManager.shared
 
     init() {
         initializeGoogleMaps()
@@ -43,6 +44,9 @@ struct TunoApp: App {
             .environmentObject(authManager)
             .environmentObject(favoritesService)
             .environmentObject(deepLinkManager)
+            .environmentObject(localizationManager)
+            .environment(\.locale, localizationManager.currentLocale)
+            .id(localizationManager.currentLocale.identifier)
             .tint(Color.primary600)
             .preferredColorScheme(.light)
             .onChange(of: authManager.isAuthenticated) {

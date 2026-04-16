@@ -1,0 +1,2816 @@
+{
+  "sourceLanguage" : "nb",
+  "version" : "1.0",
+  "strings" : {
+    "%lld plasser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : { "state" : "translated", "value" : "%lld spot" }
+              },
+              "other" : {
+                "stringUnit" : { "state" : "translated", "value" : "%lld spots" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld plasser funnet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "variations" : {
+            "plural" : {
+              "one" : {
+                "stringUnit" : { "state" : "translated", "value" : "%lld spot found" }
+              },
+              "other" : {
+                "stringUnit" : { "state" : "translated", "value" : "%lld spots found" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "%lld plasser ledig" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "%lld spots available" }
+        }
+      }
+    },
+    "Adresse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Address" }
+        }
+      }
+    },
+    "Adresse er påkrevd" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Address is required" }
+        }
+      }
+    },
+    "Aktive annonser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Active listings" }
+        }
+      }
+    },
+    "Alle %lld QR-koder lagret i Bilder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "All %lld QR codes saved to Photos" }
+        }
+      }
+    },
+    "Annonse opprettet!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Listing created!" }
+        }
+      }
+    },
+    "Annonsen din er nå publisert og synlig for gjester." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Your listing is now published and visible to guests." }
+        }
+      }
+    },
+    "Annonsen er aktiv" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Listing is active" }
+        }
+      }
+    },
+    "Annonsen er inaktiv" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Listing is inactive" }
+        }
+      }
+    },
+    "Anmeldelse sendt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Review submitted" }
+        }
+      }
+    },
+    "Antall plasser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Number of spots" }
+        }
+      }
+    },
+    "Apple Pay-betaling feilet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Apple Pay payment failed" }
+        }
+      }
+    },
+    "Apple-innlogging feilet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Apple sign in failed" }
+        }
+      }
+    },
+    "Avbryt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cancel" }
+        }
+      }
+    },
+    "Badstue" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Sauna" }
+        }
+      }
+    },
+    "Bankkonto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Bank account" }
+        }
+      }
+    },
+    "Bankkonto for utbetalinger" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Bank account for payouts" }
+        }
+      }
+    },
+    "Belysning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Lighting" }
+        }
+      }
+    },
+    "Bekreft datoer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Confirm dates" }
+        }
+      }
+    },
+    "Bekreft kansellering" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Confirm cancellation" }
+        }
+      }
+    },
+    "Bekreftet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Confirmed" }
+        }
+      }
+    },
+    "Beskrivelse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Description" }
+        }
+      }
+    },
+    "Beskrivelse må ha minst 10 tegn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Description must be at least 10 characters" }
+        }
+      }
+    },
+    "Bestill" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Book" }
+        }
+      }
+    },
+    "Bestilling bekreftet!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Booking confirmed!" }
+        }
+      }
+    },
+    "Bestillinger" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Bookings" }
+        }
+      }
+    },
+    "Bestillingene dine vil vises her" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Your bookings will appear here" }
+        }
+      }
+    },
+    "Betal %lld kr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Pay %lld kr" }
+        }
+      }
+    },
+    "Betal med kort" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Pay with card" }
+        }
+      }
+    },
+    "Betaling feilet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Payment failed" }
+        }
+      }
+    },
+    "Bli utleier" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Become a host" }
+        }
+      }
+    },
+    "Blokkerte datoer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Blocked dates" }
+        }
+      }
+    },
+    "Bobil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Motorhome" }
+        }
+      }
+    },
+    "Bookings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Bookings" }
+        }
+      }
+    },
+    "Bruk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Apply" }
+        }
+      }
+    },
+    "Brukes som standard hvis en plass ikke har egen pris." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Used as default when a spot has no price of its own." }
+        }
+      }
+    },
+    "By" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "City" }
+        }
+      }
+    },
+    "By er påkrevd" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "City is required" }
+        }
+      }
+    },
+    "Bålplass" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Campfire area" }
+        }
+      }
+    },
+    "Campingbil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Camper van" }
+        }
+      }
+    },
+    "Camping / Bobil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Camping / Motorhome" }
+        }
+      }
+    },
+    "Campingplass" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Campground" }
+        }
+      }
+    },
+    "Datoer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Dates" }
+        }
+      }
+    },
+    "Denne handlingen kan ikke angres." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "This action cannot be undone." }
+        }
+      }
+    },
+    "Denne måneden" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "This month" }
+        }
+      }
+    },
+    "Din annonse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Your listing" }
+        }
+      }
+    },
+    "Direkte" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Instant" }
+        }
+      }
+    },
+    "Direktebestilling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Instant book" }
+        }
+      }
+    },
+    "Direktebooking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Instant book" }
+        }
+      }
+    },
+    "Du finner IBAN i nettbanken din. Norske IBAN starter med NO og har 15 tegn." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "You can find your IBAN in your online bank. Norwegian IBANs start with NO and have 15 characters." }
+        }
+      }
+    },
+    "Du har ingen annonser ennå" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "You have no listings yet" }
+        }
+      }
+    },
+    "Du mister alt du har skrevet inn." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "You'll lose everything you've entered." }
+        }
+      }
+    },
+    "Du må godta vilkårene for å opprette konto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "You must accept the terms to create an account" }
+        }
+      }
+    },
+    "Du må være innlogget" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "You must be signed in" }
+        }
+      }
+    },
+    "Du vil motta en bekreftelse snart." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "You'll receive a confirmation shortly." }
+        }
+      }
+    },
+    "Dusj" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Showers" }
+        }
+      }
+    },
+    "Dyrevennlig" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Pet friendly" }
+        }
+      }
+    },
+    "Egendefinert navn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Custom name" }
+        }
+      }
+    },
+    "Egendefinert tillegg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Custom add-on" }
+        }
+      }
+    },
+    "Eksakt adresse deles etter bekreftet booking." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Exact address is shared after the booking is confirmed." }
+        }
+      }
+    },
+    "Eksakt adresse deles etter booking." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Exact address is shared after booking." }
+        }
+      }
+    },
+    "Elbil-lading" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "EV charging" }
+        }
+      }
+    },
+    "eller" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "or" }
+        }
+      }
+    },
+    "engangspris" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "one-time price" }
+        }
+      }
+    },
+    "Enkelt: alle plasser koster det samme." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Simple: all spots cost the same." }
+        }
+      }
+    },
+    "Er du sikker på at du vil logge ut?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Are you sure you want to sign out?" }
+        }
+      }
+    },
+    "Etternavn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Last name" }
+        }
+      }
+    },
+    "Etternavn er påkrevd" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Last name is required" }
+        }
+      }
+    },
+    "E-post" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Email" }
+        }
+      }
+    },
+    "Favoritter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Favorites" }
+        }
+      }
+    },
+    "Fant ikke annonsen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Listing not found" }
+        }
+      }
+    },
+    "Fasiliteter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Amenities" }
+        }
+      }
+    },
+    "Feil e-post eller passord" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Wrong email or password" }
+        }
+      }
+    },
+    "Felles tillegg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Shared add-ons" }
+        }
+      }
+    },
+    "Felles tillegg for hele plassen. Strøm, EV-lading og septik setter du per plass i Lokasjon-tabben." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Shared add-ons for the whole site. Set power, EV charging, and septic per spot in the Location tab." }
+        }
+      }
+    },
+    "Ferdig" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Done" }
+        }
+      }
+    },
+    "Fikk ikke lov til å oppdatere annonsen. Er du pålogget som eier?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Not allowed to update the listing. Are you signed in as the owner?" }
+        }
+      }
+    },
+    "Finn din plass" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Find your spot" }
+        }
+      }
+    },
+    "Fiskeutstyr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Fishing gear" }
+        }
+      }
+    },
+    "Fjellpanorama" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Mountain view" }
+        }
+      }
+    },
+    "Flott" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Great" }
+        }
+      }
+    },
+    "Forkast" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Discard" }
+        }
+      }
+    },
+    "Forkast endringer?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Discard changes?" }
+        }
+      }
+    },
+    "Forkast ny annonse?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Discard new listing?" }
+        }
+      }
+    },
+    "Fornavn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "First name" }
+        }
+      }
+    },
+    "Fornavn er påkrevd" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "First name is required" }
+        }
+      }
+    },
+    "Forsidebilde" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cover photo" }
+        }
+      }
+    },
+    "Fortell om plassen din" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Tell us about your spot" }
+        }
+      }
+    },
+    "Fortsett å redigere" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Keep editing" }
+        }
+      }
+    },
+    "Fortsett med Apple" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Continue with Apple" }
+        }
+      }
+    },
+    "Fortsett med Google" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Continue with Google" }
+        }
+      }
+    },
+    "Fortsett til annonse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Continue to listing" }
+        }
+      }
+    },
+    "Fra %@ — velg utsjekk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "From %@ — choose check-out" }
+        }
+      }
+    },
+    "Fremhevede i Norge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Featured in Norway" }
+        }
+      }
+    },
+    "Fullfør oppsett" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Finish setup" }
+        }
+      }
+    },
+    "Fullt navn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Full name" }
+        }
+      }
+    },
+    "F.eks. 10" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "e.g. 10" }
+        }
+      }
+    },
+    "F.eks. 150" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "e.g. 150" }
+        }
+      }
+    },
+    "F.eks. 200" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "e.g. 200" }
+        }
+      }
+    },
+    "F.eks. AB 12345" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "e.g. AB 12345" }
+        }
+      }
+    },
+    "F.eks. Plass 1" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "e.g. Spot 1" }
+        }
+      }
+    },
+    "F.eks. Sentral parkering ved Oslo S" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "e.g. Central parking near Oslo Central" }
+        }
+      }
+    },
+    "Fyll inn kortinformasjon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Enter card details" }
+        }
+      }
+    },
+    "Fødselsdato" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Date of birth" }
+        }
+      }
+    },
+    "Gateadresse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Street address" }
+        }
+      }
+    },
+    "Gateadresse er påkrevd" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Street address is required" }
+        }
+      }
+    },
+    "Gjester kan booke umiddelbart uten å vente på godkjenning" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Guests can book instantly without waiting for approval" }
+        }
+      }
+    },
+    "Gjester kan reservere uten bekreftelse." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Guests can reserve without approval." }
+        }
+      }
+    },
+    "Gjester kan reservere uten å vente på bekreftelse fra deg." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Guests can reserve without waiting for your approval." }
+        }
+      }
+    },
+    "Gjester ser omtrentlig område. Eksakt adresse deles etter booking." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Guests see the approximate area. The exact address is shared after booking." }
+        }
+      }
+    },
+    "Glemt passord?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Forgot password?" }
+        }
+      }
+    },
+    "Godkjenning av tjenestevilkår" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Terms of service acceptance" }
+        }
+      }
+    },
+    "Google-innlogging feilet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Google sign in failed" }
+        }
+      }
+    },
+    "Grillpakke" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Grill package" }
+        }
+      }
+    },
+    "Gyldig telefonnummer er påkrevd" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "A valid phone number is required" }
+        }
+      }
+    },
+    "Har du allerede konto?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Already have an account?" }
+        }
+      }
+    },
+    "Har du ikke konto?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Don't have an account?" }
+        }
+      }
+    },
+    "Har du noe unikt du vil tilby? Gi det et navn og sett pris." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Got something unique to offer? Give it a name and set a price." }
+        }
+      }
+    },
+    "Hva slags plass leier du ut?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "What kind of spot are you listing?" }
+        }
+      }
+    },
+    "Hvilken kjøretøytype passer?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Which vehicle type fits?" }
+        }
+      }
+    },
+    "Hvor er plassen?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Where is the spot?" }
+        }
+      }
+    },
+    "Hvor skal du?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Where to?" }
+        }
+      }
+    },
+    "Hvordan var oppholdet?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "How was your stay?" }
+        }
+      }
+    },
+    "Hovedposisjon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Main location" }
+        }
+      }
+    },
+    "Hjemmeadressen din. Brukes kun til identitetsverifisering." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Your home address. Used only for identity verification." }
+        }
+      }
+    },
+    "I går" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Yesterday" }
+        }
+      }
+    },
+    "IBAN" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "IBAN" }
+        }
+      }
+    },
+    "Ikke innlogget" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Not signed in" }
+        }
+      }
+    },
+    "Ikke tilgjengelig for disse datoene" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Not available for these dates" }
+        }
+      }
+    },
+    "Individuell melding per plass" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Individual message per spot" }
+        }
+      }
+    },
+    "Individuell pris per plass" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Individual price per spot" }
+        }
+      }
+    },
+    "Ingen bestillinger" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "No bookings" }
+        }
+      }
+    },
+    "Ingen bookings ennå" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "No bookings yet" }
+        }
+      }
+    },
+    "Ingen favoritter ennå" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "No favorites yet" }
+        }
+      }
+    },
+    "Ingen inntekter ennå" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "No earnings yet" }
+        }
+      }
+    },
+    "Ingen ledige plasser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "No spots available" }
+        }
+      }
+    },
+    "Ingen meldinger" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "No messages" }
+        }
+      }
+    },
+    "Ingen plasser å vise" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "No spots to show" }
+        }
+      }
+    },
+    "Ingen resultater" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "No results" }
+        }
+      }
+    },
+    "Ingen tilleggstjenester tilgjengelig for denne kategorien" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "No add-ons available for this category" }
+        }
+      }
+    },
+    "Innsjekk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Check-in" }
+        }
+      }
+    },
+    "Inntekt per annonse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Earnings per listing" }
+        }
+      }
+    },
+    "Inntekter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Earnings" }
+        }
+      }
+    },
+    "Inntektene dine vil vises her" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Your earnings will appear here" }
+        }
+      }
+    },
+    "Innstillinger" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Settings" }
+        }
+      }
+    },
+    "Jeg godtar og fortsetter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "I accept and continue" }
+        }
+      }
+    },
+    "Kajakk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Kayak" }
+        }
+      }
+    },
+    "Kalender" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Calendar" }
+        }
+      }
+    },
+    "Kanseller bestilling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cancel booking" }
+        }
+      }
+    },
+    "Kansellerer..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cancelling..." }
+        }
+      }
+    },
+    "Kansellert" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Cancelled" }
+        }
+      }
+    },
+    "Kategori" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Category" }
+        }
+      }
+    },
+    "Klar til å ta imot bookinger!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Ready to take bookings!" }
+        }
+      }
+    },
+    "Kjøretøy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Vehicle" }
+        }
+      }
+    },
+    "Kom i gang med Tuno" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Get started with Tuno" }
+        }
+      }
+    },
+    "Kommentar (valgfritt)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Comment (optional)" }
+        }
+      }
+    },
+    "Kontakt utleier" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Contact host" }
+        }
+      }
+    },
+    "Kontoeier" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Account holder" }
+        }
+      }
+    },
+    "Kontoeier må oppgis" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Account holder name is required" }
+        }
+      }
+    },
+    "Kontoen din er satt opp og du kan opprette annonser nå. Utbetalinger skjer automatisk etter hvert opphold." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Your account is set up and you can create listings now. Payouts happen automatically after each stay." }
+        }
+      }
+    },
+    "Kontoen Stripe skal bruke for å betale ut leieinntektene dine." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "The account Stripe will use to pay out your rental income." }
+        }
+      }
+    },
+    "Kontroller at alt ser riktig ut før du publiserer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Check that everything looks right before you publish" }
+        }
+      }
+    },
+    "Kortinformasjon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Card details" }
+        }
+      }
+    },
+    "Kunne ikke lagre: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Couldn't save: %@" }
+        }
+      }
+    },
+    "Kunne ikke opprette annonse: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Couldn't create listing: %@" }
+        }
+      }
+    },
+    "Kunne ikke opprette betalingsmetode" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Couldn't create payment method" }
+        }
+      }
+    },
+    "Kunne ikke opprette konto. Prøv igjen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Couldn't create account. Please try again." }
+        }
+      }
+    },
+    "Kunne ikke opprette samtale" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Couldn't start conversation" }
+        }
+      }
+    },
+    "Kunne ikke sende anmeldelse. Prøv igjen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Couldn't submit review. Please try again." }
+        }
+      }
+    },
+    "Kunne ikke sende melding" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Couldn't send message" }
+        }
+      }
+    },
+    "Kunne ikke sende tilbakestillingslenke" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Couldn't send reset link" }
+        }
+      }
+    },
+    "Lagre" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Save" }
+        }
+      }
+    },
+    "Lagre endringer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Save changes" }
+        }
+      }
+    },
+    "Lagret!" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Saved!" }
+        }
+      }
+    },
+    "La stå tomt for å bruke annonsens standardpris." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Leave blank to use the listing's default price." }
+        }
+      }
+    },
+    "Last ned alle (%lld)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Download all (%lld)" }
+        }
+      }
+    },
+    "Last ned PNG" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Download PNG" }
+        }
+      }
+    },
+    "Leiebil (ingen registreringsnummer)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Rental car (no license plate)" }
+        }
+      }
+    },
+    "Legg til" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Add" }
+        }
+      }
+    },
+    "Legg til bilder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Add photos" }
+        }
+      }
+    },
+    "Legg til minst 1 bilde" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Add at least 1 photo" }
+        }
+      }
+    },
+    "Legitimasjon (kommer senere — du kan opprette annonse nå)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "ID document (coming later — you can create a listing now)" }
+        }
+      }
+    },
+    "Les brukervilkår" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Read terms of service" }
+        }
+      }
+    },
+    "Les personvern" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Read privacy policy" }
+        }
+      }
+    },
+    "Logg inn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Log in" }
+        }
+      }
+    },
+    "Logg inn for å bestille" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Log in to book" }
+        }
+      }
+    },
+    "Logg inn for å se bestillingene dine" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Log in to see your bookings" }
+        }
+      }
+    },
+    "Logg inn for å se favorittene dine" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Log in to see your favorites" }
+        }
+      }
+    },
+    "Logg inn for å se meldingene dine" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Log in to see your messages" }
+        }
+      }
+    },
+    "Logg inn for å se profilen din" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Log in to see your profile" }
+        }
+      }
+    },
+    "Logg ut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Log out" }
+        }
+      }
+    },
+    "Lukk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Close" }
+        }
+      }
+    },
+    "Maks %@m" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Max %@m" }
+        }
+      }
+    },
+    "Maks lengde (m)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Max length (m)" }
+        }
+      }
+    },
+    "Mangler betalingsinformasjon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Missing payment details" }
+        }
+      }
+    },
+    "Marker plasser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Mark spots" }
+        }
+      }
+    },
+    "Marker minst én plass på kartet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Mark at least one spot on the map" }
+        }
+      }
+    },
+    "Max %lldm" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Max %lldm" }
+        }
+      }
+    },
+    "Meldinger" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Messages" }
+        }
+      }
+    },
+    "Meldinger fra utleiere og gjester vises her" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Messages from hosts and guests appear here" }
+        }
+      }
+    },
+    "Meter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Meters" }
+        }
+      }
+    },
+    "Min posisjon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "My location" }
+        }
+      }
+    },
+    "Mine annonser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "My listings" }
+        }
+      }
+    },
+    "Minst 1 plass" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "At least 1 spot" }
+        }
+      }
+    },
+    "Månedlig inntekt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Monthly earnings" }
+        }
+      }
+    },
+    "Navn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Name" }
+        }
+      }
+    },
+    "Navn (f.eks. Vedfyrt badstue)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Name (e.g. Wood-fired sauna)" }
+        }
+      }
+    },
+    "Navn / label" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Name / label" }
+        }
+      }
+    },
+    "Navn på kontoen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Name on the account" }
+        }
+      }
+    },
+    "Navn på plassen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Spot name" }
+        }
+      }
+    },
+    "Nettverksfeil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Network error" }
+        }
+      }
+    },
+    "Nettverksfeil: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Network error: %@" }
+        }
+      }
+    },
+    "Neste" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Next" }
+        }
+      }
+    },
+    "Noe gikk galt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Something went wrong" }
+        }
+      }
+    },
+    "Noe gikk galt: %@" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Something went wrong: %@" }
+        }
+      }
+    },
+    "Noe som er tilgjengelig for alle gjester, uansett hvilken plass de velger — f.eks. sauna, kajakk eller grillpakke. Plass-spesifikke tillegg (strøm, EV-lading, septik) setter du på hver enkelt plass i Lokasjon-steget." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Something available to all guests no matter which spot they choose — e.g. sauna, kayak, or a grill package. Spot-specific add-ons (power, EV charging, septic) are set per spot in the Location step." }
+        }
+      }
+    },
+    "Norge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Norway" }
+        }
+      }
+    },
+    "Nullstill" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Reset" }
+        }
+      }
+    },
+    "Ny annonse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "New listing" }
+        }
+      }
+    },
+    "Om denne plassen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "About this spot" }
+        }
+      }
+    },
+    "Omtrentlig plassering" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Approximate location" }
+        }
+      }
+    },
+    "Oppdater status" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Refresh status" }
+        }
+      }
+    },
+    "Opprett annonse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Create listing" }
+        }
+      }
+    },
+    "Opprett konto" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Create account" }
+        }
+      }
+    },
+    "Oppsettet er nesten ferdig" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Setup is almost done" }
+        }
+      }
+    },
+    "Overvåkingskamera" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Security camera" }
+        }
+      }
+    },
+    "Parkering" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Parking" }
+        }
+      }
+    },
+    "Passord" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Password" }
+        }
+      }
+    },
+    "Per natt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Per night" }
+        }
+      }
+    },
+    "Per plass" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Per spot" }
+        }
+      }
+    },
+    "per natt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "per night" }
+        }
+      }
+    },
+    "Per time" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Per hour" }
+        }
+      }
+    },
+    "Personbil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Car" }
+        }
+      }
+    },
+    "Personlig informasjon" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Personal information" }
+        }
+      }
+    },
+    "Personnummer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "National ID number" }
+        }
+      }
+    },
+    "Personnummer (11 siffer)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "National ID number (11 digits)" }
+        }
+      }
+    },
+    "Personnummer må være 11 siffer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "National ID must be 11 digits" }
+        }
+      }
+    },
+    "Plass %lld" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Spot %lld" }
+        }
+      }
+    },
+    "Plass %lld lagret i Bilder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Spot %lld saved to Photos" }
+        }
+      }
+    },
+    "Plass %lld: sett pris" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Spot %lld: set a price" }
+        }
+      }
+    },
+    "Plasser (%lld)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Spots (%lld)" }
+        }
+      }
+    },
+    "Plassering" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Location" }
+        }
+      }
+    },
+    "Populære i Norge" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Popular in Norway" }
+        }
+      }
+    },
+    "Portadgang" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Gated access" }
+        }
+      }
+    },
+    "Postnummer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Postal code" }
+        }
+      }
+    },
+    "Postnummer er påkrevd" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Postal code is required" }
+        }
+      }
+    },
+    "Poststed" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "City" }
+        }
+      }
+    },
+    "Poststed er påkrevd" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "City is required" }
+        }
+      }
+    },
+    "Pris" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Price" }
+        }
+      }
+    },
+    "Pris (kr)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Price (kr)" }
+        }
+      }
+    },
+    "Pris må være minst 1 kr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Price must be at least 1 kr" }
+        }
+      }
+    },
+    "Pris per natt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Price per night" }
+        }
+      }
+    },
+    "Pris per natt (valgfritt)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Price per night (optional)" }
+        }
+      }
+    },
+    "Prisenhet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Price unit" }
+        }
+      }
+    },
+    "Profil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Profile" }
+        }
+      }
+    },
+    "Prøv å søke etter et annet sted" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Try searching somewhere else" }
+        }
+      }
+    },
+    "Publiser annonse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Publish listing" }
+        }
+      }
+    },
+    "QR-koder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "QR codes" }
+        }
+      }
+    },
+    "Rediger annonse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Edit listing" }
+        }
+      }
+    },
+    "Rediger plass" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Edit spot" }
+        }
+      }
+    },
+    "Rediger profil" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Edit profile" }
+        }
+      }
+    },
+    "Refundert %lld kr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Refunded %lld kr" }
+        }
+      }
+    },
+    "Refusjon: %lld kr av %lld kr" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Refund: %1$lld kr of %2$lld kr" }
+        }
+      }
+    },
+    "Region" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Region" }
+        }
+      }
+    },
+    "Registrer deg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Sign up" }
+        }
+      }
+    },
+    "Registreringsnummer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "License plate" }
+        }
+      }
+    },
+    "Rullestoltilgjengelig" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Wheelchair accessible" }
+        }
+      }
+    },
+    "Samme melding for alle plasser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Same message for all spots" }
+        }
+      }
+    },
+    "Samme pris for alle plasser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Same price for all spots" }
+        }
+      }
+    },
+    "Se mine bestillinger" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "See my bookings" }
+        }
+      }
+    },
+    "Se over annonsen din" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Review your listing" }
+        }
+      }
+    },
+    "Send anmeldelse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Submit review" }
+        }
+      }
+    },
+    "Send melding til utleier" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Message the host" }
+        }
+      }
+    },
+    "Send tilbakestillingslenke" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Send reset link" }
+        }
+      }
+    },
+    "Sender..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Sending..." }
+        }
+      }
+    },
+    "Sengetøy" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Bedding" }
+        }
+      }
+    },
+    "Septiktømming" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Septic disposal" }
+        }
+      }
+    },
+    "Serviceavgift" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Service fee" }
+        }
+      }
+    },
+    "Sett pris" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Set price" }
+        }
+      }
+    },
+    "Sett ulik melding per plass (f.eks. ulike port-koder)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Set a different message per spot (e.g. different gate codes)." }
+        }
+      }
+    },
+    "Sett ulik pris for ulike plasser (f.eks. sjøutsikt vs bakrekke)." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Set different prices for different spots (e.g. sea view vs back row)." }
+        }
+      }
+    },
+    "Sett ulik pris for ulike plasser." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Set different prices for different spots." }
+        }
+      }
+    },
+    "Siste bookings" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Recent bookings" }
+        }
+      }
+    },
+    "Sjekk e-posten din" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Check your email" }
+        }
+      }
+    },
+    "Sjø-/innsjøtilgang" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Lake or sea access" }
+        }
+      }
+    },
+    "Skjul eksakt adresse" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Hide exact address" }
+        }
+      }
+    },
+    "Skjult fra søk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Hidden from search" }
+        }
+      }
+    },
+    "Skriv en melding..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Write a message..." }
+        }
+      }
+    },
+    "Skriv inn e-posten din, så sender vi deg en tilbakestillingslenke." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Enter your email and we'll send you a reset link." }
+        }
+      }
+    },
+    "Skriv inn en gyldig pris" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Enter a valid price" }
+        }
+      }
+    },
+    "Skriv individuell melding på hver plass nedenfor." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Write an individual message on each spot below." }
+        }
+      }
+    },
+    "Skriv ut og heng opp QR-kodene ved hver plass. Gjester scanner koden for å komme direkte til annonsen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Print the QR codes and hang them at each spot. Guests scan the code to go straight to the listing." }
+        }
+      }
+    },
+    "Slett" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Delete" }
+        }
+      }
+    },
+    "Slett annonse?" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Delete listing?" }
+        }
+      }
+    },
+    "Standardpris per natt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Default price per night" }
+        }
+      }
+    },
+    "Stripe krever dette for identitetsverifisering." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Stripe requires this for identity verification." }
+        }
+      }
+    },
+    "Stripe trenger litt mer informasjon før vi kan aktivere utbetalingene dine:" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Stripe needs a little more information before we can activate your payouts:" }
+        }
+      }
+    },
+    "Strøm (tilkobling)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Electric hookup" }
+        }
+      }
+    },
+    "Strømtilkobling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Power hookup" }
+        }
+      }
+    },
+    "Sykkelutleie" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Bike rental" }
+        }
+      }
+    },
+    "Synlig i søk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Visible in search" }
+        }
+      }
+    },
+    "Søk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Search" }
+        }
+      }
+    },
+    "Søk etter adresse..." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Search for an address..." }
+        }
+      }
+    },
+    "Telefonnummer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Phone number" }
+        }
+      }
+    },
+    "Tilbake" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Back" }
+        }
+      }
+    },
+    "Tilgjengelig i dag" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Available today" }
+        }
+      }
+    },
+    "Tilgjengelig på denne plassen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Available at this spot" }
+        }
+      }
+    },
+    "Tilgjengelighet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Availability" }
+        }
+      }
+    },
+    "Tillegg" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Add-ons" }
+        }
+      }
+    },
+    "Tillegg på denne plassen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Add-ons at this spot" }
+        }
+      }
+    },
+    "Tilleggstjenester" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Add-ons" }
+        }
+      }
+    },
+    "Tittel" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Title" }
+        }
+      }
+    },
+    "Tittel må ha minst 3 tegn" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Title must be at least 3 characters" }
+        }
+      }
+    },
+    "Toalett" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Toilets" }
+        }
+      }
+    },
+    "Totalt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Total" }
+        }
+      }
+    },
+    "Totalt betalt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Total paid" }
+        }
+      }
+    },
+    "Totalt tjent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Total earned" }
+        }
+      }
+    },
+    "Trykk på datoer for å blokkere eller åpne dem. Blokkerte datoer vises i rødt." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Tap dates to block or open them. Blocked dates are shown in red." }
+        }
+      }
+    },
+    "Trykk på kartet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Tap the map" }
+        }
+      }
+    },
+    "Trykk på kartet for å plassere" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Tap the map to place a pin" }
+        }
+      }
+    },
+    "Ugyldig norsk IBAN (NO + 13 siffer)" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Invalid Norwegian IBAN (NO + 13 digits)" }
+        }
+      }
+    },
+    "Ukjent" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Unknown" }
+        }
+      }
+    },
+    "Umiddelbar booking" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Instant booking" }
+        }
+      }
+    },
+    "Under tak" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Covered" }
+        }
+      }
+    },
+    "Utforsk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Explore" }
+        }
+      }
+    },
+    "Utforsk plasser og legg til favoritter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Explore spots and add favorites" }
+        }
+      }
+    },
+    "Utleier" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Host" }
+        }
+      }
+    },
+    "Utsjekk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Check-out" }
+        }
+      }
+    },
+    "Uventet svar fra serveren" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Unexpected response from the server" }
+        }
+      }
+    },
+    "Vanntilkobling" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Water hookup" }
+        }
+      }
+    },
+    "Varighet" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Duration" }
+        }
+      }
+    },
+    "Ved" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Firewood" }
+        }
+      }
+    },
+    "Velg bilder" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Choose photos" }
+        }
+      }
+    },
+    "Velg datoer" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Choose dates" }
+        }
+      }
+    },
+    "Velg en kategori" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Choose a category" }
+        }
+      }
+    },
+    "Velg en lokasjon fra forslagene" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Pick a location from the suggestions" }
+        }
+      }
+    },
+    "Velg plasser" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Choose spots" }
+        }
+      }
+    },
+    "Velkomstmelding for denne plassen" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Welcome message for this spot" }
+        }
+      }
+    },
+    "Velkomstmelding ved innsjekk" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Check-in welcome message" }
+        }
+      }
+    },
+    "Velkommen som utleier" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Welcome, host" }
+        }
+      }
+    },
+    "Venter" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Pending" }
+        }
+      }
+    },
+    "Vi har sendt en bekreftelseslenke til %@. Klikk på lenken for å aktivere kontoen din, og logg deretter inn." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "We've sent a confirmation link to %@. Click the link to activate your account, then sign in." }
+        }
+      }
+    },
+    "Vi har sendt en lenke for å tilbakestille passordet ditt til %@." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "We've sent a link to reset your password to %@." }
+        }
+      }
+    },
+    "Vi trenger litt informasjon for å kunne betale ut leieinntektene dine. Alt skjer her i appen." : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "We need a little information so we can pay out your rental income. It all happens here in the app." }
+        }
+      }
+    },
+    "WiFi" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "Wi-Fi" }
+        }
+      }
+    },
+    "dag" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "day" }
+        }
+      }
+    },
+    "natt" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : { "state" : "translated", "value" : "night" }
+        }
+      }
+    }
+  }
+}
