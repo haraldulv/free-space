@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Loader2, FileText, MapPin, Image as ImageIcon, Sparkles, CalendarDays } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { updateListingAction, updateBlockedDatesAction } from "../../actions";
 import BasicInfoStep from "@/components/features/listing-form/steps/BasicInfoStep";
@@ -13,20 +14,22 @@ import ExtrasStep from "@/components/features/listing-form/steps/ExtrasStep";
 import AvailabilityEditor from "@/components/features/listing-form/AvailabilityEditor";
 import Button from "@/components/ui/Button";
 import type { CreateListingData } from "@/lib/supabase/listings";
-import type { Listing, Amenity, SpotMarker, ListingExtra } from "@/types";
+import type { Amenity, SpotMarker, ListingExtra } from "@/types";
 
-const TABS = [
-  { id: "info", label: "Detaljer", icon: FileText },
-  { id: "location", label: "Plasser", icon: MapPin },
-  { id: "images", label: "Bilder", icon: ImageIcon },
-  { id: "amenities", label: "Fasiliteter", icon: Sparkles },
-  { id: "extras", label: "Felles tillegg", icon: Sparkles },
-  { id: "availability", label: "Tilgjengelighet", icon: CalendarDays },
+const TAB_META = [
+  { id: "info", labelKey: "tabInfo", icon: FileText },
+  { id: "location", labelKey: "tabLocation", icon: MapPin },
+  { id: "images", labelKey: "tabImages", icon: ImageIcon },
+  { id: "amenities", labelKey: "tabAmenities", icon: Sparkles },
+  { id: "extras", labelKey: "tabExtras", icon: Sparkles },
+  { id: "availability", labelKey: "tabAvailability", icon: CalendarDays },
 ] as const;
 
-type TabId = (typeof TABS)[number]["id"];
+type TabId = (typeof TAB_META)[number]["id"];
 
 export default function EditListingPage() {
+  const t = useTranslations("host.edit");
+  const tHost = useTranslations("host");
   const router = useRouter();
   const params = useParams();
   const id = params.id as string;
@@ -108,7 +111,6 @@ export default function EditListingPage() {
         setSaving(false);
         return;
       }
-      // Also save blocked dates
       const datesResult = await updateBlockedDatesAction(id, blockedDates);
       if (datesResult.error) {
         setError(datesResult.error);
@@ -117,7 +119,7 @@ export default function EditListingPage() {
       }
       setSaved(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Noe gikk galt");
+      setError(err instanceof Error ? err.message : tHost("somethingWentWrong"));
     } finally {
       setSaving(false);
     }
@@ -126,7 +128,7 @@ export default function EditListingPage() {
   if (loading || !userId) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <p className="text-sm text-neutral-400">Laster annonse...</p>
+        <p className="text-sm text-neutral-400">{t("loadingListing")}</p>
       </div>
     );
   }
@@ -136,22 +138,22 @@ export default function EditListingPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-neutral-900">Rediger annonse</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">{t("title")}</h1>
         <div className="flex items-center gap-3">
           {saved && (
-            <span className="text-sm text-green-600 font-medium">Lagret!</span>
+            <span className="text-sm text-green-600 font-medium">{t("saved")}</span>
           )}
           <Button variant="ghost" onClick={() => router.push("/dashboard?tab=annonser")}>
-            Avbryt
+            {t("cancel")}
           </Button>
           <Button onClick={handleSave} disabled={saving}>
             {saving ? (
               <>
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                Lagrer...
+                {t("saving")}
               </>
             ) : (
-              "Lagre endringer"
+              t("save")
             )}
           </Button>
         </div>
@@ -163,20 +165,20 @@ export default function EditListingPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 border-b border-neutral-200 mb-8 overflow-x-auto">
-        {TABS.map((t) => {
-          const Icon = t.icon;
+        {TAB_META.map((meta) => {
+          const Icon = meta.icon;
           return (
             <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
+              key={meta.id}
+              onClick={() => setTab(meta.id)}
               className={`flex items-center gap-2 whitespace-nowrap px-4 py-2.5 text-sm font-medium transition-colors ${
-                tab === t.id
+                tab === meta.id
                   ? "border-b-2 border-primary-600 text-primary-600"
                   : "text-neutral-500 hover:text-neutral-700"
               }`}
             >
               <Icon className="h-4 w-4" />
-              {t.label}
+              {t(meta.labelKey)}
             </button>
           );
         })}
@@ -260,16 +262,16 @@ export default function EditListingPage() {
       {/* Bottom save bar */}
       <div className="mt-10 flex items-center justify-end gap-3 border-t border-neutral-200 pt-6">
         {saved && (
-          <span className="text-sm text-green-600 font-medium">Endringene er lagret</span>
+          <span className="text-sm text-green-600 font-medium">{t("savedBottom")}</span>
         )}
         <Button onClick={handleSave} disabled={saving}>
           {saving ? (
             <>
               <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-              Lagrer...
+              {t("saving")}
             </>
           ) : (
-            "Lagre endringer"
+            t("save")
           )}
         </Button>
       </div>
