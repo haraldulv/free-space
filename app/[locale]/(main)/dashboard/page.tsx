@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
 import {
   CalendarCheck,
   CalendarOff,
@@ -18,6 +17,8 @@ import {
   Clock,
   ArrowUpRight,
 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/[locale]/(main)/bli-utleier/actions";
 import { cancelBookingAction } from "@/app/[locale]/(main)/book/actions";
@@ -33,14 +34,16 @@ import { Booking, Listing, Conversation } from "@/types";
 
 type Tab = "bookings" | "rentals" | "earnings" | "favorites" | "listings" | "messages" | "settings";
 
-const allSidebarItems: { key: Tab; label: string; icon: React.ElementType; hostOnly?: boolean }[] = [
-  { key: "bookings", label: "Mine bestillinger", icon: CalendarCheck },
-  { key: "rentals", label: "Utleie", icon: Inbox, hostOnly: true },
-  { key: "earnings", label: "Inntekter", icon: TrendingUp, hostOnly: true },
-  { key: "favorites", label: "Favoritter", icon: Heart },
-  { key: "messages", label: "Meldinger", icon: MessageCircle },
-  { key: "listings", label: "Mine annonser", icon: Megaphone },
-  { key: "settings", label: "Innstillinger", icon: Settings },
+type SidebarKey = Exclude<Tab, never>;
+
+const sidebarConfig: { key: SidebarKey; labelKey: string; icon: React.ElementType; hostOnly?: boolean }[] = [
+  { key: "bookings", labelKey: "myBookings", icon: CalendarCheck },
+  { key: "rentals", labelKey: "rentals", icon: Inbox, hostOnly: true },
+  { key: "earnings", labelKey: "income", icon: TrendingUp, hostOnly: true },
+  { key: "favorites", labelKey: "favorites", icon: Heart },
+  { key: "messages", labelKey: "messages", icon: MessageCircle },
+  { key: "listings", labelKey: "myListings", icon: Megaphone },
+  { key: "settings", labelKey: "settings", icon: Settings },
 ];
 
 function groupBookings(items: Booking[]) {
@@ -124,9 +127,16 @@ function rowToListing(row: Record<string, unknown>): Listing {
 }
 
 export default function DashboardPage() {
+  const t = useTranslations("dashboard");
+  const tListing = useTranslations("listing");
+  const tNav = useTranslations("nav");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
+  const numberLocale = locale === "en" ? "en-US" : "nb-NO";
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const conversationIdParam = searchParams.get("conversation");
+  const sidebarItemsBase = sidebarConfig.map((c) => ({ ...c, label: t(c.labelKey as "myBookings") }));
   const initialTab: Tab =
     tabParam === "listings" || tabParam === "annonser" ? "listings"
     : tabParam === "rentals" ? "rentals"
@@ -177,7 +187,7 @@ export default function DashboardPage() {
             .map((row) => ({
               id: row.id,
               listingId: row.listing_id,
-              listingTitle: (row.listings as Record<string, unknown>)?.title as string || "Ukjent",
+              listingTitle: (row.listings as Record<string, unknown>)?.title as string || t("unknown"),
               listingImage: ((row.listings as Record<string, unknown>)?.images as string[])?.[0] || "",
               listingCategory: (row.listings as Record<string, unknown>)?.category as Booking["listingCategory"] || "camping",
               location: `${(row.listings as Record<string, unknown>)?.city || ""}, ${(row.listings as Record<string, unknown>)?.region || ""}`,
@@ -230,7 +240,7 @@ export default function DashboardPage() {
           rentalRows.map((row) => ({
             id: row.id,
             listingId: row.listing_id,
-            listingTitle: (row.listings as Record<string, unknown>)?.title as string || "Ukjent",
+            listingTitle: (row.listings as Record<string, unknown>)?.title as string || t("unknown"),
             listingImage: ((row.listings as Record<string, unknown>)?.images as string[])?.[0] || "",
             listingCategory: (row.listings as Record<string, unknown>)?.category as Booking["listingCategory"] || "camping",
             location: `${(row.listings as Record<string, unknown>)?.city || ""}, ${(row.listings as Record<string, unknown>)?.region || ""}`,
@@ -245,7 +255,7 @@ export default function DashboardPage() {
             checkInTime: (row.listings as Record<string, unknown>)?.check_in_time as string || "15:00",
             checkOutTime: (row.listings as Record<string, unknown>)?.check_out_time as string || "11:00",
             listingAddress: (row.listings as Record<string, unknown>)?.address as string,
-            guestName: (row.guest as Record<string, unknown>)?.full_name as string || "Anonym",
+            guestName: (row.guest as Record<string, unknown>)?.full_name as string || t("anonymous"),
             guestAvatar: (row.guest as Record<string, unknown>)?.avatar_url as string || "",
             guestEmail: (row.guest as Record<string, unknown>)?.email as string || "",
             cancelledAt: row.cancelled_at,
@@ -307,7 +317,7 @@ export default function DashboardPage() {
               bookingId: convoRow.booking_id,
               lastMessageAt: convoRow.last_message_at,
               createdAt: convoRow.created_at,
-              otherUserName: (otherUser?.full_name as string) || "Anonym",
+              otherUserName: (otherUser?.full_name as string) || t("anonymous"),
               otherUserAvatar: (otherUser?.avatar_url as string) || "",
               listingTitle: (listing?.title as string) || "",
               listingImage: ((listing?.images as string[]) || [])[0] || "",
@@ -325,7 +335,7 @@ export default function DashboardPage() {
   }, [conversationIdParam]);
 
   const isHost = listings.length > 0 || rentals.length > 0;
-  const sidebarItems = allSidebarItems.filter((item) => !item.hostOnly || isHost);
+  const sidebarItems = sidebarItemsBase.filter((item) => !item.hostOnly || isHost);
 
   const handleTabChange = (item: typeof sidebarItems[number]) => {
     setTab(item.key);
@@ -358,7 +368,7 @@ export default function DashboardPage() {
       await deleteListingAction(id);
       setListings((prev) => prev.filter((l) => l.id !== id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : "Kunne ikke slette");
+      alert(err instanceof Error ? err.message : t("couldNotDelete"));
     }
   };
 
@@ -389,7 +399,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-neutral-50">
       <Container className="py-8 lg:py-10">
-        <h1 className="text-2xl font-semibold text-neutral-900">Dashboard</h1>
+        <h1 className="text-2xl font-semibold text-neutral-900">{t("title")}</h1>
 
         <div className="mt-6 flex flex-col lg:flex-row lg:gap-10">
           {/* Sidebar — desktop */}
@@ -460,13 +470,13 @@ export default function DashboardPage() {
                       <CalendarOff className="h-8 w-8 text-neutral-400" />
                     </div>
                     <h2 className="mt-4 text-lg font-semibold text-neutral-700">
-                      Ingen bestillinger ennå
+                      {t("noBookingsTitle")}
                     </h2>
                     <p className="mt-1 text-sm text-neutral-500">
-                      Begynn å utforske og bestill din første parkering- eller campingplass.
+                      {t("noBookingsTip")}
                     </p>
                     <Link href="/" className="mt-6">
-                      <Button>Utforsk plasser</Button>
+                      <Button>{t("exploreSpots")}</Button>
                     </Link>
                   </div>
                 ) : (
@@ -475,9 +485,9 @@ export default function DashboardPage() {
                       const { upcoming, active, past } = groupBookings(bookings);
                       return (
                         <>
-                          <BookingSection title="Aktive" items={active} onCancel={handleCancelBooking} />
-                          <BookingSection title="Kommende" items={upcoming} onCancel={handleCancelBooking} />
-                          <BookingSection title="Tidligere" items={past} onCancel={handleCancelBooking} />
+                          <BookingSection title={t("active")} items={active} onCancel={handleCancelBooking} />
+                          <BookingSection title={t("upcoming")} items={upcoming} onCancel={handleCancelBooking} />
+                          <BookingSection title={t("past")} items={past} onCancel={handleCancelBooking} />
                         </>
                       );
                     })()}
@@ -495,10 +505,10 @@ export default function DashboardPage() {
                       <Inbox className="h-8 w-8 text-neutral-400" />
                     </div>
                     <h2 className="mt-4 text-lg font-semibold text-neutral-700">
-                      Ingen utleie ennå
+                      {t("noRentalsYet")}
                     </h2>
                     <p className="mt-1 text-sm text-neutral-500">
-                      Når noen booker en av plassene dine, dukker det opp her.
+                      {t("noRentalsDescription")}
                     </p>
                   </div>
                 ) : (
@@ -507,9 +517,9 @@ export default function DashboardPage() {
                       const { upcoming, active, past } = groupBookings(rentals);
                       return (
                         <>
-                          <BookingSection title="Aktive" items={active} variant="host" onCancel={handleCancelRental} />
-                          <BookingSection title="Kommende" items={upcoming} variant="host" onCancel={handleCancelRental} />
-                          <BookingSection title="Tidligere" items={past} variant="host" />
+                          <BookingSection title={t("active")} items={active} variant="host" onCancel={handleCancelRental} />
+                          <BookingSection title={t("upcoming")} items={upcoming} variant="host" onCancel={handleCancelRental} />
+                          <BookingSection title={t("past")} items={past} variant="host" />
                         </>
                       );
                     })()}
@@ -530,13 +540,13 @@ export default function DashboardPage() {
                       <Heart className="h-8 w-8 text-neutral-400" />
                     </div>
                     <h2 className="mt-4 text-lg font-semibold text-neutral-700">
-                      Ingen favoritter ennå
+                      {t("noFavoritesTitle")}
                     </h2>
                     <p className="mt-1 text-sm text-neutral-500">
-                      Trykk på hjertet på en annonse for å lagre den her.
+                      {t("noFavoritesTip")}
                     </p>
                     <Link href="/search" className="mt-6">
-                      <Button>Utforsk plasser</Button>
+                      <Button>{t("exploreSpots")}</Button>
                     </Link>
                   </div>
                 ) : (
@@ -558,7 +568,7 @@ export default function DashboardPage() {
                             <p className="text-xs text-neutral-500">{listing.location.city}, {listing.location.region}</p>
                             <p className="mt-1 text-sm">
                               <span className="font-semibold">{listing.price} kr</span>
-                              <span className="text-neutral-500"> / {listing.priceUnit === "time" ? "time" : "natt"}</span>
+                              <span className="text-neutral-500"> / {listing.priceUnit === "time" ? tListing("hour") : tListing("night")}</span>
                             </p>
                           </div>
                         </div>
@@ -574,12 +584,12 @@ export default function DashboardPage() {
               <>
                 <div className="mt-4 lg:mt-0 flex items-center justify-between">
                   <p className="text-sm text-neutral-500">
-                    {listings.length} {listings.length === 1 ? "annonse" : "annonser"}
+                    {t("listingsCount", { count: listings.length })}
                   </p>
                   <Link href="/bli-utleier">
                     <Button size="sm">
                       <Plus className="mr-1.5 h-4 w-4" />
-                      Ny annonse
+                      {t("newListing")}
                     </Button>
                   </Link>
                 </div>
@@ -590,13 +600,13 @@ export default function DashboardPage() {
                       <Building2 className="h-8 w-8 text-neutral-400" />
                     </div>
                     <h2 className="mt-4 text-lg font-semibold text-neutral-700">
-                      Du har ingen annonser ennå
+                      {t("noListingsTitle")}
                     </h2>
                     <p className="mt-1 text-sm text-neutral-500">
-                      Kom i gang som utleier og begynn å tjene penger på plassen din.
+                      {t("noListingsTip")}
                     </p>
                     <Link href="/bli-utleier" className="mt-6">
-                      <Button>Bli utleier</Button>
+                      <Button>{tNav("becomeHost")}</Button>
                     </Link>
                   </div>
                 ) : (
@@ -631,13 +641,13 @@ export default function DashboardPage() {
                         <ChatView
                           conversationId={selectedConvo.id}
                           currentUserId={userId}
-                          otherUserName={selectedConvo.otherUserName || "Anonym"}
+                          otherUserName={selectedConvo.otherUserName || t("anonymous")}
                           listingTitle={selectedConvo.listingTitle || ""}
                           onBack={() => setSelectedConvo(null)}
                         />
                       ) : (
                         <div className="flex flex-1 items-center justify-center text-sm text-neutral-400">
-                          Velg en samtale
+                          {t("selectConversation")}
                         </div>
                       )}
                     </div>
@@ -662,6 +672,10 @@ export default function DashboardPage() {
 const SERVICE_FEE = 0.10;
 
 function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: Listing[] }) {
+  const t = useTranslations("dashboard");
+  const locale = useLocale();
+  const numberLocale = locale === "en" ? "en-US" : "nb-NO";
+  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
   const confirmedRentals = rentals.filter((r) => r.status === "confirmed" && r.paymentStatus === "paid");
   const transferredRentals = rentals.filter((r) => r.paymentStatus === "paid");
 
@@ -680,7 +694,7 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
     months.push({
-      label: d.toLocaleDateString("nb-NO", { month: "short" }),
+      label: d.toLocaleDateString(dateLocale, { month: "short" }),
       key: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`,
     });
   }
@@ -712,11 +726,11 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
               <DollarSign className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs text-neutral-500">Totalt tjent</p>
-              <p className="text-lg font-bold text-neutral-900">{hostShare.toLocaleString("nb-NO")} kr</p>
+              <p className="text-xs text-neutral-500">{t("totalEarned")}</p>
+              <p className="text-lg font-bold text-neutral-900">{hostShare.toLocaleString(numberLocale)} kr</p>
             </div>
           </div>
-          <p className="mt-2 text-xs text-neutral-400">{platformFee.toLocaleString("nb-NO")} kr i plattformavgift</p>
+          <p className="mt-2 text-xs text-neutral-400">{t("platformFee", { amount: platformFee.toLocaleString(numberLocale) })}</p>
         </div>
         <div className="rounded-xl border border-neutral-200 bg-white p-4">
           <div className="flex items-center gap-3">
@@ -724,8 +738,8 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
               <TrendingUp className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs text-neutral-500">Denne måneden</p>
-              <p className="text-lg font-bold text-neutral-900">{thisMonthEarnings.toLocaleString("nb-NO")} kr</p>
+              <p className="text-xs text-neutral-500">{t("thisMonth")}</p>
+              <p className="text-lg font-bold text-neutral-900">{thisMonthEarnings.toLocaleString(numberLocale)} kr</p>
             </div>
           </div>
         </div>
@@ -735,7 +749,7 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
               <ArrowUpRight className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs text-neutral-500">Bookings</p>
+              <p className="text-xs text-neutral-500">{t("bookings")}</p>
               <p className="text-lg font-bold text-neutral-900">{confirmedRentals.length}</p>
             </div>
           </div>
@@ -746,7 +760,7 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
               <Clock className="h-5 w-5" />
             </div>
             <div>
-              <p className="text-xs text-neutral-500">Aktive annonser</p>
+              <p className="text-xs text-neutral-500">{t("activeListings")}</p>
               <p className="text-lg font-bold text-neutral-900">{listings.filter((l) => l.isActive).length}</p>
             </div>
           </div>
@@ -757,20 +771,20 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
       <div className="rounded-xl border border-neutral-200 bg-white p-5">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-neutral-700">
           <TrendingUp className="h-4 w-4 text-primary-600" />
-          Månedlig inntekt
+          {t("monthlyIncome")}
         </h3>
         <div className="mt-4 flex items-end gap-3 h-44">
           {monthlyData.map((m) => (
             <div key={m.key} className="flex flex-1 flex-col items-center gap-1">
               <span className="text-xs font-medium text-neutral-700">
-                {m.earnings > 0 ? `${m.earnings.toLocaleString("nb-NO")}` : ""}
+                {m.earnings > 0 ? `${m.earnings.toLocaleString(numberLocale)}` : ""}
               </span>
               <div
                 className="w-full max-w-10 rounded-t-md bg-primary-500 transition-all"
                 style={{ height: `${Math.max((m.earnings / maxEarnings) * 120, m.earnings > 0 ? 4 : 0)}px` }}
               />
               <span className="text-xs text-neutral-400">{m.label}</span>
-              {m.count > 0 && <span className="text-[10px] text-neutral-300">{m.count} booking{m.count > 1 ? "s" : ""}</span>}
+              {m.count > 0 && <span className="text-[10px] text-neutral-300">{t("bookingsCount", { count: m.count })}</span>}
             </div>
           ))}
         </div>
@@ -778,10 +792,10 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
 
       {/* Per-listing breakdown */}
       <div className="rounded-xl border border-neutral-200 bg-white p-5">
-        <h3 className="text-sm font-semibold text-neutral-700">Inntekt per annonse</h3>
+        <h3 className="text-sm font-semibold text-neutral-700">{t("incomePerListing")}</h3>
         <div className="mt-4 space-y-4">
           {listingBreakdown.length === 0 ? (
-            <p className="text-sm text-neutral-400">Ingen inntekter ennå</p>
+            <p className="text-sm text-neutral-400">{t("noIncomeYet")}</p>
           ) : (
             listingBreakdown.map(([id, data]) => (
               <div key={id} className="flex items-center gap-4">
@@ -792,7 +806,7 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
                 )}
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium text-neutral-700 truncate">{data.title}</p>
-                  <p className="text-xs text-neutral-400">{data.count} booking{data.count > 1 ? "s" : ""}</p>
+                  <p className="text-xs text-neutral-400">{t("bookingsCount", { count: data.count })}</p>
                   <div className="mt-1 h-1.5 w-full rounded-full bg-neutral-100">
                     <div
                       className="h-1.5 rounded-full bg-primary-500"
@@ -800,7 +814,7 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
                     />
                   </div>
                 </div>
-                <span className="text-sm font-bold text-neutral-900">{data.earnings.toLocaleString("nb-NO")} kr</span>
+                <span className="text-sm font-bold text-neutral-900">{data.earnings.toLocaleString(numberLocale)} kr</span>
               </div>
             ))
           )}
@@ -809,7 +823,7 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
 
       {/* Recent payouts */}
       <div className="rounded-xl border border-neutral-200 bg-white p-5">
-        <h3 className="text-sm font-semibold text-neutral-700">Siste bookings</h3>
+        <h3 className="text-sm font-semibold text-neutral-700">{t("recentBookings")}</h3>
         <div className="mt-3 divide-y divide-neutral-100">
           {transferredRentals.slice(0, 10).map((r) => {
             const hostAmount = Math.round(r.totalPrice * (1 - SERVICE_FEE));
@@ -818,20 +832,20 @@ function EarningsTab({ rentals, listings }: { rentals: Booking[]; listings: List
                 <div>
                   <p className="text-sm font-medium text-neutral-700">{r.listingTitle}</p>
                   <p className="text-xs text-neutral-400">
-                    {r.guestName || "Gjest"} · {new Date(r.checkIn).toLocaleDateString("nb-NO")} – {new Date(r.checkOut).toLocaleDateString("nb-NO")}
+                    {r.guestName || t("guest")} · {new Date(r.checkIn).toLocaleDateString(dateLocale)} – {new Date(r.checkOut).toLocaleDateString(dateLocale)}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm font-semibold">{hostAmount.toLocaleString("nb-NO")} kr</p>
+                  <p className="text-sm font-semibold">{hostAmount.toLocaleString(numberLocale)} kr</p>
                   <span className={`text-xs ${r.status === "confirmed" ? "text-green-600" : "text-red-500"}`}>
-                    {r.status === "confirmed" ? "Bekreftet" : "Kansellert"}
+                    {r.status === "confirmed" ? t("confirmed") : t("cancelled")}
                   </span>
                 </div>
               </div>
             );
           })}
           {transferredRentals.length === 0 && (
-            <p className="py-4 text-sm text-neutral-400">Ingen bookings ennå</p>
+            <p className="py-4 text-sm text-neutral-400">{t("noRecentBookings")}</p>
           )}
         </div>
       </div>
