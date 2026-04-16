@@ -404,6 +404,20 @@
     "requiredField": "Dette feltet er påkrevd",
     "mustAcceptTerms": "Du må godta vilkårene for å fortsette"
   },
+  "host": {
+    "stepCategory": "Kategori",
+    "stepDetails": "Detaljer",
+    "stepLocation": "Lokasjon",
+    "stepImages": "Bilder",
+    "stepAmenities": "Fasiliteter",
+    "stepExtras": "Felles tillegg",
+    "stepCalendar": "Kalender",
+    "stepPublish": "Publiser",
+    "publishing": "Publiserer...",
+    "publishListing": "Publiser annonse",
+    "saveChanges": "Lagre endringer",
+    "somethingWentWrong": "Noe gikk galt"
+  },
   "common": {
     "loading": "Laster...",
     "save": "Lagre",

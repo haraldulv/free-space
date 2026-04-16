@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import StepIndicator from "./StepIndicator";
 import CategoryStep from "./steps/CategoryStep";
@@ -34,7 +34,8 @@ export default function ListingFormWizard({
   initialData,
   onSubmit,
 }: ListingFormWizardProps) {
-  const router = useRouter();
+  const t = useTranslations("host");
+  const tCommon = useTranslations("common");
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [globalError, setGlobalError] = useState("");
@@ -112,7 +113,7 @@ export default function ListingFormWizard({
       await onSubmit(formData as CreateListingData);
       window.location.href = "/dashboard?tab=annonser";
     } catch (err) {
-      setGlobalError(err instanceof Error ? err.message : "Noe gikk galt");
+      setGlobalError(err instanceof Error ? err.message : t("somethingWentWrong"));
       setSubmitting(false);
     }
   };
@@ -217,7 +218,7 @@ export default function ListingFormWizard({
         {step > 0 ? (
           <Button variant="ghost" onClick={back}>
             <ArrowLeft className="mr-1.5 h-4 w-4" />
-            Tilbake
+            {tCommon("back")}
           </Button>
         ) : (
           <div />
@@ -225,7 +226,7 @@ export default function ListingFormWizard({
 
         {step < TOTAL_STEPS - 1 ? (
           <Button onClick={next}>
-            Neste
+            {tCommon("next")}
             <ArrowRight className="ml-1.5 h-4 w-4" />
           </Button>
         ) : (
@@ -233,12 +234,12 @@ export default function ListingFormWizard({
             {submitting ? (
               <>
                 <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                Publiserer...
+                {t("publishing")}
               </>
             ) : mode === "edit" ? (
-              "Lagre endringer"
+              t("saveChanges")
             ) : (
-              "Publiser annonse"
+              t("publishListing")
             )}
           </Button>
         )}

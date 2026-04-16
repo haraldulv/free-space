@@ -1,23 +1,28 @@
-const STEP_LABELS = [
-  "Kategori",
-  "Detaljer",
-  "Lokasjon",
-  "Bilder",
-  "Fasiliteter",
-  "Felles tillegg",
-  "Kalender",
-  "Publiser",
-];
+"use client";
+
+import { useTranslations } from "next-intl";
+
+const STEP_KEYS = [
+  "stepCategory",
+  "stepDetails",
+  "stepLocation",
+  "stepImages",
+  "stepAmenities",
+  "stepExtras",
+  "stepCalendar",
+  "stepPublish",
+] as const;
 
 interface StepIndicatorProps {
   currentStep: number;
 }
 
 export default function StepIndicator({ currentStep }: StepIndicatorProps) {
+  const t = useTranslations("host");
   return (
     <div className="flex items-center gap-1">
-      {STEP_LABELS.map((label, i) => (
-        <div key={label} className="flex items-center gap-1 flex-1">
+      {STEP_KEYS.map((key, i) => (
+        <div key={key} className="flex items-center gap-1 flex-1">
           <div className="flex flex-col items-center flex-1">
             <div
               className={`h-1.5 w-full rounded-full transition-colors ${
@@ -29,7 +34,7 @@ export default function StepIndicator({ currentStep }: StepIndicatorProps) {
                 i === currentStep ? "text-primary-600" : i < currentStep ? "text-neutral-500" : "text-neutral-300"
               }`}
             >
-              {label}
+              {t(key)}
             </span>
           </div>
         </div>

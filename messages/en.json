@@ -404,6 +404,20 @@
     "requiredField": "This field is required",
     "mustAcceptTerms": "You must accept the terms to continue"
   },
+  "host": {
+    "stepCategory": "Category",
+    "stepDetails": "Details",
+    "stepLocation": "Location",
+    "stepImages": "Photos",
+    "stepAmenities": "Amenities",
+    "stepExtras": "Shared extras",
+    "stepCalendar": "Calendar",
+    "stepPublish": "Publish",
+    "publishing": "Publishing...",
+    "publishListing": "Publish listing",
+    "saveChanges": "Save changes",
+    "somethingWentWrong": "Something went wrong"
+  },
   "common": {
     "loading": "Loading...",
     "save": "Save",
