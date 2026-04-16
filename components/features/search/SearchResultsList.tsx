@@ -1,5 +1,6 @@
 "use client";
 
+import { useTranslations } from "next-intl";
 import { Listing } from "@/types";
 import SearchListingCard from "./SearchListingCard";
 
@@ -22,20 +23,21 @@ export default function SearchResultsList({
   onHover,
   onSelect,
 }: SearchResultsListProps) {
+  const t = useTranslations("search");
   return (
     <div className="px-5 py-3 sm:px-6 lg:px-6">
       <div className="mb-3">
         <h1 className="text-sm font-semibold text-neutral-900">
           {listings.length > 0
-            ? `${listings.length} ${listings.length === 1 ? "plass" : "plasser"} i kartområdet`
-            : "Ingen resultater"}
+            ? t("spotsInArea", { count: listings.length })
+            : t("noResults")}
         </h1>
       </div>
 
       {listings.length === 0 ? (
         <div className="py-16 text-center">
           <p className="text-neutral-500">
-            Prøv å søke etter et annet sted eller endre filtrene dine.
+            {t("noResultsInArea")}
           </p>
         </div>
       ) : (

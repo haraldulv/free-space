@@ -1,6 +1,7 @@
-import Link from "next/link";
 import Image from "next/image";
 import { Star } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Listing, getDisplayPriceText } from "@/types";
 
 interface ListingCardProps {
@@ -8,6 +9,8 @@ interface ListingCardProps {
 }
 
 export default function ListingCard({ listing }: ListingCardProps) {
+  const t = useTranslations("listing");
+  const priceUnitLabel = listing.priceUnit === "time" ? t("day") : t("night");
   return (
     <Link href={`/listings/${listing.id}`} className="group block">
       <div className="overflow-hidden rounded-lg">
@@ -38,7 +41,7 @@ export default function ListingCard({ listing }: ListingCardProps) {
           <p className="mt-0.5 text-sm text-neutral-900">
             <span className="font-semibold">{getDisplayPriceText(listing)} kr</span>
             <span className="font-normal text-neutral-500">
-              {" "}/ {listing.priceUnit === "time" ? "dag" : "natt"}
+              {" "}/ {priceUnitLabel}
             </span>
           </p>
         </div>

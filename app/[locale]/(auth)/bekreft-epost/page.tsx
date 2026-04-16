@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Mail } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
 
 export default function BekreftEpostPage() {
+  const t = useTranslations("auth");
   const searchParams = useSearchParams();
   const email = searchParams.get("email") || "";
   const [resending, setResending] = useState(false);
@@ -30,22 +32,18 @@ export default function BekreftEpostPage() {
 
       <div>
         <h1 className="text-2xl font-bold text-neutral-900">
-          Sjekk e-posten din
+          {t("resetSent")}
         </h1>
         <p className="mt-2 text-sm text-neutral-500">
-          Vi har sendt en bekreftelseslenke til{" "}
-          {email ? (
-            <span className="font-medium text-neutral-700">{email}</span>
-          ) : (
-            "e-postadressen din"
-          )}
-          . Klikk på lenken for å aktivere kontoen din.
+          {email
+            ? t("confirmEmailInstructions", { email })
+            : t("confirmEmailInstructionsNoEmail")}
         </p>
       </div>
 
       <div className="space-y-3">
         <p className="text-xs text-neutral-400">
-          Sjekk søppelpost-mappen dersom du ikke finner e-posten.
+          {t("checkSpam")}
         </p>
 
         <Button
@@ -56,10 +54,10 @@ export default function BekreftEpostPage() {
           className="mx-auto"
         >
           {resending
-            ? "Sender..."
+            ? t("sending")
             : resent
-              ? "Sendt!"
-              : "Send bekreftelse på nytt"}
+              ? t("sent")
+              : t("resendConfirmation")}
         </Button>
       </div>
     </div>

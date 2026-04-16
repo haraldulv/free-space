@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { MapPin, Users, Clock } from "lucide-react";
+import { getTranslations } from "next-intl/server";
 import { createClient } from "@/lib/supabase/server";
-import { getListingById, getAllListingIds, getFutureBookedDates } from "@/lib/supabase/listings";
+import { getListingById, getFutureBookedDates } from "@/lib/supabase/listings";
 import { getListingReviews } from "@/lib/supabase/reviews";
 import Container from "@/components/ui/Container";
 import Badge from "@/components/ui/Badge";
@@ -20,13 +21,15 @@ export const dynamic = "force-dynamic";
 export default async function ListingPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ id: string; locale: string }>;
 }) {
   const { id } = await params;
-  const [listing, reviews, bookedDates] = await Promise.all([
+  const [listing, reviews, bookedDates, tListing, tCategory] = await Promise.all([
     getListingById(id),
     getListingReviews(id),
     getFutureBookedDates(id),
+    getTranslations("listing"),
+    getTranslations("category"),
   ]);
   if (!listing) notFound();
 
@@ -42,11 +45,11 @@ export default async function ListingPage({
         <div className="lg:col-span-2">
           <div className="flex items-center gap-3">
             <Badge>
-              {listing.category === "parking" ? "Parkering" : "Campingplass"}
+              {listing.category === "parking" ? tCategory("parking") : tCategory("camping")}
             </Badge>
             {listing.maxVehicleLength && (
               <Badge variant="secondary">
-                Max {listing.maxVehicleLength}m
+                {tListing("maxLength", { length: listing.maxVehicleLength })}
               </Badge>
             )}
           </div>
@@ -68,17 +71,20 @@ export default async function ListingPage({
             </div>
             <div className="flex items-center gap-1">
               <Users className="h-4 w-4" />
-              {listing.spots} plasser
+              {tListing("spotsAvailable", { count: listing.spots })}
             </div>
             <div className="flex items-center gap-1">
               <Clock className="h-4 w-4" />
-              Inn {listing.checkInTime || "15:00"} / Ut {listing.checkOutTime || "11:00"}
+              {tListing("checkInOutTimes", {
+                checkIn: listing.checkInTime || "15:00",
+                checkOut: listing.checkOutTime || "11:00",
+              })}
             </div>
           </div>
 
           <div className="mt-6 border-t border-neutral-100 pt-6">
             <h2 className="text-lg font-semibold text-neutral-900">
-              Om denne plassen
+              {tListing("description")}
             </h2>
             <p className="mt-2 leading-relaxed text-neutral-600">
               {listing.description}
@@ -88,7 +94,7 @@ export default async function ListingPage({
           {listing.amenities.length > 0 && (
             <div className="mt-6 border-t border-neutral-100 pt-6">
               <h2 className="mb-4 text-lg font-semibold text-neutral-900">
-                Fasiliteter
+                {tListing("amenities")}
               </h2>
               <AmenityList amenities={listing.amenities} />
             </div>
@@ -100,20 +106,20 @@ export default async function ListingPage({
             if (listingExtras.length === 0 && spotsWithExtras.length === 0) return null;
             return (
               <div className="mt-6 border-t border-neutral-100 pt-6">
-                <h2 className="mb-4 text-lg font-semibold text-neutral-900">Tillegg</h2>
+                <h2 className="mb-4 text-lg font-semibold text-neutral-900">{tListing("extras")}</h2>
                 {listingExtras.length > 0 && (
                   <div className="mb-5">
-                    <p className="mb-2 text-sm font-medium text-neutral-700">Felles tillegg</p>
+                    <p className="mb-2 text-sm font-medium text-neutral-700">{tListing("extrasShared")}</p>
                     <ExtraList extras={listingExtras} />
                   </div>
                 )}
                 {spotsWithExtras.length > 0 && (
                   <div className="space-y-3">
-                    <p className="text-sm font-medium text-neutral-700">Per plass</p>
+                    <p className="text-sm font-medium text-neutral-700">{tListing("extrasPerSpot")}</p>
                     {spotsWithExtras.map((spot, idx) => (
                       <div key={spot.id ?? idx} className="rounded-lg border border-neutral-200 p-4">
                         <p className="mb-3 text-sm font-semibold text-neutral-900">
-                          {spot.label?.trim() || `Plass ${idx + 1}`}
+                          {spot.label?.trim() || tListing("spotLabel", { number: idx + 1 })}
                         </p>
                         <ExtraList extras={spot.extras ?? []} />
                       </div>
@@ -126,7 +132,7 @@ export default async function ListingPage({
 
           <div className="mt-6 border-t border-neutral-100 pt-6">
             <h2 className="mb-4 text-lg font-semibold text-neutral-900">
-              {listing.hideExactLocation ? "Omtrentlig plassering" : "Plassering"}
+              {listing.hideExactLocation ? tListing("approximateLocation") : tListing("location")}
             </h2>
             {!listing.hideExactLocation && (
               <div className="mb-3 flex items-center gap-1 text-sm text-neutral-500">
@@ -142,7 +148,7 @@ export default async function ListingPage({
             />
             {listing.hideExactLocation && (
               <p className="mt-2 text-xs text-neutral-400">
-                Eksakt adresse deles etter bekreftet booking.
+                {tListing("exactLocationSharedAfterBooking")}
               </p>
             )}
           </div>
@@ -159,7 +165,7 @@ export default async function ListingPage({
         <div className="lg:col-span-1">
           {isOwner ? (
             <div className="lg:sticky lg:top-24 rounded-xl border border-neutral-200 bg-neutral-50 p-6 text-sm text-neutral-600">
-              Dette er din egen annonse. Bruk "Mine annonser" for å redigere den.
+              {tListing("ownerNotice")}
             </div>
           ) : (
             <BookingForm listing={listing} bookedDates={bookedDates} />

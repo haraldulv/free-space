@@ -5,8 +5,9 @@ import { createPortal } from "react-dom";
 import { Search, X, Car, Caravan, Bus, MapPin } from "lucide-react";
 import { DateRange } from "react-day-picker";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
+import { useLocale, useTranslations } from "next-intl";
 import DatePicker from "@/components/ui/DatePicker";
-import { VehicleType, vehicleLabels } from "@/types";
+import { VehicleType } from "@/types";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
@@ -44,6 +45,14 @@ export default function SearchBar({
   initialCheckOut,
   compact = false,
 }: SearchBarProps) {
+  const t = useTranslations("search");
+  const tv = useTranslations("vehicle");
+  const locale = useLocale();
+  const vehicleLabels: Record<VehicleType, string> = {
+    motorhome: tv("motorhome"),
+    campervan: tv("campervan"),
+    car: tv("car"),
+  };
   const [location, setLocation] = useState(initialQuery);
   const [vehicle, setVehicle] = useState<VehicleType>(initialVehicle || "motorhome");
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
@@ -149,12 +158,14 @@ export default function SearchBar({
       params.set("lng", searchLng.toFixed(6));
     }
     const qs = params.toString();
-    window.location.href = qs ? `/search?${qs}` : "/search";
+    const prefix = locale === "nb" ? "" : `/${locale}`;
+    window.location.href = qs ? `${prefix}/search?${qs}` : `${prefix}/search`;
   };
 
+  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
   const dateLabel =
     dateRange?.from && dateRange?.to
-      ? `${dateRange.from.toLocaleDateString("nb-NO", { day: "numeric", month: "short" })} – ${dateRange.to.toLocaleDateString("nb-NO", { day: "numeric", month: "short" })}`
+      ? `${dateRange.from.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })} – ${dateRange.to.toLocaleDateString(dateLocale, { day: "numeric", month: "short" })}`
       : undefined;
 
   const vehicleLabel = vehicleLabels[vehicle];
@@ -172,9 +183,9 @@ export default function SearchBar({
   }, [expanded]);
 
   const summaryParts = [
-    location || "Hvor som helst",
-    dateLabel || "Når som helst",
-    vehicleLabel || "Kjøretøy",
+    location || t("anywhere"),
+    dateLabel || t("anytime"),
+    vehicleLabel || t("vehicle"),
   ];
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -210,7 +221,7 @@ export default function SearchBar({
             </button>
           ))
         ) : location.trim() ? (
-          <div className="px-4 py-3 text-sm text-neutral-400">Søker...</div>
+          <div className="px-4 py-3 text-sm text-neutral-400">{t("searching")}</div>
         ) : null}
       </div>
     );
@@ -242,8 +253,8 @@ export default function SearchBar({
                   className={`flex-1 min-w-0 px-5 h-[48px] text-left rounded-full transition-all ${activeSegment === "where" ? "bg-white shadow-lg" : activeSegment ? "hover:bg-neutral-200/50" : "hover:bg-neutral-50"}`}
                   onClick={() => setActiveSegment("where")}
                 >
-                  <div className="text-xs font-semibold text-neutral-900">Hvor</div>
-                  <input type="text" value={location} onChange={(e) => handleLocationChange(e.target.value)} onKeyDown={handleKeyDown} onFocus={() => setActiveSegment("where")} placeholder="Søk etter sted eller adresse" className="w-full bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none truncate" tabIndex={activeSegment === "where" ? 0 : -1} readOnly={activeSegment !== "where"} autoFocus />
+                  <div className="text-xs font-semibold text-neutral-900">{t("where")}</div>
+                  <input type="text" value={location} onChange={(e) => handleLocationChange(e.target.value)} onKeyDown={handleKeyDown} onFocus={() => setActiveSegment("where")} placeholder={t("locationPlaceholder")} className="w-full bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none truncate" tabIndex={activeSegment === "where" ? 0 : -1} readOnly={activeSegment !== "where"} autoFocus />
                 </button>
                 {!activeSegment && <div className="h-8 w-px bg-neutral-200 shrink-0" />}
                 <button
@@ -251,17 +262,17 @@ export default function SearchBar({
                   onClick={() => setActiveSegment("when")}
                 >
                   <div className="text-xs font-semibold text-neutral-900">Når</div>
-                  <div className={`text-sm truncate ${dateLabel ? "text-neutral-700" : "text-neutral-400"}`}>{dateLabel || "Legg til dato"}</div>
+                  <div className={`text-sm truncate ${dateLabel ? "text-neutral-700" : "text-neutral-400"}`}>{dateLabel || t("addDate")}</div>
                 </button>
                 {!activeSegment && <div className="h-8 w-px bg-neutral-200 shrink-0" />}
                 <button
                   className={`flex-1 min-w-0 px-5 h-[48px] text-left rounded-full transition-all ${activeSegment === "vehicle" ? "bg-white shadow-lg" : activeSegment ? "hover:bg-neutral-200/50" : "hover:bg-neutral-50"}`}
                   onClick={() => setActiveSegment("vehicle")}
                 >
-                  <div className="text-xs font-semibold text-neutral-900">Kjøretøy</div>
-                  <div className={`flex items-center gap-1.5 text-sm truncate ${vehicleLabel ? "text-neutral-700" : "text-neutral-400"}`}><VehicleIcon className="h-3.5 w-3.5" />{vehicleLabel || "Legg til kjøretøy"}</div>
+                  <div className="text-xs font-semibold text-neutral-900">{t("vehicle")}</div>
+                  <div className={`flex items-center gap-1.5 text-sm truncate ${vehicleLabel ? "text-neutral-700" : "text-neutral-400"}`}><VehicleIcon className="h-3.5 w-3.5" />{vehicleLabel || t("addVehicle")}</div>
                 </button>
-                <button onClick={handleSearch} className="m-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md transition-all hover:shadow-lg active:scale-95" aria-label="Søk">
+                <button onClick={handleSearch} className="m-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md transition-all hover:shadow-lg active:scale-95" aria-label={t("button")}>
                   <Search className="h-3.5 w-3.5" />
                 </button>
               </div>
@@ -296,9 +307,9 @@ export default function SearchBar({
         >
           <Search className="h-4 w-4 text-neutral-900 shrink-0" />
           <div className="text-left min-w-0">
-            <div className="text-sm font-medium text-neutral-900 truncate">{location || "Hvor vil du?"}</div>
+            <div className="text-sm font-medium text-neutral-900 truncate">{location || t("whereToGo")}</div>
             <div className="text-xs text-neutral-400 truncate">
-              {[dateLabel, vehicleLabel].filter(Boolean).join(" · ") || "Sted · Dato · Kjøretøy"}
+              {[dateLabel, vehicleLabel].filter(Boolean).join(" · ") || t("defaultSummary")}
             </div>
           </div>
         </button>
@@ -307,14 +318,14 @@ export default function SearchBar({
         {mobileOpen && createPortal(
           <div className="md:hidden" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
             <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-              <button onClick={() => setMobileOpen(false)} className="rounded-full p-2.5 hover:bg-neutral-100" aria-label="Lukk"><X className="h-5 w-5" /></button>
-              <span className="text-sm font-semibold">Søk</span>
+              <button onClick={() => setMobileOpen(false)} className="rounded-full p-2.5 hover:bg-neutral-100" aria-label={t("close")}><X className="h-5 w-5" /></button>
+              <span className="text-sm font-semibold">{t("title")}</span>
               <div className="w-9" />
             </div>
             <div className="space-y-4 p-4 overflow-y-auto flex-1">
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Hvor</label>
-                <input type="text" value={location} onChange={(e) => handleLocationChange(e.target.value)} onKeyDown={handleKeyDown} placeholder="Søk etter sted eller adresse" className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
+                <label className="mb-1.5 block text-sm font-semibold text-neutral-900">{t("where")}</label>
+                <input type="text" value={location} onChange={(e) => handleLocationChange(e.target.value)} onKeyDown={handleKeyDown} placeholder={t("locationPlaceholder")} className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20" />
                 {suggestions.length > 0 && (
                   <div className="mt-2 rounded-lg border border-neutral-200 bg-white py-1 max-h-48 overflow-y-auto">
                     {suggestions.map((s) => (
@@ -330,17 +341,17 @@ export default function SearchBar({
                 )}
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Når</label>
+                <label className="mb-1.5 block text-sm font-semibold text-neutral-900">{t("when")}</label>
                 <DatePicker selected={dateRange} onSelect={setDateRange} />
               </div>
               <div>
-                <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Kjøretøy</label>
+                <label className="mb-1.5 block text-sm font-semibold text-neutral-900">{t("vehicle")}</label>
                 <div className="grid grid-cols-2 gap-2">
                   {vehicleOptions.map((opt) => { const Icon = opt.icon; const isSelected = vehicle === opt.value; return (<button key={opt.value} onClick={() => setVehicle(isSelected ? "motorhome" : opt.value)} className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${isSelected ? "border-primary-600 bg-primary-50 text-primary-700 font-medium" : "border-neutral-200 text-neutral-700 hover:border-neutral-300"}`}><Icon className="h-4 w-4" />{vehicleLabels[opt.value]}</button>); })}
                 </div>
               </div>
               <button onClick={handleSearch} className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-700">
-                <Search className="mr-2 inline-block h-4 w-4" />Søk
+                <Search className="mr-2 inline-block h-4 w-4" />{t("button")}
               </button>
             </div>
           </div>,
@@ -368,7 +379,7 @@ export default function SearchBar({
               onChange={(e) => handleLocationChange(e.target.value)}
               onKeyDown={handleKeyDown}
               onFocus={() => setActiveSegment("where")}
-              placeholder="Søk etter sted eller adresse"
+              placeholder={t("locationPlaceholder")}
               className="w-full bg-transparent text-sm text-neutral-700 placeholder:text-neutral-400 focus:outline-none truncate"
               tabIndex={activeSegment === "where" ? 0 : -1}
               readOnly={activeSegment !== "where"}
@@ -385,7 +396,7 @@ export default function SearchBar({
           >
             <div className="text-xs font-semibold text-neutral-900">Når</div>
             <div className={`text-sm truncate ${dateLabel ? "text-neutral-700" : "text-neutral-400"}`}>
-              {dateLabel || "Legg til dato"}
+              {dateLabel || t("addDate")}
             </div>
           </button>
 
@@ -399,14 +410,14 @@ export default function SearchBar({
           >
             <div className="text-xs font-semibold text-neutral-900">Kjøretøy</div>
             <div className={`flex items-center gap-1.5 text-sm truncate ${vehicleLabel ? "text-neutral-700" : "text-neutral-400"}`}>
-              <VehicleIcon className="h-3.5 w-3.5" />{vehicleLabel || "Legg til kjøretøy"}
+              <VehicleIcon className="h-3.5 w-3.5" />{vehicleLabel || t("addVehicle")}
             </div>
           </button>
 
           <button
             onClick={handleSearch}
             className="m-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95"
-            aria-label="Søk"
+            aria-label={t("button")}
           >
             <Search className="h-4 w-4" />
           </button>
@@ -449,9 +460,9 @@ export default function SearchBar({
       >
         <Search className="h-4 w-4 text-neutral-900 shrink-0" />
         <div className="text-left min-w-0">
-          <div className="text-sm font-medium text-neutral-900 truncate">{location || "Hvor vil du?"}</div>
+          <div className="text-sm font-medium text-neutral-900 truncate">{location || t("whereToGo")}</div>
           <div className="text-xs text-neutral-400 truncate">
-            {[dateLabel, vehicleLabel].filter(Boolean).join(" · ") || "Sted · Dato · Kjøretøy"}
+            {[dateLabel, vehicleLabel].filter(Boolean).join(" · ") || t("defaultSummary")}
           </div>
         </div>
       </button>
@@ -460,22 +471,22 @@ export default function SearchBar({
       {mobileOpen && createPortal(
         <div className="md:hidden" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, zIndex: 9999, backgroundColor: '#ffffff', display: 'flex', flexDirection: 'column' }}>
           <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-3">
-            <button onClick={() => setMobileOpen(false)} className="rounded-full p-2.5 hover:bg-neutral-100" aria-label="Lukk">
+            <button onClick={() => setMobileOpen(false)} className="rounded-full p-2.5 hover:bg-neutral-100" aria-label={t("close")}>
               <X className="h-5 w-5" />
             </button>
-            <span className="text-sm font-semibold">Søk</span>
+            <span className="text-sm font-semibold">{t("title")}</span>
             <div className="w-10" />
           </div>
 
           <div className="space-y-4 p-4 overflow-y-auto flex-1">
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Hvor</label>
+              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">{t("where")}</label>
               <input
                 type="text"
                 value={location}
                 onChange={(e) => handleLocationChange(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Søk etter sted eller adresse"
+                placeholder={t("locationPlaceholder")}
                 className="w-full rounded-lg border border-neutral-300 px-4 py-3 text-sm placeholder:text-neutral-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20"
               />
               {suggestions.length > 0 && (
@@ -494,12 +505,12 @@ export default function SearchBar({
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Når</label>
+              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">{t("when")}</label>
               <DatePicker selected={dateRange} onSelect={setDateRange} />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">Kjøretøy</label>
+              <label className="mb-1.5 block text-sm font-semibold text-neutral-900">{t("vehicle")}</label>
               <div className="grid grid-cols-2 gap-2">
                 {vehicleOptions.map((opt) => {
                   const Icon = opt.icon;

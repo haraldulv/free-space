@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { forgotPasswordSchema } from "@/lib/utils/validation";
 import AuthForm from "@/components/features/AuthForm";
 
 export default function ForgotPasswordPage() {
+  const t = useTranslations("auth");
   const [sent, setSent] = useState(false);
   const supabase = createClient();
 
@@ -28,15 +30,15 @@ export default function ForgotPasswordPage() {
   if (sent) {
     return (
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-neutral-900">Sjekk e-posten din</h1>
+        <h1 className="text-2xl font-bold text-neutral-900">{t("resetSent")}</h1>
         <p className="mt-2 text-sm text-neutral-500">
-          Vi har sendt en lenke for å tilbakestille passordet til e-postadressen din.
+          {t("resetLinkSent")}
         </p>
         <Link
           href="/login"
           className="mt-4 inline-block text-sm text-primary-600 hover:text-primary-700"
         >
-          Tilbake til innlogging
+          {t("backToLogin")}
         </Link>
       </div>
     );
@@ -44,25 +46,25 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthForm
-      title="Tilbakestill passord"
-      subtitle="Skriv inn e-posten din, så sender vi en tilbakestillingslenke"
+      title={t("forgotPasswordTitle")}
+      subtitle={t("resetPasswordSubtitle")}
       fields={[
         {
           name: "email",
-          label: "E-post",
+          label: t("email"),
           type: "email",
-          placeholder: "deg@eksempel.no",
+          placeholder: t("emailPlaceholder"),
           autoComplete: "email",
         },
       ]}
-      submitLabel="Send tilbakestillingslenke"
+      submitLabel={t("sendResetLink")}
       onSubmit={handleSubmit}
       footer={
         <Link
           href="/login"
           className="text-primary-600 hover:text-primary-700"
         >
-          Tilbake til innlogging
+          {t("backToLogin")}
         </Link>
       }
     />

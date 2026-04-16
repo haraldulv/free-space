@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter, Link } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { loginSchema } from "@/lib/utils/validation";
 import AuthForm from "@/components/features/AuthForm";
@@ -9,6 +10,7 @@ import GoogleSignInButton from "@/components/features/GoogleSignInButton";
 import AppleSignInButton from "@/components/features/AppleSignInButton";
 
 export default function LoginPage() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
@@ -33,8 +35,8 @@ export default function LoginPage() {
   return (
     <div className="space-y-5">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-neutral-900">Velkommen tilbake</h1>
-        <p className="mt-1 text-sm text-neutral-500">Logg inn på din Tuno-konto</p>
+        <h1 className="text-2xl font-bold text-neutral-900">{t("loginTitle")}</h1>
+        <p className="mt-1 text-sm text-neutral-500">{t("loginSubtitle")}</p>
       </div>
 
       <AppleSignInButton redirectTo={redirectTo} />
@@ -45,7 +47,7 @@ export default function LoginPage() {
           <div className="w-full border-t border-neutral-200" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="bg-white px-3 text-neutral-400">eller</span>
+          <span className="bg-white px-3 text-neutral-400">{t("or")}</span>
         </div>
       </div>
 
@@ -53,20 +55,20 @@ export default function LoginPage() {
         fields={[
           {
             name: "email",
-            label: "E-post",
+            label: t("email"),
             type: "email",
-            placeholder: "deg@eksempel.no",
+            placeholder: t("emailPlaceholder"),
             autoComplete: "email",
           },
           {
             name: "password",
-            label: "Passord",
+            label: t("password"),
             type: "password",
-            placeholder: "••••••••",
+            placeholder: t("passwordDots"),
             autoComplete: "current-password",
           },
         ]}
-        submitLabel="Logg inn"
+        submitLabel={t("loginButton")}
         onSubmit={handleLogin}
         footer={
           <>
@@ -74,14 +76,17 @@ export default function LoginPage() {
               href="/forgot-password"
               className="text-primary-600 hover:text-primary-700"
             >
-              Glemt passord?
+              {t("forgotPassword")}
             </Link>
             <span className="mx-2">&middot;</span>
             <Link
-              href={`/register${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
+              href={{
+                pathname: "/register",
+                query: redirectTo !== "/dashboard" ? { redirectTo } : {},
+              }}
               className="text-primary-600 hover:text-primary-700"
             >
-              Opprett konto
+              {t("createAccount")}
             </Link>
           </>
         }

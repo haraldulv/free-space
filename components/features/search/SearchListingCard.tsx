@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import Link from "next/link";
 import { Star, Zap } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { Listing, getDisplayPriceText } from "@/types";
 import ImageCarousel from "@/components/features/ImageCarousel";
 import FavoriteButton from "@/components/features/FavoriteButton";
@@ -28,6 +29,7 @@ export default function SearchListingCard({
   onMouseLeave,
   onClick,
 }: SearchListingCardProps) {
+  const t = useTranslations("listing");
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -35,6 +37,8 @@ export default function SearchListingCard({
       ref.current.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
   }, [isSelected]);
+
+  const priceUnitLabel = listing.priceUnit === "time" ? t("hour") : t("night");
 
   return (
     <div
@@ -83,17 +87,24 @@ export default function SearchListingCard({
             <p className="text-sm text-neutral-900">
               <span className="font-semibold">{getDisplayPriceText(listing)} kr</span>
               <span className="font-normal text-neutral-500">
-                {" "}/ {listing.priceUnit === "time" ? "time" : "natt"}
+                {" "}/ {priceUnitLabel}
               </span>
             </p>
             <div className="flex items-center gap-1.5">
               {listing.instantBooking && (
-                <span className="flex items-center text-[10px] font-semibold text-green-600" title="Direktebooking">
+                <span className="flex items-center text-[10px] font-semibold text-green-600" title={t("instantBook")}>
                   <Zap className="h-3 w-3 fill-green-600" />
                 </span>
               )}
               {listing.spots > 1 && (
-                <span className="flex items-center gap-0.5 text-[10px] text-neutral-400" title={listing.availableSpots !== undefined ? `${listing.availableSpots}/${listing.spots} plasser tilgjengelig` : `${listing.spots} plasser`}>
+                <span
+                  className="flex items-center gap-0.5 text-[10px] text-neutral-400"
+                  title={
+                    listing.availableSpots !== undefined
+                      ? t("spotsOfTotalAvailable", { available: listing.availableSpots, total: listing.spots })
+                      : t("spotsAvailable", { count: listing.spots })
+                  }
+                >
                   <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2" />
                     <circle cx="7" cy="17" r="2" /><path d="M9 17h6" /><circle cx="17" cy="17" r="2" />

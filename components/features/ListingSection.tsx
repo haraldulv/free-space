@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Listing } from "@/types";
 import ListingCard from "./ListingCard";
 import Container from "@/components/ui/Container";
@@ -12,6 +13,7 @@ interface ListingSectionProps {
 }
 
 export default function ListingSection({ title, listings }: ListingSectionProps) {
+  const t = useTranslations("common");
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
@@ -63,7 +65,7 @@ export default function ListingSection({ title, listings }: ListingSectionProps)
                   ? "bg-white text-neutral-700 hover:bg-neutral-50"
                   : "bg-neutral-100 text-neutral-300 cursor-default"
               }`}
-              aria-label="Forrige"
+              aria-label={t("previous")}
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
@@ -75,7 +77,7 @@ export default function ListingSection({ title, listings }: ListingSectionProps)
                   ? "bg-white text-neutral-700 hover:bg-neutral-50"
                   : "bg-neutral-100 text-neutral-300 cursor-default"
               }`}
-              aria-label="Neste"
+              aria-label={t("next")}
             >
               <ChevronRight className="h-4 w-4" />
             </button>

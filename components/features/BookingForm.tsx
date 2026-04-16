@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
-import { useRouter } from "next/navigation";
 import { DateRange } from "react-day-picker";
 import { differenceInDays, format } from "date-fns";
 import { CalendarDays, Star, Users, Plus, Minus, MapPin, Sparkles } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import DatePicker from "@/components/ui/DatePicker";
 import Button from "@/components/ui/Button";
 import { Listing, SpotMarker, getDisplayPriceText } from "@/types";
@@ -17,6 +18,11 @@ interface BookingFormProps {
 }
 
 export default function BookingForm({ listing, bookedDates }: BookingFormProps) {
+  const t = useTranslations("booking");
+  const tListing = useTranslations("listing");
+  const tCommon = useTranslations("common");
+  const locale = useLocale();
+  const dateLocale = locale === "en" ? "en-GB" : "nb-NO";
   const router = useRouter();
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [showCalendar, setShowCalendar] = useState(false);
@@ -205,7 +211,7 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
     router.push(`/book/${listing.id}?${params.toString()}`);
   };
 
-  const priceLabel = listing.priceUnit === "time" ? "dag" : "natt";
+  const priceLabel = listing.priceUnit === "time" ? tListing("day") : tListing("night");
   const hasListingExtras = (listing.extras || []).length > 0;
 
   const buttonDisabled =
@@ -237,11 +243,11 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
           <CalendarDays className="h-4 w-4 text-neutral-400" />
           {dateRange?.from && dateRange?.to ? (
             <span className="text-neutral-900">
-              {dateRange.from.toLocaleDateString("nb-NO")} –{" "}
-              {dateRange.to.toLocaleDateString("nb-NO")}
+              {dateRange.from.toLocaleDateString(dateLocale)} –{" "}
+              {dateRange.to.toLocaleDateString(dateLocale)}
             </span>
           ) : (
-            <span className="text-neutral-400">Velg datoer</span>
+            <span className="text-neutral-400">{t("selectDates")}</span>
           )}
         </button>
         {showCalendar && (
@@ -255,7 +261,7 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
         <div className="mt-4 flex items-center gap-2 rounded-lg bg-neutral-50 px-3 py-2 text-sm">
           <Users className="h-4 w-4 text-neutral-400" />
           <span className={availability.availableSpots === 0 ? "font-medium text-red-600" : "text-neutral-600"}>
-            {availability.availableSpots}/{availability.totalSpots} plasser tilgjengelig
+            {tListing("spotsOfTotalAvailable", { available: availability.availableSpots, total: availability.totalSpots })}
           </span>
         </div>
       )}
@@ -263,7 +269,7 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
       {/* Spot picker */}
       {hasSpotLevelPricing && nights > 0 && (
         <div className="mt-4 border-t border-neutral-100 pt-4">
-          <p className="text-sm font-medium text-neutral-700 mb-2">Velg plasser</p>
+          <p className="text-sm font-medium text-neutral-700 mb-2">{t("selectSpots")}</p>
           <div className="space-y-2">
             {spotMarkers.map((spot, i) => {
               if (!spot.id) return null;
@@ -282,9 +288,9 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
                       <MapPin className="h-4 w-4" />
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm font-medium text-neutral-900">{spot.label ?? `Plass ${i + 1}`}</div>
+                      <div className="text-sm font-medium text-neutral-900">{spot.label ?? tListing("spotLabel", { number: i + 1 })}</div>
                       <div className="text-xs text-neutral-500">
-                        {blocked ? "Ikke tilgjengelig for disse datoene" : `${price} kr/natt`}
+                        {blocked ? t("spotNotAvailable") : t("pricePerNightShort", { price })}
                       </div>
                     </div>
                     <div className={`flex h-5 w-5 items-center justify-center rounded border-2 ${blocked ? "border-neutral-300" : isSelected ? "border-primary-600 bg-primary-600" : "border-neutral-300"}`}>
@@ -301,7 +307,9 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
                               <Sparkles className="h-3 w-3 text-primary-600" />
                               <span className="text-neutral-700">{extra.name}</span>
                               <span className="text-xs text-neutral-400">
-                                {extra.price} kr{extra.perNight ? "/natt" : ""}
+                                {extra.perNight
+                                  ? t("pricePerNightShort", { price: extra.price })
+                                  : `${extra.price} kr`}
                               </span>
                             </div>
                             <div className="flex items-center gap-2">
@@ -335,7 +343,7 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
       {/* Listing-wide extras */}
       {hasListingExtras && nights > 0 && (
         <div className="mt-4 border-t border-neutral-100 pt-4">
-          <p className="text-sm font-medium text-neutral-700 mb-3">Tilleggstjenester</p>
+          <p className="text-sm font-medium text-neutral-700 mb-3">{t("extrasLabel")}</p>
           <div className="space-y-2">
             {(listing.extras || []).map((extra) => {
               const qty = listingExtras[extra.id] || 0;
@@ -345,7 +353,9 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
                   <div>
                     <span className="text-neutral-700">{extra.name}</span>
                     <span className="ml-1 text-neutral-400">
-                      {extra.price} kr{extra.perNight ? "/natt" : ""}
+                      {extra.perNight
+                        ? t("pricePerNightShort", { price: extra.price })
+                        : `${extra.price} kr`}
                     </span>
                   </div>
                   <div className="flex items-center gap-2">
@@ -377,23 +387,25 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
           <div className="flex justify-between text-neutral-600">
             <span>
               {hasSpotLevelPricing && selectedSpots.length > 0
-                ? `${selectedSpots.length} plass${selectedSpots.length > 1 ? "er" : ""} × ${nights} ${nights === 1 ? "natt" : "netter"}`
-                : `${listing.price} kr × ${nights} ${nights === 1 ? priceLabel : priceLabel === "dag" ? "dager" : "netter"}`}
+                ? t("spotsTimesNights", { spots: selectedSpots.length, nights })
+                : listing.priceUnit === "time"
+                  ? t("pricePerDayCalc", { price: listing.price, days: nights })
+                  : t("pricePerNightCalc", { price: listing.price, nights })}
             </span>
             <span>{baseTotal} kr</span>
           </div>
           {(listingExtrasTotal + spotExtrasTotal) > 0 && (
             <div className="flex justify-between text-neutral-600">
-              <span>Tilleggstjenester</span>
+              <span>{t("extrasLabel")}</span>
               <span>{listingExtrasTotal + spotExtrasTotal} kr</span>
             </div>
           )}
           <div className="flex justify-between text-neutral-600">
-            <span>Serviceavgift</span>
+            <span>{t("serviceFeeLabel")}</span>
             <span>{serviceFee} kr</span>
           </div>
           <div className="flex justify-between border-t border-neutral-100 pt-2 font-semibold text-neutral-900">
-            <span>Totalt</span>
+            <span>{t("totalLabel")}</span>
             <span>{total} kr</span>
           </div>
         </div>
@@ -406,14 +418,14 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
         disabled={buttonDisabled}
       >
         {checkingAvailability
-          ? "Sjekker tilgjengelighet..."
+          ? t("checkingAvailability")
           : availability?.availableSpots === 0
-            ? "Fullbooket"
+            ? t("fullyBooked")
             : hasSpotLevelPricing && nights > 0 && selectedSpotIds.length === 0
-              ? "Velg minst én plass"
+              ? t("selectAtLeastOneSpot")
               : dateRange?.from && dateRange?.to
-                ? "Reserver"
-                : "Sjekk tilgjengelighet"}
+                ? t("reserve")
+                : t("checkAvailability")}
       </Button>
     </div>
   );

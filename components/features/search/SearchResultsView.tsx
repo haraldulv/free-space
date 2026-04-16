@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Map, List, Maximize2, Minimize2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { Listing, ListingCategory, VehicleType } from "@/types";
 import { getUserFavorites } from "@/lib/supabase/favorites";
 import SearchResultsList from "./SearchResultsList";
@@ -19,6 +20,7 @@ interface SearchResultsViewProps {
 export default function SearchResultsView({
   listings,
 }: SearchResultsViewProps) {
+  const t = useTranslations("search");
   const [hoveredListingId, setHoveredListingId] = useState<string | null>(null);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
     null,
@@ -102,7 +104,7 @@ export default function SearchResultsView({
           <button
             onClick={() => setMapFullscreen(!mapFullscreen)}
             className="absolute top-5 right-5 z-[1000] hidden lg:flex h-9 w-9 items-center justify-center rounded-lg bg-white shadow-md transition-colors hover:bg-neutral-100"
-            aria-label={mapFullscreen ? "Lukk fullskjerm" : "Fullskjerm kart"}
+            aria-label={mapFullscreen ? t("closeFullscreen") : t("fullscreenMap")}
           >
             {mapFullscreen ? (
               <Minimize2 className="h-4 w-4 text-neutral-600" />
@@ -123,12 +125,12 @@ export default function SearchResultsView({
         {mobileView === "list" ? (
           <>
             <Map className="h-4 w-4" />
-            Vis kart
+            {t("showMap")}
           </>
         ) : (
           <>
             <List className="h-4 w-4" />
-            Vis liste
+            {t("showList")}
           </>
         )}
       </button>

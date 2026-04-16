@@ -1,11 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { useRouter } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { resetPasswordSchema } from "@/lib/utils/validation";
 import AuthForm from "@/components/features/AuthForm";
 
 export default function ResetPasswordPage() {
+  const t = useTranslations("auth");
   const router = useRouter();
   const supabase = createClient();
 
@@ -25,25 +27,25 @@ export default function ResetPasswordPage() {
 
   return (
     <AuthForm
-      title="Sett nytt passord"
-      subtitle="Skriv inn ditt nye passord nedenfor"
+      title={t("newPasswordTitle")}
+      subtitle={t("newPasswordSubtitle")}
       fields={[
         {
           name: "password",
-          label: "Nytt passord",
+          label: t("newPassword"),
           type: "password",
-          placeholder: "••••••••",
+          placeholder: t("passwordDots"),
           autoComplete: "new-password",
         },
         {
           name: "confirmPassword",
-          label: "Bekreft nytt passord",
+          label: t("confirmNewPassword"),
           type: "password",
-          placeholder: "••••••••",
+          placeholder: t("passwordDots"),
           autoComplete: "new-password",
         },
       ]}
-      submitLabel="Oppdater passord"
+      submitLabel={t("updatePassword")}
       onSubmit={handleReset}
     />
   );

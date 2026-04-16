@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { registerSchema } from "@/lib/utils/validation";
 import AuthForm from "@/components/features/AuthForm";
@@ -10,7 +11,7 @@ import GoogleSignInButton from "@/components/features/GoogleSignInButton";
 import AppleSignInButton from "@/components/features/AppleSignInButton";
 
 export default function RegisterPage() {
-  const router = useRouter();
+  const t = useTranslations("auth");
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
   const supabase = createClient();
@@ -21,8 +22,8 @@ export default function RegisterPage() {
     setTermsError("");
 
     if (!termsAccepted) {
-      setTermsError("Du må godta vilkårene for å opprette konto");
-      throw new Error("Du må godta vilkårene for å opprette konto");
+      setTermsError(t("mustAcceptTermsToCreate"));
+      throw new Error(t("mustAcceptTermsToCreate"));
     }
 
     const result = registerSchema.safeParse(values);
@@ -53,8 +54,8 @@ export default function RegisterPage() {
   return (
     <div className="space-y-5">
       <div className="text-center">
-        <h1 className="text-2xl font-bold text-neutral-900">Opprett konto</h1>
-        <p className="mt-1 text-sm text-neutral-500">Bli med på Tuno og begynn å booke</p>
+        <h1 className="text-2xl font-bold text-neutral-900">{t("registerTitle")}</h1>
+        <p className="mt-1 text-sm text-neutral-500">{t("registerSubtitle")}</p>
       </div>
 
       <AppleSignInButton redirectTo={redirectTo} />
@@ -65,7 +66,7 @@ export default function RegisterPage() {
           <div className="w-full border-t border-neutral-200" />
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="bg-white px-3 text-neutral-400">eller</span>
+          <span className="bg-white px-3 text-neutral-400">{t("or")}</span>
         </div>
       </div>
 
@@ -73,34 +74,34 @@ export default function RegisterPage() {
         fields={[
           {
             name: "fullName",
-            label: "Fullt navn",
+            label: t("fullName"),
             type: "text",
-            placeholder: "Ola Nordmann",
+            placeholder: t("fullNamePlaceholder"),
             autoComplete: "name",
           },
           {
             name: "email",
-            label: "E-post",
+            label: t("email"),
             type: "email",
-            placeholder: "deg@eksempel.no",
+            placeholder: t("emailPlaceholder"),
             autoComplete: "email",
           },
           {
             name: "password",
-            label: "Passord",
+            label: t("password"),
             type: "password",
-            placeholder: "••••••••",
+            placeholder: t("passwordDots"),
             autoComplete: "new-password",
           },
           {
             name: "confirmPassword",
-            label: "Bekreft passord",
+            label: t("confirmPassword"),
             type: "password",
-            placeholder: "••••••••",
+            placeholder: t("passwordDots"),
             autoComplete: "new-password",
           },
         ]}
-        submitLabel="Opprett konto"
+        submitLabel={t("createAccount")}
         onSubmit={handleRegister}
         extraContent={
           <div>
@@ -115,21 +116,21 @@ export default function RegisterPage() {
                 className="mt-0.5 h-4 w-4 rounded border-neutral-300 text-[#46C185] focus:ring-[#46C185]"
               />
               <span className="text-sm text-neutral-600">
-                Jeg godtar Tunos{" "}
+                {t("acceptTermsIntro")}{" "}
                 <Link
                   href="/vilkar"
                   target="_blank"
                   className="underline text-neutral-900 hover:text-[#46C185]"
                 >
-                  brukervilkår
+                  {t("userTerms")}
                 </Link>{" "}
-                og{" "}
+                {t("and")}{" "}
                 <Link
                   href="/personvern"
                   target="_blank"
                   className="underline text-neutral-900 hover:text-[#46C185]"
                 >
-                  personvernerklæring
+                  {t("privacyPolicy")}
                 </Link>
               </span>
             </label>
@@ -140,12 +141,15 @@ export default function RegisterPage() {
         }
         footer={
           <>
-            Har du allerede en konto?{" "}
+            {t("haveAccount")}{" "}
             <Link
-              href={`/login${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
+              href={{
+                pathname: "/login",
+                query: redirectTo !== "/dashboard" ? { redirectTo } : {},
+              }}
               className="text-primary-600 hover:text-primary-700"
             >
-              Logg inn
+              {t("loginButton")}
             </Link>
           </>
         }
