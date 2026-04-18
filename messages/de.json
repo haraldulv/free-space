@@ -269,7 +269,12 @@
     "sendRequestAmount": "Anfrage senden — {amount} kr",
     "tunoGuaranteeRequest": "Du wirst nur belastet, wenn der Gastgeber bestätigt. Die Tuno-Garantie schützt dich.",
     "requestSentTitle": "Anfrage gesendet!",
-    "requestSentDesc": "Wir haben deine Zahlung autorisiert und den Gastgeber benachrichtigt. Du wirst nur belastet, wenn der Gastgeber bestätigt — andernfalls wird der Betrag innerhalb von 24 Stunden automatisch freigegeben."
+    "requestSentDesc": "Wir haben deine Zahlung autorisiert und den Gastgeber benachrichtigt. Du wirst nur belastet, wenn der Gastgeber bestätigt — andernfalls wird der Betrag innerhalb von 24 Stunden automatisch freigegeben.",
+    "reviewGuest": "Gast bewerten",
+    "counterpartReviewedYou": "Die andere Partei hat dich bewertet",
+    "writeYoursToReveal": "Schreibe deine, um zu sehen, was sie geschrieben haben (oder warte 14 Tage).",
+    "hostReviewedYou": "Gastgeber über dich",
+    "guestReviewedYou": "Gast über dich"
   },
   "dashboard": {
     "title": "Dashboard",

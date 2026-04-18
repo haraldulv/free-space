@@ -240,7 +240,7 @@ export default function DashboardPage() {
       // Fetch host rentals (bookings on user's listings)
       const { data: rentalRows } = await supabase
         .from("bookings")
-        .select("*, listings(title, images, category, city, region, address, lat, lng, check_in_time, check_out_time), guest:user_id(full_name, avatar_url)")
+        .select("*, listings(title, images, category, city, region, address, lat, lng, check_in_time, check_out_time), guest:user_id(full_name, avatar_url, rating, review_count)")
         .eq("host_id", data.user.id)
         .order("created_at", { ascending: false });
 
@@ -267,6 +267,8 @@ export default function DashboardPage() {
             guestName: (row.guest as Record<string, unknown>)?.full_name as string || t("anonymous"),
             guestAvatar: (row.guest as Record<string, unknown>)?.avatar_url as string || "",
             guestEmail: (row.guest as Record<string, unknown>)?.email as string || "",
+            guestRating: (row.guest as Record<string, unknown>)?.rating as number || 0,
+            guestReviewCount: (row.guest as Record<string, unknown>)?.review_count as number || 0,
             cancelledAt: row.cancelled_at,
             cancelledBy: row.cancelled_by,
             cancellationReason: row.cancellation_reason,

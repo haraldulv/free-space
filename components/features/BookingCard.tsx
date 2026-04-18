@@ -10,6 +10,7 @@ import Badge from "@/components/ui/Badge";
 import Button from "@/components/ui/Button";
 import ReviewForm from "@/components/features/ReviewForm";
 import { getCancellationPreviewAction } from "@/app/[locale]/(main)/book/actions";
+import { getBookingReviewStatusAction } from "@/app/[locale]/(main)/reviews/actions";
 import { getOrCreateConversationAction } from "@/app/[locale]/(main)/meldinger/actions";
 import { Booking } from "@/types";
 
@@ -42,7 +43,13 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
   const isRequested = booking.status === "requested";
   const canCancel = (booking.status === "pending" || booking.status === "confirmed") && !isRequested;
   const isPast = new Date(booking.checkOut) < new Date();
-  const canReview = booking.status === "confirmed" && isPast && !reviewed;
+  const [reviewStatus, setReviewStatus] = useState<{
+    hasMyReview: boolean;
+    hasCounterpart: boolean;
+    counterpartVisible: boolean;
+    counterpart: { rating: number; comment: string; createdAt: string } | null;
+  } | null>(null);
+  const canReview = booking.status === "confirmed" && isPast && !reviewed && reviewStatus !== null && !reviewStatus.hasMyReview;
   const canRespond = isRequested && variant === "host" && onApprove && onDecline;
   const deadlineMs = booking.approvalDeadline ? new Date(booking.approvalDeadline).getTime() - Date.now() : null;
   const deadlineHours = deadlineMs != null ? Math.max(0, Math.floor(deadlineMs / 3600000)) : null;
@@ -55,6 +62,21 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
       });
     }
   }, [showConfirm, booking.id, refundPreview]);
+
+  useEffect(() => {
+    if (booking.status === "confirmed" && isPast) {
+      getBookingReviewStatusAction(booking.id).then((r) => {
+        if (!r.error) {
+          setReviewStatus({
+            hasMyReview: !!r.hasMyReview,
+            hasCounterpart: !!r.hasCounterpart,
+            counterpartVisible: !!r.counterpartVisible,
+            counterpart: r.counterpart || null,
+          });
+        }
+      });
+    }
+  }, [booking.id, booking.status, isPast]);
 
   const handleCancel = async () => {
     if (!onCancel) return;
@@ -143,9 +165,15 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
               {booking.listingTitle}
             </h3>
             {variant === "host" && booking.guestName && (
-              <p className="mt-0.5 flex items-center gap-1 text-sm text-neutral-500">
+              <p className="mt-0.5 flex items-center gap-1.5 text-sm text-neutral-500">
                 <User className="h-3.5 w-3.5" />
                 {booking.guestName}
+                {booking.guestReviewCount && booking.guestReviewCount > 0 ? (
+                  <span className="inline-flex items-center gap-0.5 text-xs text-neutral-600">
+                    <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                    {booking.guestRating?.toFixed(1)} ({booking.guestReviewCount})
+                  </span>
+                ) : null}
               </p>
             )}
           </div>
@@ -290,6 +318,36 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
             </div>
           )}
 
+          {reviewStatus?.hasCounterpart && !reviewStatus.counterpartVisible && (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm">
+              <p className="font-medium text-blue-800">{t("counterpartReviewedYou")}</p>
+              <p className="mt-0.5 text-blue-700">{t("writeYoursToReveal")}</p>
+            </div>
+          )}
+
+          {reviewStatus?.counterpartVisible && reviewStatus.counterpart && (
+            <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm">
+              <div className="flex items-center gap-1">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-3.5 w-3.5 ${
+                      i < reviewStatus.counterpart!.rating
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "text-neutral-300"
+                    }`}
+                  />
+                ))}
+                <span className="ml-1 text-xs text-neutral-500">
+                  {variant === "host" ? t("guestReviewedYou") : t("hostReviewedYou")}
+                </span>
+              </div>
+              {reviewStatus.counterpart.comment && (
+                <p className="mt-1 text-neutral-700">{reviewStatus.counterpart.comment}</p>
+              )}
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-3">
             <ChatLink booking={booking} variant={variant} />
             {canRespond && (
@@ -310,13 +368,13 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
                 </button>
               </>
             )}
-            {variant === "guest" && canReview && (
+            {canReview && (
               <button
                 onClick={() => setShowReview(!showReview)}
                 className="flex items-center gap-1 text-sm text-primary-600 hover:text-primary-700 transition-colors"
               >
                 <Star className="h-3.5 w-3.5" />
-                {t("writeReview")}
+                {variant === "host" ? t("reviewGuest") : t("writeReview")}
               </button>
             )}
             {canCancel && onCancel && !canReview && (

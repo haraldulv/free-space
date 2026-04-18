@@ -344,6 +344,7 @@ struct BookingCard: View {
                 .from("reviews")
                 .select("id")
                 .eq("booking_id", value: booking.id)
+                .eq("reviewer_role", value: "guest")
                 .execute()
                 .value
             hasExistingReview = !rows.isEmpty
@@ -363,6 +364,8 @@ struct BookingCard: View {
                 let booking_id: String
                 let listing_id: String
                 let user_id: String
+                let reviewer_role: String
+                let reviewee_id: String
                 let rating: Int
                 let comment: String
             }
@@ -370,6 +373,8 @@ struct BookingCard: View {
                 booking_id: booking.id,
                 listing_id: listingId,
                 user_id: userId,
+                reviewer_role: "guest",
+                reviewee_id: booking.hostId,
                 rating: reviewRating,
                 comment: reviewComment.trimmingCharacters(in: .whitespaces)
             )

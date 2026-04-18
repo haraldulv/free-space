@@ -415,10 +415,14 @@ struct Booking: Codable, Identifiable {
 struct BookingGuest: Codable {
     let fullName: String?
     let avatarUrl: String?
+    let rating: Double?
+    let reviewCount: Int?
 
     enum CodingKeys: String, CodingKey {
         case fullName = "full_name"
         case avatarUrl = "avatar_url"
+        case rating
+        case reviewCount = "review_count"
     }
 }
 
@@ -457,6 +461,8 @@ struct Review: Codable, Identifiable {
     let bookingId: String
     let listingId: String
     let userId: String
+    let reviewerRole: String?
+    let revieweeId: String?
     let rating: Int
     let comment: String
     let createdAt: String?
@@ -467,6 +473,8 @@ struct Review: Codable, Identifiable {
         case bookingId = "booking_id"
         case listingId = "listing_id"
         case userId = "user_id"
+        case reviewerRole = "reviewer_role"
+        case revieweeId = "reviewee_id"
         case createdAt = "created_at"
     }
 }

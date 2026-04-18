@@ -269,7 +269,12 @@
     "sendRequestAmount": "Send request — {amount} kr",
     "tunoGuaranteeRequest": "You're only charged if the host approves. Tuno's guarantee protects you.",
     "requestSentTitle": "Request sent!",
-    "requestSentDesc": "We've authorized your payment and notified the host. You're only charged if the host approves — otherwise the amount is released automatically within 24 hours."
+    "requestSentDesc": "We've authorized your payment and notified the host. You're only charged if the host approves — otherwise the amount is released automatically within 24 hours.",
+    "reviewGuest": "Review guest",
+    "counterpartReviewedYou": "The other party has reviewed you",
+    "writeYoursToReveal": "Write yours to see what they wrote (or wait 14 days).",
+    "hostReviewedYou": "Host said about you",
+    "guestReviewedYou": "Guest said about you"
   },
   "dashboard": {
     "title": "Dashboard",

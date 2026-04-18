@@ -61,9 +61,20 @@ struct HostRequestsView: View {
                             .font(.system(size: 15, weight: .semibold))
                             .lineLimit(1)
                         if let guestName = booking.guest?.fullName {
-                            Text(guestName)
-                                .font(.system(size: 13))
-                                .foregroundStyle(.neutral500)
+                            HStack(spacing: 4) {
+                                Text(guestName)
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(.neutral500)
+                                if let count = booking.guest?.reviewCount, count > 0,
+                                   let rating = booking.guest?.rating {
+                                    Image(systemName: "star.fill")
+                                        .font(.system(size: 10))
+                                        .foregroundStyle(.yellow)
+                                    Text(String(format: "%.1f (%d)", rating, count))
+                                        .font(.system(size: 12))
+                                        .foregroundStyle(.neutral600)
+                                }
+                            }
                         }
                     }
                     Spacer()
@@ -165,7 +176,7 @@ struct HostRequestsView: View {
         do {
             requests = try await supabase
                 .from("bookings")
-                .select("*, listing:listings(id, title, city, images), guest:user_id(full_name, avatar_url)")
+                .select("*, listing:listings(id, title, city, images), guest:user_id(full_name, avatar_url, rating, review_count)")
                 .eq("host_id", value: userId)
                 .eq("status", value: "requested")
                 .order("approval_deadline", ascending: true)

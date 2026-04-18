@@ -269,7 +269,12 @@
     "sendRequestAmount": "Send forespørsel om {amount} kr",
     "tunoGuaranteeRequest": "Du belastes først hvis utleier godkjenner. Tuno Garantiprogram beskytter deg.",
     "requestSentTitle": "Forespørselen er sendt!",
-    "requestSentDesc": "Vi har autorisert betalingen og varslet utleier. Du belastes først hvis utleier godkjenner — ellers frigjøres beløpet automatisk innen 24 timer."
+    "requestSentDesc": "Vi har autorisert betalingen og varslet utleier. Du belastes først hvis utleier godkjenner — ellers frigjøres beløpet automatisk innen 24 timer.",
+    "reviewGuest": "Anmeld gjesten",
+    "counterpartReviewedYou": "Motparten har anmeldt deg",
+    "writeYoursToReveal": "Skriv din anmeldelse for å se hva de skrev (eller vent 14 dager).",
+    "hostReviewedYou": "Utleier sa om deg",
+    "guestReviewedYou": "Gjest sa om deg"
   },
   "dashboard": {
     "title": "Dashboard",

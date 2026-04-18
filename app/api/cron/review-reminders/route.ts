@@ -8,6 +8,10 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
+/**
+ * Sender review-påminnelse 1-2 dager etter utsjekk til BÅDE gjest og host
+ * som ennå ikke har skrevet sin anmeldelse. Kjøres daglig.
+ */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
   if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -15,13 +19,12 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Find bookings where checkout was 1-2 days ago, no review exists, and reminder not sent
     const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
     const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
     const { data: bookings } = await supabase
       .from("bookings")
-      .select("id, user_id, listing_id, review_reminder_sent")
+      .select("id, user_id, host_id, listing_id, review_reminder_sent")
       .eq("status", "confirmed")
       .eq("payment_status", "paid")
       .lte("check_out", oneDayAgo)
@@ -35,45 +38,75 @@ export async function GET(request: NextRequest) {
     let sent = 0;
 
     for (const booking of bookings) {
-      // Check if review already exists
-      const { count } = await supabase
+      const { data: existingReviews } = await supabase
         .from("reviews")
-        .select("id", { count: "exact", head: true })
+        .select("reviewer_role")
         .eq("booking_id", booking.id);
 
-      if (count && count > 0) continue;
+      const guestHasReviewed = (existingReviews || []).some((r) => r.reviewer_role === "guest");
+      const hostHasReviewed = (existingReviews || []).some((r) => r.reviewer_role === "host");
 
       const { data: listing } = await supabase
         .from("listings")
         .select("title")
         .eq("id", booking.listing_id)
         .single();
+      const listingTitle = listing?.title || "plassen";
 
-      const { data: authData } = await supabase.auth.admin.getUserById(booking.user_id);
-      const email = authData.user?.email;
-      const name = authData.user?.user_metadata?.full_name || "Gjest";
+      const sends: Promise<unknown>[] = [];
 
-      if (email) {
-        const listingTitle = listing?.title || "plassen";
-        await Promise.all([
-          sendReviewReminderEmail(email, {
-            guestName: name,
-            listingTitle,
-            bookingId: booking.id,
-          }),
+      if (!guestHasReviewed) {
+        const { data: guestAuth } = await supabase.auth.admin.getUserById(booking.user_id);
+        const email = guestAuth.user?.email;
+        const name = guestAuth.user?.user_metadata?.full_name || "Gjest";
+        if (email) {
+          sends.push(
+            sendReviewReminderEmail(email, {
+              guestName: name,
+              listingTitle,
+              bookingId: booking.id,
+            }),
+          );
+        }
+        sends.push(
           sendPushToUser(
             booking.user_id,
             "Hvordan var oppholdet?",
             `Legg igjen en anmeldelse av ${listingTitle}.`,
             { bookingId: booking.id, type: "review_reminder" },
           ),
-        ]);
+        );
+      }
 
+      if (!hostHasReviewed && booking.host_id) {
+        const { data: hostAuth } = await supabase.auth.admin.getUserById(booking.host_id);
+        const email = hostAuth.user?.email;
+        const name = hostAuth.user?.user_metadata?.full_name || "Utleier";
+        if (email) {
+          sends.push(
+            sendReviewReminderEmail(email, {
+              guestName: name,
+              listingTitle: `gjesten av ${listingTitle}`,
+              bookingId: booking.id,
+            }),
+          );
+        }
+        sends.push(
+          sendPushToUser(
+            booking.host_id,
+            "Anmeld gjesten",
+            `Hvordan var gjesten på ${listingTitle}?`,
+            { bookingId: booking.id, type: "review_reminder" },
+          ),
+        );
+      }
+
+      if (sends.length > 0) {
+        await Promise.all(sends);
         await supabase
           .from("bookings")
           .update({ review_reminder_sent: true })
           .eq("id", booking.id);
-
         sent++;
       }
     }

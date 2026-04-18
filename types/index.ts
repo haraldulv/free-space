@@ -198,6 +198,8 @@ export interface Booking {
   paymentStatus?: "pending" | "paid" | "failed" | "refunded";
   approvalDeadline?: string;
   hostRespondedAt?: string;
+  guestRating?: number;
+  guestReviewCount?: number;
   guestName?: string;
   guestAvatar?: string;
   guestEmail?: string;
