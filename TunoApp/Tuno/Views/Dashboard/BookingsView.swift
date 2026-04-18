@@ -448,15 +448,16 @@ struct StatusBadge: View {
 
     private var label: String {
         switch status {
-        case .pending: return "Venter"
-        case .confirmed: return "Bekreftet"
-        case .cancelled: return "Kansellert"
+        case .pending: return String(localized: "booking.statusPending", defaultValue: "Venter")
+        case .requested: return String(localized: "booking.statusRequested", defaultValue: "Forespørsel sendt")
+        case .confirmed: return String(localized: "booking.statusConfirmed", defaultValue: "Bekreftet")
+        case .cancelled: return String(localized: "booking.statusCancelled", defaultValue: "Kansellert")
         }
     }
 
     private var bgColor: Color {
         switch status {
-        case .pending: return .orange.opacity(0.15)
+        case .pending, .requested: return .orange.opacity(0.15)
         case .confirmed: return .green.opacity(0.15)
         case .cancelled: return .red.opacity(0.15)
         }
@@ -464,7 +465,7 @@ struct StatusBadge: View {
 
     private var textColor: Color {
         switch status {
-        case .pending: return .orange
+        case .pending, .requested: return .orange
         case .confirmed: return .green
         case .cancelled: return .red
         }

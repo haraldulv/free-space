@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createClient } from "@supabase/supabase-js";
-import { sendBookingConfirmation, sendBookingNotificationToHost } from "@/lib/email";
+import {
+  sendBookingConfirmation,
+  sendBookingNotificationToHost,
+  sendBookingRequestToHost,
+  sendBookingRequestPendingToGuest,
+} from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
 
 // Use service role for webhook (no user auth context)
@@ -42,20 +47,99 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
+  // Non-instant flyt: PI er autorisert (capture_method=manual). Vi setter
+  // booking.status='requested' og varsler host. Capture skjer først ved
+  // host-godkjenning (approveBookingAction).
+  if (event.type === "payment_intent.amount_capturable_updated") {
+    const paymentIntent = event.data.object;
+    const bookingId = paymentIntent.metadata?.bookingId;
+    const listingTitle = paymentIntent.metadata?.listingTitle || "en plass";
+
+    if (bookingId) {
+      // Bare oppdater hvis status fortsatt er 'pending' (idempotent ved retry).
+      const { data: existing } = await supabase
+        .from("bookings")
+        .select("status, user_id, host_id, listing_id, check_in, check_out, total_price, approval_deadline")
+        .eq("id", bookingId)
+        .single();
+
+      if (existing && existing.status === "pending") {
+        await supabase
+          .from("bookings")
+          .update({ status: "requested" })
+          .eq("id", bookingId);
+
+        const [guestRes, hostRes, listingRes] = await Promise.all([
+          supabase.auth.admin.getUserById(existing.user_id),
+          existing.host_id ? supabase.auth.admin.getUserById(existing.host_id) : null,
+          existing.listing_id ? supabase.from("listings").select("images").eq("id", existing.listing_id).single() : null,
+        ]);
+        const guestEmail = guestRes.data.user?.email;
+        const guestName = guestRes.data.user?.user_metadata?.full_name || "Gjest";
+        const hostEmail = hostRes?.data.user?.email;
+        const hostName = hostRes?.data.user?.user_metadata?.full_name || "Utleier";
+        const listingImage = listingRes?.data?.images?.[0] ?? null;
+
+        // Push til host: ny forespørsel
+        if (existing.host_id) {
+          sendPushToUser(
+            existing.host_id,
+            "Ny booking-forespørsel",
+            `${guestName} ønsker å booke ${listingTitle}. Du har 24 timer på å svare.`,
+            { bookingId, type: "booking_request" },
+          ).catch((err) => console.error("[Push] Host request notify failed:", err));
+        }
+
+        // E-post til host + bekreftelse til gjest
+        const emailSends: Promise<unknown>[] = [];
+        if (hostEmail) {
+          emailSends.push(
+            sendBookingRequestToHost(hostEmail, {
+              hostName,
+              guestName,
+              listingTitle,
+              listingId: existing.listing_id,
+              listingImage,
+              checkIn: existing.check_in,
+              checkOut: existing.check_out,
+              totalPrice: existing.total_price,
+              approvalDeadline: existing.approval_deadline,
+            }).catch((err) => console.error("[Email] Host request failed:", err)),
+          );
+        }
+        if (guestEmail) {
+          emailSends.push(
+            sendBookingRequestPendingToGuest(guestEmail, {
+              guestName,
+              listingTitle,
+              listingId: existing.listing_id,
+              listingImage,
+              checkIn: existing.check_in,
+              checkOut: existing.check_out,
+              totalPrice: existing.total_price,
+            }).catch((err) => console.error("[Email] Guest pending failed:", err)),
+          );
+        }
+        await Promise.all(emailSends);
+      }
+    }
+  }
+
   if (event.type === "payment_intent.succeeded") {
     const paymentIntent = event.data.object;
     const bookingId = paymentIntent.metadata?.bookingId;
     const listingTitle = paymentIntent.metadata?.listingTitle || "en plass";
 
     if (bookingId) {
-      // Update booking status
+      // Bare bekreft hvis ikke allerede cancelled — unngår race med decline-action.
       await supabase
         .from("bookings")
         .update({
           status: "confirmed",
           payment_status: "paid",
         })
-        .eq("id", bookingId);
+        .eq("id", bookingId)
+        .neq("status", "cancelled");
 
       // Get booking + profiles for notifications and emails
       const { data: booking } = await supabase

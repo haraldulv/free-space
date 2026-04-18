@@ -63,10 +63,14 @@ struct MainTabView: View {
         }
         .onChange(of: pushRouter.pendingBookingId) { _, newValue in
             guard newValue != nil else { return }
-            // Bytt til bookings-tab ved tap på booking-relatert varsel
-            selectedTab = 2
-            homeNavPath = NavigationPath()
-            // BookingsView kan plukke opp ID-en selv når den laster
+            // booking_request → Profile-tab (HostRequestsView pluker det opp).
+            // Andre typer → Bookings-tab (gjest-flyt).
+            if pushRouter.pendingBookingType == "booking_request" {
+                selectedTab = 4
+            } else {
+                selectedTab = 2
+                homeNavPath = NavigationPath()
+            }
         }
         .onChange(of: pushRouter.pendingConversationId) { _, newValue in
             guard newValue != nil else { return }

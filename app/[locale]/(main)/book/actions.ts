@@ -5,7 +5,11 @@ import { stripe } from "@/lib/stripe";
 import { getAvailableSpots, getBookedSpotIds } from "@/lib/supabase/listings";
 import { SERVICE_FEE_RATE } from "@/lib/config";
 import { computeRefund, type CancelledBy } from "@/lib/cancellation";
-import { sendCancellationEmail } from "@/lib/email";
+import {
+  sendCancellationEmail,
+  sendBookingApprovedToGuest,
+  sendBookingDeclinedToGuest,
+} from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 import type { SpotMarker, ListingExtra, SelectedExtras, SelectedExtraEntry } from "@/types";
@@ -99,7 +103,7 @@ export async function createBookingAction(data: {
   isRentalCar?: boolean;
   selectedSpotIds?: string[];
   selectedExtras?: SelectedExtras;
-}): Promise<{ bookingId?: string; clientSecret?: string; error?: string }> {
+}): Promise<{ bookingId?: string; clientSecret?: string; requiresApproval?: boolean; error?: string }> {
   try {
     const { supabase, user } = await getAuthUser();
 
@@ -127,7 +131,7 @@ export async function createBookingAction(data: {
 
     const { data: listing } = await supabase
       .from("listings")
-      .select("host_id, title, price, spot_markers, extras")
+      .select("host_id, title, price, spot_markers, extras, instant_booking")
       .eq("id", data.listingId)
       .single();
 
@@ -180,6 +184,11 @@ export async function createBookingAction(data: {
       return { error: "Utleier har ikke satt opp utbetalinger ennå. Prøv igjen senere." };
     }
 
+    const requiresApproval = listing.instant_booking === false;
+    const approvalDeadline = requiresApproval
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
       .insert({
@@ -193,6 +202,7 @@ export async function createBookingAction(data: {
         host_id: listing.host_id,
         license_plate: data.licensePlate || null,
         is_rental_car: data.isRentalCar || false,
+        approval_deadline: approvalDeadline,
         selected_spot_ids: data.selectedSpotIds && data.selectedSpotIds.length > 0 ? data.selectedSpotIds : null,
         selected_extras: data.selectedExtras && (data.selectedExtras.listing?.length || Object.keys(data.selectedExtras.spots || {}).length)
           ? data.selectedExtras
@@ -220,6 +230,7 @@ export async function createBookingAction(data: {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: authoritativeTotal * 100,
       currency: "nok",
+      capture_method: requiresApproval ? "manual" : "automatic",
       metadata: {
         bookingId: booking.id,
         listingId: data.listingId,
@@ -227,6 +238,7 @@ export async function createBookingAction(data: {
         listingTitle: listing.title,
         hostStripeAccountId: hostProfile.stripe_account_id,
         serviceFeeRate: String(SERVICE_FEE_RATE),
+        requiresApproval: requiresApproval ? "true" : "false",
       },
     });
 
@@ -238,6 +250,7 @@ export async function createBookingAction(data: {
     return {
       bookingId: booking.id,
       clientSecret: paymentIntent.client_secret!,
+      requiresApproval,
     };
   } catch (err) {
     console.error("createBookingAction error:", err);
@@ -337,6 +350,164 @@ export async function cancelBookingAction(
 
     return { refundAmount: result.refundAmount };
   } catch (err) {
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
+}
+
+/**
+ * Host godkjenner en booking-forespørsel.
+ * Stripe captures den autoriserte PaymentIntent — succeeds-webhook oppdaterer
+ * deretter status til 'confirmed' + payment_status='paid'.
+ */
+export async function approveBookingAction(bookingId: string): Promise<{ error?: string }> {
+  try {
+    const { supabase, user } = await getAuthUser();
+
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("id, host_id, status, payment_intent_id, approval_deadline, user_id, listing_id, check_in, check_out, total_price")
+      .eq("id", bookingId)
+      .single();
+
+    if (!booking) return { error: "Bestilling ikke funnet" };
+    if (booking.host_id !== user.id) return { error: "Ikke tilgang" };
+    if (booking.status !== "requested") return { error: "Bookingen kan ikke godkjennes" };
+    if (booking.approval_deadline && new Date(booking.approval_deadline) < new Date()) {
+      return { error: "Tidsfristen for å godkjenne har gått ut" };
+    }
+    if (!booking.payment_intent_id) return { error: "Mangler betalingsinformasjon" };
+
+    await stripe.paymentIntents.capture(booking.payment_intent_id);
+
+    // Sett status optimistisk så UI oppdateres umiddelbart. Webhooken vil
+    // sette samme verdi når payment_intent.succeeded fyrer.
+    await supabase
+      .from("bookings")
+      .update({
+        status: "confirmed",
+        payment_status: "paid",
+        host_responded_at: new Date().toISOString(),
+      })
+      .eq("id", bookingId);
+
+    // Push + e-post til gjest
+    try {
+      const db = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const { data: listing } = await db.from("listings").select("title, images").eq("id", booking.listing_id).single();
+      const guestAuth = await db.auth.admin.getUserById(booking.user_id);
+      const guestEmail = guestAuth.data.user?.email;
+      const guestName = guestAuth.data.user?.user_metadata?.full_name || "Gjest";
+      const listingTitle = listing?.title || "en plass";
+
+      sendPushToUser(
+        booking.user_id,
+        "Forespørselen er godkjent!",
+        `Utleier har godkjent bookingen av ${listingTitle}.`,
+        { bookingId: booking.id, type: "booking_confirmed" },
+      ).catch(console.error);
+
+      if (guestEmail) {
+        sendBookingApprovedToGuest(guestEmail, {
+          guestName,
+          listingTitle,
+          listingId: booking.listing_id,
+          listingImage: listing?.images?.[0] ?? null,
+          checkIn: booking.check_in,
+          checkOut: booking.check_out,
+          totalPrice: booking.total_price,
+        }).catch(console.error);
+      }
+    } catch { /* ikke blokker */ }
+
+    return {};
+  } catch (err) {
+    console.error("approveBookingAction error:", err);
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
+}
+
+/**
+ * Host avviser en booking-forespørsel (eller cron auto-avviser ved timeout).
+ * Stripe canceller den autoriserte PaymentIntent — pengene frigjøres.
+ */
+export async function declineBookingAction(
+  bookingId: string,
+  options?: { autoDeclined?: boolean; allowCron?: boolean },
+): Promise<{ error?: string }> {
+  try {
+    const supabase = options?.allowCron
+      ? createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!)
+      : (await getAuthUser()).supabase;
+    const userId = options?.allowCron ? null : (await getAuthUser()).user.id;
+
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("id, host_id, status, payment_intent_id, user_id, listing_id, check_in, check_out")
+      .eq("id", bookingId)
+      .single();
+
+    if (!booking) return { error: "Bestilling ikke funnet" };
+    if (!options?.allowCron && booking.host_id !== userId) return { error: "Ikke tilgang" };
+    if (booking.status !== "requested") return { error: "Bookingen kan ikke avvises" };
+
+    if (booking.payment_intent_id) {
+      try {
+        await stripe.paymentIntents.cancel(booking.payment_intent_id);
+      } catch (err) {
+        // Hvis PI allerede er cancelled (idempotent retry), fortsett.
+        console.warn("paymentIntents.cancel:", err);
+      }
+    }
+
+    await supabase
+      .from("bookings")
+      .update({
+        status: "cancelled",
+        payment_status: "refunded",
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: "host",
+        cancellation_reason: options?.autoDeclined ? "auto_declined_timeout" : "host_declined",
+        host_responded_at: new Date().toISOString(),
+      })
+      .eq("id", bookingId);
+
+    // Push + e-post til gjest
+    try {
+      const db = createServiceClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+      const { data: listing } = await db.from("listings").select("title").eq("id", booking.listing_id).single();
+      const guestAuth = await db.auth.admin.getUserById(booking.user_id);
+      const guestEmail = guestAuth.data.user?.email;
+      const guestName = guestAuth.data.user?.user_metadata?.full_name || "Gjest";
+      const listingTitle = listing?.title || "en plass";
+
+      const pushTitle = options?.autoDeclined
+        ? "Forespørselen utløp"
+        : "Forespørselen ble avvist";
+      const pushBody = options?.autoDeclined
+        ? `Utleier rakk ikke å svare på ${listingTitle}. Beløpet er frigjort.`
+        : `Utleier kunne ikke ta imot ${listingTitle}. Beløpet er frigjort.`;
+
+      sendPushToUser(
+        booking.user_id,
+        pushTitle,
+        pushBody,
+        { bookingId: booking.id, type: "booking_declined" },
+      ).catch(console.error);
+
+      if (guestEmail) {
+        sendBookingDeclinedToGuest(guestEmail, {
+          guestName,
+          listingTitle,
+          checkIn: booking.check_in,
+          checkOut: booking.check_out,
+          autoDeclined: !!options?.autoDeclined,
+        }).catch(console.error);
+      }
+    } catch { /* ikke blokker */ }
+
+    return {};
+  } catch (err) {
+    console.error("declineBookingAction error:", err);
     return { error: err instanceof Error ? err.message : "Noe gikk galt" };
   }
 }

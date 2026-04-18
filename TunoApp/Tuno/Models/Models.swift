@@ -379,12 +379,15 @@ struct Booking: Codable, Identifiable {
     var refundAmount: Int?
     let selectedSpotIds: [String]?
     let selectedExtras: SelectedExtras?
+    let approvalDeadline: String?
+    let hostRespondedAt: String?
 
     // Joined data
     let listing: BookingListing?
+    let guest: BookingGuest?
 
     enum CodingKeys: String, CodingKey {
-        case id, status, listing
+        case id, status, listing, guest
         case userId = "user_id"
         case listingId = "listing_id"
         case hostId = "host_id"
@@ -404,6 +407,18 @@ struct Booking: Codable, Identifiable {
         case refundAmount = "refund_amount"
         case selectedSpotIds = "selected_spot_ids"
         case selectedExtras = "selected_extras"
+        case approvalDeadline = "approval_deadline"
+        case hostRespondedAt = "host_responded_at"
+    }
+}
+
+struct BookingGuest: Codable {
+    let fullName: String?
+    let avatarUrl: String?
+
+    enum CodingKeys: String, CodingKey {
+        case fullName = "full_name"
+        case avatarUrl = "avatar_url"
     }
 }
 
@@ -416,6 +431,7 @@ struct BookingListing: Codable {
 
 enum BookingStatus: String, Codable {
     case pending
+    case requested
     case confirmed
     case cancelled
 }

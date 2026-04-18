@@ -254,7 +254,22 @@
     "paymentFailedDesc": "Bei der Zahlung ist etwas schiefgegangen. Bitte versuche es erneut.",
     "bookingConfirmed": "Buchung bestätigt!",
     "bookingConfirmedDesc": "Die Zahlung ist abgeschlossen und dein Stellplatz ist reserviert. Die Buchungsdetails findest du in deinem Dashboard.",
-    "seeMyBookings": "Meine Buchungen ansehen"
+    "seeMyBookings": "Meine Buchungen ansehen",
+    "statusRequested": "Anfrage gesendet",
+    "requestNeedsResponse": "Du musst auf diese Anfrage antworten",
+    "requestAwaitingHost": "Warten auf Bestätigung durch den Gastgeber",
+    "requestExpiresIn": "Läuft ab in {hours} Std. {minutes} Min.",
+    "requestExpired": "Frist abgelaufen",
+    "approveRequest": "Bestätigen",
+    "approving": "Bestätige…",
+    "declineRequest": "Ablehnen",
+    "declining": "Lehne ab…",
+    "confirmDeclineRequest": "Möchtest du diese Anfrage wirklich ablehnen? Der Betrag wird dem Gast freigegeben.",
+    "requestToBook": "Anfrage senden",
+    "sendRequestAmount": "Anfrage senden — {amount} kr",
+    "tunoGuaranteeRequest": "Du wirst nur belastet, wenn der Gastgeber bestätigt. Die Tuno-Garantie schützt dich.",
+    "requestSentTitle": "Anfrage gesendet!",
+    "requestSentDesc": "Wir haben deine Zahlung autorisiert und den Gastgeber benachrichtigt. Du wirst nur belastet, wenn der Gastgeber bestätigt — andernfalls wird der Betrag innerhalb von 24 Stunden automatisch freigegeben."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -318,7 +333,9 @@
     "payouts": "Auszahlungen",
     "thisMonth": "Dieser Monat",
     "lastMonth": "Letzter Monat",
-    "total": "Gesamt"
+    "total": "Gesamt",
+    "awaitingApproval": "Warten auf Gastgeber",
+    "requestsToReview": "Anfragen zur Beantwortung"
   },
   "messages": {
     "title": "Nachrichten",

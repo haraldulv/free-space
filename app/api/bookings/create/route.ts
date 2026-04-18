@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     // Check availability
     const { data: listing } = await supabase
       .from("listings")
-      .select("spots, host_id, title, price, spot_markers, extras")
+      .select("spots, host_id, title, price, spot_markers, extras, instant_booking")
       .eq("id", listingId)
       .single();
 
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
       .from("bookings")
       .select("selected_spot_ids")
       .eq("listing_id", listingId)
-      .in("status", ["confirmed", "pending"])
+      .in("status", ["confirmed", "pending", "requested"])
       .lt("check_in", checkOut)
       .gt("check_out", checkIn);
 
@@ -182,6 +182,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Utleier har ikke satt opp utbetalinger ennå. Prøv igjen senere." });
     }
 
+    const requiresApproval = listing.instant_booking === false;
+    const approvalDeadline = requiresApproval
+      ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
+      : null;
+
     // Insert booking
     const { data: booking, error: bookingError } = await supabase
       .from("bookings")
@@ -196,6 +201,7 @@ export async function POST(request: NextRequest) {
         host_id: listing.host_id,
         license_plate: licensePlate || null,
         is_rental_car: isRentalCar || false,
+        approval_deadline: approvalDeadline,
         selected_spot_ids: selectedSpotIds && selectedSpotIds.length > 0 ? selectedSpotIds : null,
         selected_extras: selectedExtras && (selectedExtras.listing?.length || Object.keys(selectedExtras.spots || {}).length)
           ? selectedExtras
@@ -225,6 +231,7 @@ export async function POST(request: NextRequest) {
     const paymentIntent = await stripe.paymentIntents.create({
       amount: totalPrice * 100,
       currency: "nok",
+      capture_method: requiresApproval ? "manual" : "automatic",
       metadata: {
         bookingId: booking.id,
         listingId,
@@ -232,6 +239,7 @@ export async function POST(request: NextRequest) {
         listingTitle: listing.title,
         hostStripeAccountId: hostProfile.stripe_account_id,
         serviceFeeRate: String(SERVICE_FEE_RATE),
+        requiresApproval: requiresApproval ? "true" : "false",
       },
     });
 
@@ -245,6 +253,7 @@ export async function POST(request: NextRequest) {
       bookingId: booking.id,
       clientSecret: paymentIntent.client_secret,
       publishableKey: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+      requiresApproval,
     });
   } catch (err) {
     console.error("POST /api/bookings/create error:", err);

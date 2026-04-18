@@ -22,7 +22,7 @@ import { Link } from "@/i18n/navigation";
 import { bcpLocale, numberLocale } from "@/lib/i18n-helpers";
 import { createClient } from "@/lib/supabase/client";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/[locale]/(main)/bli-utleier/actions";
-import { cancelBookingAction } from "@/app/[locale]/(main)/book/actions";
+import { cancelBookingAction, approveBookingAction, declineBookingAction } from "@/app/[locale]/(main)/book/actions";
 import { getConversations } from "@/lib/supabase/chat";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
@@ -49,12 +49,15 @@ const sidebarConfig: { key: SidebarKey; labelKey: string; icon: React.ElementTyp
 
 function groupBookings(items: Booking[]) {
   const today = new Date().toISOString().split("T")[0];
+  const requested: Booking[] = [];
   const upcoming: Booking[] = [];
   const active: Booking[] = [];
   const past: Booking[] = [];
 
   for (const b of items) {
-    if (b.status === "cancelled") {
+    if (b.status === "requested") {
+      requested.push(b);
+    } else if (b.status === "cancelled") {
       past.push(b);
     } else if (b.checkIn > today) {
       upcoming.push(b);
@@ -65,22 +68,25 @@ function groupBookings(items: Booking[]) {
     }
   }
 
-  return { upcoming, active, past };
+  return { requested, upcoming, active, past };
 }
 
-function BookingSection({ title, items, variant = "guest", onCancel }: {
+function BookingSection({ title, items, variant = "guest", onCancel, onApprove, onDecline, highlight }: {
   title: string;
   items: Booking[];
   variant?: "guest" | "host";
   onCancel?: (id: string, reason?: string) => Promise<void>;
+  onApprove?: (id: string) => Promise<void>;
+  onDecline?: (id: string) => Promise<void>;
+  highlight?: boolean;
 }) {
   if (items.length === 0) return null;
   return (
     <div>
-      <h3 className="mb-3 text-sm font-medium text-neutral-500">{title}</h3>
+      <h3 className={`mb-3 text-sm font-medium ${highlight ? "text-amber-700" : "text-neutral-500"}`}>{title}</h3>
       <div className="space-y-3">
         {items.map((b) => (
-          <BookingCard key={b.id} booking={b} variant={variant} onCancel={onCancel} />
+          <BookingCard key={b.id} booking={b} variant={variant} onCancel={onCancel} onApprove={onApprove} onDecline={onDecline} />
         ))}
       </div>
     </div>
@@ -209,6 +215,8 @@ export default function DashboardPage() {
               cancelledBy: row.cancelled_by,
               cancellationReason: row.cancellation_reason,
               refundAmount: row.refund_amount,
+              approvalDeadline: row.approval_deadline,
+              hostRespondedAt: row.host_responded_at,
               hostName: (row.host as Record<string, unknown>)?.full_name as string || "",
               hostPhone: (row.host as Record<string, unknown>)?.show_phone ? (row.host as Record<string, unknown>)?.phone as string || "" : "",
             }))
@@ -364,6 +372,28 @@ export default function DashboardPage() {
     );
   };
 
+  const handleApproveRequest = async (bookingId: string) => {
+    const result = await approveBookingAction(bookingId);
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    setRentals((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, status: "confirmed" as const, paymentStatus: "paid" as const } : b))
+    );
+  };
+
+  const handleDeclineRequest = async (bookingId: string) => {
+    const result = await declineBookingAction(bookingId);
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    setRentals((prev) =>
+      prev.map((b) => (b.id === bookingId ? { ...b, status: "cancelled" as const, paymentStatus: "refunded" as const, cancelledBy: "host" as const } : b))
+    );
+  };
+
   const handleDelete = async (id: string) => {
     try {
       await deleteListingAction(id);
@@ -483,9 +513,10 @@ export default function DashboardPage() {
                 ) : (
                   <div className="mt-4 lg:mt-0 space-y-6">
                     {(() => {
-                      const { upcoming, active, past } = groupBookings(bookings);
+                      const { requested, upcoming, active, past } = groupBookings(bookings);
                       return (
                         <>
+                          <BookingSection title={t("awaitingApproval")} items={requested} onCancel={handleCancelBooking} highlight />
                           <BookingSection title={t("active")} items={active} onCancel={handleCancelBooking} />
                           <BookingSection title={t("upcoming")} items={upcoming} onCancel={handleCancelBooking} />
                           <BookingSection title={t("past")} items={past} onCancel={handleCancelBooking} />
@@ -515,9 +546,17 @@ export default function DashboardPage() {
                 ) : (
                   <div className="mt-4 lg:mt-0 space-y-6">
                     {(() => {
-                      const { upcoming, active, past } = groupBookings(rentals);
+                      const { requested, upcoming, active, past } = groupBookings(rentals);
                       return (
                         <>
+                          <BookingSection
+                            title={t("requestsToReview")}
+                            items={requested}
+                            variant="host"
+                            onApprove={handleApproveRequest}
+                            onDecline={handleDeclineRequest}
+                            highlight
+                          />
                           <BookingSection title={t("active")} items={active} variant="host" onCancel={handleCancelRental} />
                           <BookingSection title={t("upcoming")} items={upcoming} variant="host" onCancel={handleCancelRental} />
                           <BookingSection title={t("past")} items={past} variant="host" />

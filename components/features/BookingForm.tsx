@@ -425,7 +425,7 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
             : hasSpotLevelPricing && nights > 0 && selectedSpotIds.length === 0
               ? t("selectAtLeastOneSpot")
               : dateRange?.from && dateRange?.to
-                ? t("reserve")
+                ? (listing.instantBooking === false ? t("requestToBook") : t("reserve"))
                 : t("checkAvailability")}
       </Button>
     </div>

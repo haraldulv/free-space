@@ -2,8 +2,11 @@ import SwiftUI
 
 struct ProfileView: View {
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var pushRouter: PushRouter
     @State private var showLogoutConfirm = false
     @State private var showLogin = false
+    @State private var pendingRequestCount: Int = 0
+    @State private var navigateToHostRequests = false
 
     var body: some View {
         if !authManager.isAuthenticated {
@@ -92,6 +95,23 @@ struct ProfileView: View {
 
                 if authManager.isHost {
                     NavigationLink {
+                        HostRequestsView()
+                    } label: {
+                        HStack {
+                            Label("Forespørsler", systemImage: "tray.full.fill")
+                            if pendingRequestCount > 0 {
+                                Spacer()
+                                Text("\(pendingRequestCount)")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 2)
+                                    .background(Color.red)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                    NavigationLink {
                         MyListingsView()
                     } label: {
                         Label("Mine annonser", systemImage: "house.fill")
@@ -128,6 +148,9 @@ struct ProfileView: View {
             }
         }
         .navigationTitle("Profil")
+        .navigationDestination(isPresented: $navigateToHostRequests) {
+            HostRequestsView()
+        }
         .alert("Logg ut", isPresented: $showLogoutConfirm) {
             Button("Logg ut", role: .destructive) {
                 Task { await authManager.signOut() }
@@ -135,6 +158,35 @@ struct ProfileView: View {
             Button("Avbryt", role: .cancel) {}
         } message: {
             Text("Er du sikker på at du vil logge ut?")
+        }
+        .task(id: authManager.currentUser?.id) {
+            await loadPendingCount()
+        }
+        .onChange(of: pushRouter.pendingBookingType) { _, newType in
+            if newType == "booking_request" {
+                navigateToHostRequests = true
+                pushRouter.clearBooking()
+            }
+        }
+    }
+
+    private func loadPendingCount() async {
+        guard let userId = authManager.currentUser?.id.uuidString.lowercased(),
+              authManager.isHost else {
+            pendingRequestCount = 0
+            return
+        }
+        do {
+            let count = try await supabase
+                .from("bookings")
+                .select("id", head: true, count: .exact)
+                .eq("host_id", value: userId)
+                .eq("status", value: "requested")
+                .execute()
+                .count ?? 0
+            pendingRequestCount = count
+        } catch {
+            print("loadPendingCount error: \(error)")
         }
     }
 }

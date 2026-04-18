@@ -170,6 +170,134 @@ export async function sendPayoutEmail(to: string, data: {
   });
 }
 
+export async function sendBookingRequestToHost(to: string, data: {
+  hostName: string;
+  guestName: string;
+  listingTitle: string;
+  listingId?: string | null;
+  listingImage?: string | null;
+  checkIn: string;
+  checkOut: string;
+  totalPrice: number;
+  approvalDeadline?: string | null;
+}) {
+  const hostAmount = Math.round(data.totalPrice * 0.9);
+  const deadlineLine = data.approvalDeadline
+    ? `<p style="color:#d97706;font-size:14px;font-weight:600;margin:16px 0 0;">⏱ Du har 24 timer på å svare — ellers blir forespørselen automatisk avvist.</p>`
+    : "";
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Ny forespørsel: ${data.listingTitle}`,
+    html: wrap("Du har en ny forespørsel", `
+      <p style="color:#525252;font-size:14px;line-height:1.6;">
+        Hei ${data.hostName}, ${data.guestName} ønsker å booke plassen din.
+      </p>
+      ${listingCard({
+        listingId: data.listingId ?? null,
+        listingTitle: data.listingTitle,
+        listingImage: data.listingImage ?? null,
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        bottomLine: `Din utbetaling: ${hostAmount} kr`,
+      })}
+      ${deadlineLine}
+      ${btn("Godkjenn eller avvis", `https://tuno.no/dashboard?tab=rentals`)}
+    `),
+  });
+}
+
+export async function sendBookingRequestPendingToGuest(to: string, data: {
+  guestName: string;
+  listingTitle: string;
+  listingId?: string | null;
+  listingImage?: string | null;
+  checkIn: string;
+  checkOut: string;
+  totalPrice: number;
+}) {
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Forespørsel sendt: ${data.listingTitle}`,
+    html: wrap("Vi venter på utleier", `
+      <p style="color:#525252;font-size:14px;line-height:1.6;">
+        Hei ${data.guestName}, vi har autorisert betalingen din og sendt forespørselen til utleier.
+        Du belastes først hvis utleier godkjenner — ellers frigjøres beløpet automatisk.
+      </p>
+      ${listingCard({
+        listingId: data.listingId ?? null,
+        listingTitle: data.listingTitle,
+        listingImage: data.listingImage ?? null,
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        bottomLine: `${data.totalPrice} kr`,
+      })}
+      <p style="color:#737373;font-size:13px;margin-top:16px;">
+        Utleier har 24 timer på å svare. Vi varsler deg så snart vi hører noe.
+      </p>
+      ${btn("Se bestillingen", `https://tuno.no/dashboard?tab=bookings`)}
+    `),
+  });
+}
+
+export async function sendBookingApprovedToGuest(to: string, data: {
+  guestName: string;
+  listingTitle: string;
+  listingId?: string | null;
+  listingImage?: string | null;
+  checkIn: string;
+  checkOut: string;
+  totalPrice: number;
+}) {
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Bekreftet: ${data.listingTitle}`,
+    html: wrap("Forespørselen din er godkjent!", `
+      <p style="color:#525252;font-size:14px;line-height:1.6;">
+        Hei ${data.guestName}, utleier har godkjent forespørselen og bookingen er bekreftet.
+      </p>
+      ${listingCard({
+        listingId: data.listingId ?? null,
+        listingTitle: data.listingTitle,
+        listingImage: data.listingImage ?? null,
+        checkIn: data.checkIn,
+        checkOut: data.checkOut,
+        bottomLine: `${data.totalPrice} kr`,
+      })}
+      ${btn("Se bestillingen", `https://tuno.no/dashboard?tab=bookings`)}
+    `),
+  });
+}
+
+export async function sendBookingDeclinedToGuest(to: string, data: {
+  guestName: string;
+  listingTitle: string;
+  checkIn: string;
+  checkOut: string;
+  autoDeclined: boolean;
+}) {
+  const reason = data.autoDeclined
+    ? "Utleier rakk dessverre ikke å svare innen 24 timer, så forespørselen ble automatisk avvist."
+    : "Utleier kunne dessverre ikke ta imot deg denne gangen.";
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Forespørselen ble ikke godkjent`,
+    html: wrap("Forespørselen ble avvist", `
+      <p style="color:#525252;font-size:14px;line-height:1.6;">
+        Hei ${data.guestName}, ${reason} Beløpet er frigjort og du belastes ikke.
+      </p>
+      <div style="background:#f5f5f5;border-radius:8px;padding:16px;margin:16px 0;">
+        <p style="margin:0;font-size:14px;color:#525252;"><strong>${data.listingTitle}</strong></p>
+        <p style="margin:4px 0 0;font-size:14px;color:#737373;">${data.checkIn} – ${data.checkOut}</p>
+      </div>
+      ${btn("Finn en annen plass", `https://tuno.no/search`)}
+    `),
+  });
+}
+
 export async function sendReviewReminderEmail(to: string, data: {
   guestName: string;
   listingTitle: string;

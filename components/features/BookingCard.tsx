@@ -17,9 +17,11 @@ interface BookingCardProps {
   booking: Booking;
   variant?: "guest" | "host";
   onCancel?: (bookingId: string, reason?: string) => Promise<void>;
+  onApprove?: (bookingId: string) => Promise<void>;
+  onDecline?: (bookingId: string) => Promise<void>;
 }
 
-export default function BookingCard({ booking, variant = "guest", onCancel }: BookingCardProps) {
+export default function BookingCard({ booking, variant = "guest", onCancel, onApprove, onDecline }: BookingCardProps) {
   const t = useTranslations("booking");
   const tCategory = useTranslations("category");
   const tCommon = useTranslations("common");
@@ -27,6 +29,7 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
   const dateLocale = bcpLocale(locale);
 
   const [cancelling, setCancelling] = useState(false);
+  const [responding, setResponding] = useState<"approve" | "decline" | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showReview, setShowReview] = useState(false);
   const [reviewed, setReviewed] = useState(false);
@@ -36,9 +39,14 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
   const CategoryIcon = booking.listingCategory === "parking" ? Car : Tent;
   const checkIn = new Date(booking.checkIn).toLocaleDateString(dateLocale);
   const checkOut = new Date(booking.checkOut).toLocaleDateString(dateLocale);
-  const canCancel = booking.status === "pending" || booking.status === "confirmed";
+  const isRequested = booking.status === "requested";
+  const canCancel = (booking.status === "pending" || booking.status === "confirmed") && !isRequested;
   const isPast = new Date(booking.checkOut) < new Date();
   const canReview = booking.status === "confirmed" && isPast && !reviewed;
+  const canRespond = isRequested && variant === "host" && onApprove && onDecline;
+  const deadlineMs = booking.approvalDeadline ? new Date(booking.approvalDeadline).getTime() - Date.now() : null;
+  const deadlineHours = deadlineMs != null ? Math.max(0, Math.floor(deadlineMs / 3600000)) : null;
+  const deadlineMinutes = deadlineMs != null ? Math.max(0, Math.floor((deadlineMs % 3600000) / 60000)) : null;
 
   useEffect(() => {
     if (showConfirm && !refundPreview) {
@@ -54,6 +62,21 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
     await onCancel(booking.id, cancelReason || undefined);
     setCancelling(false);
     setShowConfirm(false);
+  };
+
+  const handleApprove = async () => {
+    if (!onApprove) return;
+    setResponding("approve");
+    await onApprove(booking.id);
+    setResponding(null);
+  };
+
+  const handleDecline = async () => {
+    if (!onDecline) return;
+    if (!confirm(t("confirmDeclineRequest"))) return;
+    setResponding("decline");
+    await onDecline(booking.id);
+    setResponding(null);
   };
 
   const directionsUrl = booking.listingLat && booking.listingLng
@@ -105,11 +128,13 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
               <Badge
                 variant={
                   booking.status === "confirmed" ? "primary"
+                  : booking.status === "requested" ? "secondary"
                   : booking.status === "pending" ? "secondary"
                   : "secondary"
                 }
               >
                 {booking.status === "confirmed" ? t("statusConfirmed")
+                  : booking.status === "requested" ? t("statusRequested")
                   : booking.status === "pending" ? t("statusPending")
                   : t("statusCancelled")}
               </Badge>
@@ -252,8 +277,39 @@ export default function BookingCard({ booking, variant = "guest", onCancel }: Bo
             )}
           </div>
 
+          {isRequested && deadlineHours != null && (
+            <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
+              <p className="font-medium text-amber-800">
+                {variant === "host" ? t("requestNeedsResponse") : t("requestAwaitingHost")}
+              </p>
+              <p className="mt-0.5 text-amber-700">
+                {deadlineMs != null && deadlineMs > 0
+                  ? t("requestExpiresIn", { hours: deadlineHours, minutes: deadlineMinutes ?? 0 })
+                  : t("requestExpired")}
+              </p>
+            </div>
+          )}
+
           <div className="flex flex-wrap items-center gap-3 border-t border-neutral-100 pt-3">
             <ChatLink booking={booking} variant={variant} />
+            {canRespond && (
+              <>
+                <Button
+                  size="sm"
+                  onClick={handleApprove}
+                  disabled={!!responding}
+                >
+                  {responding === "approve" ? t("approving") : t("approveRequest")}
+                </Button>
+                <button
+                  onClick={handleDecline}
+                  disabled={!!responding}
+                  className="text-sm text-red-500 hover:text-red-700 transition-colors disabled:opacity-50"
+                >
+                  {responding === "decline" ? t("declining") : t("declineRequest")}
+                </button>
+              </>
+            )}
             {variant === "guest" && canReview && (
               <button
                 onClick={() => setShowReview(!showReview)}

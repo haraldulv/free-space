@@ -85,6 +85,7 @@ class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCen
                     PushRouter.shared.pendingConversationId = id
                 }
             case "booking_new", "booking_confirmed", "booking_cancelled",
+                 "booking_request", "booking_declined",
                  "review_reminder", "payout_sent", "checkin_message":
                 if let id = bookingId {
                     PushRouter.shared.pendingBookingId = id

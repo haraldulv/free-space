@@ -190,12 +190,14 @@ export interface Booking {
   checkIn: string;
   checkOut: string;
   totalPrice: number;
-  status: "pending" | "confirmed" | "cancelled";
+  status: "pending" | "requested" | "confirmed" | "cancelled";
   createdAt: string;
   userId?: string;
   hostId?: string;
   paymentIntentId?: string;
   paymentStatus?: "pending" | "paid" | "failed" | "refunded";
+  approvalDeadline?: string;
+  hostRespondedAt?: string;
   guestName?: string;
   guestAvatar?: string;
   guestEmail?: string;

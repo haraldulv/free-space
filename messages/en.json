@@ -254,7 +254,22 @@
     "paymentFailedDesc": "Something went wrong with the payment. Please try again.",
     "bookingConfirmed": "Booking confirmed!",
     "bookingConfirmedDesc": "Payment completed and your spot is reserved. You can see booking details in your dashboard.",
-    "seeMyBookings": "See my bookings"
+    "seeMyBookings": "See my bookings",
+    "statusRequested": "Request sent",
+    "requestNeedsResponse": "You need to respond to this request",
+    "requestAwaitingHost": "Waiting for host to approve",
+    "requestExpiresIn": "Expires in {hours}h {minutes}m",
+    "requestExpired": "Deadline has passed",
+    "approveRequest": "Approve",
+    "approving": "Approving…",
+    "declineRequest": "Decline",
+    "declining": "Declining…",
+    "confirmDeclineRequest": "Are you sure you want to decline this request? The amount will be released to the guest.",
+    "requestToBook": "Request to book",
+    "sendRequestAmount": "Send request — {amount} kr",
+    "tunoGuaranteeRequest": "You're only charged if the host approves. Tuno's guarantee protects you.",
+    "requestSentTitle": "Request sent!",
+    "requestSentDesc": "We've authorized your payment and notified the host. You're only charged if the host approves — otherwise the amount is released automatically within 24 hours."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -318,7 +333,9 @@
     "payouts": "Payouts",
     "thisMonth": "This month",
     "lastMonth": "Last month",
-    "total": "Total"
+    "total": "Total",
+    "awaitingApproval": "Awaiting host",
+    "requestsToReview": "Requests to respond to"
   },
   "messages": {
     "title": "Messages",

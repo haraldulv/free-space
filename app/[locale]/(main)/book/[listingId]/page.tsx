@@ -32,7 +32,7 @@ function parseExtrasParam(raw: string | null): { listing: Record<string, number>
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-function PaymentForm({ total, bookingId }: { total: number; bookingId: string }) {
+function PaymentForm({ total, bookingId, requiresApproval }: { total: number; bookingId: string; requiresApproval: boolean }) {
   const t = useTranslations("booking");
   const stripe = useStripe();
   const elements = useElements();
@@ -65,7 +65,7 @@ function PaymentForm({ total, bookingId }: { total: number; bookingId: string })
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       <div className="mt-6 flex items-center gap-2 rounded-lg bg-primary-50 p-3 text-sm text-primary-700">
         <ShieldCheck className="h-5 w-5 shrink-0" />
-        {t("tunoGuarantee")}
+        {requiresApproval ? t("tunoGuaranteeRequest") : t("tunoGuarantee")}
       </div>
       <Button
         type="submit"
@@ -78,6 +78,8 @@ function PaymentForm({ total, bookingId }: { total: number; bookingId: string })
             <Loader2 className="h-4 w-4 animate-spin" />
             {t("processing")}
           </span>
+        ) : requiresApproval ? (
+          t("sendRequestAmount", { amount: total })
         ) : (
           t("payAmount", { amount: total })
         )}
@@ -97,6 +99,7 @@ export default function BookPage() {
   const [loading, setLoading] = useState(true);
   const [clientSecret, setClientSecret] = useState("");
   const [bookingId, setBookingId] = useState("");
+  const [requiresApproval, setRequiresApproval] = useState(false);
   const [creatingPayment, setCreatingPayment] = useState(false);
   const [error, setError] = useState("");
   const [licensePlate, setLicensePlate] = useState("");
@@ -238,6 +241,7 @@ export default function BookPage() {
       } else {
         setClientSecret(result.clientSecret!);
         setBookingId(result.bookingId!);
+        setRequiresApproval(!!result.requiresApproval);
       }
       setCreatingPayment(false);
     });
@@ -374,7 +378,7 @@ export default function BookPage() {
                     locale: stripeLocale(locale),
                   }}
                 >
-                  <PaymentForm total={total} bookingId={bookingId} />
+                  <PaymentForm total={total} bookingId={bookingId} requiresApproval={requiresApproval} />
                 </Elements>
               </div>
             )}

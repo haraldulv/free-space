@@ -152,7 +152,7 @@ async function getBookedSpotsCounts(
     .from("bookings")
     .select("listing_id, selected_spot_ids")
     .in("listing_id", listingIds)
-    .in("status", ["confirmed", "pending"])
+    .in("status", ["confirmed", "pending", "requested"])
     .lt("check_in", checkOut)
     .gt("check_out", checkIn);
 
@@ -186,7 +186,7 @@ export async function getAvailableSpots(
     .from("bookings")
     .select("selected_spot_ids")
     .eq("listing_id", listingId)
-    .in("status", ["confirmed", "pending"])
+    .in("status", ["confirmed", "pending", "requested"])
     .lt("check_in", checkOut)
     .gt("check_out", checkIn);
 
@@ -213,7 +213,7 @@ export async function getBookedSpotIds(
     .from("bookings")
     .select("selected_spot_ids")
     .eq("listing_id", listingId)
-    .in("status", ["confirmed", "pending"])
+    .in("status", ["confirmed", "pending", "requested"])
     .lt("check_in", checkOut)
     .gt("check_out", checkIn);
 
@@ -241,7 +241,7 @@ export async function getFutureBookedDates(
     .from("bookings")
     .select("check_in, check_out, selected_spot_ids")
     .eq("listing_id", listingId)
-    .in("status", ["confirmed", "pending"])
+    .in("status", ["confirmed", "pending", "requested"])
     .gte("check_out", today);
 
   const perSpot: Record<string, Set<string>> = {};

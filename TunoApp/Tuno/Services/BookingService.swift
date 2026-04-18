@@ -158,7 +158,7 @@ final class BookingService: ObservableObject {
                 .from("bookings")
                 .select("check_in, check_out, selected_spot_ids")
                 .eq("listing_id", value: listingId)
-                .in("status", values: ["confirmed", "pending"])
+                .in("status", values: ["confirmed", "pending", "requested"])
                 .gte("check_out", value: today)
                 .execute()
                 .value
@@ -210,7 +210,7 @@ final class BookingService: ObservableObject {
                 .from("bookings")
                 .select("id", head: true, count: .exact)
                 .eq("listing_id", value: listingId)
-                .in("status", values: ["confirmed", "pending"])
+                .in("status", values: ["confirmed", "pending", "requested"])
                 .lt("check_in", value: checkOut)
                 .gt("check_out", value: checkIn)
                 .execute()
