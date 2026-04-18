@@ -69,10 +69,29 @@ export async function createConnectAccount(
     individual,
     settings: {
       payouts: {
-        schedule: { interval: "manual" },
+        // Daily med Stripe-default delay (7 dager for nye NO-kontoer).
+        // Pengene som vår cron overfører via stripe.transfers.create blir
+        // automatisk utbetalt til hostens bankkonto neste bankdag.
+        schedule: { interval: "daily" },
       },
     },
     metadata: { platform: "tuno" },
+  });
+}
+
+/**
+ * Oppdater payout schedule på en eksisterende Connect-konto.
+ * Brukes som backfill for kontoer opprettet før daily-default ble satt.
+ */
+export async function setPayoutScheduleDaily(
+  accountId: string,
+): Promise<Stripe.Account> {
+  return stripe.accounts.update(accountId, {
+    settings: {
+      payouts: {
+        schedule: { interval: "daily" },
+      },
+    },
   });
 }
 
