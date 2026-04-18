@@ -33,7 +33,7 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
     <div className={`flex gap-4 rounded-xl border bg-white p-3 transition-shadow hover:shadow-sm ${
       isActive ? "border-neutral-200" : "border-neutral-200 opacity-60"
     }`}>
-      <Link href={`/listings/${listing.id}`} className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg">
+      <Link href={`/dashboard/annonse/${listing.id}`} className="relative h-24 w-32 shrink-0 overflow-hidden rounded-lg">
         {listing.images[0] ? (
           <Image
             src={listing.images[0]}
@@ -54,7 +54,7 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
         )}
       </Link>
 
-      <Link href={`/listings/${listing.id}`} className="flex flex-1 flex-col justify-between min-w-0">
+      <Link href={`/dashboard/annonse/${listing.id}`} className="flex flex-1 flex-col justify-between min-w-0">
         <div>
           <div className="flex items-center gap-2">
             <h3 className="text-sm font-semibold text-neutral-900 truncate">{listing.title}</h3>

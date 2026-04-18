@@ -340,7 +340,8 @@
     "lastMonth": "Last month",
     "total": "Total",
     "awaitingApproval": "Awaiting host",
-    "requestsToReview": "Requests to respond to"
+    "requestsToReview": "Requests to respond to",
+    "editListing": "Edit listing"
   },
   "messages": {
     "title": "Messages",
@@ -681,5 +682,46 @@
   "metadata": {
     "title": "Tuno",
     "description": "Find and book parking spots and camping sites across Norway. Commuter parking and motorhome tourism made simple."
+  },
+  "hostStats": {
+    "viewPublic": "View public listing",
+    "occupancy30": "Occupancy (30 d)",
+    "occupancy90Compare": "Last 90 d: {pct}%",
+    "revenue30": "Revenue (30 d)",
+    "revenue90Compare": "Last 90 d: {kr} kr",
+    "upcomingBookings": "Upcoming bookings",
+    "nextCheckIn": "Next check-in: {date}",
+    "noUpcoming": "No upcoming bookings",
+    "capacity": "Capacity",
+    "namedSpotsCount": "{count} named spots",
+    "noNamedSpots": "Listing uses shared capacity",
+    "spotBreakdown": "Per spot",
+    "spotBreakdownDesc": "Click a spot to see calendar and block dates.",
+    "occupancy30Short": "Occupancy 30 d",
+    "revenue30Short": "Revenue 30 d",
+    "upcomingShort": "Upcoming",
+    "nextShort": "Next: {date}",
+    "upcomingTitle": "Upcoming bookings",
+    "noUpcomingBookings": "No upcoming bookings.",
+    "guest": "Guest",
+    "dates": "Dates",
+    "status": "Status",
+    "amount": "Amount",
+    "anonymousGuest": "Anonymous",
+    "statusRequested": "Requested",
+    "statusConfirmed": "Confirmed",
+    "unnamedSpot": "Unnamed spot",
+    "pricePerNight": "{kr} kr per night",
+    "usesListingPrice": "Uses listing price",
+    "upcomingForSpot": "Upcoming for this spot",
+    "noUpcomingForSpot": "No upcoming bookings for this spot.",
+    "availabilityTitle": "Availability",
+    "availabilitySubtitle": "Click dates to block this spot for maintenance or personal use.",
+    "legendBlocked": "Blocked",
+    "legendBooked": "Booked",
+    "saving": "Saving…",
+    "saveBlocked": "Save blocking",
+    "saved": "Saved",
+    "blockedCount": "{count, plural, =1 {1 date blocked} other {# dates blocked}}"
   }
 }

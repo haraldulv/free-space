@@ -340,7 +340,8 @@
     "lastMonth": "Letzter Monat",
     "total": "Gesamt",
     "awaitingApproval": "Warten auf Gastgeber",
-    "requestsToReview": "Anfragen zur Beantwortung"
+    "requestsToReview": "Anfragen zur Beantwortung",
+    "editListing": "Anzeige bearbeiten"
   },
   "messages": {
     "title": "Nachrichten",
@@ -681,5 +682,46 @@
   "metadata": {
     "title": "Tuno",
     "description": "Finde und buche Parkplätze und Campingplätze in ganz Norwegen. Pendlerparken und Wohnmobil-Tourismus – einfach gemacht."
+  },
+  "hostStats": {
+    "viewPublic": "Öffentliche Ansicht",
+    "occupancy30": "Belegung (30 T)",
+    "occupancy90Compare": "Letzte 90 T: {pct}%",
+    "revenue30": "Einnahmen (30 T)",
+    "revenue90Compare": "Letzte 90 T: {kr} kr",
+    "upcomingBookings": "Anstehende Buchungen",
+    "nextCheckIn": "Nächster Check-in: {date}",
+    "noUpcoming": "Keine anstehenden Buchungen",
+    "capacity": "Kapazität",
+    "namedSpotsCount": "{count} benannte Stellplätze",
+    "noNamedSpots": "Anzeige nutzt gemeinsame Kapazität",
+    "spotBreakdown": "Pro Stellplatz",
+    "spotBreakdownDesc": "Klicke auf einen Stellplatz für Kalender und Sperrungen.",
+    "occupancy30Short": "Belegung 30 T",
+    "revenue30Short": "Einnahmen 30 T",
+    "upcomingShort": "Anstehend",
+    "nextShort": "Nächster: {date}",
+    "upcomingTitle": "Anstehende Buchungen",
+    "noUpcomingBookings": "Keine anstehenden Buchungen.",
+    "guest": "Gast",
+    "dates": "Daten",
+    "status": "Status",
+    "amount": "Betrag",
+    "anonymousGuest": "Anonym",
+    "statusRequested": "Anfrage",
+    "statusConfirmed": "Bestätigt",
+    "unnamedSpot": "Unbenannter Stellplatz",
+    "pricePerNight": "{kr} kr pro Nacht",
+    "usesListingPrice": "Verwendet Anzeigenpreis",
+    "upcomingForSpot": "Anstehend für diesen Stellplatz",
+    "noUpcomingForSpot": "Keine anstehenden Buchungen für diesen Stellplatz.",
+    "availabilityTitle": "Verfügbarkeit",
+    "availabilitySubtitle": "Klicke auf Daten, um den Stellplatz für Wartung oder Eigennutzung zu sperren.",
+    "legendBlocked": "Gesperrt",
+    "legendBooked": "Gebucht",
+    "saving": "Speichern…",
+    "saveBlocked": "Sperrung speichern",
+    "saved": "Gespeichert",
+    "blockedCount": "{count, plural, =1 {1 Tag gesperrt} other {# Tage gesperrt}}"
   }
 }

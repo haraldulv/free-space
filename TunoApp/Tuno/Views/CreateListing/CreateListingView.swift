@@ -1454,11 +1454,8 @@ struct AvailabilityStepView: View {
     @State private var displayedMonth = Date()
 
     private let calendar = Calendar.current
-    private let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    // Bruker TunoCalendar.dateKey(_:) — DateFormatter med eksplisitt timeZone
+    // for å unngå off-by-one-bugs som har plaget tidligere kalender-kode.
 
     private let monthFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -1516,7 +1513,7 @@ struct AvailabilityStepView: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 4) {
                     ForEach(days, id: \.self) { day in
                         if let day {
-                            let dateStr = dateFormatter.string(from: day)
+                            let dateStr = TunoCalendar.dateKey(day)
                             let isBlocked = form.blockedDates.contains(dateStr)
                             let isPast = day < calendar.startOfDay(for: Date())
 
@@ -1940,11 +1937,7 @@ struct SpotBlockedDatesSection: View {
     @State private var displayedMonth = Date()
 
     private let calendar = Calendar.current
-    private let dateFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        return f
-    }()
+    // Bruker TunoCalendar.dateKey(_:) for konsistens og timezone-safety.
     private let monthFormatter: DateFormatter = {
         let f = DateFormatter()
         f.locale = Locale(identifier: "nb_NO")
@@ -2005,7 +1998,7 @@ struct SpotBlockedDatesSection: View {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 2) {
                     ForEach(Array(days.enumerated()), id: \.offset) { _, day in
                         if let day {
-                            let dateStr = dateFormatter.string(from: day)
+                            let dateStr = TunoCalendar.dateKey(day)
                             let isBlocked = blockedDates.contains(dateStr)
                             let isPast = day < calendar.startOfDay(for: Date())
                             Button {

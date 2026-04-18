@@ -266,7 +266,7 @@ struct MyListingsView: View {
                 List {
                     ForEach(listings) { listing in
                         NavigationLink {
-                            ListingDetailView(listingId: listing.id)
+                            HostListingStatsView(listing: listing)
                         } label: {
                             HStack(spacing: 12) {
                                 AsyncImage(url: URL(string: listing.images?.first ?? "")) { phase in

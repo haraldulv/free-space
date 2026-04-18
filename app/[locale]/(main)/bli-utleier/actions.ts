@@ -56,3 +56,45 @@ export async function updateBlockedDatesAction(id: string, blockedDates: string[
     return { error: err instanceof Error ? err.message : "Noe gikk galt" };
   }
 }
+
+/**
+ * Oppdater blokkerte datoer for én plass innenfor en annonse.
+ * Bevarer alle øvrige felt på spot_markers — bare blockedDates på matching spot endres.
+ */
+export async function updateSpotBlockedDatesAction(
+  listingId: string,
+  spotId: string,
+  blockedDates: string[],
+): Promise<{ error?: string }> {
+  try {
+    const userId = await getAuthUserId();
+    const { createClient } = await import("@/lib/supabase/server");
+    const supabase = await createClient();
+
+    const { data: listing, error: fetchErr } = await supabase
+      .from("listings")
+      .select("host_id, spot_markers")
+      .eq("id", listingId)
+      .single();
+
+    if (fetchErr || !listing) return { error: "Annonse ikke funnet" };
+    if (listing.host_id !== userId) return { error: "Ikke tilgang" };
+
+    const markers = (listing.spot_markers as Array<Record<string, unknown>>) || [];
+    const updated = markers.map((m) =>
+      m.id === spotId
+        ? { ...m, blockedDates: blockedDates.length > 0 ? blockedDates : null }
+        : m,
+    );
+
+    const { error: updateErr } = await supabase
+      .from("listings")
+      .update({ spot_markers: updated })
+      .eq("id", listingId);
+
+    if (updateErr) return { error: updateErr.message };
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
+}

@@ -340,7 +340,8 @@
     "lastMonth": "Forrige måned",
     "total": "Totalt",
     "awaitingApproval": "Venter på utleier",
-    "requestsToReview": "Forespørsler du må svare på"
+    "requestsToReview": "Forespørsler du må svare på",
+    "editListing": "Rediger annonse"
   },
   "messages": {
     "title": "Meldinger",
@@ -681,5 +682,46 @@
   "metadata": {
     "title": "Tuno",
     "description": "Finn og book parkeringsplasser og campingplasser over hele Norge. Pendlerparkering og bobilturisme gjort enkelt."
+  },
+  "hostStats": {
+    "viewPublic": "Se offentlig visning",
+    "occupancy30": "Belegg (30 d)",
+    "occupancy90Compare": "Siste 90 d: {pct}%",
+    "revenue30": "Inntekt (30 d)",
+    "revenue90Compare": "Siste 90 d: {kr} kr",
+    "upcomingBookings": "Kommende bookinger",
+    "nextCheckIn": "Neste innsjekk: {date}",
+    "noUpcoming": "Ingen kommende bookinger",
+    "capacity": "Kapasitet",
+    "namedSpotsCount": "{count} navngitte plasser",
+    "noNamedSpots": "Annonsen bruker samlet kapasitet",
+    "spotBreakdown": "Per plass",
+    "spotBreakdownDesc": "Klikk på en plass for å se kalender og blokkere datoer.",
+    "occupancy30Short": "Belegg 30 d",
+    "revenue30Short": "Inntekt 30 d",
+    "upcomingShort": "Kommende",
+    "nextShort": "Neste: {date}",
+    "upcomingTitle": "Kommende bookinger",
+    "noUpcomingBookings": "Ingen kommende bookinger.",
+    "guest": "Gjest",
+    "dates": "Datoer",
+    "status": "Status",
+    "amount": "Beløp",
+    "anonymousGuest": "Anonym",
+    "statusRequested": "Forespørsel",
+    "statusConfirmed": "Bekreftet",
+    "unnamedSpot": "Plass uten navn",
+    "pricePerNight": "{kr} kr per natt",
+    "usesListingPrice": "Bruker annonsens pris",
+    "upcomingForSpot": "Kommende på denne plassen",
+    "noUpcomingForSpot": "Ingen kommende bookinger på denne plassen.",
+    "availabilityTitle": "Tilgjengelighet",
+    "availabilitySubtitle": "Trykk på datoer for å blokkere plassen for vedlikehold eller egen bruk.",
+    "legendBlocked": "Blokkert",
+    "legendBooked": "Booket",
+    "saving": "Lagrer…",
+    "saveBlocked": "Lagre blokkering",
+    "saved": "Lagret",
+    "blockedCount": "{count, plural, =1 {1 dato blokkert} other {# datoer blokkert}}"
   }
 }
