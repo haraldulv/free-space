@@ -417,12 +417,14 @@ struct BookingGuest: Codable {
     let avatarUrl: String?
     let rating: Double?
     let reviewCount: Int?
+    let joinedYear: Int?
 
     enum CodingKeys: String, CodingKey {
         case fullName = "full_name"
         case avatarUrl = "avatar_url"
         case rating
         case reviewCount = "review_count"
+        case joinedYear = "joined_year"
     }
 }
 

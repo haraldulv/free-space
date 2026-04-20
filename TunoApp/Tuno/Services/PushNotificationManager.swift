@@ -88,8 +88,10 @@ class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCen
                  "booking_request", "booking_declined",
                  "review_reminder", "payout_sent", "checkin_message":
                 if let id = bookingId {
-                    PushRouter.shared.pendingBookingId = id
+                    // Viktig: sett type FØR id så onChange-observere på id
+                    // garantert ser riktig type når de leser routeren.
                     PushRouter.shared.pendingBookingType = type
+                    PushRouter.shared.pendingBookingId = id
                 }
             default:
                 break

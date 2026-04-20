@@ -162,6 +162,14 @@ struct ProfileView: View {
         .task(id: authManager.currentUser?.id) {
             await loadPendingCount()
         }
+        .onAppear {
+            // Hvis push allerede har satt type før dette viewet mountes
+            // (typisk når tab-switch skjer fra kald push), fanger vi det her.
+            if pushRouter.pendingBookingType == "booking_request" {
+                navigateToHostRequests = true
+                pushRouter.clearBooking()
+            }
+        }
         .onChange(of: pushRouter.pendingBookingType) { _, newType in
             if newType == "booking_request" {
                 navigateToHostRequests = true
