@@ -1,4 +1,4 @@
-/** Brand name used across the platform */
+/** Brand name used across the platform. */
 export const BRAND_NAME = "Tuno";
 
 /** Site URL — used for QR codes, Stripe callbacks, etc. */
