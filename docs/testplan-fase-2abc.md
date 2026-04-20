@@ -1,10 +1,16 @@
 # Testplan — Fase 2A/2B/2C ende-til-ende
 
-**Build:** iOS 10 (re-testes etter build 10-fix'er)
+**Build:** iOS 11 (re-testes etter build 11-fix'er)
 **Mål:** Verifisere non-instant booking, tovei reviews og host-dashboard før TestFlight-submit.
 **Estimert tid:** ~90 min fokusert.
 
-**Build 10-endringer å re-verifisere i Fase 2A.1 under:**
+**Build 11-endringer (nyeste) å re-verifisere i Fase 2A.1 under:**
+- Profil-tab badge (pending host requests vises på selve tab'en)
+- Avatar-upload i iOS (`Rediger profil` — bruker kan laste opp eget bilde)
+- Pris-oppdeling i detail-sheet ("Gjesten betaler" + "Din andel" tydelig skilt)
+- Payout-formel fikset (host får nå full listed pris, ikke ~1% mindre)
+
+**Build 10-endringer (fortsatt relevant):**
 - Push-routing for `booking_request` (P0-bug fikset)
 - Descending sort (nyeste forespørsel øverst)
 - "Ny gjest"-label
@@ -20,7 +26,7 @@
 - [x] Test-annonse opprettet med `instant_booking = false`
 - [x] Test-annonsen har minst **2 plasser** (for 2C drill-down)
 - [x] Lav pris satt (f.eks. 50 kr/natt) for å spare Stripe-fees
-- [ ] iOS build 10 installert på device via Xcode (`cd TunoApp && xcodegen generate`, bygg via Xcode på device)
+- [ ] iOS build 11 installert på device via Xcode (`cd TunoApp && xcodegen generate`, bygg via Xcode på device)
 - [x] Andre device eller web åpen for gjest-rollen
 - [x] Stripe Dashboard åpent i **live mode**
 - [x] Supabase SQL editor åpen
@@ -96,46 +102,94 @@
 #### Steg 11 — Web-verifisering
 - [x] Gjest logger inn på `https://www.tuno.no/dashboard`
 - [x] Tab **"Mine bestillinger"** → booking vises med status "Bekreftet"
-- [ ] Klikk inn → detaljer matcher (datoer, annonse, totalpris)
+- [x] Klikk inn → detaljer matcher (datoer, annonse, totalpris)
 
 ### 1A.1 — Build 10 regresjonsverifikasjon
 
 > Kjør på en ny test-booking. Bruk ny, liten sum (3–5 kr) for å unngå Stripe-fees.
 
 #### R1 — Push-routing for booking_request (P0-fix)
-- [ ] Lag ny booking som gjest, lukk appen helt på host-device (swipe vekk)
-- [ ] Trykk på push-varselet "Ny booking-forespørsel"
-- [ ] App åpner direkte i `HostRequestsView` — IKKE "Bestillinger"-tab
-- [ ] Hvis app var i bakgrunnen: samme oppførsel (åpner riktig tab + navigerer)
+- [x] Lag ny booking som gjest, lukk appen helt på host-device (swipe vekk)
+- [x] Trykk på push-varselet "Ny booking-forespørsel"
+- [x] App åpner direkte i `HostRequestsView` — IKKE "Bestillinger"-tab
+- [x] Hvis app var i bakgrunnen: samme oppførsel (åpner riktig tab + navigerer)
 
 #### R2 — Descending sort
-- [ ] Lag minst to forespørsler (to separate bookinger fra gjest)
-- [ ] Åpne Forespørsler — nyeste booking skal være ØVERST (ikke nederst som i build 9)
+- [x] Lag minst to forespørsler (to separate bookinger fra gjest)
+- [x] Åpne Forespørsler — nyeste booking skal være ØVERST (ikke nederst som i build 9)
 
 #### R3 — Airbnb-paritet på kortet
-- [ ] Gjestens avatar vises som sirkel øverst til venstre på kortet
-- [ ] Hvis gjesten ikke har avatar: fallback-sirkel med gjestens initial vises
-- [ ] Kort viser "Ny gjest"-pill når `reviewCount = 0` (ikke tomt felt)
-- [ ] Kort viser "X turer" hvis gjesten har tidligere confirmed bookinger
-- [ ] Kort viser "Gjest siden {år}" hvis `joined_year` er satt i profil
+- [x] Gjestens avatar vises som sirkel øverst til venstre på kortet
+- [x] Hvis gjesten ikke har avatar: fallback-sirkel med gjestens initial vises
+- [x] Kort viser "Ny gjest"-pill når `reviewCount = 0` (ikke tomt felt)
+- [x] Kort viser "X turer" hvis gjesten har tidligere confirmed bookinger
+- [x] Kort viser "Gjest siden {år}" hvis `joined_year` er satt i profil
 
 #### R4 — Detail-sheet ("Se gjennom")
-- [ ] Trykk hvor som helst på forespørselskortet → detail-sheet åpner som bottom-sheet
-- [ ] Sheet viser: stort avatar, navn, rating/Ny gjest, turer, "Siden {år}"
-- [ ] Oppholdet-seksjon: annonse-bilde, tittel, by, ankomst, avreise, frist
-- [ ] Pris-seksjon: totalbeløp + forklaring om utbetaling
-- [ ] "Hva skjer nå?"-seksjon med tre bullet points (policy)
-- [ ] I bunnen: **Avvis** (rød outline) + **Godkjenn** (grønn) som sticky action-bar
+- [x] Trykk hvor som helst på forespørselskortet → detail-sheet åpner som bottom-sheet
+- [x] Sheet viser: stort avatar, navn, rating/Ny gjest, turer, "Siden {år}"
+- [x] Oppholdet-seksjon: annonse-bilde, tittel, by, ankomst, avreise, frist
+- [x] Pris-seksjon: totalbeløp + forklaring om utbetaling
+- [x] "Hva skjer nå?"-seksjon med tre bullet points (policy)
+- [x] I bunnen: **Avvis** (rød outline) + **Godkjenn** (grønn) som sticky action-bar
 
 #### R5 — Bekreftelses-alert før godkjenn/avvis
-- [ ] Trykk **Godkjenn** → alert "Godkjenn forespørselen?" med forklaring om belastning
-- [ ] "Avbryt" → sheet forblir åpen, ingenting skjer
-- [ ] "Godkjenn" → kallet går gjennom, sheet lukkes, kortet forsvinner fra listen
-- [ ] Samme prinsipp for Avvis: alert "Avvise forespørselen?" → Avbryt/Avvis
+- [x] Trykk **Godkjenn** → alert "Godkjenn forespørselen?" med forklaring om belastning
+- [x] "Avbryt" → sheet forblir åpen, ingenting skjer
+- [x] "Godkjenn" → kallet går gjennom, sheet lukkes, kortet forsvinner fra listen
+- [x] Samme prinsipp for Avvis: alert "Avvise forespørselen?" → Avbryt/Avvis
 
 #### R6 — Decline-e-post (await-fiks)
-- [ ] Avvis en forespørsel via sheet
-- [ ] **Gjest-innboks:** e-posten "Forespørselen ble ikke godkjent" kommer fram innen ~15 sek (i build 9 ble denne kuttet av Vercel-lambda)
+- [x] Avvis en forespørsel via sheet
+- [x] **Gjest-innboks:** e-posten "Forespørselen ble ikke godkjent" kommer fram innen ~15 sek (i build 9 ble denne kuttet av Vercel-lambda)
+
+---
+
+### 1A.2 — Build 11 regresjonsverifikasjon
+
+> Nye fiks etter build 10-testen. Kjør med samme test-annonse.
+
+#### R7 — Profil-tab badge
+- [ ] Lag ny booking som gjest
+- [ ] Host-device: se på bunnen av skjermen — **Profil**-tab har rød badge med `1` (telleren for pending forespørsler)
+- [ ] Bytt til andre tabs og tilbake — badge vises fortsatt
+- [ ] Godkjenn eller avvis forespørselen → badge forsvinner fra Profil-tab
+- [ ] Verifiser også at ved 0 pending forespørsler: ingen badge
+- [ ] Merk: badge på "Forespørsler"-raden INNE i Profil-siden skal fortsatt virke (uendret)
+
+#### R8 — Avatar-upload (iOS)
+- [ ] Profil → **Rediger profil**
+- [ ] Øverst vises profilbilde-sirkel med kamera-ikon
+- [ ] Trykk på sirkelen → PhotosPicker åpner
+- [ ] Velg et bilde → lastes opp (spinner vises)
+- [ ] Sirkelen viser nytt bilde etter få sekunder
+- [ ] Gå ut av "Rediger profil" og inn igjen — bildet persisterer
+- [ ] **Verifiser at gjest-siden også ser bildet:** kjør ny booking der denne gjesten er gjest → host ser gjestens nye avatar på forespørselskortet
+- [ ] **Web:** gjesten går til `tuno.no/dashboard?tab=settings` (Innstillinger) → samme avatar vises → kan byttes derfra også (eksisterende flyt)
+
+#### R9 — Pris-oppdeling i detail-sheet
+- [ ] Åpne en forespørsel → detail-sheet
+- [ ] Pris-seksjon viser nå:
+  - "Gjesten betaler: {X} kr" (liten, grå)
+  - "Din andel: {Y} kr" (stor, grønn, fet)
+- [ ] Forklarings-tekst: "Du får utbetalt din pris. Tunos servicegebyr betales av gjesten på toppen."
+- [ ] For små testbeløp (3 kr): begge tallene kan være like fordi fee rundes til 0. For større beløp (f.eks. 110 kr-booking): "Gjesten betaler 110", "Din andel 100"
+
+#### R10 — Payout-formel (web + backend)
+- [ ] Sjekk SQL: finn en `confirmed + paid + transfer_status=pending`-booking
+  ```sql
+  select id, total_price from bookings
+  where status='confirmed' and payment_status='paid' and transfer_status='pending'
+  order by check_in desc limit 5;
+  ```
+- [ ] Trigg payout-cron manuelt (bruk `www`-domene):
+  ```bash
+  curl -H "Authorization: Bearer $CRON_SECRET" \
+    https://www.tuno.no/api/cron/process-payouts
+  ```
+- [ ] Verifiser i Stripe Dashboard → Connected Accounts → host → Transfers: beløpet matcher `total_price - round(total_price * 0.1 / 1.1)` (ikke `total_price * 0.9` som før)
+- [ ] Sjekk `notifications`-rad i Supabase + push/e-post til host: "X kr overført" der X er korrekt host-andel
+- [ ] Sjekk host-dashboard `/dashboard/annonse/[id]` → inntekts-widget bruker samme korrekte formel
 
 ---
 
@@ -242,7 +296,7 @@ Bruker den godkjente bookingen fra **1A**.
 
 ## 4. TestFlight
 
-- [ ] Xcode → Product → Archive (build 10)
+- [ ] Xcode → Product → Archive (build 11)
 - [ ] Upload til App Store Connect
 - [ ] Legg til interne testere (meg + Kim)
 - [ ] Røyktest: installer fra TestFlight
@@ -268,6 +322,13 @@ Bruker den godkjente bookingen fra **1A**.
 - [x] **`HostRequestsView` — Airbnb-paritet:** Avatar, rating, "X turer", "Gjest siden {år}" på kortet. Full oppsummering i detail-sheet.
 - [x] **"Se gjennom"-steg før godkjenn:** Ny `HostRequestDetailSheet` med policy-info og bekreftelses-alerts på Godkjenn og Avvis. Inline-knappene er borte.
 - [x] **Fire-and-forget push/e-post:** Alle sendinger er nå await'et før serverless-return. Gjelder respond-route, cron/process-payouts, reviews-actions, og book/actions (commit b9c1a24).
+
+## Løst i build 11 (verifiser via Fase 2A.2)
+
+- [x] **Profil-tab badge:** `CustomTabBar` viser nå rød badge på Profil-tab med antall pending forespørsler. `MainTabView` holder state og refresher ved push + tab-switch.
+- [x] **Avatar-upload iOS:** `EditProfileView` har nå PhotosPicker-basert opplasting til Supabase Storage (`avatars`-bucket). Komprimering via felles `ImageCompression.compressForUpload`. Web har fra før `SettingsPanel.handleAvatarChange`.
+- [x] **Pris-oppdeling "Se gjennom":** Sheet viser nå "Gjesten betaler" + "Din andel" tydelig skilt. Host-andel beregnes lokalt med samme formel som `lib/cancellation.ts`.
+- [x] **Payout-formel bug:** `process-payouts`, `stats.ts`, `lib/email.ts` brukte `total * 0.9` — feil fordi fee legges på toppen (`total = subtotal * 1.1`), så riktig formel er `total - round(total * 0.1 / 1.1)`. Underbetalte host ~1%. Fikset via ny `splitHostAndFee`-helper i `lib/config.ts`.
 
 ---
 

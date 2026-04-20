@@ -226,6 +226,19 @@
     "•" : {
 
     },
+    "• %@ %@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "• %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "• Gjest siden %@" : {
+
+    },
     "+" : {
 
     },
@@ -450,9 +463,6 @@
         }
       }
     },
-    "Avvis" : {
-
-    },
     "Badstue" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -572,7 +582,10 @@
         }
       }
     },
-    "Beløpet frigjøres til gjesten." : {
+    "Beløpet belastes gjesten og pengene reserveres til utbetaling etter oppholdet." : {
+
+    },
+    "Beløpet frigjøres til gjesten umiddelbart." : {
 
     },
     "Belysning" : {
@@ -1076,6 +1089,9 @@
           }
         }
       }
+    },
+    "Du får utbetalt din andel etter oppholdet (minus Tunos servicegebyr)." : {
+
     },
     "Du finner IBAN i nettbanken din. Norske IBAN starter med NO og har 15 tegn." : {
       "extractionState" : "manual",
@@ -4032,6 +4048,9 @@
         }
       }
     },
+    "Ny gjest" : {
+
+    },
     "Om denne plassen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4903,6 +4922,9 @@
           }
         }
       }
+    },
+    "Se gjennom" : {
+
     },
     "Se mine bestillinger" : {
       "extractionState" : "manual",

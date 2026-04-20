@@ -1,4 +1,5 @@
 import SwiftUI
+import PhotosUI
 
 struct ProfileView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -203,9 +204,33 @@ struct EditProfileView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var fullName = ""
     @State private var isSaving = false
+    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var isUploadingAvatar = false
+    @State private var avatarError: String?
 
     var body: some View {
         Form {
+            Section {
+                HStack(spacing: 16) {
+                    avatarView
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Profilbilde")
+                            .font(.system(size: 15, weight: .medium))
+                        Text("Klikk for å endre. Maks 5 MB.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral500)
+                    }
+                    Spacer()
+                }
+                .padding(.vertical, 4)
+
+                if let err = avatarError {
+                    Text(err)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.red)
+                }
+            }
+
             Section("Personlig informasjon") {
                 TextField("Fullt navn", text: $fullName)
             }
@@ -234,6 +259,90 @@ struct EditProfileView: View {
         .navigationTitle("Rediger profil")
         .onAppear {
             fullName = authManager.profile?.fullName ?? ""
+        }
+        .onChange(of: selectedPhoto) { _, newItem in
+            guard let item = newItem else { return }
+            Task { await uploadAvatar(item) }
+        }
+    }
+
+    @ViewBuilder
+    private var avatarView: some View {
+        PhotosPicker(selection: $selectedPhoto, matching: .images, photoLibrary: .shared()) {
+            ZStack {
+                if let urlStr = authManager.profile?.avatarUrl, let url = URL(string: urlStr) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        default:
+                            Circle().fill(Color.neutral200)
+                        }
+                    }
+                } else {
+                    Circle()
+                        .fill(Color.primary100)
+                        .overlay(
+                            Text(String((authManager.profile?.fullName ?? "?").prefix(1)).uppercased())
+                                .font(.system(size: 24, weight: .semibold))
+                                .foregroundStyle(.primary600)
+                        )
+                }
+
+                if isUploadingAvatar {
+                    Circle().fill(Color.white.opacity(0.7))
+                    ProgressView()
+                } else {
+                    Circle()
+                        .fill(Color.black.opacity(0.001)) // usynlig men treffer hit-testen
+                        .overlay(alignment: .bottomTrailing) {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.white)
+                                .padding(6)
+                                .background(Color.primary600)
+                                .clipShape(Circle())
+                                .offset(x: 2, y: 2)
+                        }
+                }
+            }
+            .frame(width: 72, height: 72)
+            .clipShape(Circle())
+        }
+        .disabled(isUploadingAvatar)
+    }
+
+    private func uploadAvatar(_ item: PhotosPickerItem) async {
+        avatarError = nil
+        isUploadingAvatar = true
+        defer { isUploadingAvatar = false }
+
+        guard let raw = try? await item.loadTransferable(type: Data.self) else {
+            avatarError = "Kunne ikke lese bildet"
+            return
+        }
+        let compressed = ImageCompression.compressForUpload(raw) ?? raw
+        guard let userId = authManager.currentUser?.id.uuidString.lowercased() else {
+            avatarError = "Ikke innlogget"
+            return
+        }
+
+        let fileName = "\(userId)/\(UUID().uuidString.lowercased()).jpg"
+        do {
+            try await supabase.storage
+                .from("avatars")
+                .upload(fileName, data: compressed, options: .init(contentType: "image/jpeg", upsert: true))
+            let publicURL = try supabase.storage
+                .from("avatars")
+                .getPublicURL(path: fileName)
+            try await supabase
+                .from("profiles")
+                .update(["avatar_url": publicURL.absoluteString])
+                .eq("id", value: userId)
+                .execute()
+            await authManager.loadProfile()
+        } catch {
+            avatarError = "Kunne ikke laste opp: \(error.localizedDescription)"
         }
     }
 }

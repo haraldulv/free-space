@@ -3,6 +3,7 @@ import SwiftUI
 struct CustomTabBar: View {
     @Binding var selectedTab: Int
     var unreadMessages: Int = 0
+    var pendingHostRequests: Int = 0
 
     private let tabs: [(index: Int, icon: String, label: String)] = [
         (0, "magnifyingglass", "Utforsk"),
@@ -11,6 +12,14 @@ struct CustomTabBar: View {
         (3, "bubble.left", "Meldinger"),
         (4, "person.crop.circle", "Profil"),
     ]
+
+    private func badgeCount(for tabIndex: Int) -> Int {
+        switch tabIndex {
+        case 3: return unreadMessages
+        case 4: return pendingHostRequests
+        default: return 0
+        }
+    }
 
     var body: some View {
         HStack(spacing: 0) {
@@ -31,9 +40,9 @@ struct CustomTabBar: View {
                                     .font(.system(size: 20))
                                     .frame(height: 22)
 
-                                // Badge for Meldinger tab
-                                if tab.index == 3 && unreadMessages > 0 {
-                                    Text(unreadMessages > 99 ? "99+" : "\(unreadMessages)")
+                                let count = badgeCount(for: tab.index)
+                                if count > 0 {
+                                    Text(count > 99 ? "99+" : "\(count)")
                                         .font(.system(size: 10, weight: .bold))
                                         .foregroundStyle(.white)
                                         .padding(.horizontal, 4)

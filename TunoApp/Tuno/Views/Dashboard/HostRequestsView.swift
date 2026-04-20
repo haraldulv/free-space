@@ -420,16 +420,34 @@ private struct HostRequestDetailSheet: View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader("Pris")
             HStack {
-                Text("Totalt")
-                    .font(.system(size: 15))
+                Text("Gjesten betaler")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral600)
                 Spacer()
                 Text("\(booking.totalPrice) kr")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral600)
             }
-            Text("Du får utbetalt din andel etter oppholdet (minus Tunos servicegebyr).")
+            HStack {
+                Text("Din andel")
+                    .font(.system(size: 15, weight: .semibold))
+                Spacer()
+                Text("\(hostPayout) kr")
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.primary600)
+            }
+            Text("Du får utbetalt din pris. Tunos servicegebyr betales av gjesten på toppen.")
                 .font(.system(size: 12))
                 .foregroundStyle(.neutral500)
         }
+    }
+
+    /// Gjesten betaler `total_price` (= host-pris + Tunos servicegebyr på toppen).
+    /// Host får sin opprinnelige pris. Formelen speiler `lib/cancellation.ts`.
+    private var hostPayout: Int {
+        let rate = 0.10
+        let fee = Int((Double(booking.totalPrice) * rate / (1 + rate)).rounded())
+        return booking.totalPrice - fee
     }
 
     private var policySection: some View {

@@ -8,6 +8,7 @@ struct MainTabView: View {
     @State private var selectedTab = 0
     @State private var homeNavPath = NavigationPath()
     @State private var messagesNavPath = NavigationPath()
+    @State private var pendingHostRequests: Int = 0
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -42,16 +43,25 @@ struct MainTabView: View {
             .padding(.bottom, 56)
 
             // Custom tab bar
-            CustomTabBar(selectedTab: $selectedTab, unreadMessages: chatService.unreadCount)
+            CustomTabBar(
+                selectedTab: $selectedTab,
+                unreadMessages: chatService.unreadCount,
+                pendingHostRequests: pendingHostRequests,
+            )
         }
         .ignoresSafeArea(.keyboard)
         .task {
             await loadUnreadCount()
+            await loadPendingHostRequests()
         }
         .onChange(of: selectedTab) { _, newTab in
             // Refresh unread count when leaving messages tab
             if newTab != 3 {
                 Task { await loadUnreadCount() }
+            }
+            // Refresh pending-count når vi forlater Profil-tab (etter at host svarte)
+            if newTab != 4 {
+                Task { await loadPendingHostRequests() }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
@@ -60,7 +70,10 @@ struct MainTabView: View {
             deepLinkManager.pendingListingId = nil
         }
         .onReceive(NotificationCenter.default.publisher(for: .newPushNotification)) { _ in
-            Task { await loadUnreadCount() }
+            Task {
+                await loadUnreadCount()
+                await loadPendingHostRequests()
+            }
         }
         .onChange(of: pushRouter.pendingBookingId) { _, newValue in
             guard newValue != nil else { return }
@@ -90,6 +103,26 @@ struct MainTabView: View {
     private func loadUnreadCount() async {
         guard let userId = authManager.currentUser?.id else { return }
         await chatService.loadConversations(userId: userId.uuidString.lowercased())
+    }
+
+    private func loadPendingHostRequests() async {
+        guard let userId = authManager.currentUser?.id.uuidString.lowercased(),
+              authManager.isHost else {
+            pendingHostRequests = 0
+            return
+        }
+        do {
+            let count = try await supabase
+                .from("bookings")
+                .select("id", head: true, count: .exact)
+                .eq("host_id", value: userId)
+                .eq("status", value: "requested")
+                .execute()
+                .count ?? 0
+            pendingHostRequests = count
+        } catch {
+            print("loadPendingHostRequests error: \(error)")
+        }
     }
 }
 
