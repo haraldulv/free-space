@@ -96,19 +96,24 @@ export async function GET(request: NextRequest) {
         const { data: hostAuth } = await supabase.auth.admin.getUserById(booking.host_id);
         const { data: hostProfile } = await supabase.from("profiles").select("full_name").eq("id", booking.host_id).single();
         const listingTitle = listing?.title || "en plass";
+        const payoutSends: Promise<unknown>[] = [
+          sendPushToUser(
+            booking.host_id,
+            "Utbetaling sendt!",
+            `${hostAmountNok} kr er overført til din konto for ${listingTitle}.`,
+            { bookingId: booking.id, type: "payout_sent" },
+          ).catch((err) => console.error("[Push] payout failed:", err)),
+        ];
         if (hostAuth.user?.email) {
-          sendPayoutEmail(hostAuth.user.email, {
-            hostName: hostProfile?.full_name || "Utleier",
-            amount: hostAmountNok,
-            listingTitle,
-          }).catch(console.error);
+          payoutSends.push(
+            sendPayoutEmail(hostAuth.user.email, {
+              hostName: hostProfile?.full_name || "Utleier",
+              amount: hostAmountNok,
+              listingTitle,
+            }).catch((err) => console.error("[Email] payout failed:", err)),
+          );
         }
-        sendPushToUser(
-          booking.host_id,
-          "Utbetaling sendt!",
-          `${hostAmountNok} kr er overført til din konto for ${listingTitle}.`,
-          { bookingId: booking.id, type: "payout_sent" },
-        ).catch(console.error);
+        await Promise.all(payoutSends);
 
         processed++;
       } catch (err) {

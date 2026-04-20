@@ -77,24 +77,28 @@ export async function POST(request: NextRequest) {
         })
         .eq("id", bookingId);
 
-      sendPushToUser(
-        booking.user_id,
-        "Forespørselen er godkjent!",
-        `Utleier har godkjent bookingen av ${listingTitle}.`,
-        { bookingId: booking.id, type: "booking_confirmed" },
-      ).catch(console.error);
-
+      const approveSends: Promise<unknown>[] = [
+        sendPushToUser(
+          booking.user_id,
+          "Forespørselen er godkjent!",
+          `Utleier har godkjent bookingen av ${listingTitle}.`,
+          { bookingId: booking.id, type: "booking_confirmed" },
+        ).catch((err) => console.error("[Push] approve failed:", err)),
+      ];
       if (guestEmail) {
-        sendBookingApprovedToGuest(guestEmail, {
-          guestName,
-          listingTitle,
-          listingId: booking.listing_id,
-          listingImage: listing?.images?.[0] ?? null,
-          checkIn: booking.check_in,
-          checkOut: booking.check_out,
-          totalPrice: booking.total_price,
-        }).catch(console.error);
+        approveSends.push(
+          sendBookingApprovedToGuest(guestEmail, {
+            guestName,
+            listingTitle,
+            listingId: booking.listing_id,
+            listingImage: listing?.images?.[0] ?? null,
+            checkIn: booking.check_in,
+            checkOut: booking.check_out,
+            totalPrice: booking.total_price,
+          }).catch((err) => console.error("[Email] approve failed:", err)),
+        );
       }
+      await Promise.all(approveSends);
 
       return NextResponse.json({ status: "confirmed" });
     }
@@ -120,22 +124,26 @@ export async function POST(request: NextRequest) {
       })
       .eq("id", bookingId);
 
-    sendPushToUser(
-      booking.user_id,
-      "Forespørselen ble avvist",
-      `Utleier kunne ikke ta imot ${listingTitle}. Beløpet er frigjort.`,
-      { bookingId: booking.id, type: "booking_declined" },
-    ).catch(console.error);
-
+    const declineSends: Promise<unknown>[] = [
+      sendPushToUser(
+        booking.user_id,
+        "Forespørselen ble avvist",
+        `Utleier kunne ikke ta imot ${listingTitle}. Beløpet er frigjort.`,
+        { bookingId: booking.id, type: "booking_declined" },
+      ).catch((err) => console.error("[Push] decline failed:", err)),
+    ];
     if (guestEmail) {
-      sendBookingDeclinedToGuest(guestEmail, {
-        guestName,
-        listingTitle,
-        checkIn: booking.check_in,
-        checkOut: booking.check_out,
-        autoDeclined: false,
-      }).catch(console.error);
+      declineSends.push(
+        sendBookingDeclinedToGuest(guestEmail, {
+          guestName,
+          listingTitle,
+          checkIn: booking.check_in,
+          checkOut: booking.check_out,
+          autoDeclined: false,
+        }).catch((err) => console.error("[Email] decline failed:", err)),
+      );
     }
+    await Promise.all(declineSends);
 
     return NextResponse.json({ status: "cancelled" });
   } catch (err) {

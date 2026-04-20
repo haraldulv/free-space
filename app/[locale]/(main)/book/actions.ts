@@ -325,27 +325,41 @@ export async function cancelBookingAction(
       };
       const listingTitle = listing?.title || "en plass";
       const refundSuffix = result.refundAmount > 0 ? ` Refusjon: ${result.refundAmount} kr.` : "";
-      if (guestEmail) sendCancellationEmail(guestEmail, { name: guestName, ...emailData }).catch(console.error);
+      const cancelSends: Promise<unknown>[] = [];
+      if (guestEmail) {
+        cancelSends.push(
+          sendCancellationEmail(guestEmail, { name: guestName, ...emailData })
+            .catch((err) => console.error("[Email] cancel guest failed:", err)),
+        );
+      }
       if (hostEmail && cancelledBy === "guest") {
         const { data: hostProfile } = await db.from("profiles").select("full_name").eq("id", booking.host_id).single();
-        sendCancellationEmail(hostEmail, { name: hostProfile?.full_name || "Utleier", ...emailData }).catch(console.error);
+        cancelSends.push(
+          sendCancellationEmail(hostEmail, { name: hostProfile?.full_name || "Utleier", ...emailData })
+            .catch((err) => console.error("[Email] cancel host failed:", err)),
+        );
       }
       // Push til den motparten som ikke avbestilte selv.
       if (cancelledBy === "host") {
-        sendPushToUser(
-          booking.user_id,
-          "Booking kansellert",
-          `Utleier har kansellert ${listingTitle}.${refundSuffix}`,
-          { bookingId: booking.id, type: "booking_cancelled" },
-        ).catch(console.error);
+        cancelSends.push(
+          sendPushToUser(
+            booking.user_id,
+            "Booking kansellert",
+            `Utleier har kansellert ${listingTitle}.${refundSuffix}`,
+            { bookingId: booking.id, type: "booking_cancelled" },
+          ).catch((err) => console.error("[Push] cancel guest failed:", err)),
+        );
       } else if (cancelledBy === "guest" && booking.host_id) {
-        sendPushToUser(
-          booking.host_id,
-          "Booking kansellert",
-          `Gjesten har kansellert bookingen av ${listingTitle}.`,
-          { bookingId: booking.id, type: "booking_cancelled" },
-        ).catch(console.error);
+        cancelSends.push(
+          sendPushToUser(
+            booking.host_id,
+            "Booking kansellert",
+            `Gjesten har kansellert bookingen av ${listingTitle}.`,
+            { bookingId: booking.id, type: "booking_cancelled" },
+          ).catch((err) => console.error("[Push] cancel host failed:", err)),
+        );
       }
+      await Promise.all(cancelSends);
     } catch { /* email/push errors should not block cancellation */ }
 
     return { refundAmount: result.refundAmount };
@@ -399,24 +413,29 @@ export async function approveBookingAction(bookingId: string): Promise<{ error?:
       const guestName = guestAuth.data.user?.user_metadata?.full_name || "Gjest";
       const listingTitle = listing?.title || "en plass";
 
-      sendPushToUser(
-        booking.user_id,
-        "Forespørselen er godkjent!",
-        `Utleier har godkjent bookingen av ${listingTitle}.`,
-        { bookingId: booking.id, type: "booking_confirmed" },
-      ).catch(console.error);
+      const approveSends: Promise<unknown>[] = [
+        sendPushToUser(
+          booking.user_id,
+          "Forespørselen er godkjent!",
+          `Utleier har godkjent bookingen av ${listingTitle}.`,
+          { bookingId: booking.id, type: "booking_confirmed" },
+        ).catch((err) => console.error("[Push] approve failed:", err)),
+      ];
 
       if (guestEmail) {
-        sendBookingApprovedToGuest(guestEmail, {
-          guestName,
-          listingTitle,
-          listingId: booking.listing_id,
-          listingImage: listing?.images?.[0] ?? null,
-          checkIn: booking.check_in,
-          checkOut: booking.check_out,
-          totalPrice: booking.total_price,
-        }).catch(console.error);
+        approveSends.push(
+          sendBookingApprovedToGuest(guestEmail, {
+            guestName,
+            listingTitle,
+            listingId: booking.listing_id,
+            listingImage: listing?.images?.[0] ?? null,
+            checkIn: booking.check_in,
+            checkOut: booking.check_out,
+            totalPrice: booking.total_price,
+          }).catch((err) => console.error("[Email] approve failed:", err)),
+        );
       }
+      await Promise.all(approveSends);
     } catch { /* ikke blokker */ }
 
     return {};
@@ -487,22 +506,27 @@ export async function declineBookingAction(
         ? `Utleier rakk ikke å svare på ${listingTitle}. Beløpet er frigjort.`
         : `Utleier kunne ikke ta imot ${listingTitle}. Beløpet er frigjort.`;
 
-      sendPushToUser(
-        booking.user_id,
-        pushTitle,
-        pushBody,
-        { bookingId: booking.id, type: "booking_declined" },
-      ).catch(console.error);
+      const declineSends: Promise<unknown>[] = [
+        sendPushToUser(
+          booking.user_id,
+          pushTitle,
+          pushBody,
+          { bookingId: booking.id, type: "booking_declined" },
+        ).catch((err) => console.error("[Push] decline failed:", err)),
+      ];
 
       if (guestEmail) {
-        sendBookingDeclinedToGuest(guestEmail, {
-          guestName,
-          listingTitle,
-          checkIn: booking.check_in,
-          checkOut: booking.check_out,
-          autoDeclined: !!options?.autoDeclined,
-        }).catch(console.error);
+        declineSends.push(
+          sendBookingDeclinedToGuest(guestEmail, {
+            guestName,
+            listingTitle,
+            checkIn: booking.check_in,
+            checkOut: booking.check_out,
+            autoDeclined: !!options?.autoDeclined,
+          }).catch((err) => console.error("[Email] decline failed:", err)),
+        );
       }
+      await Promise.all(declineSends);
     } catch { /* ikke blokker */ }
 
     return {};

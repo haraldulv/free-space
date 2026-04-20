@@ -107,12 +107,12 @@ export async function createReviewAction(data: {
         metadata: { bookingId: data.bookingId, listingId: data.listingId },
       });
 
-      sendPushToUser(
+      await sendPushToUser(
         counterpartId,
         title,
         body,
         { bookingId: data.bookingId, type: "new_review" },
-      ).catch(console.error);
+      ).catch((err) => console.error("[Push] new_review failed:", err));
     }
 
     return {};
