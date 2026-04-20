@@ -267,7 +267,9 @@ struct BookingCard: View {
             ChatView(
                 conversationId: id,
                 otherUserName: "Utleier",
-                listingTitle: booking.listing?.title ?? ""
+                listingTitle: booking.listing?.title ?? "",
+                listingId: booking.listing?.id,
+                listingImage: booking.listing?.images.first
             )
         }
         .task {

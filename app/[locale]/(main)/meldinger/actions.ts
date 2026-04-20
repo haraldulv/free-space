@@ -106,6 +106,7 @@ export async function sendMessageAction(data: {
       recipientId,
       "Ny melding",
       `${senderName}: ${data.content.slice(0, 100)}`,
+      { type: "new_message", conversationId: data.conversationId },
     );
 
     return {};

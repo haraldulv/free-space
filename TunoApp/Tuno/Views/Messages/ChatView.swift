@@ -4,10 +4,13 @@ struct ChatView: View {
     let conversationId: String
     let otherUserName: String
     let listingTitle: String
+    var listingId: String? = nil
+    var listingImage: String? = nil
 
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var chatService = ChatService()
     @State private var messageText = ""
+    @State private var showListingDetail = false
     @FocusState private var isInputFocused: Bool
 
     private var currentUserId: String {
@@ -16,6 +19,10 @@ struct ChatView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            listingHeader
+
+            Divider()
+
             // Messages
             ScrollViewReader { proxy in
                 ScrollView {
@@ -71,17 +78,11 @@ struct ChatView: View {
             .padding(.vertical, 10)
             .background(.white)
         }
-        .navigationTitle(otherUserName)
+        .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                VStack(spacing: 1) {
-                    Text(otherUserName)
-                        .font(.system(size: 15, weight: .semibold))
-                    Text(listingTitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.neutral400)
-                }
+        .navigationDestination(isPresented: $showListingDetail) {
+            if let listingId {
+                ListingDetailView(listingId: listingId)
             }
         }
         .task {
@@ -92,6 +93,58 @@ struct ChatView: View {
         .onDisappear {
             Task { await chatService.unsubscribe() }
         }
+    }
+
+    private var listingHeader: some View {
+        Button {
+            if listingId != nil {
+                showListingDetail = true
+            }
+        } label: {
+            HStack(spacing: 12) {
+                if let listingImage, let url = URL(string: listingImage) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        default:
+                            Rectangle().fill(Color.neutral100)
+                        }
+                    }
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                } else {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.neutral100)
+                        .frame(width: 44, height: 44)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(otherUserName)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text(listingTitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                if listingId != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.neutral400)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.white)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(listingId == nil)
     }
 
     private func sendMessage() async {

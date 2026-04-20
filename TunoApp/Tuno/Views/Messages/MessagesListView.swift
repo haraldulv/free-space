@@ -34,16 +34,17 @@ struct MessagesListView: View {
                     }
                 }
                 .listStyle(.plain)
-                .navigationDestination(for: String.self) { conversationId in
-                    if let convo = chatService.conversations.first(where: { $0.id == conversationId }) {
-                        ChatView(
-                            conversationId: convo.id,
-                            otherUserName: convo.otherUserName,
-                            listingTitle: convo.listingTitle
-                        )
-                    }
-                }
             }
+        }
+        .navigationDestination(for: String.self) { conversationId in
+            let convo = chatService.conversations.first(where: { $0.id == conversationId })
+            ChatView(
+                conversationId: conversationId,
+                otherUserName: convo?.otherUserName ?? "",
+                listingTitle: convo?.listingTitle ?? "",
+                listingId: convo?.listingId,
+                listingImage: convo?.listingImage
+            )
         }
         .navigationTitle("Meldinger")
         .fullScreenCover(isPresented: $showLogin) {

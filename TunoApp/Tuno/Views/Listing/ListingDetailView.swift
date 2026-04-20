@@ -358,7 +358,9 @@ struct ListingDetailView: View {
                 ChatView(
                     conversationId: convoId,
                     otherUserName: chatHostName ?? "Utleier",
-                    listingTitle: listing?.title ?? ""
+                    listingTitle: listing?.title ?? "",
+                    listingId: listing?.id,
+                    listingImage: listing?.images?.first
                 )
             }
         }

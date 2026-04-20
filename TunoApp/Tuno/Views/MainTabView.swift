@@ -7,6 +7,7 @@ struct MainTabView: View {
     @StateObject private var chatService = ChatService()
     @State private var selectedTab = 0
     @State private var homeNavPath = NavigationPath()
+    @State private var messagesNavPath = NavigationPath()
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -26,7 +27,7 @@ struct MainTabView: View {
                         BookingsView()
                     }
                 case 3:
-                    NavigationStack {
+                    NavigationStack(path: $messagesNavPath) {
                         MessagesListView()
                     }
                 case 4:
@@ -73,8 +74,11 @@ struct MainTabView: View {
             }
         }
         .onChange(of: pushRouter.pendingConversationId) { _, newValue in
-            guard newValue != nil else { return }
+            guard let id = newValue else { return }
             selectedTab = 3
+            messagesNavPath = NavigationPath()
+            messagesNavPath.append(id)
+            pushRouter.clearConversation()
         }
         .sheet(item: $deepLinkManager.pendingListingId) { listingId in
             NavigationStack {

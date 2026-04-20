@@ -217,6 +217,7 @@ export default function DashboardPage() {
               refundAmount: row.refund_amount,
               approvalDeadline: row.approval_deadline,
               hostRespondedAt: row.host_responded_at,
+              hostId: row.host_id as string,
               hostName: (row.host as Record<string, unknown>)?.full_name as string || "",
               hostPhone: (row.host as Record<string, unknown>)?.show_phone ? (row.host as Record<string, unknown>)?.phone as string || "" : "",
             }))
@@ -685,6 +686,8 @@ export default function DashboardPage() {
                           currentUserId={userId}
                           otherUserName={selectedConvo.otherUserName || t("anonymous")}
                           listingTitle={selectedConvo.listingTitle || ""}
+                          listingId={selectedConvo.listingId}
+                          listingImage={selectedConvo.listingImage}
                           onBack={() => setSelectedConvo(null)}
                         />
                       ) : (

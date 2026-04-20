@@ -2,8 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { Send, ArrowLeft } from "lucide-react";
+import { Send, ArrowLeft, ChevronRight } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { Link } from "@/i18n/navigation";
 import { dateFnsLocale } from "@/lib/i18n-helpers";
 import { getMessages, subscribeToMessages } from "@/lib/supabase/chat";
 import { sendMessageAction, markMessagesReadAction } from "@/app/[locale]/(main)/meldinger/actions";
@@ -14,6 +15,8 @@ interface ChatViewProps {
   currentUserId: string;
   otherUserName: string;
   listingTitle: string;
+  listingId?: string;
+  listingImage?: string;
   onBack?: () => void;
 }
 
@@ -22,6 +25,8 @@ export default function ChatView({
   currentUserId,
   otherUserName,
   listingTitle,
+  listingId,
+  listingImage,
   onBack,
 }: ChatViewProps) {
   const t = useTranslations("messages");
@@ -100,10 +105,43 @@ export default function ChatView({
             <ArrowLeft className="h-5 w-5" />
           </button>
         )}
-        <div>
-          <p className="text-sm font-semibold text-neutral-900">{otherUserName}</p>
-          <p className="text-xs text-neutral-500">{listingTitle}</p>
-        </div>
+        {listingId ? (
+          <Link
+            href={`/listings/${listingId}`}
+            className="flex flex-1 items-center gap-3 min-w-0 transition-opacity hover:opacity-80"
+          >
+            {listingImage ? (
+              <img
+                src={listingImage}
+                alt=""
+                className="h-10 w-10 shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="h-10 w-10 shrink-0 rounded-lg bg-neutral-100" />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-neutral-900">{otherUserName}</p>
+              <p className="truncate text-xs text-neutral-500">{listingTitle}</p>
+            </div>
+            <ChevronRight className="h-4 w-4 shrink-0 text-neutral-400" />
+          </Link>
+        ) : (
+          <div className="flex flex-1 items-center gap-3 min-w-0">
+            {listingImage ? (
+              <img
+                src={listingImage}
+                alt=""
+                className="h-10 w-10 shrink-0 rounded-lg object-cover"
+              />
+            ) : (
+              <div className="h-10 w-10 shrink-0 rounded-lg bg-neutral-100" />
+            )}
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-neutral-900">{otherUserName}</p>
+              <p className="truncate text-xs text-neutral-500">{listingTitle}</p>
+            </div>
+          </div>
+        )}
       </div>
 
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
