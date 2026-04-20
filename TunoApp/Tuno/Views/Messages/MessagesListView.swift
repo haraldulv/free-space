@@ -2,7 +2,7 @@ import SwiftUI
 
 struct MessagesListView: View {
     @EnvironmentObject var authManager: AuthManager
-    @StateObject private var chatService = ChatService()
+    @EnvironmentObject var chatService: ChatService
     @State private var showLogin = false
 
     var body: some View {
@@ -51,8 +51,13 @@ struct MessagesListView: View {
             LoginView()
         }
         .task {
+            // Lastes allerede av MainTabView ved app-start. Lesbar race-sjekk:
+            // hvis listen er tom og vi ikke laster nå, trigger ett kall — f.eks. hvis
+            // bruker logget inn etter app-launch.
             guard let userId = authManager.currentUser?.id else { return }
-            await chatService.loadConversations(userId: userId.uuidString)
+            if chatService.conversations.isEmpty && !chatService.isLoading {
+                await chatService.loadConversations(userId: userId.uuidString)
+            }
         }
         .refreshable {
             guard let userId = authManager.currentUser?.id else { return }
@@ -68,13 +73,10 @@ struct ConversationRow: View {
         HStack(spacing: 12) {
             // Avatar
             if let avatarUrl = conversation.otherUserAvatar, let url = URL(string: avatarUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    default:
-                        avatarPlaceholder
-                    }
+                CachedAsyncImage(url: url) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    avatarPlaceholder
                 }
                 .frame(width: 50, height: 50)
                 .clipShape(Circle())

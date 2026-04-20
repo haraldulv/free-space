@@ -31,6 +31,17 @@ struct TunoApp: App {
 
     init() {
         initializeGoogleMaps()
+        configureImageCache()
+    }
+
+    /// Stor disk-cache for listing-bilder og avatarer. URLSession bruker denne via
+    /// `URLCache.shared`, og `CachedAsyncImage` leser fra den før nettkall.
+    private func configureImageCache() {
+        URLCache.shared = URLCache(
+            memoryCapacity: 50 * 1024 * 1024,   // 50 MB RAM
+            diskCapacity: 500 * 1024 * 1024,    // 500 MB disk
+            directory: nil,
+        )
     }
 
     var body: some Scene {

@@ -28,18 +28,12 @@ struct ListingCard: View {
                     Color.neutral100
                         .aspectRatio(1, contentMode: .fit)
                         .overlay(
-                            AsyncImage(url: URL(string: images[imageIndex])) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                case .failure:
-                                    Image(systemName: "photo")
-                                        .foregroundStyle(.neutral400)
-                                default:
-                                    ProgressView()
-                                }
+                            CachedAsyncImage(url: URL(string: images[imageIndex])) { image in
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            } placeholder: {
+                                ProgressView()
                             }
                         )
                         .clipped()

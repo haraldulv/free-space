@@ -54,13 +54,10 @@ struct ProfileView: View {
                 HStack(spacing: 14) {
                     if let avatarUrl = authManager.profile?.avatarUrl,
                        let url = URL(string: avatarUrl) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            default:
-                                Circle().fill(Color.neutral200)
-                            }
+                        CachedAsyncImage(url: url) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Circle().fill(Color.neutral200)
                         }
                         .frame(width: 60, height: 60)
                         .clipShape(Circle())
@@ -271,13 +268,10 @@ struct EditProfileView: View {
         PhotosPicker(selection: $selectedPhoto, matching: .images, photoLibrary: .shared()) {
             ZStack {
                 if let urlStr = authManager.profile?.avatarUrl, let url = URL(string: urlStr) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        default:
-                            Circle().fill(Color.neutral200)
-                        }
+                    CachedAsyncImage(url: url) { image in
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Circle().fill(Color.neutral200)
                     }
                 } else {
                     Circle()

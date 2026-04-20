@@ -249,13 +249,10 @@ private struct GuestAvatar: View {
     var body: some View {
         Group {
             if let avatarUrl, let url = URL(string: avatarUrl) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    default:
-                        fallback
-                    }
+                CachedAsyncImage(url: url) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    fallback
                 }
             } else {
                 fallback

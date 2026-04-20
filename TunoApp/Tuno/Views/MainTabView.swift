@@ -49,6 +49,7 @@ struct MainTabView: View {
                 pendingHostRequests: pendingHostRequests,
             )
         }
+        .environmentObject(chatService)
         .ignoresSafeArea(.keyboard)
         .task {
             await loadUnreadCount()

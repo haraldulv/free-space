@@ -29,6 +29,10 @@ final class LocalizationManager: ObservableObject {
     static let shared = LocalizationManager()
 
     @Published var currentLocale: Locale
+    /// Settes til `true` mens et språkbytte applyes. Brukes til å vise
+    /// spinner-overlay i SettingsView slik at brukeren får umiddelbar feedback
+    /// på tappet — også når SwiftUI ikke har rendret ferdig ennå.
+    @Published var isChangingLanguage: Bool = false
 
     private init() {
         let stored = UserDefaults.standard.string(forKey: "app_language")
@@ -39,10 +43,21 @@ final class LocalizationManager: ObservableObject {
 
     func setLanguage(_ code: String) {
         let normalized = Self.normalize(code)
+        guard normalized != currentLocale.identifier else { return }
+
+        isChangingLanguage = true
         UserDefaults.standard.set(normalized, forKey: "app_language")
         UserDefaults.standard.set([normalized], forKey: "AppleLanguages")
         Bundle.setLanguage(normalized)
         currentLocale = Locale(identifier: normalized)
+
+        // Trigger re-render og skru av spinner etter et lite vindu. Den faktiske
+        // applyeringen er synkron (<50ms), men SwiftUI trenger en frame for å
+        // rebuilde view-treet som lytter på `currentLocale.identifier` via `.id(...)`.
+        Task {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            self.isChangingLanguage = false
+        }
     }
 
     var currentLanguageCode: String {

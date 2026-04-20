@@ -1,10 +1,16 @@
 # Testplan — Fase 2A/2B/2C ende-til-ende
 
-**Build:** iOS 11 (re-testes etter build 11-fix'er)
+**Build:** iOS 12 (re-testes etter build 12-fix'er)
 **Mål:** Verifisere non-instant booking, tovei reviews og host-dashboard før TestFlight-submit.
 **Estimert tid:** ~90 min fokusert.
 
-**Build 11-endringer (nyeste) å re-verifisere i Fase 2A.1 under:**
+**Build 12-endringer (nyeste) å re-verifisere i Fase 2A.3 under:**
+- Meldinger-fanen laster raskt (4 batch-queries istedenfor 4·N waterfall)
+- Bildecache (CachedAsyncImage) — listing-bilder + avatarer persisterer mellom app-launches
+- Språkbytte-UX (loading-overlay + tyske strenger 100% komplett)
+- Utvidet SettingsView (varsler, support, juridiske lenker, versjon)
+
+**Build 11-endringer å re-verifisere i Fase 2A.2:**
 - Profil-tab badge (pending host requests vises på selve tab'en)
 - Avatar-upload i iOS (`Rediger profil` — bruker kan laste opp eget bilde)
 - Pris-oppdeling i detail-sheet ("Gjesten betaler" + "Din andel" tydelig skilt)
@@ -26,7 +32,7 @@
 - [x] Test-annonse opprettet med `instant_booking = false`
 - [x] Test-annonsen har minst **2 plasser** (for 2C drill-down)
 - [x] Lav pris satt (f.eks. 50 kr/natt) for å spare Stripe-fees
-- [ ] iOS build 11 installert på device via Xcode (`cd TunoApp && xcodegen generate`, bygg via Xcode på device)
+- [ ] iOS build 12 installert på device via Xcode (`cd TunoApp && xcodegen generate`, bygg via Xcode på device)
 - [x] Andre device eller web åpen for gjest-rollen
 - [x] Stripe Dashboard åpent i **live mode**
 - [x] Supabase SQL editor åpen
@@ -193,6 +199,45 @@
 
 ---
 
+### 1A.3 — Build 12 regresjonsverifikasjon (perf + i18n + settings)
+
+> Etter at bygget er installert, kjør disse før du fortsetter med 1B/1C/1D.
+
+#### R11 — Meldinger-fanen lasting
+- [ ] Logg inn og vent til appen er fullastet (Forsiden vises)
+- [ ] Trykk **Meldinger**-tab → listen skal vises innen 1 sekund (helst momentant)
+- [ ] Kald start: force-quit appen, re-åpne, gå direkte til Meldinger — fortsatt < 1 sek
+- [ ] Pull-to-refresh skal fortsatt fungere (re-laster samme batch)
+- [ ] Marker en samtale som lest (åpne + les) — unread-counter i tab-bar + bjellen oppdateres
+- [ ] **Måling (valgfri):** I Xcode Debug-konsoll, se etter "Failed to load conversations" — skal ikke forekomme
+
+#### R12 — Bildecache
+- [ ] Forsiden: scroll gjennom alle seksjoner (Populære, Utvalgte, Tilgjengelige i dag)
+- [ ] Scroll tilbake — bildene vises momentant (ingen re-load-flicker)
+- [ ] Force-quit appen og åpne på nytt → bildene på forsiden skal vises nesten umiddelbart (fra disk-cache, ikke nytt nettkall)
+- [ ] Meldinger-avatarer: scroll listen → ingen flicker
+- [ ] **Måling (valgfri):** I Xcode → Debug Navigator → Network — total bytes bør være lavere etter fix (Vi har 50 MB RAM + 500 MB disk allokert i `TunoApp.init()`)
+
+#### R13 — Utvidet SettingsView
+- [ ] Profil-tab → Innstillinger
+- [ ] Seksjoner synlige (i rekkefølge):
+  - **Språk** (nb/en/de — som før)
+  - **Varsler** — "Push-varslinger" → åpner iOS-innstillinger
+  - **Hjelp** — "Kontakt support" (mailto:support@tuno.no) + "Retningslinjer"
+  - **Juridisk** — "Brukervilkår", "Utleiervilkår", "Personvernerklæring" (alle åpner Safari til tuno.no)
+  - **Om appen** — versjonsnummer ("1.0.0 (12)")
+
+#### R14 — Språkbytte-UX + tysk completeness
+- [ ] Innstillinger → velg **Deutsch 🇩🇪**
+- [ ] **Spinner-overlay vises i ~250 ms** med teksten "Bytter språk…" (ny feedback i build 12)
+- [ ] Liste-knappene er disabled mens spinneren vises
+- [ ] Etter bytte: tab-titler, knapper, labels skal være på tysk
+- [ ] Gå inn på en annonse-detaljside, book-flow, og forespørsler-sheet — ingen norske ord igjen (tidligere blanding av norsk og tysk)
+- [ ] Konkrete strings å sjekke: "Ny gjest" → "Neuer Gast", "Se gjennom" → "Überprüfen", "Forespørsel" → "Anfrage", "kr/natt" → "kr/Nacht"
+- [ ] Bytt tilbake til **Norsk** — samme spinner-oppførsel, ingen engelske strings igjen
+
+---
+
 ### 1B. Avvis-flyt (med ny detail-sheet)
 
 - [ ] Ny booking fra gjest på samme annonse
@@ -296,7 +341,7 @@ Bruker den godkjente bookingen fra **1A**.
 
 ## 4. TestFlight
 
-- [ ] Xcode → Product → Archive (build 11)
+- [ ] Xcode → Product → Archive (build 12)
 - [ ] Upload til App Store Connect
 - [ ] Legg til interne testere (meg + Kim)
 - [ ] Røyktest: installer fra TestFlight
@@ -329,6 +374,15 @@ Bruker den godkjente bookingen fra **1A**.
 - [x] **Avatar-upload iOS:** `EditProfileView` har nå PhotosPicker-basert opplasting til Supabase Storage (`avatars`-bucket). Komprimering via felles `ImageCompression.compressForUpload`. Web har fra før `SettingsPanel.handleAvatarChange`.
 - [x] **Pris-oppdeling "Se gjennom":** Sheet viser nå "Gjesten betaler" + "Din andel" tydelig skilt. Host-andel beregnes lokalt med samme formel som `lib/cancellation.ts`.
 - [x] **Payout-formel bug:** `process-payouts`, `stats.ts`, `lib/email.ts` brukte `total * 0.9` — feil fordi fee legges på toppen (`total = subtotal * 1.1`), så riktig formel er `total - round(total * 0.1 / 1.1)`. Underbetalte host ~1%. Fikset via ny `splitHostAndFee`-helper i `lib/config.ts`.
+
+## Løst i build 12 (verifiser via Fase 2A.3)
+
+- [x] **Meldinger-fanen lasting:** `ChatService.loadConversations` rewrote fra 1 + 4·N waterfall (8–20 sek for 10 samtaler) til 4 batch-queries parallelt (~300–800 ms uansett antall). `markAsRead` tilsvarende: én UPDATE i stedet for N.
+- [x] **ChatService deles:** `MessagesListView` brukte eget `@StateObject` — doble-laste queries. Nå delt via `EnvironmentObject` fra `MainTabView`, som forhåndslaster ved app-start.
+- [x] **Bildecache:** Ny `CachedAsyncImage`-komponent bruker `URLCache.shared` (50 MB RAM + 500 MB disk, konfigurert i `TunoApp.init()`). Byttet ut `AsyncImage` i `ListingCard`, `MessagesListView`, `HostRequestsView`, `ProfileView`.
+- [x] **Språkbytte-UX:** `LocalizationManager.isChangingLanguage` med 250 ms spinner-overlay i `SettingsView`.
+- [x] **Tysk i18n completeness:** 57 manglende strenger lagt til i `Localizable.xcstrings`. 406/406 strings har nå tysk (var 349/406).
+- [x] **SettingsView utvidet:** Språk + Varsler (iOS-innstillinger) + Hjelp (support + retningslinjer) + Juridisk (vilkår + personvern) + Om appen (versjon + build). Tidligere var det bare språk.
 
 ---
 
