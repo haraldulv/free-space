@@ -224,12 +224,12 @@ struct HostRequestsView: View {
 }
 
 extension ISO8601DateFormatter {
-    static let tunoFractional: ISO8601DateFormatter = {
+    nonisolated(unsafe) static let tunoFractional: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return f
     }()
-    static let tunoBasic: ISO8601DateFormatter = {
+    nonisolated(unsafe) static let tunoBasic: ISO8601DateFormatter = {
         let f = ISO8601DateFormatter()
         f.formatOptions = [.withInternetDateTime]
         return f

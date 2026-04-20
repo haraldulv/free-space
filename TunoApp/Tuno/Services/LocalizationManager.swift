@@ -2,7 +2,7 @@ import SwiftUI
 import Combine
 import ObjectiveC
 
-private var bundleKey: UInt8 = 0
+nonisolated(unsafe) private var bundleKey: UInt8 = 0
 
 /// Subclass av Bundle som videresender lookup til en valgt språk-bundle.
 final class LocalizedBundle: Bundle, @unchecked Sendable {
