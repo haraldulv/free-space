@@ -266,42 +266,45 @@ struct EditProfileView: View {
     @ViewBuilder
     private var avatarView: some View {
         PhotosPicker(selection: $selectedPhoto, matching: .images, photoLibrary: .shared()) {
-            ZStack {
-                if let urlStr = authManager.profile?.avatarUrl, let url = URL(string: urlStr) {
-                    CachedAsyncImage(url: url) { image in
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Circle().fill(Color.neutral200)
+            // Avatar-sirkel (clippet) med kamera-badge som sitter UTENFOR clip-maska
+            // så den ikke kuttes av sirkelen.
+            ZStack(alignment: .bottomTrailing) {
+                Group {
+                    if let urlStr = authManager.profile?.avatarUrl, let url = URL(string: urlStr) {
+                        CachedAsyncImage(url: url) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Circle().fill(Color.neutral200)
+                        }
+                    } else {
+                        Circle()
+                            .fill(Color.primary100)
+                            .overlay(
+                                Text(String((authManager.profile?.fullName ?? "?").prefix(1)).uppercased())
+                                    .font(.system(size: 24, weight: .semibold))
+                                    .foregroundStyle(.primary600)
+                            )
                     }
-                } else {
-                    Circle()
-                        .fill(Color.primary100)
-                        .overlay(
-                            Text(String((authManager.profile?.fullName ?? "?").prefix(1)).uppercased())
-                                .font(.system(size: 24, weight: .semibold))
-                                .foregroundStyle(.primary600)
-                        )
+                }
+                .frame(width: 72, height: 72)
+                .clipShape(Circle())
+                .overlay {
+                    if isUploadingAvatar {
+                        Circle().fill(Color.white.opacity(0.7))
+                        ProgressView()
+                    }
                 }
 
-                if isUploadingAvatar {
-                    Circle().fill(Color.white.opacity(0.7))
-                    ProgressView()
-                } else {
-                    Circle()
-                        .fill(Color.black.opacity(0.001)) // usynlig men treffer hit-testen
-                        .overlay(alignment: .bottomTrailing) {
-                            Image(systemName: "camera.fill")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.white)
-                                .padding(6)
-                                .background(Color.primary600)
-                                .clipShape(Circle())
-                                .offset(x: 2, y: 2)
-                        }
+                if !isUploadingAvatar {
+                    Image(systemName: "camera.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.white)
+                        .frame(width: 24, height: 24)
+                        .background(Color.primary600)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.white, lineWidth: 2))
                 }
             }
-            .frame(width: 72, height: 72)
-            .clipShape(Circle())
         }
         .disabled(isUploadingAvatar)
     }
