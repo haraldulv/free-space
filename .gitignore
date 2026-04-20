@@ -45,3 +45,6 @@ airbnb*.png
 ios/App/Pods/
 ios/App/build/
 ios/App/DerivedData/
+
+# claude code (per-maskin tillatelser, kan inneholde tokens)
+.claude/settings.local.json
