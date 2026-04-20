@@ -80,18 +80,21 @@ export async function POST(request: NextRequest) {
         const hostName = hostRes?.data.user?.user_metadata?.full_name || "Utleier";
         const listingImage = listingRes?.data?.images?.[0] ?? null;
 
+        const emailSends: Promise<unknown>[] = [];
+
         // Push til host: ny forespørsel
         if (existing.host_id) {
-          sendPushToUser(
-            existing.host_id,
-            "Ny booking-forespørsel",
-            `${guestName} ønsker å booke ${listingTitle}. Du har 24 timer på å svare.`,
-            { bookingId, type: "booking_request" },
-          ).catch((err) => console.error("[Push] Host request notify failed:", err));
+          emailSends.push(
+            sendPushToUser(
+              existing.host_id,
+              "Ny booking-forespørsel",
+              `${guestName} ønsker å booke ${listingTitle}. Du har 24 timer på å svare.`,
+              { bookingId, type: "booking_request" },
+            ).catch((err) => console.error("[Push] Host request notify failed:", err)),
+          );
         }
 
         // E-post til host + bekreftelse til gjest
-        const emailSends: Promise<unknown>[] = [];
         if (hostEmail) {
           emailSends.push(
             sendBookingRequestToHost(hostEmail, {
