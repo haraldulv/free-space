@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { splitHostAndFee } from "@/lib/config";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Tuno <noreply@tuno.no>";
@@ -99,7 +100,7 @@ export async function sendBookingNotificationToHost(to: string, data: {
   checkOut: string;
   totalPrice: number;
 }) {
-  const hostAmount = Math.round(data.totalPrice * 0.9);
+  const hostAmount = splitHostAndFee(data.totalPrice).hostShareNok;
   await resend.emails.send({
     from: FROM,
     to,
@@ -181,7 +182,7 @@ export async function sendBookingRequestToHost(to: string, data: {
   totalPrice: number;
   approvalDeadline?: string | null;
 }) {
-  const hostAmount = Math.round(data.totalPrice * 0.9);
+  const hostAmount = splitHostAndFee(data.totalPrice).hostShareNok;
   const deadlineLine = data.approvalDeadline
     ? `<p style="color:#d97706;font-size:14px;font-weight:600;margin:16px 0 0;">⏱ Du har 24 timer på å svare — ellers blir forespørselen automatisk avvist.</p>`
     : "";

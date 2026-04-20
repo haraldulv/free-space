@@ -1,5 +1,5 @@
 import { createClient } from "./server";
-import { SERVICE_FEE_RATE } from "@/lib/config";
+import { splitHostAndFee } from "@/lib/config";
 
 export type ListingStats = {
   occupancyPct: number;        // belegg siste N dager (0-100)
@@ -12,8 +12,6 @@ export type SpotStats = ListingStats & {
   spotId: string;
   label: string;
 };
-
-const HOST_SHARE = 1 - SERVICE_FEE_RATE;
 
 function dateNDaysAgoIso(n: number): string {
   return new Date(Date.now() - n * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
@@ -64,7 +62,7 @@ export async function getListingStats(
     const overlapNights = Math.max(0, nightsBetween(ci, co));
     const occupies = (b.selected_spot_ids as string[] | null)?.length || 1;
     occupiedNights += overlapNights * occupies;
-    revenue += Math.round((b.total_price as number) * HOST_SHARE);
+    revenue += splitHostAndFee(b.total_price as number).hostShareNok;
   }
 
   const occupancyPct = Math.min(100, Math.round((occupiedNights / (capacity * days)) * 100));
@@ -125,8 +123,8 @@ export async function getSpotStatsForListing(
       const ci = (b.check_in as string) > fromDate ? (b.check_in as string) : fromDate;
       const co = (b.check_out as string) < today ? (b.check_out as string) : today;
       occupiedNights += Math.max(0, nightsBetween(ci, co));
-      // Fordel pris likt mellom valgte plasser i bookingen
-      revenue += Math.round((b.total_price as number) * HOST_SHARE / ids.length);
+      // Fordel host-andel likt mellom valgte plasser i bookingen
+      revenue += Math.round(splitHostAndFee(b.total_price as number).hostShareNok / ids.length);
     }
 
     const upcomingForSpot = (upcoming || []).filter((b) =>

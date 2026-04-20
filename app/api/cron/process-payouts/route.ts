@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createTransfer } from "@/lib/stripe";
-import { SERVICE_FEE_RATE } from "@/lib/config";
+import { splitHostAndFee } from "@/lib/config";
 import { sendPayoutEmail } from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
 
@@ -55,8 +55,10 @@ export async function GET(request: NextRequest) {
           continue;
         }
 
-        // Calculate host payout (total minus platform fee), in øre
-        const hostAmount = Math.round(booking.total_price * (1 - SERVICE_FEE_RATE) * 100);
+        // Host-andel = det utleier har satt som pris (gjesten betalte pris + fee på toppen).
+        // Beløp i øre for Stripe-transfer.
+        const { hostShareNok } = splitHostAndFee(booking.total_price);
+        const hostAmount = hostShareNok * 100;
 
         // Get listing title for notification
         const { data: listing } = await supabase
@@ -81,7 +83,7 @@ export async function GET(request: NextRequest) {
           })
           .eq("id", booking.id);
 
-        const hostAmountNok = Math.round(booking.total_price * (1 - SERVICE_FEE_RATE));
+        const hostAmountNok = hostShareNok;
 
         // Notify host
         await supabase.from("notifications").insert({
