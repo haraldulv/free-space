@@ -104,7 +104,7 @@ struct SelectedExtraEntry: Codable, Hashable {
     let price: Int
     let perNight: Bool
     let quantity: Int
-    let message: String?
+    var message: String? = nil
 }
 
 struct SelectedExtras: Codable, Hashable {
