@@ -686,16 +686,25 @@ export default function DashboardPage() {
             {/* Listings */}
             {tab === "listings" && (
               <>
-                <div className="mt-4 lg:mt-0 flex items-center justify-between">
+                <div className="mt-4 lg:mt-0 flex items-center justify-between gap-3 flex-wrap">
                   <p className="text-sm text-neutral-500">
                     {t("listingsCount", { count: listings.length })}
                   </p>
-                  <Link href="/bli-utleier">
-                    <Button size="sm">
-                      <Plus className="mr-1.5 h-4 w-4" />
-                      {t("newListing")}
-                    </Button>
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    {listings.length > 0 && (
+                      <Link href="/dashboard/kalender">
+                        <Button size="sm" variant="outline">
+                          {t("calendarLink")}
+                        </Button>
+                      </Link>
+                    )}
+                    <Link href="/bli-utleier">
+                      <Button size="sm">
+                        <Plus className="mr-1.5 h-4 w-4" />
+                        {t("newListing")}
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
 
                 {listings.length === 0 ? (
