@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getListingStats, getSpotStatsForListing } from "@/lib/supabase/stats";
 import Container from "@/components/ui/Container";
 import { SpotStatsGrid } from "./SpotStatsGrid";
+import { PricingRulesPanel } from "./PricingRulesPanel";
 import type { SpotMarker } from "@/types";
 
 export default async function ListingOverviewPage({
@@ -23,7 +24,7 @@ export default async function ListingOverviewPage({
 
   const { data: listing } = await supabase
     .from("listings")
-    .select("id, title, host_id, images, city, region, address, spots, spot_markers, instant_booking, is_active")
+    .select("id, title, host_id, images, city, region, address, spots, spot_markers, instant_booking, is_active, price")
     .eq("id", id)
     .single();
 
@@ -35,13 +36,26 @@ export default async function ListingOverviewPage({
   const spotMarkers = (listing.spot_markers as SpotMarker[] | null) || [];
   const namedSpots = spotMarkers.filter((s): s is SpotMarker & { id: string } => !!s.id);
 
-  const [stats30, stats90, spotStats] = await Promise.all([
+  const [stats30, stats90, spotStats, pricingRulesRes] = await Promise.all([
     getListingStats(id, 30),
     getListingStats(id, 90),
     namedSpots.length > 0
       ? getSpotStatsForListing(id, namedSpots.map((s) => ({ id: s.id, label: s.label })), 30)
       : Promise.resolve([]),
+    supabase.from("listing_pricing_rules").select("*").eq("listing_id", id),
   ]);
+
+  const pricingRules = pricingRulesRes.data || [];
+  const weekendRule = pricingRules.find((r) => r.kind === "weekend");
+  const seasonRules = pricingRules
+    .filter((r) => r.kind === "season")
+    .map((r) => ({
+      id: r.id as string,
+      startDate: r.start_date as string,
+      endDate: r.end_date as string,
+      price: r.price as number,
+    }))
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
 
   const upcomingQuery = await supabase
     .from("bookings")
@@ -126,6 +140,14 @@ export default async function ListingOverviewPage({
           sub={namedSpots.length > 0 ? t("namedSpotsCount", { count: namedSpots.length }) : t("noNamedSpots")}
         />
       </div>
+
+      {/* Pricing rules */}
+      <PricingRulesPanel
+        listingId={id}
+        basePrice={(listing.price as number) ?? 0}
+        initialWeekendPrice={(weekendRule?.price as number | undefined) ?? null}
+        initialSeasonRules={seasonRules}
+      />
 
       {/* Per-spot grid */}
       {namedSpots.length > 0 && (

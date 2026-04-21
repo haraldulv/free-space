@@ -753,5 +753,23 @@
     "saveBlocked": "Save blocking",
     "saved": "Saved",
     "blockedCount": "{count, plural, =1 {1 date blocked} other {# dates blocked}}"
+  },
+  "hostPricing": {
+    "title": "Pricing rules",
+    "description": "Your listing's base price is {basePrice} NOK/night. Add weekend or season rules to override it.",
+    "weekendTitle": "Weekend price",
+    "weekendDescription": "Friday, Saturday and Sunday get their own price. Precedence: season > weekend > base.",
+    "seasonTitle": "Season price",
+    "seasonDescription": "Set a price for a specific period (e.g. summer weeks). Overrides weekend and base.",
+    "startDate": "From",
+    "endDate": "To",
+    "priceLabel": "Price",
+    "addSeason": "Add season",
+    "removeSeason": "Remove",
+    "save": "Save",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "invalidPrice": "Invalid price.",
+    "missingDates": "Pick start and end date."
   }
 }

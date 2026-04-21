@@ -753,5 +753,23 @@
     "saveBlocked": "Lagre blokkering",
     "saved": "Lagret",
     "blockedCount": "{count, plural, =1 {1 dato blokkert} other {# datoer blokkert}}"
+  },
+  "hostPricing": {
+    "title": "Prisregler",
+    "description": "Annonsens standardpris er {basePrice} kr/natt. Legg til helg-pris eller sesong-regler som overstyrer.",
+    "weekendTitle": "Helg-pris",
+    "weekendDescription": "Fredag, lørdag og søndag får egen pris. Presedens: sesong > helg > standard.",
+    "seasonTitle": "Sesong-pris",
+    "seasonDescription": "Sett pris for en periode (f.eks. sommeruker). Overstyrer helg og standard.",
+    "startDate": "Fra",
+    "endDate": "Til",
+    "priceLabel": "Pris",
+    "addSeason": "Legg til sesong",
+    "removeSeason": "Fjern",
+    "save": "Lagre",
+    "saving": "Lagrer…",
+    "saved": "Lagret",
+    "invalidPrice": "Ugyldig pris.",
+    "missingDates": "Velg start- og sluttdato."
   }
 }

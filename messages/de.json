@@ -753,5 +753,23 @@
     "saveBlocked": "Sperrung speichern",
     "saved": "Gespeichert",
     "blockedCount": "{count, plural, =1 {1 Tag gesperrt} other {# Tage gesperrt}}"
+  },
+  "hostPricing": {
+    "title": "Preisregeln",
+    "description": "Der Standardpreis deiner Anzeige ist {basePrice} kr/Nacht. Füge Wochenend- oder Saisonregeln hinzu, um ihn zu überschreiben.",
+    "weekendTitle": "Wochenendpreis",
+    "weekendDescription": "Freitag, Samstag und Sonntag bekommen einen eigenen Preis. Vorrang: Saison > Wochenende > Standard.",
+    "seasonTitle": "Saisonpreis",
+    "seasonDescription": "Setze einen Preis für einen bestimmten Zeitraum (z. B. Sommerwochen). Überschreibt Wochenend- und Standardpreis.",
+    "startDate": "Von",
+    "endDate": "Bis",
+    "priceLabel": "Preis",
+    "addSeason": "Saison hinzufügen",
+    "removeSeason": "Entfernen",
+    "save": "Speichern",
+    "saving": "Wird gespeichert …",
+    "saved": "Gespeichert",
+    "invalidPrice": "Ungültiger Preis.",
+    "missingDates": "Wähle Start- und Enddatum."
   }
 }
