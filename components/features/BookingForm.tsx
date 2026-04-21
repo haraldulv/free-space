@@ -10,7 +10,7 @@ import { bcpLocale } from "@/lib/i18n-helpers";
 import DatePicker from "@/components/ui/DatePicker";
 import Button from "@/components/ui/Button";
 import { Listing, SpotMarker, getDisplayPriceText } from "@/types";
-import { SERVICE_FEE_RATE } from "@/lib/config";
+import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS } from "@/lib/config";
 import { checkAvailabilityAction } from "@/app/[locale]/(main)/book/actions";
 
 interface BookingFormProps {
@@ -412,6 +412,12 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
         </div>
       )}
 
+      {nights > MAX_INSTANT_NIGHTS && listing.instantBooking && (
+        <p className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          {t("longStayRequiresApproval", { days: MAX_INSTANT_NIGHTS })}
+        </p>
+      )}
+
       <Button
         onClick={handleBook}
         size="lg"
@@ -425,7 +431,7 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
             : hasSpotLevelPricing && nights > 0 && selectedSpotIds.length === 0
               ? t("selectAtLeastOneSpot")
               : dateRange?.from && dateRange?.to
-                ? (listing.instantBooking === false ? t("requestToBook") : t("reserve"))
+                ? ((listing.instantBooking === false || nights > MAX_INSTANT_NIGHTS) ? t("requestToBook") : t("reserve"))
                 : t("checkAvailability")}
       </Button>
     </div>

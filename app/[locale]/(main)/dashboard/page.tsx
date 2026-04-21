@@ -214,8 +214,10 @@ export default function DashboardPage() {
               paymentStatus: row.payment_status,
               licensePlate: row.license_plate,
               isRentalCar: row.is_rental_car,
-              checkInTime: (row.listings as Record<string, unknown>)?.check_in_time as string || "15:00",
-              checkOutTime: (row.listings as Record<string, unknown>)?.check_out_time as string || "11:00",
+              // Snapshot-verdier fra bookingen vinner over listingens live-verdier
+              // så host-endringer ikke rammer eksisterende bookinger retroaktivt.
+              checkInTime: (row.check_in_time as string) || (row.listings as Record<string, unknown>)?.check_in_time as string || "15:00",
+              checkOutTime: (row.check_out_time as string) || (row.listings as Record<string, unknown>)?.check_out_time as string || "11:00",
               listingLat: (row.listings as Record<string, unknown>)?.lat as number,
               listingLng: (row.listings as Record<string, unknown>)?.lng as number,
               listingAddress: (row.listings as Record<string, unknown>)?.address as string,
@@ -271,8 +273,8 @@ export default function DashboardPage() {
             paymentStatus: row.payment_status,
             licensePlate: row.license_plate,
             isRentalCar: row.is_rental_car,
-            checkInTime: (row.listings as Record<string, unknown>)?.check_in_time as string || "15:00",
-            checkOutTime: (row.listings as Record<string, unknown>)?.check_out_time as string || "11:00",
+            checkInTime: (row.check_in_time as string) || (row.listings as Record<string, unknown>)?.check_in_time as string || "15:00",
+            checkOutTime: (row.check_out_time as string) || (row.listings as Record<string, unknown>)?.check_out_time as string || "11:00",
             listingAddress: (row.listings as Record<string, unknown>)?.address as string,
             guestName: (row.guest as Record<string, unknown>)?.full_name as string || t("anonymous"),
             guestAvatar: (row.guest as Record<string, unknown>)?.avatar_url as string || "",

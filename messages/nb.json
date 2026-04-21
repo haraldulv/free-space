@@ -226,6 +226,7 @@
     "reserve": "Reserver",
     "checkAvailability": "Sjekk tilgjengelighet",
     "checkingAvailability": "Sjekker tilgjengelighet...",
+    "longStayRequiresApproval": "Opphold på mer enn {days} netter krever godkjenning fra utleier.",
     "fullyBooked": "Fullbooket",
     "selectAtLeastOneSpot": "Velg minst én plass",
     "pricePerNightShort": "{price} kr/natt",
@@ -479,7 +480,7 @@
       "checkInLabel": "Innsjekk fra",
       "checkOutLabel": "Utsjekk innen",
       "instantLabel": "Umiddelbar booking",
-      "instantDesc": "Gjester kan reservere uten å vente på bekreftelse fra deg."
+      "instantDesc": "Gjester kan reservere opphold på inntil 7 netter uten å vente på bekreftelse. Lengre opphold krever alltid godkjenning fra deg."
     },
     "images": {
       "title": "Legg til bilder",
@@ -525,7 +526,7 @@
       "perHour": "Per time",
       "perNight": "Per natt",
       "instantLabel": "Direktebooking",
-      "instantDesc": "Gjester kan booke umiddelbart uten å vente på godkjenning"
+      "instantDesc": "Gjester kan booke umiddelbart opptil 7 netter. Lengre opphold krever alltid godkjenning."
     },
     "availability": {
       "title": "Tilgjengelighet",

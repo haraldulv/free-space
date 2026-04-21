@@ -11,6 +11,13 @@ export const SERVICE_FEE_RATE = 0.10;
 export const HOST_PAYOUT_DELAY_HOURS = 24;
 
 /**
+ * Maks antall netter som kan bookes via "Book nå" på instant-annonser.
+ * Lengre opphold krever alltid godkjenning fra utleier — beskytter mot
+ * uønskede langtidsopphold på plasser med instant_booking=true.
+ */
+export const MAX_INSTANT_NIGHTS = 7;
+
+/**
  * Split av `total_price` (det gjesten betaler) til (host-andel, Tunos gebyr).
  * Host-andelen er listing-prisen de selv har satt; gebyret er lagt på toppen.
  *

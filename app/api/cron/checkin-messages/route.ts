@@ -82,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     const { data: bookings, error: bookingsError } = await supabase
       .from("bookings")
-      .select("id, user_id, host_id, listing_id, check_in, selected_spot_ids, selected_extras")
+      .select("id, user_id, host_id, listing_id, check_in, check_in_time, selected_spot_ids, selected_extras")
       .eq("status", "confirmed")
       .eq("payment_status", "paid")
       .is("checkin_message_sent_at", null)
@@ -112,7 +112,8 @@ export async function GET(request: NextRequest) {
         continue;
       }
 
-      const checkInTime = (listing.check_in_time as string) || "15:00";
+      // Foretrekk booking-snapshot; fall tilbake til listing for gamle bookinger uten snapshot.
+      const checkInTime = (booking.check_in_time as string) || (listing.check_in_time as string) || "15:00";
       const scheduledOslo = `${booking.check_in} ${checkInTime}:00`;
       if (osloNow < scheduledOslo) {
         skipped++;

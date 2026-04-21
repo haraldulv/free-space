@@ -226,6 +226,7 @@
     "reserve": "Reserve",
     "checkAvailability": "Check availability",
     "checkingAvailability": "Checking availability...",
+    "longStayRequiresApproval": "Stays longer than {days} nights require host approval.",
     "fullyBooked": "Fully booked",
     "selectAtLeastOneSpot": "Select at least one spot",
     "pricePerNightShort": "{price} NOK/night",
@@ -479,7 +480,7 @@
       "checkInLabel": "Check-in from",
       "checkOutLabel": "Check-out by",
       "instantLabel": "Instant booking",
-      "instantDesc": "Guests can reserve without waiting for your confirmation."
+      "instantDesc": "Guests can reserve stays of up to 7 nights without waiting for your confirmation. Longer stays always require your approval."
     },
     "images": {
       "title": "Add photos",
@@ -525,7 +526,7 @@
       "perHour": "Per hour",
       "perNight": "Per night",
       "instantLabel": "Instant book",
-      "instantDesc": "Guests can book instantly without waiting for approval"
+      "instantDesc": "Guests can book instantly for up to 7 nights. Longer stays always require approval."
     },
     "availability": {
       "title": "Availability",

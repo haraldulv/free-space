@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe";
-import { SERVICE_FEE_RATE } from "@/lib/config";
+import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS } from "@/lib/config";
 import type { SpotMarker, ListingExtra, SelectedExtras } from "@/types";
 
 function computeTotal(args: {
@@ -90,7 +90,7 @@ export async function POST(request: NextRequest) {
     // Check availability
     const { data: listing } = await supabase
       .from("listings")
-      .select("spots, host_id, title, price, spot_markers, extras, instant_booking")
+      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time")
       .eq("id", listingId)
       .single();
 
@@ -182,7 +182,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Utleier har ikke satt opp utbetalinger ennå. Prøv igjen senere." });
     }
 
-    const requiresApproval = listing.instant_booking === false;
+    // Max-dager-regelen: opphold over MAX_INSTANT_NIGHTS krever godkjenning uansett.
+    const nights = Math.max(
+      1,
+      Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000),
+    );
+    const exceedsInstantLimit = nights > MAX_INSTANT_NIGHTS;
+    const requiresApproval = listing.instant_booking === false || exceedsInstantLimit;
     const approvalDeadline = requiresApproval
       ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       : null;
@@ -195,6 +201,9 @@ export async function POST(request: NextRequest) {
         listing_id: listingId,
         check_in: checkIn,
         check_out: checkOut,
+        // Snapshot tidspunkter — host-endringer på listing skal ikke ramme eksisterende bookinger.
+        check_in_time: (listing.check_in_time as string) || "15:00",
+        check_out_time: (listing.check_out_time as string) || "11:00",
         total_price: totalPrice,
         status: "pending",
         payment_status: "pending",
@@ -212,6 +221,42 @@ export async function POST(request: NextRequest) {
 
     if (bookingError) {
       return NextResponse.json({ error: bookingError.message }, { status: 500 });
+    }
+
+    // Post-insert overlap-verifisering (samme logikk som web-server-action).
+    const { data: overlapping } = await supabase
+      .from("bookings")
+      .select("id, created_at, selected_spot_ids")
+      .eq("listing_id", listingId)
+      .in("status", ["pending", "requested", "confirmed"])
+      .lt("check_in", checkOut)
+      .gt("check_out", checkIn)
+      .order("created_at", { ascending: true });
+
+    if (overlapping) {
+      const totalSpots = (listing.spots as number) || 1;
+      if (selectedSpotIds && selectedSpotIds.length > 0) {
+        const otherSpots = new Set<string>();
+        for (const o of overlapping) {
+          if (o.id === booking.id) continue;
+          if (new Date(o.created_at).getTime() >= Date.now() - 60000) {
+            for (const sid of (o.selected_spot_ids as string[] | null) || []) {
+              otherSpots.add(sid);
+            }
+          }
+        }
+        const conflict = selectedSpotIds.find((id: string) => otherSpots.has(id));
+        if (conflict) {
+          await supabase.from("bookings").delete().eq("id", booking.id);
+          return NextResponse.json({ error: "Plassen ble booket av en annen bruker akkurat nå. Velg en annen plass." }, { status: 409 });
+        }
+      } else if (overlapping.length > totalSpots) {
+        const ourIdx = overlapping.findIndex((o) => o.id === booking.id);
+        if (ourIdx >= totalSpots) {
+          await supabase.from("bookings").delete().eq("id", booking.id);
+          return NextResponse.json({ error: "Annonsen ble fullbooket av andre brukere akkurat nå. Prøv en annen dato." }, { status: 409 });
+        }
+      }
     }
 
     // Sørg for at det finnes en samtale mellom gjest og host — ingen dead links.

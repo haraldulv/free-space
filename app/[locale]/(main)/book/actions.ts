@@ -3,7 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { getAvailableSpots, getBookedSpotIds } from "@/lib/supabase/listings";
-import { SERVICE_FEE_RATE } from "@/lib/config";
+import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS } from "@/lib/config";
 import { computeRefund, type CancelledBy } from "@/lib/cancellation";
 import {
   sendCancellationEmail,
@@ -131,7 +131,7 @@ export async function createBookingAction(data: {
 
     const { data: listing } = await supabase
       .from("listings")
-      .select("host_id, title, price, spot_markers, extras, instant_booking")
+      .select("host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, spots")
       .eq("id", data.listingId)
       .single();
 
@@ -184,7 +184,16 @@ export async function createBookingAction(data: {
       return { error: "Utleier har ikke satt opp utbetalinger ennå. Prøv igjen senere." };
     }
 
-    const requiresApproval = listing.instant_booking === false;
+    // Opphold over MAX_INSTANT_NIGHTS krever alltid godkjenning — selv på
+    // instant-annonser. Beskytter host mot langtidsopphold de ikke aktivt har sagt ja til.
+    const nights = Math.max(
+      1,
+      Math.round(
+        (new Date(data.checkOut).getTime() - new Date(data.checkIn).getTime()) / 86400000,
+      ),
+    );
+    const exceedsInstantLimit = nights > MAX_INSTANT_NIGHTS;
+    const requiresApproval = listing.instant_booking === false || exceedsInstantLimit;
     const approvalDeadline = requiresApproval
       ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
       : null;
@@ -196,6 +205,10 @@ export async function createBookingAction(data: {
         listing_id: data.listingId,
         check_in: data.checkIn,
         check_out: data.checkOut,
+        // Snapshot tidspunkter — hvis host endrer listing.check_in_time/check_out_time
+        // senere skal eksisterende bookinger beholde sin opprinnelige avtale.
+        check_in_time: (listing.check_in_time as string) || "15:00",
+        check_out_time: (listing.check_out_time as string) || "11:00",
         total_price: authoritativeTotal,
         status: "pending",
         payment_status: "pending",
@@ -212,6 +225,51 @@ export async function createBookingAction(data: {
       .single();
 
     if (bookingError) return { error: bookingError.message };
+
+    // Post-insert overlap-verifisering: hvis to bookinger slapp gjennom
+    // availability-sjekken på nesten samme tidspunkt, sjekk at totalt antall
+    // bookinger ikke overstiger listing.spots. Taperen (den med nyeste
+    // created_at) rulles tilbake. Dette er pragmatisk beskyttelse uten å
+    // kreve DB-transaksjon.
+    const { data: overlapping } = await supabase
+      .from("bookings")
+      .select("id, created_at, selected_spot_ids")
+      .eq("listing_id", data.listingId)
+      .in("status", ["pending", "requested", "confirmed"])
+      .lt("check_in", data.checkOut)
+      .gt("check_out", data.checkIn)
+      .order("created_at", { ascending: true });
+
+    if (overlapping) {
+      const totalSpots = (listing.spots as number) || 1;
+      if (data.selectedSpotIds && data.selectedSpotIds.length > 0) {
+        // Spot-level check: er noen spesifikke plasser doble?
+        const otherSpots = new Set<string>();
+        for (const o of overlapping) {
+          if (o.id === booking.id) continue;
+          if (new Date(o.created_at).getTime() >= new Date().getTime() - 60000) {
+            for (const sid of (o.selected_spot_ids as string[] | null) || []) {
+              otherSpots.add(sid);
+            }
+          }
+        }
+        const conflict = data.selectedSpotIds.find((id) => otherSpots.has(id));
+        if (conflict) {
+          await supabase.from("bookings").delete().eq("id", booking.id);
+          return { error: "Plassen ble booket av en annen bruker akkurat nå. Velg en annen plass." };
+        }
+      } else {
+        // Listing-level check: totalt antall bookinger må ikke overstige spots.
+        if (overlapping.length > totalSpots) {
+          // Vi er taperen hvis vår created_at er den nyeste
+          const ourIdx = overlapping.findIndex((o) => o.id === booking.id);
+          if (ourIdx >= totalSpots) {
+            await supabase.from("bookings").delete().eq("id", booking.id);
+            return { error: "Annonsen ble fullbooket av andre brukere akkurat nå. Prøv en annen dato." };
+          }
+        }
+      }
+    }
 
     // Sørg for at det finnes en samtale mellom gjest og host — ingen dead links.
     // Ikke-blokkende: feil her skal ikke stoppe booking.

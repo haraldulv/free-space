@@ -226,6 +226,7 @@
     "reserve": "Reservieren",
     "checkAvailability": "Verfügbarkeit prüfen",
     "checkingAvailability": "Verfügbarkeit wird geprüft ...",
+    "longStayRequiresApproval": "Aufenthalte von mehr als {days} Nächten erfordern eine Bestätigung durch den Gastgeber.",
     "fullyBooked": "Ausgebucht",
     "selectAtLeastOneSpot": "Wähle mindestens einen Stellplatz",
     "pricePerNightShort": "{price} kr/Nacht",
@@ -479,7 +480,7 @@
       "checkInLabel": "Check-in ab",
       "checkOutLabel": "Check-out bis",
       "instantLabel": "Sofortbuchung",
-      "instantDesc": "Gäste können ohne deine Bestätigung reservieren."
+      "instantDesc": "Gäste können Aufenthalte bis zu 7 Nächten ohne deine Bestätigung reservieren. Längere Aufenthalte erfordern immer deine Zustimmung."
     },
     "images": {
       "title": "Fotos hinzufügen",
@@ -525,7 +526,7 @@
       "perHour": "Pro Stunde",
       "perNight": "Pro Nacht",
       "instantLabel": "Sofortbuchung",
-      "instantDesc": "Gäste können sofort buchen, ohne auf eine Bestätigung zu warten"
+      "instantDesc": "Gäste können Aufenthalte bis 7 Nächten sofort buchen. Längere Aufenthalte erfordern immer eine Bestätigung."
     },
     "availability": {
       "title": "Verfügbarkeit",
