@@ -149,12 +149,14 @@ enum VehicleType: String, Codable, CaseIterable {
 
 struct ListingExtra: Codable, Hashable, Identifiable {
     let id: String
-    let name: String
+    var name: String
     var price: Int
-    let perNight: Bool
+    var perNight: Bool
+    /// Valgfri melding som sendes til gjest ved innsjekk hvis dette ekstrautstyret ble booket.
+    var message: String? = nil
 
     enum CodingKeys: String, CodingKey {
-        case id, name, price
+        case id, name, price, message
         case perNight = "perNight"
     }
 }
@@ -381,6 +383,10 @@ struct Booking: Codable, Identifiable {
     let selectedExtras: SelectedExtras?
     let approvalDeadline: String?
     let hostRespondedAt: String?
+    /// Snapshot av listing.check_in_time ved booking-tidspunkt — beholder opprinnelig
+    /// avtale selv om host endrer listingen senere. NULL for gamle bookinger.
+    let checkInTimeSnapshot: String?
+    let checkOutTimeSnapshot: String?
 
     // Joined data
     let listing: BookingListing?
@@ -409,6 +415,8 @@ struct Booking: Codable, Identifiable {
         case selectedExtras = "selected_extras"
         case approvalDeadline = "approval_deadline"
         case hostRespondedAt = "host_responded_at"
+        case checkInTimeSnapshot = "check_in_time"
+        case checkOutTimeSnapshot = "check_out_time"
     }
 }
 

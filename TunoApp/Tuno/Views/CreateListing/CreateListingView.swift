@@ -339,17 +339,13 @@ struct BasicInfoStepView: View {
                         Text("Innsjekk")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.neutral600)
-                        TextField("15:00", text: $form.checkInTime)
-                            .textFieldStyle(.roundedBorder)
-                            .keyboardType(.numbersAndPunctuation)
+                        TimePickerField(timeString: $form.checkInTime, defaultTime: "15:00")
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Utsjekk")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(.neutral600)
-                        TextField("11:00", text: $form.checkOutTime)
-                            .textFieldStyle(.roundedBorder)
-                            .keyboardType(.numbersAndPunctuation)
+                        TimePickerField(timeString: $form.checkOutTime, defaultTime: "11:00")
                     }
                 }
 

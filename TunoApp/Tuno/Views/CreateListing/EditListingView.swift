@@ -213,12 +213,10 @@ struct EditListingView: View {
                 }
                 HStack(spacing: 16) {
                     field("Innsjekk") {
-                        TextField("15:00", text: $checkInTime)
-                            .textFieldStyle(.roundedBorder)
+                        TimePickerField(timeString: $checkInTime, defaultTime: "15:00")
                     }
                     field("Utsjekk") {
-                        TextField("11:00", text: $checkOutTime)
-                            .textFieldStyle(.roundedBorder)
+                        TimePickerField(timeString: $checkOutTime, defaultTime: "11:00")
                     }
                 }
 

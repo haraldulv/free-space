@@ -207,6 +207,20 @@ struct BookingView: View {
 
                 priceBreakdown
 
+                if listing.instantBooking == true && nights > 7 {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "info.circle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.system(size: 14))
+                        Text("Opphold på mer enn 7 netter krever godkjenning fra utleier. Beløpet reserveres på kortet ditt og belastes først når utleier godkjenner.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.neutral700)
+                    }
+                    .padding(12)
+                    .background(Color.orange.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
                 // Card form (expandable)
                 if showCardForm {
                     VStack(alignment: .leading, spacing: 8) {
