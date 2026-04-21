@@ -47,6 +47,8 @@ struct MainTabView: View {
                 selectedTab: $selectedTab,
                 unreadMessages: chatService.unreadCount,
                 pendingHostRequests: pendingHostRequests,
+                profileAvatarURL: authManager.profile?.avatarUrl.flatMap(URL.init(string:)),
+                profileInitial: profileInitial,
             )
         }
         .environmentObject(chatService)
@@ -99,6 +101,17 @@ struct MainTabView: View {
                 ListingDetailView(listingId: listingId)
             }
         }
+    }
+
+    private var profileInitial: String? {
+        let name = authManager.profile?.fullName?.trimmingCharacters(in: .whitespaces)
+        if let name, let first = name.first {
+            return String(first).uppercased()
+        }
+        if let email = authManager.currentUser?.email, let first = email.first {
+            return String(first).uppercased()
+        }
+        return nil
     }
 
     private func loadUnreadCount() async {
