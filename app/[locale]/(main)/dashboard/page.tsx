@@ -24,6 +24,7 @@ import { createClient } from "@/lib/supabase/client";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/[locale]/(main)/bli-utleier/actions";
 import { cancelBookingAction, approveBookingAction, declineBookingAction } from "@/app/[locale]/(main)/book/actions";
 import { getConversations, subscribeToUserMessages } from "@/lib/supabase/chat";
+import { useBrowserNotifications } from "@/lib/hooks/useBrowserNotifications";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingCard from "@/components/features/BookingCard";
@@ -169,6 +170,7 @@ export default function DashboardPage() {
   };
   const [userId, setUserId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const { permission: notifPermission, request: requestNotifPermission, show: showNotification } = useBrowserNotifications();
 
   useEffect(() => {
     const supabase = createClient();
@@ -364,6 +366,7 @@ export default function DashboardPage() {
     if (!userId || conversations.length === 0) return;
     const convoIds = conversations.map((c) => c.id);
     const channel = subscribeToUserMessages(userId, convoIds, ({ conversationId, content }) => {
+      let convoSnapshot: Conversation | null = null;
       setConversations((prev) => {
         const idx = prev.findIndex((c) => c.id === conversationId);
         if (idx < 0) return prev;
@@ -374,14 +377,32 @@ export default function DashboardPage() {
           lastMessageAt: new Date().toISOString(),
           unreadCount: bumpUnread ? (prev[idx].unreadCount || 0) + 1 : prev[idx].unreadCount,
         };
+        convoSnapshot = updated;
         // Flytt samtalen til toppen
         const next = [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
         return next;
       });
+
+      // Browser-varsel når brukeren ikke har samtalen åpen
+      if (selectedConvo?.id !== conversationId && convoSnapshot) {
+        const convo = convoSnapshot as Conversation;
+        showNotification(
+          t("notifNewMessageFrom", { name: convo.otherUserName || t("anonymous") }),
+          {
+            body: content.slice(0, 140),
+            tag: `convo-${conversationId}`,
+            onClick: () => {
+              setTab("messages");
+              setSelectedConvo(convo);
+            },
+          },
+        );
+      }
     });
     return () => {
       channel.unsubscribe();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId, conversations.length, selectedConvo?.id]);
 
   const isHost = listings.length > 0 || rentals.length > 0;
@@ -708,6 +729,18 @@ export default function DashboardPage() {
             {/* Messages */}
             {tab === "messages" && (
               <div className="mt-4 lg:mt-0">
+                {notifPermission === "default" && (
+                  <div className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-sm">
+                    <span className="text-neutral-700">{t("enableNotifsPrompt")}</span>
+                    <button
+                      type="button"
+                      onClick={requestNotifPermission}
+                      className="shrink-0 rounded-full bg-primary-600 px-3 py-1 text-xs font-medium text-white hover:bg-primary-700"
+                    >
+                      {t("enableNotifsCta")}
+                    </button>
+                  </div>
+                )}
                 <div className="overflow-hidden rounded-xl border border-neutral-200 bg-white" style={{ height: "min(600px, calc(100vh - 220px))" }}>
                   <div className="flex h-full">
                     <div className={`${selectedConvo ? "hidden lg:block" : ""} w-full lg:w-80 border-r border-neutral-200 overflow-y-auto`}>

@@ -1,6 +1,7 @@
 import { createClient } from "./server";
 import type { Listing, SearchFilters, ListingCategory, Amenity, SpotMarker, VehicleType } from "@/types";
 import { vehicleFitsIn } from "@/types";
+import { haversineKm } from "@/lib/geo";
 
 /**
  * Deterministisk fuzz av lat/lng for listings med hide_exact_location=true.
@@ -314,18 +315,6 @@ export async function getFutureBookedDates(
   };
 }
 
-/** Calculate distance between two coordinates in km */
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371;
-  const dLat = ((lat2 - lat1) * Math.PI) / 180;
-  const dLng = ((lng2 - lng1) * Math.PI) / 180;
-  const a =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) *
-    Math.sin(dLng / 2) * Math.sin(dLng / 2);
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
 /** Generate array of date strings between start and end (inclusive) */
 function getDateRange(start: string, end: string): string[] {
   const dates: string[] = [];
@@ -392,10 +381,23 @@ export async function getAllListingIds(): Promise<string[]> {
 
   const { data, error } = await supabase
     .from("listings")
-    .select("id");
+    .select("id")
+    .neq("is_active", false);
 
   if (error) return [];
   return (data || []).map((r) => r.id);
+}
+
+export async function getAllActiveListingsForSitemap(): Promise<Array<{ id: string; createdAt: string | null }>> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select("id, created_at")
+    .neq("is_active", false);
+
+  if (error) return [];
+  return (data || []).map((r) => ({ id: r.id as string, createdAt: (r.created_at as string) || null }));
 }
 
 export async function getListingsByHost(hostId: string): Promise<Listing[]> {

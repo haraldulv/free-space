@@ -2,9 +2,11 @@
 
 import { useEffect, useRef } from "react";
 import { Star, Zap } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Listing, getDisplayPriceText } from "@/types";
+import { haversineKm, formatDistance } from "@/lib/geo";
+import type { UserLocation } from "@/lib/hooks/useUserLocation";
 import ImageCarousel from "@/components/features/ImageCarousel";
 import FavoriteButton from "@/components/features/FavoriteButton";
 
@@ -17,6 +19,7 @@ interface SearchListingCardProps {
   onMouseEnter: () => void;
   onMouseLeave: () => void;
   onClick: () => void;
+  userLocation?: UserLocation | null;
 }
 
 export default function SearchListingCard({
@@ -28,9 +31,15 @@ export default function SearchListingCard({
   onMouseEnter,
   onMouseLeave,
   onClick,
+  userLocation,
 }: SearchListingCardProps) {
   const t = useTranslations("listing");
+  const locale = useLocale();
   const ref = useRef<HTMLDivElement>(null);
+
+  const distanceKm = userLocation
+    ? haversineKm(userLocation.lat, userLocation.lng, listing.location.lat, listing.location.lng)
+    : null;
 
   useEffect(() => {
     if (isSelected && ref.current) {
@@ -82,6 +91,9 @@ export default function SearchListingCard({
           </div>
           <p className="text-xs text-neutral-500 line-clamp-1">
             {listing.location.city}, {listing.location.region}
+            {distanceKm !== null && (
+              <span className="ml-1 text-neutral-400">· {formatDistance(distanceKm, locale)}</span>
+            )}
           </p>
           <div className="mt-1 flex items-center justify-between">
             <p className="text-sm text-neutral-900">

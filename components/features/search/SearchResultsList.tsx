@@ -1,7 +1,9 @@
 "use client";
 
+import { Loader2, Navigation } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Listing } from "@/types";
+import type { GeoStatus, UserLocation } from "@/lib/hooks/useUserLocation";
 import SearchListingCard from "./SearchListingCard";
 
 interface SearchResultsListProps {
@@ -12,6 +14,9 @@ interface SearchResultsListProps {
   selectedListingId: string | null;
   onHover: (id: string | null) => void;
   onSelect: (id: string | null) => void;
+  userLocation?: UserLocation | null;
+  geoStatus?: GeoStatus;
+  onRequestLocation?: () => void;
 }
 
 export default function SearchResultsList({
@@ -22,16 +27,38 @@ export default function SearchResultsList({
   selectedListingId,
   onHover,
   onSelect,
+  userLocation,
+  geoStatus = "idle",
+  onRequestLocation,
 }: SearchResultsListProps) {
   const t = useTranslations("search");
   return (
     <div className="px-5 py-3 sm:px-6 lg:px-6">
-      <div className="mb-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <h1 className="text-sm font-semibold text-neutral-900">
           {listings.length > 0
             ? t("spotsInArea", { count: listings.length })
             : t("noResults")}
         </h1>
+        {onRequestLocation && (
+          geoStatus === "granted" ? null : geoStatus === "denied" ? (
+            <span className="text-xs text-neutral-400">{t("locationDenied")}</span>
+          ) : geoStatus === "unavailable" ? null : (
+            <button
+              type="button"
+              onClick={onRequestLocation}
+              disabled={geoStatus === "prompting"}
+              className="inline-flex items-center gap-1 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-medium text-neutral-700 shadow-sm hover:border-primary-500 hover:text-primary-600 disabled:opacity-60"
+            >
+              {geoStatus === "prompting" ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <Navigation className="h-3 w-3" />
+              )}
+              {t("findNearMe")}
+            </button>
+          )
+        )}
       </div>
 
       {listings.length === 0 ? (
@@ -57,6 +84,7 @@ export default function SearchResultsList({
                   selectedListingId === listing.id ? null : listing.id,
                 )
               }
+              userLocation={userLocation}
             />
           ))}
         </div>

@@ -5,6 +5,7 @@ import { Map, List, Maximize2, Minimize2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Listing, ListingCategory, VehicleType } from "@/types";
 import { getUserFavorites } from "@/lib/supabase/favorites";
+import { useUserLocation } from "@/lib/hooks/useUserLocation";
 import SearchResultsList from "./SearchResultsList";
 import SearchMap, { type MapBounds } from "./SearchMap";
 
@@ -29,6 +30,7 @@ export default function SearchResultsView({
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const { location: userLocation, status: geoStatus, request: requestLocation } = useUserLocation();
 
   useEffect(() => {
     getUserFavorites().then(setFavoriteIds);
@@ -77,6 +79,9 @@ export default function SearchResultsView({
           selectedListingId={selectedListingId}
           onHover={setHoveredListingId}
           onSelect={setSelectedListingId}
+          userLocation={userLocation}
+          geoStatus={geoStatus}
+          onRequestLocation={requestLocation}
         />
       </div>
 
