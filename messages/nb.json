@@ -511,7 +511,10 @@
       "customNamePlaceholder": "Navn (f.eks. Vedfyrt badstue)",
       "customPricePlaceholder": "Pris",
       "customPerNightLabel": "Per natt",
-      "addButton": "Legg til"
+      "addButton": "Legg til",
+      "messageLabel": "Melding til gjest",
+      "messagePlaceholder": "F.eks. Elbil-laderen har type 2-kontakt, passordet er TUNO123",
+      "messageHelp": "Sendes sammen med velkomstmeldingen hvis dette tillegget ble booket."
     },
     "pricing": {
       "title": "Sett pris",

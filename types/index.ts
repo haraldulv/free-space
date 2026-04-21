@@ -57,6 +57,8 @@ export type ListingExtra = {
   name: string;
   price: number;
   perNight: boolean;
+  /** Valgfri melding som sendes til gjest ved innsjekk hvis dette tillegget ble booket. */
+  message?: string;
 };
 
 export type ExtraId =
@@ -138,6 +140,8 @@ export type SelectedExtraEntry = {
   price: number;
   perNight: boolean;
   quantity: number;
+  /** Kopiert fra ListingExtra.message ved booking så den overlever hvis host endrer senere. */
+  message?: string;
 };
 
 export type SelectedExtras = {

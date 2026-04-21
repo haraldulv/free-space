@@ -96,8 +96,8 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
                   {isSelected && <svg className="h-3 w-3 text-white" viewBox="0 0 12 12"><path d="M10 3L4.5 8.5L2 6" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"/></svg>}
                 </div>
               </button>
-              {isSelected && (
-                <div className="border-t border-primary-200 px-4 py-3">
+              {isSelected && selected && (
+                <div className="border-t border-primary-200 px-4 py-3 space-y-3">
                   <div className="flex items-center gap-3">
                     <Input
                       id={`price-${extra.id}`}
@@ -108,6 +108,17 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
                       className="w-32"
                     />
                     <span className="mt-5 text-sm text-neutral-500">{extra.perNight ? t("pricePerNightUnit") : t("priceOneTimeUnit")}</span>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-neutral-700">{t("messageLabel")}</label>
+                    <textarea
+                      value={selected.message ?? ""}
+                      onChange={(e) => onChange(extras.map((x) => x.id === extra.id ? { ...x, message: e.target.value || undefined } : x))}
+                      placeholder={t("messagePlaceholder")}
+                      rows={2}
+                      className="mt-1 w-full rounded-md border border-neutral-300 bg-white px-2 py-1.5 text-sm placeholder:text-neutral-400"
+                    />
+                    <p className="mt-0.5 text-[11px] text-neutral-500">{t("messageHelp")}</p>
                   </div>
                 </div>
               )}
@@ -160,6 +171,15 @@ export default function ExtrasStep({ category, extras, onChange }: ExtrasStepPro
                 />
                 {t("customPerNightLabel")}
               </label>
+            </div>
+            <div className="pl-7">
+              <textarea
+                value={extra.message ?? ""}
+                onChange={(e) => onChange(extras.map((x) => x.id === extra.id ? { ...x, message: e.target.value || undefined } : x))}
+                placeholder={t("messagePlaceholder")}
+                rows={2}
+                className="w-full rounded-md border border-neutral-200 bg-white px-2 py-1 text-xs placeholder:text-neutral-400"
+              />
             </div>
           </div>
         ))}

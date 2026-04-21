@@ -13,6 +13,17 @@ type SpotMarker = {
   checkinMessage?: string;
 };
 
+type SelectedExtraEntry = {
+  id: string;
+  name: string;
+  message?: string;
+};
+
+type SelectedExtras = {
+  listing?: SelectedExtraEntry[];
+  spots?: Record<string, SelectedExtraEntry[]>;
+};
+
 function osloDateTimeString(date: Date): string {
   // Returns "YYYY-MM-DD HH:mm:ss" i Europe/Oslo-tid; string-sammenligning fungerer kronologisk.
   return date.toLocaleString("sv-SE", { timeZone: "Europe/Oslo" });
@@ -22,6 +33,7 @@ function composeMessage(
   listingMessage: string | null,
   spots: SpotMarker[],
   selectedSpotIds: string[] | null,
+  selectedExtras: SelectedExtras | null,
 ): string | null {
   const parts: string[] = [];
 
@@ -36,6 +48,20 @@ function composeMessage(
       if (msg) {
         const label = spot?.label?.trim() || `Plass ${spotId.slice(0, 4)}`;
         parts.push(`${label}: ${msg}`);
+      }
+    }
+  }
+
+  // Extras-meldinger — både på listing-nivå og per-plass
+  if (selectedExtras) {
+    const allEntries = [
+      ...(selectedExtras.listing ?? []),
+      ...Object.values(selectedExtras.spots ?? {}).flat(),
+    ];
+    for (const entry of allEntries) {
+      const msg = entry.message?.trim();
+      if (msg) {
+        parts.push(`${entry.name}: ${msg}`);
       }
     }
   }
@@ -56,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     const { data: bookings, error: bookingsError } = await supabase
       .from("bookings")
-      .select("id, user_id, host_id, listing_id, check_in, selected_spot_ids")
+      .select("id, user_id, host_id, listing_id, check_in, selected_spot_ids, selected_extras")
       .eq("status", "confirmed")
       .eq("payment_status", "paid")
       .is("checkin_message_sent_at", null)
@@ -98,6 +124,7 @@ export async function GET(request: NextRequest) {
         (listing.checkin_message as string) || null,
         spots,
         (booking.selected_spot_ids as string[] | null) || null,
+        (booking.selected_extras as SelectedExtras | null) || null,
       );
 
       if (!content) {

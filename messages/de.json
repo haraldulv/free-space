@@ -511,7 +511,10 @@
       "customNamePlaceholder": "Name (z. B. Holzbefeuerte Sauna)",
       "customPricePlaceholder": "Preis",
       "customPerNightLabel": "Pro Nacht",
-      "addButton": "Hinzufügen"
+      "addButton": "Hinzufügen",
+      "messageLabel": "Nachricht an Gast",
+      "messagePlaceholder": "Z. B. Die Ladestation hat einen Typ-2-Stecker, Passwort ist TUNO123",
+      "messageHelp": "Wird zusammen mit der Willkommensnachricht gesendet, wenn dieses Extra gebucht wurde."
     },
     "pricing": {
       "title": "Preis festlegen",

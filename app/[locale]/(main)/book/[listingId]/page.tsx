@@ -187,7 +187,14 @@ export default function BookPage() {
       .map(([id, qty]) => {
         const extra = (listing?.extras || []).find((e) => e.id === id);
         if (!extra) return null;
-        return { id: extra.id, name: extra.name, price: extra.price, perNight: extra.perNight, quantity: qty };
+        return {
+          id: extra.id,
+          name: extra.name,
+          price: extra.price,
+          perNight: extra.perNight,
+          quantity: qty,
+          message: extra.message,
+        };
       })
       .filter((x): x is NonNullable<typeof x> => x !== null);
 
@@ -200,7 +207,14 @@ export default function BookPage() {
         .map(([id, qty]) => {
           const extra = (spot.extras || []).find((e) => e.id === id);
           if (!extra) return null;
-          return { id: extra.id, name: extra.name, price: extra.price, perNight: extra.perNight, quantity: qty };
+          return {
+            id: extra.id,
+            name: extra.name,
+            price: extra.price,
+            perNight: extra.perNight,
+            quantity: qty,
+            message: extra.message,
+          };
         })
         .filter((x): x is NonNullable<typeof x> => x !== null);
       if (entries.length > 0) spotEntries[spotId] = entries;

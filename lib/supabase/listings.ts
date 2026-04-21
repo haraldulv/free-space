@@ -2,6 +2,30 @@ import { createClient } from "./server";
 import type { Listing, SearchFilters, ListingCategory, Amenity, SpotMarker, VehicleType } from "@/types";
 import { vehicleFitsIn } from "@/types";
 
+/**
+ * Deterministisk fuzz av lat/lng for listings med hide_exact_location=true.
+ * Offset seedes fra listing id så kartet ikke hopper mellom forespørsler.
+ * Resultat: fuzzed punkt ligger ~250-400m fra reelle koordinater.
+ */
+function fuzzCoords(lat: number, lng: number, seed: string): { lat: number; lng: number } {
+  // Enkel string-hash — deterministisk, trenger ikke være kryptografisk
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = ((h << 5) - h) + seed.charCodeAt(i);
+    h |= 0;
+  }
+  // Splitt hashen i to 16-bit verdier for lat/lng
+  const r1 = ((h >>> 0) % 10000) / 10000; // 0..1
+  const r2 = (((h >>> 0) >> 16) & 0xffff) / 0xffff; // 0..1
+  // Polarkoordinater: vinkel [0, 2π), radius 250-450m
+  const angle = r1 * Math.PI * 2;
+  const metersRadius = 250 + r2 * 200;
+  // 1° breddegrad ≈ 111 km. Lengdegrad skaleres av cos(lat).
+  const latOffset = (metersRadius * Math.sin(angle)) / 111000;
+  const lngOffset = (metersRadius * Math.cos(angle)) / (111000 * Math.max(0.1, Math.cos((lat * Math.PI) / 180)));
+  return { lat: lat + latOffset, lng: lng + lngOffset };
+}
+
 export interface CreateListingData {
   category: ListingCategory;
   vehicleType: VehicleType;
@@ -32,10 +56,24 @@ export interface CreateListingData {
   perSpotCheckinMessage?: boolean;
 }
 
-/** Convert a Supabase row to our Listing type */
+/**
+ * Convert a Supabase row to our Listing type.
+ * NB: når hide_exact_location=true fuzzes lat/lng og adresse strippes — dette
+ * brukes på alle publikke lese-stier (søk, listing-detalj, forsiden). Host-redigering
+ * går utenom (raw Supabase-query i edit-siden), så host ser ekte koordinater.
+ */
 function rowToListing(row: Record<string, unknown>): Listing {
+  const id = row.id as string;
+  const rawLat = row.lat as number;
+  const rawLng = row.lng as number;
+  const hideExact = row.hide_exact_location as boolean | undefined;
+  const { lat: shownLat, lng: shownLng } = hideExact
+    ? fuzzCoords(rawLat, rawLng, id)
+    : { lat: rawLat, lng: rawLng };
+  const shownAddress = hideExact ? "" : (row.address as string);
+
   return {
-    id: row.id as string,
+    id,
     title: row.title as string,
     description: row.description as string,
     category: row.category as Listing["category"],
@@ -43,9 +81,9 @@ function rowToListing(row: Record<string, unknown>): Listing {
     location: {
       city: row.city as string,
       region: row.region as string,
-      address: row.address as string,
-      lat: row.lat as number,
-      lng: row.lng as number,
+      address: shownAddress,
+      lat: shownLat,
+      lng: shownLng,
     },
     price: row.price as number,
     priceUnit: row.price_unit as Listing["priceUnit"],

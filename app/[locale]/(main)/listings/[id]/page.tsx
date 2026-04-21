@@ -37,8 +37,51 @@ export default async function ListingPage({
   const { data: { user } } = await supabase.auth.getUser();
   const isOwner = user?.id === listing.host.id;
 
+  const listingTypeMap = {
+    parking: "ParkingFacility",
+    camping: "Campground",
+  } as const;
+  const jsonLd: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": listingTypeMap[listing.category] ?? "LodgingBusiness",
+    name: listing.title,
+    description: listing.description,
+    image: listing.images,
+    address: {
+      "@type": "PostalAddress",
+      addressLocality: listing.location.city,
+      addressRegion: listing.location.region,
+      addressCountry: "NO",
+      ...(listing.hideExactLocation ? {} : { streetAddress: listing.location.address }),
+    },
+    ...(listing.hideExactLocation
+      ? {}
+      : {
+          geo: {
+            "@type": "GeoCoordinates",
+            latitude: listing.location.lat,
+            longitude: listing.location.lng,
+          },
+        }),
+    priceRange: `${listing.price} NOK / ${listing.priceUnit === "time" ? "hour" : "night"}`,
+    ...(listing.reviewCount > 0
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: listing.rating,
+            reviewCount: listing.reviewCount,
+          },
+        }
+      : {}),
+    url: `https://tuno.no/listings/${listing.id}`,
+  };
+
   return (
     <Container className="py-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <ImageGallery images={listing.images} alt={listing.title} />
 
       <div className="mt-8 grid grid-cols-1 gap-6 lg:gap-10 lg:grid-cols-3">

@@ -511,7 +511,10 @@
       "customNamePlaceholder": "Name (e.g. Wood-fired sauna)",
       "customPricePlaceholder": "Price",
       "customPerNightLabel": "Per night",
-      "addButton": "Add"
+      "addButton": "Add",
+      "messageLabel": "Message to guest",
+      "messagePlaceholder": "E.g. The EV charger uses a Type 2 connector, password is TUNO123",
+      "messageHelp": "Sent alongside the welcome message if this extra was booked."
     },
     "pricing": {
       "title": "Set price",
