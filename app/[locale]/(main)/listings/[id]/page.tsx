@@ -14,6 +14,7 @@ import BookingForm from "@/components/features/BookingForm";
 import ListingFavoriteButton from "@/components/features/ListingFavoriteButton";
 import ShareButton from "@/components/features/ShareButton";
 import ListingMap from "@/components/features/ListingMap";
+import ListingDistanceBadge from "@/components/features/ListingDistanceBadge";
 import ReviewList from "@/components/features/ReviewList";
 
 export const dynamic = "force-dynamic";
@@ -107,13 +108,14 @@ export default async function ListingPage({
             </div>
           </div>
 
-          <div className="mt-2 flex items-center gap-4 text-neutral-500">
+          <div className="mt-2 flex items-center gap-4 text-neutral-500 flex-wrap">
             <div className="flex items-center gap-1">
               <MapPin className="h-4 w-4" />
               {listing.hideExactLocation
                 ? `${listing.location.city}, ${listing.location.region}`
                 : `${listing.location.address}, ${listing.location.city}`}
             </div>
+            <ListingDistanceBadge lat={listing.location.lat} lng={listing.location.lng} />
             <div className="flex items-center gap-1">
               <Users className="h-4 w-4" />
               {tListing("spotsAvailable", { count: listing.spots })}

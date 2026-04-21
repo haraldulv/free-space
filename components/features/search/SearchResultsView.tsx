@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { Listing, ListingCategory, VehicleType } from "@/types";
 import { getUserFavorites } from "@/lib/supabase/favorites";
 import { useUserLocation } from "@/lib/hooks/useUserLocation";
+import { haversineKm } from "@/lib/geo";
 import SearchResultsList from "./SearchResultsList";
 import SearchMap, { type MapBounds } from "./SearchMap";
 
@@ -30,7 +31,16 @@ export default function SearchResultsView({
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [mapBounds, setMapBounds] = useState<MapBounds | null>(null);
   const [favoriteIds, setFavoriteIds] = useState<Set<string>>(new Set());
+  const [sortByDistance, setSortByDistance] = useState(false);
   const { location: userLocation, status: geoStatus, request: requestLocation } = useUserLocation();
+
+  // Skru automatisk på distance-sort så snart posisjon er delt
+  useEffect(() => {
+    if (userLocation && !sortByDistance) {
+      setSortByDistance(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userLocation]);
 
   useEffect(() => {
     getUserFavorites().then(setFavoriteIds);
@@ -51,17 +61,29 @@ export default function SearchResultsView({
 
   // Filter listings to those visible on the map (with slight padding for edge markers)
   const visibleListings = useMemo(() => {
-    if (!mapBounds) return listings;
-    const latPad = (mapBounds.north - mapBounds.south) * 0.05;
-    const lngPad = (mapBounds.east - mapBounds.west) * 0.05;
-    return listings.filter(
-      (l) =>
-        l.location.lat >= mapBounds.south - latPad &&
-        l.location.lat <= mapBounds.north + latPad &&
-        l.location.lng >= mapBounds.west - lngPad &&
-        l.location.lng <= mapBounds.east + lngPad,
-    );
-  }, [listings, mapBounds]);
+    const filtered = !mapBounds
+      ? listings
+      : (() => {
+          const latPad = (mapBounds.north - mapBounds.south) * 0.05;
+          const lngPad = (mapBounds.east - mapBounds.west) * 0.05;
+          return listings.filter(
+            (l) =>
+              l.location.lat >= mapBounds.south - latPad &&
+              l.location.lat <= mapBounds.north + latPad &&
+              l.location.lng >= mapBounds.west - lngPad &&
+              l.location.lng <= mapBounds.east + lngPad,
+          );
+        })();
+
+    if (sortByDistance && userLocation) {
+      return [...filtered].sort((a, b) => {
+        const da = haversineKm(userLocation.lat, userLocation.lng, a.location.lat, a.location.lng);
+        const db = haversineKm(userLocation.lat, userLocation.lng, b.location.lat, b.location.lng);
+        return da - db;
+      });
+    }
+    return filtered;
+  }, [listings, mapBounds, sortByDistance, userLocation]);
 
   return (
     <div className="relative overflow-hidden" style={{ height: "calc(100dvh - 64px)" }}>
