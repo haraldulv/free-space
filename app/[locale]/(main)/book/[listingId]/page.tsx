@@ -9,7 +9,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useRouter } from "@/i18n/navigation";
 import { stripeLocale } from "@/lib/i18n-helpers";
 import { createClient } from "@/lib/supabase/client";
-import { createBookingAction } from "../actions";
+import { createBookingAction, previewPriceBreakdownAction } from "../actions";
+import type { NightlyPriceEntry } from "@/types";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingSummary from "@/components/features/BookingSummary";
@@ -105,6 +106,7 @@ export default function BookPage() {
   const [licensePlate, setLicensePlate] = useState("");
   const [isRentalCar, setIsRentalCar] = useState(false);
   const [vehicleReady, setVehicleReady] = useState(false);
+  const [priceBreakdown, setPriceBreakdown] = useState<NightlyPriceEntry[] | null>(null);
 
   useEffect(() => {
     const supabase = createClient();
@@ -155,10 +157,17 @@ export default function BookPage() {
     (s) => s.id && selectedSpotIds.includes(s.id),
   );
 
+  const hasPerSpotPricing = selectedSpots.some((s) => s.price != null);
+  // Hvis vi har breakdown fra server og ingen per-spot-pricing, bruk den.
+  const perNightFromBreakdown = priceBreakdown?.reduce((sum, n) => sum + n.price, 0) ?? null;
   const baseTotal = listing
-    ? selectedSpots.length > 0
+    ? hasPerSpotPricing
       ? selectedSpots.reduce((sum, s) => sum + (s.price ?? listing.price) * nights, 0)
-      : listing.price * nights
+      : perNightFromBreakdown != null
+        ? perNightFromBreakdown * Math.max(1, selectedSpots.length || 1)
+        : selectedSpots.length > 0
+          ? selectedSpots.reduce((sum, s) => sum + (s.price ?? listing.price) * nights, 0)
+          : listing.price * nights
     : 0;
 
   const listingExtrasTotal = listing
@@ -225,6 +234,23 @@ export default function BookPage() {
       spots: Object.keys(spotEntries).length > 0 ? (spotEntries as SelectedExtras["spots"]) : undefined,
     };
   };
+
+  // Hent pris-breakdown fra server når datoer/listing er satt
+  useEffect(() => {
+    if (!listing || nights <= 0) return;
+    const checkInStr = searchParams.get("checkIn");
+    const checkOutStr = searchParams.get("checkOut");
+    if (!checkInStr || !checkOutStr) return;
+    const formatDate = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    previewPriceBreakdownAction({
+      listingId: listing.id,
+      checkIn: formatDate(new Date(checkInStr)),
+      checkOut: formatDate(new Date(checkOutStr)),
+    }).then((result) => {
+      setPriceBreakdown(result.breakdown);
+    });
+  }, [listing, nights, searchParams]);
 
   // Create booking + payment intent once vehicle info is submitted
   useEffect(() => {
@@ -303,6 +329,7 @@ export default function BookPage() {
             baseAmount={baseTotal}
             selectedExtras={buildSelectedExtras()}
             selectedSpotCount={selectedSpots.length || undefined}
+            priceBreakdown={priceBreakdown ?? undefined}
             subtotal={subtotal}
             serviceFee={serviceFee}
             total={total}

@@ -4,7 +4,7 @@ import Image from "next/image";
 import { CalendarDays, MapPin, Clock } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import Badge from "@/components/ui/Badge";
-import { Listing, SelectedExtras } from "@/types";
+import { Listing, SelectedExtras, NightlyPriceEntry } from "@/types";
 import { bcpLocale } from "@/lib/i18n-helpers";
 
 interface BookingSummaryProps {
@@ -15,6 +15,7 @@ interface BookingSummaryProps {
   baseAmount?: number;
   selectedExtras?: SelectedExtras;
   selectedSpotCount?: number;
+  priceBreakdown?: NightlyPriceEntry[];
   subtotal: number;
   serviceFee: number;
   total: number;
@@ -30,6 +31,7 @@ export default function BookingSummary({
   baseAmount,
   selectedExtras,
   selectedSpotCount,
+  priceBreakdown,
   subtotal,
   serviceFee,
   total,
@@ -38,6 +40,7 @@ export default function BookingSummary({
 }: BookingSummaryProps) {
   const t = useTranslations("booking");
   const tCategory = useTranslations("category");
+  const tListing = useTranslations("listing");
   const locale = useLocale();
   const dateLocale = bcpLocale(locale);
 
@@ -50,6 +53,28 @@ export default function BookingSummary({
     : isHourly
       ? t("pricePerDayCalc", { price: listing.price, days: nights })
       : t("pricePerNightCalc", { price: listing.price, nights });
+
+  // Grupper breakdown hvis det finnes variasjon i priser
+  const breakdownGroups = (() => {
+    if (!priceBreakdown || priceBreakdown.length === 0) return [];
+    const groups: { price: number; source: string; count: number }[] = [];
+    for (const entry of priceBreakdown) {
+      const last = groups[groups.length - 1];
+      if (last && last.price === entry.price && last.source === entry.source) {
+        last.count += 1;
+      } else {
+        groups.push({ price: entry.price, source: entry.source, count: 1 });
+      }
+    }
+    return groups;
+  })();
+  const hasPriceVariation = breakdownGroups.length > 1;
+  const sourceLabel: Record<string, string> = {
+    base: t("priceSourceBase"),
+    weekend: t("priceSourceWeekend"),
+    season: t("priceSourceSeason"),
+    override: t("priceSourceOverride"),
+  };
 
   const listingExtras = selectedExtras?.listing ?? [];
   const allSpotExtras = Object.values(selectedExtras?.spots ?? {}).flat();
@@ -111,10 +136,30 @@ export default function BookingSummary({
       </div>
 
       <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 text-sm">
-        <div className="flex justify-between text-neutral-600">
-          <span>{baseLabel}</span>
-          <span>{resolvedBase} kr</span>
-        </div>
+        {hasPriceVariation ? (
+          <>
+            {breakdownGroups.map((g, idx) => (
+              <div key={idx} className="flex justify-between text-neutral-600">
+                <span>
+                  {g.price} kr × {g.count} {g.count === 1 ? tListing("night") : tListing("nights")}
+                  <span className="ml-1 text-neutral-400">({sourceLabel[g.source] ?? g.source})</span>
+                </span>
+                <span>{g.price * g.count} kr</span>
+              </div>
+            ))}
+            {spotCount > 1 && (
+              <div className="flex justify-between text-neutral-500 text-xs">
+                <span>× {spotCount} {spotCount === 1 ? tListing("spot") : tListing("spots")}</span>
+                <span>{resolvedBase} kr</span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="flex justify-between text-neutral-600">
+            <span>{baseLabel}</span>
+            <span>{resolvedBase} kr</span>
+          </div>
+        )}
 
         {hasExtras && (
           <div className="border-t border-neutral-100 pt-2 space-y-1.5">

@@ -2,9 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe";
 import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS } from "@/lib/config";
+import { getNightlyPricesWithServiceClient, applyPriceBreakdown, type NightlyPrice } from "@/lib/pricing";
 import type { SpotMarker, ListingExtra, SelectedExtras } from "@/types";
 
-function computeTotal(args: {
+async function computeTotalWithBreakdown(args: {
+  listingId: string;
   listingPrice: number;
   spotMarkers: SpotMarker[] | null;
   listingExtras: ListingExtra[] | null;
@@ -12,7 +14,7 @@ function computeTotal(args: {
   checkOut: string;
   selectedSpotIds?: string[];
   selectedExtras?: SelectedExtras;
-}): number {
+}): Promise<{ total: number; breakdown: NightlyPrice[] | null }> {
   const start = new Date(args.checkIn);
   const end = new Date(args.checkOut);
   const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
@@ -20,10 +22,27 @@ function computeTotal(args: {
   const selectedSpots = (args.spotMarkers || []).filter(
     (s) => s.id && args.selectedSpotIds?.includes(s.id),
   );
+  const hasPerSpotPricing = selectedSpots.length > 0 && selectedSpots.some((s) => s.price != null);
 
-  const baseTotal = selectedSpots.length > 0
-    ? selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * nights, 0)
-    : args.listingPrice * nights;
+  let baseTotal: number;
+  let breakdown: NightlyPrice[] | null = null;
+
+  if (hasPerSpotPricing) {
+    baseTotal = selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * nights, 0);
+  } else {
+    breakdown = await getNightlyPricesWithServiceClient(
+      {
+        listingId: args.listingId,
+        checkIn: args.checkIn,
+        checkOut: args.checkOut,
+        basePrice: args.listingPrice,
+      },
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+    const perNight = applyPriceBreakdown(breakdown);
+    baseTotal = selectedSpots.length > 1 ? perNight * selectedSpots.length : perNight;
+  }
 
   let extrasTotal = 0;
   for (const entry of args.selectedExtras?.listing || []) {
@@ -42,7 +61,8 @@ function computeTotal(args: {
   }
 
   const subtotal = baseTotal + extrasTotal;
-  return subtotal + Math.round(subtotal * SERVICE_FEE_RATE);
+  const total = subtotal + Math.round(subtotal * SERVICE_FEE_RATE);
+  return { total, breakdown };
 }
 
 const supabase = createClient(
@@ -103,7 +123,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Rekalkulér totalen autoritativt server-side — klient sender ikke lenger beløp.
-    const totalPrice = computeTotal({
+    const { total: totalPrice, breakdown } = await computeTotalWithBreakdown({
+      listingId,
       listingPrice: listing.price,
       spotMarkers: listing.spot_markers as SpotMarker[] | null,
       listingExtras: listing.extras as ListingExtra[] | null,
@@ -215,6 +236,7 @@ export async function POST(request: NextRequest) {
         selected_extras: selectedExtras && (selectedExtras.listing?.length || Object.keys(selectedExtras.spots || {}).length)
           ? selectedExtras
           : null,
+        price_breakdown: breakdown,
       })
       .select("id")
       .single();

@@ -26,6 +26,7 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
   const t = useTranslations("booking");
   const tCategory = useTranslations("category");
   const tCommon = useTranslations("common");
+  const tListing = useTranslations("listing");
   const locale = useLocale();
   const dateLocale = bcpLocale(locale);
 
@@ -304,6 +305,46 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
               </div>
             )}
           </div>
+
+          {(() => {
+            const breakdown = booking.priceBreakdown ?? [];
+            // Grupper konsekvente netter med lik (pris, kilde) for lesbarhet
+            const groups: { price: number; source: string; count: number }[] = [];
+            for (const entry of breakdown) {
+              const last = groups[groups.length - 1];
+              if (last && last.price === entry.price && last.source === entry.source) {
+                last.count += 1;
+              } else {
+                groups.push({ price: entry.price, source: entry.source, count: 1 });
+              }
+            }
+            const hasVariation = groups.length > 1;
+            if (!hasVariation) return null;
+            const sourceLabel: Record<string, string> = {
+              base: t("priceSourceBase"),
+              weekend: t("priceSourceWeekend"),
+              season: t("priceSourceSeason"),
+              override: t("priceSourceOverride"),
+            };
+            return (
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm">
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  {t("priceBreakdownLabel")}
+                </p>
+                <div className="space-y-1">
+                  {groups.map((g, idx) => (
+                    <div key={idx} className="flex justify-between text-neutral-600">
+                      <span>
+                        {g.price} kr × {g.count} {g.count === 1 ? tListing("night") : tListing("nights")}
+                        <span className="ml-1 text-neutral-400">({sourceLabel[g.source] ?? g.source})</span>
+                      </span>
+                      <span>{g.price * g.count} kr</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {(() => {
             const listingExtras = booking.selectedExtras?.listing ?? [];

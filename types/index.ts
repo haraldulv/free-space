@@ -149,6 +149,14 @@ export type SelectedExtras = {
   spots?: Record<string, SelectedExtraEntry[]>;
 };
 
+export type NightlyPriceSource = "base" | "weekend" | "season" | "override";
+
+export interface NightlyPriceEntry {
+  date: string;
+  price: number;
+  source: NightlyPriceSource;
+}
+
 export interface Listing {
   id: string;
   title: string;
@@ -223,6 +231,7 @@ export interface Booking {
   conversationId?: string;
   selectedSpotIds?: string[];
   selectedExtras?: SelectedExtras;
+  priceBreakdown?: NightlyPriceEntry[];
 }
 
 export interface Review {

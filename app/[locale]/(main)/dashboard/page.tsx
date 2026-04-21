@@ -233,6 +233,7 @@ export default function DashboardPage() {
               hostName: (row.host as Record<string, unknown>)?.full_name as string || "",
               hostPhone: (row.host as Record<string, unknown>)?.show_phone ? (row.host as Record<string, unknown>)?.phone as string || "" : "",
               selectedExtras: row.selected_extras || undefined,
+              priceBreakdown: row.price_breakdown || undefined,
             }))
         );
 
@@ -288,6 +289,7 @@ export default function DashboardPage() {
             cancellationReason: row.cancellation_reason,
             refundAmount: row.refund_amount,
             selectedExtras: row.selected_extras || undefined,
+            priceBreakdown: row.price_breakdown || undefined,
           }))
         );
       }

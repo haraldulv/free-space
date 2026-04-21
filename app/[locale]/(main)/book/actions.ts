@@ -12,6 +12,7 @@ import {
 } from "@/lib/email";
 import { sendPushToUser } from "@/lib/push";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
+import { getNightlyPrices, applyPriceBreakdown, type NightlyPrice } from "@/lib/pricing";
 import type { SpotMarker, ListingExtra, SelectedExtras, SelectedExtraEntry } from "@/types";
 
 type SelectedExtrasClient = {
@@ -23,8 +24,13 @@ type SelectedExtrasClient = {
  * Autoritativ pris-utregning server-side. Klient sender inn ønsket total,
  * men vi rekalkulerer basert på DB-en så Stripe-beløpet aldri avviker fra
  * det annonsen faktisk koster.
+ *
+ * For listings uten per-spot-pricing brukes pricing-engine (regler + overrides).
+ * For listings med per-spot-pricing brukes flat spot-pris × nights (rules
+ * gjelder ikke når host eksplisitt har satt pris per plass).
  */
-function computeAuthoritativeTotal(args: {
+async function computeAuthoritativeTotal(args: {
+  listingId: string;
   listingPrice: number;
   spotMarkers: SpotMarker[] | null;
   listingExtras: ListingExtra[] | null;
@@ -32,7 +38,7 @@ function computeAuthoritativeTotal(args: {
   checkOut: string;
   selectedSpotIds?: string[];
   selectedExtras?: SelectedExtrasClient;
-}): { total: number; baseTotal: number; extrasTotal: number; serviceFee: number } {
+}): Promise<{ total: number; baseTotal: number; extrasTotal: number; serviceFee: number; breakdown: NightlyPrice[] | null }> {
   const start = new Date(args.checkIn);
   const end = new Date(args.checkOut);
   const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
@@ -41,9 +47,33 @@ function computeAuthoritativeTotal(args: {
     (s) => s.id && args.selectedSpotIds?.includes(s.id),
   );
 
-  const baseTotal = selectedSpots.length > 0
-    ? selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * nights, 0)
-    : args.listingPrice * nights;
+  const hasPerSpotPricing = selectedSpots.length > 0 && selectedSpots.some((s) => s.price != null);
+
+  let baseTotal: number;
+  let breakdown: NightlyPrice[] | null = null;
+
+  if (hasPerSpotPricing) {
+    baseTotal = selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * nights, 0);
+  } else if (selectedSpots.length > 1) {
+    // Flere plasser, uniform pris → rules ganget med antall plasser
+    breakdown = await getNightlyPrices({
+      listingId: args.listingId,
+      checkIn: args.checkIn,
+      checkOut: args.checkOut,
+      basePrice: args.listingPrice,
+    });
+    const perNightTotal = applyPriceBreakdown(breakdown);
+    baseTotal = perNightTotal * selectedSpots.length;
+  } else {
+    // Ingen eller én plass → ren breakdown gjelder
+    breakdown = await getNightlyPrices({
+      listingId: args.listingId,
+      checkIn: args.checkIn,
+      checkOut: args.checkOut,
+      basePrice: args.listingPrice,
+    });
+    baseTotal = applyPriceBreakdown(breakdown);
+  }
 
   let extrasTotal = 0;
   for (const entry of args.selectedExtras?.listing || []) {
@@ -65,7 +95,7 @@ function computeAuthoritativeTotal(args: {
   const serviceFee = Math.round(subtotal * SERVICE_FEE_RATE);
   const total = subtotal + serviceFee;
 
-  return { total, baseTotal, extrasTotal, serviceFee };
+  return { total, baseTotal, extrasTotal, serviceFee, breakdown };
 }
 
 async function getAuthUser() {
@@ -73,6 +103,27 @@ async function getAuthUser() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Ikke innlogget");
   return { supabase, user };
+}
+
+export async function previewPriceBreakdownAction(data: {
+  listingId: string;
+  checkIn: string;
+  checkOut: string;
+}): Promise<{ breakdown: NightlyPrice[] | null; nightlyTotal: number }> {
+  const supabase = await createClient();
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("price")
+    .eq("id", data.listingId)
+    .single();
+  if (!listing) return { breakdown: null, nightlyTotal: 0 };
+  const breakdown = await getNightlyPrices({
+    listingId: data.listingId,
+    checkIn: data.checkIn,
+    checkOut: data.checkOut,
+    basePrice: listing.price as number,
+  });
+  return { breakdown, nightlyTotal: applyPriceBreakdown(breakdown) };
 }
 
 export async function checkAvailabilityAction(data: {
@@ -159,7 +210,8 @@ export async function createBookingAction(data: {
     }
 
     // Autoritativ rekalkulering — server bestemmer beløpet, ikke klient.
-    const { total: authoritativeTotal } = computeAuthoritativeTotal({
+    const { total: authoritativeTotal, breakdown } = await computeAuthoritativeTotal({
+      listingId: data.listingId,
       listingPrice: listing.price,
       spotMarkers: listing.spot_markers as SpotMarker[] | null,
       listingExtras: listing.extras as ListingExtra[] | null,
@@ -220,6 +272,9 @@ export async function createBookingAction(data: {
         selected_extras: data.selectedExtras && (data.selectedExtras.listing?.length || Object.keys(data.selectedExtras.spots || {}).length)
           ? data.selectedExtras
           : null,
+        // Snapshot per-natt pris-breakdown — host-endringer av regler
+        // skal ikke ramme eksisterende bookinger retroaktivt.
+        price_breakdown: breakdown,
       })
       .select("id")
       .single();
