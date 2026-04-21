@@ -668,23 +668,42 @@ struct EditListingView: View {
                let extras = spotMarkers[spotIndex].extras,
                let idx = extras.firstIndex(where: { $0.id == preset.rawValue }) {
                 Divider().padding(.horizontal, 10)
-                HStack(spacing: 8) {
-                    Text("Pris").font(.system(size: 12)).foregroundStyle(.neutral600)
-                    TextField("", value: Binding(
-                        get: { extras[idx].price },
-                        set: { newVal in
-                            var updated = spotMarkers[spotIndex].extras ?? []
-                            if let i = updated.firstIndex(where: { $0.id == preset.rawValue }) {
-                                updated[i].price = max(0, newVal)
-                                spotMarkers[spotIndex].extras = updated
-                            }
-                        }
-                    ), format: .number)
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text("Pris").font(.system(size: 12)).foregroundStyle(.neutral600)
+                        TextField("", value: Binding(
+                            get: { extras[idx].price },
+                            set: { newVal in
+                                var updated = spotMarkers[spotIndex].extras ?? []
+                                if let i = updated.firstIndex(where: { $0.id == preset.rawValue }) {
+                                    updated[i].price = max(0, newVal)
+                                    spotMarkers[spotIndex].extras = updated
+                                }
+                            },
+                        ), format: .number)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
+                        .frame(width: 80)
+                        Text(preset.perNight ? "kr/natt" : "kr").font(.system(size: 11)).foregroundStyle(.neutral400)
+                        Spacer()
+                    }
+                    TextField(
+                        "Melding til gjest (valgfri)",
+                        text: Binding(
+                            get: { extras[idx].message ?? "" },
+                            set: { newMsg in
+                                var updated = spotMarkers[spotIndex].extras ?? []
+                                if let i = updated.firstIndex(where: { $0.id == preset.rawValue }) {
+                                    updated[i].message = newMsg.isEmpty ? nil : newMsg
+                                    spotMarkers[spotIndex].extras = updated
+                                }
+                            },
+                        ),
+                        axis: .vertical,
+                    )
                     .textFieldStyle(.roundedBorder)
-                    .keyboardType(.numberPad)
-                    .frame(width: 80)
-                    Text(preset.perNight ? "kr/natt" : "kr").font(.system(size: 11)).foregroundStyle(.neutral400)
-                    Spacer()
+                    .font(.system(size: 12))
+                    .lineLimit(2...3)
                 }
                 .padding(.horizontal, 10).padding(.vertical, 6)
             }
@@ -933,28 +952,50 @@ struct EditListingView: View {
                             if isSelected, let currentExtra = selectedExtra {
                                 Divider().padding(.horizontal, 14)
 
-                                HStack(spacing: 12) {
-                                    Text("Pris (kr)")
-                                        .font(.system(size: 14, weight: .medium))
-                                        .foregroundStyle(.neutral600)
+                                VStack(alignment: .leading, spacing: 10) {
+                                    HStack(spacing: 12) {
+                                        Text("Pris (kr)")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(.neutral600)
 
-                                    TextField("Pris", value: Binding(
-                                        get: { currentExtra.price },
-                                        set: { newPrice in
-                                            if let idx = selectedExtras.firstIndex(where: { $0.id == extra.rawValue }) {
-                                                selectedExtras[idx].price = max(0, newPrice)
+                                        TextField("Pris", value: Binding(
+                                            get: { currentExtra.price },
+                                            set: { newPrice in
+                                                if let idx = selectedExtras.firstIndex(where: { $0.id == extra.rawValue }) {
+                                                    selectedExtras[idx].price = max(0, newPrice)
+                                                }
                                             }
-                                        }
-                                    ), format: .number)
-                                    .textFieldStyle(.roundedBorder)
-                                    .keyboardType(.numberPad)
-                                    .frame(width: 100)
+                                        ), format: .number)
+                                        .textFieldStyle(.roundedBorder)
+                                        .keyboardType(.numberPad)
+                                        .frame(width: 100)
 
-                                    Text(extra.perNight ? "kr/natt" : "kr")
-                                        .font(.system(size: 13))
-                                        .foregroundStyle(.neutral400)
+                                        Text(extra.perNight ? "kr/natt" : "kr")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(.neutral400)
 
-                                    Spacer()
+                                        Spacer()
+                                    }
+
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text("Melding til gjest (valgfri)")
+                                            .font(.system(size: 12, weight: .medium))
+                                            .foregroundStyle(.neutral600)
+                                        TextField(
+                                            "F.eks. Elbil-laderen har type 2-kontakt",
+                                            text: Binding(
+                                                get: { currentExtra.message ?? "" },
+                                                set: { newMsg in
+                                                    if let idx = selectedExtras.firstIndex(where: { $0.id == extra.rawValue }) {
+                                                        selectedExtras[idx].message = newMsg.isEmpty ? nil : newMsg
+                                                    }
+                                                },
+                                            ),
+                                            axis: .vertical,
+                                        )
+                                        .textFieldStyle(.roundedBorder)
+                                        .lineLimit(2...4)
+                                    }
                                 }
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
