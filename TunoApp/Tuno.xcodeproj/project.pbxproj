@@ -27,6 +27,7 @@
 		4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */; };
 		4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01854C020C64868465F39BDC /* Models.swift */; };
 		53263F543ED69E31B489D2D5 /* SpotPlacementSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */; };
+		53A0D526B1C2D389C36E2A64 /* PricingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E3029710A8D3475494799E /* PricingService.swift */; };
 		5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */; };
 		642AF85B63EEA4DB11DEA032 /* ListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6DFB7D23F06D079D826635 /* ListingDetailView.swift */; };
 		659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CE3CB213405AF521294421 /* TunoApp.swift */; };
@@ -91,6 +92,7 @@
 		4D9B33BBC5E75BE977852EBE /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		5416B142A121192B7EDCA9A2 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		54806C1D2B79947D8E8CE6C9 /* HostOnboardingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingService.swift; sourceTree = "<group>"; };
+		56E3029710A8D3475494799E /* PricingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingService.swift; sourceTree = "<group>"; };
 		5C5065BE9CC3C749754F554F /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
 		64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingViewModel.swift; sourceTree = "<group>"; };
 		653B4F2F1D411111416483A4 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
@@ -171,6 +173,7 @@
 				653B4F2F1D411111416483A4 /* LocalizationManager.swift */,
 				5416B142A121192B7EDCA9A2 /* LocationManager.swift */,
 				3CB173E040FBC726599E7A89 /* PlacesService.swift */,
+				56E3029710A8D3475494799E /* PricingService.swift */,
 				FBE71C1EE64D63048F5BD2F5 /* PushNotificationManager.swift */,
 				3D0ADDAE2EA91F5F458E3E5A /* SupabaseService.swift */,
 				308BCB9A59C6E33399015B98 /* TunoCalendar.swift */,
@@ -455,6 +458,7 @@
 				4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */,
 				F5C607CAFB1A650AC022C486 /* MotorhomeIcon.swift in Sources */,
 				B61A0EA246DD9BEF82475048 /* PlacesService.swift in Sources */,
+				53A0D526B1C2D389C36E2A64 /* PricingService.swift in Sources */,
 				D66A3C676F36A7AC0C7FA620 /* ProfileView.swift in Sources */,
 				1A1B9BC09172D4EBECCDB2C3 /* PushNotificationManager.swift in Sources */,
 				C0BA2DBEE5876C34B94A911D /* QRCodeView.swift in Sources */,

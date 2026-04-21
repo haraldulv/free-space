@@ -687,26 +687,7 @@ struct EditListingView: View {
         VStack(alignment: .leading, spacing: 6) {
             if !customExtras.isEmpty {
                 ForEach(customExtras) { extra in
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkles").foregroundStyle(.primary600).font(.system(size: 12))
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(extra.name).font(.system(size: 12, weight: .medium))
-                            Text("\(extra.price) \(extra.perNight ? "kr/natt" : "kr")")
-                                .font(.system(size: 10)).foregroundStyle(.neutral500)
-                        }
-                        Spacer()
-                        Button {
-                            var updated = spotMarkers[spotIndex].extras ?? []
-                            updated.removeAll { $0.id == extra.id }
-                            spotMarkers[spotIndex].extras = updated.isEmpty ? nil : updated
-                        } label: {
-                            Image(systemName: "xmark.circle.fill").foregroundStyle(.neutral400)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(8)
-                    .background(Color.primary50)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    editCustomSpotExtraCard(spotIndex: spotIndex, extra: extra)
                 }
             }
 
@@ -767,28 +748,15 @@ struct EditListingView: View {
                     uploadPhotos(items)
                 }
 
+                if !imageURLs.isEmpty {
+                    Text("Første bilde er forsidebilde. Bruk pilene for å endre rekkefølge.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral500)
+                }
+
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                     ForEach(Array(imageURLs.enumerated()), id: \.offset) { index, url in
-                        ZStack(alignment: .topTrailing) {
-                            AsyncImage(url: URL(string: url)) { phase in
-                                switch phase {
-                                case .success(let image):
-                                    image.resizable().aspectRatio(contentMode: .fill)
-                                default:
-                                    Rectangle().fill(Color.neutral100)
-                                }
-                            }
-                            .frame(height: 100)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                            Button { imageURLs.remove(at: index) } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 22))
-                                    .foregroundStyle(.white)
-                                    .shadow(radius: 2)
-                            }
-                            .padding(4)
-                        }
+                        editImageCell(index: index, url: url)
                     }
 
                     ForEach(uploadingPhotos) { photo in
@@ -993,24 +961,7 @@ struct EditListingView: View {
                 .padding(.top, 8)
 
             ForEach(customExtras) { extra in
-                HStack(spacing: 10) {
-                    Image(systemName: "sparkles").foregroundStyle(.primary600)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(extra.name).font(.system(size: 14, weight: .medium))
-                        Text("\(extra.price) \(extra.perNight ? "kr/natt" : "kr")")
-                            .font(.system(size: 12)).foregroundStyle(.neutral500)
-                    }
-                    Spacer()
-                    Button {
-                        selectedExtras.removeAll { $0.id == extra.id }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.neutral400)
-                    }
-                }
-                .padding(10)
-                .background(Color.primary50)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                editCustomListingExtraCard(extra: extra)
             }
 
             HStack(spacing: 8) {
@@ -1192,6 +1143,244 @@ struct EditListingView: View {
                 isSaving = false
             }
         }
+    }
+
+    @ViewBuilder
+    private func editImageCell(index: Int, url: String) -> some View {
+        let isCover = index == 0
+        ZStack(alignment: .topTrailing) {
+            AsyncImage(url: URL(string: url)) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().aspectRatio(contentMode: .fill)
+                default:
+                    Rectangle().fill(Color.neutral100)
+                }
+            }
+            .frame(height: 100)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(isCover ? Color.primary600 : Color.clear, lineWidth: 2),
+            )
+
+            Button { imageURLs.remove(at: index) } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(.white)
+                    .shadow(radius: 2)
+            }
+            .padding(4)
+
+            if isCover {
+                HStack(spacing: 3) {
+                    Image(systemName: "star.fill").font(.system(size: 8))
+                    Text("Forside").font(.system(size: 10, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Color.primary600)
+                .clipShape(Capsule())
+                .padding(4)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+
+            HStack(spacing: 4) {
+                Button {
+                    moveEditImage(from: index, to: index - 1)
+                } label: {
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(index == 0 ? .neutral300 : .neutral700)
+                        .frame(width: 24, height: 24)
+                        .background(Color.white.opacity(0.95))
+                        .clipShape(Circle())
+                }
+                .disabled(index == 0)
+
+                if !isCover {
+                    Button {
+                        moveEditImage(from: index, to: 0)
+                    } label: {
+                        Text("Forside")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.neutral700)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.95))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                Button {
+                    moveEditImage(from: index, to: index + 1)
+                } label: {
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(index == imageURLs.count - 1 ? .neutral300 : .neutral700)
+                        .frame(width: 24, height: 24)
+                        .background(Color.white.opacity(0.95))
+                        .clipShape(Circle())
+                }
+                .disabled(index == imageURLs.count - 1)
+            }
+            .padding(4)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        }
+    }
+
+    private func moveEditImage(from: Int, to: Int) {
+        guard from >= 0, from < imageURLs.count else { return }
+        let target = max(0, min(imageURLs.count - 1, to))
+        if target == from { return }
+        let item = imageURLs.remove(at: from)
+        imageURLs.insert(item, at: target)
+    }
+
+    @ViewBuilder
+    private func editCustomSpotExtraCard(spotIndex: Int, extra: ListingExtra) -> some View {
+        let extraId = extra.id
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles").foregroundStyle(.primary600).font(.system(size: 12))
+                TextField("Navn", text: Binding(
+                    get: { extra.name },
+                    set: { newName in
+                        var updated = spotMarkers[spotIndex].extras ?? []
+                        if let i = updated.firstIndex(where: { $0.id == extraId }) {
+                            updated[i].name = newName
+                            spotMarkers[spotIndex].extras = updated
+                        }
+                    },
+                ))
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 12, weight: .medium))
+                Spacer()
+                Button {
+                    var updated = spotMarkers[spotIndex].extras ?? []
+                    updated.removeAll { $0.id == extraId }
+                    spotMarkers[spotIndex].extras = updated.isEmpty ? nil : updated
+                } label: {
+                    Image(systemName: "trash").font(.system(size: 12)).foregroundStyle(.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+            }
+            HStack(spacing: 8) {
+                TextField("Pris", value: Binding(
+                    get: { extra.price },
+                    set: { newPrice in
+                        var updated = spotMarkers[spotIndex].extras ?? []
+                        if let i = updated.firstIndex(where: { $0.id == extraId }) {
+                            updated[i].price = max(0, newPrice)
+                            spotMarkers[spotIndex].extras = updated
+                        }
+                    },
+                ), format: .number)
+                .textFieldStyle(.roundedBorder)
+                .keyboardType(.numberPad)
+                .frame(width: 80)
+                Toggle("Per natt", isOn: Binding(
+                    get: { extra.perNight },
+                    set: { newPN in
+                        var updated = spotMarkers[spotIndex].extras ?? []
+                        if let i = updated.firstIndex(where: { $0.id == extraId }) {
+                            updated[i].perNight = newPN
+                            spotMarkers[spotIndex].extras = updated
+                        }
+                    },
+                ))
+                .font(.system(size: 11))
+                .tint(.primary600)
+            }
+            TextField(
+                "Melding til gjest (valgfri)",
+                text: Binding(
+                    get: { extra.message ?? "" },
+                    set: { newMsg in
+                        var updated = spotMarkers[spotIndex].extras ?? []
+                        if let i = updated.firstIndex(where: { $0.id == extraId }) {
+                            updated[i].message = newMsg.isEmpty ? nil : newMsg
+                            spotMarkers[spotIndex].extras = updated
+                        }
+                    },
+                ),
+                axis: .vertical,
+            )
+            .textFieldStyle(.roundedBorder)
+            .font(.system(size: 12))
+            .lineLimit(2...3)
+        }
+        .padding(10)
+        .background(Color.primary50)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    @ViewBuilder
+    private func editCustomListingExtraCard(extra: ListingExtra) -> some View {
+        let idxOpt = selectedExtras.firstIndex(where: { $0.id == extra.id })
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "sparkles").foregroundStyle(.primary600)
+                TextField("Navn", text: Binding(
+                    get: { extra.name },
+                    set: { newName in
+                        if let i = idxOpt { selectedExtras[i].name = newName }
+                    },
+                ))
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 14, weight: .medium))
+                Spacer()
+                Button {
+                    selectedExtras.removeAll { $0.id == extra.id }
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.red.opacity(0.7))
+                }
+            }
+            HStack(spacing: 10) {
+                TextField("Pris", value: Binding(
+                    get: { extra.price },
+                    set: { newPrice in
+                        if let i = idxOpt { selectedExtras[i].price = max(0, newPrice) }
+                    },
+                ), format: .number)
+                .textFieldStyle(.roundedBorder)
+                .keyboardType(.numberPad)
+                .frame(width: 100)
+                Toggle("Per natt", isOn: Binding(
+                    get: { extra.perNight },
+                    set: { newPN in
+                        if let i = idxOpt { selectedExtras[i].perNight = newPN }
+                    },
+                ))
+                .font(.system(size: 13))
+                .tint(.primary600)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Melding til gjest (valgfri)")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.neutral600)
+                TextField(
+                    "F.eks. Badstuen er klar fra 16:00, nøkkel ligger i postkassen.",
+                    text: Binding(
+                        get: { extra.message ?? "" },
+                        set: { newMsg in
+                            if let i = idxOpt {
+                                selectedExtras[i].message = newMsg.isEmpty ? nil : newMsg
+                            }
+                        },
+                    ),
+                    axis: .vertical,
+                )
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(2...4)
+            }
+        }
+        .padding(12)
+        .background(Color.primary50)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func uploadPhotos(_ items: [PhotosPickerItem]) {

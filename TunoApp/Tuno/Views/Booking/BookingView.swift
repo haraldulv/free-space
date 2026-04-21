@@ -114,6 +114,8 @@ struct BookingView: View {
     @State private var listingExtrasQty: [String: Int] = [:]
     @State private var spotExtrasQty: [String: [String: Int]] = [:]
     @State private var bookedDates: BookingService.BookedDates?
+    @State private var nightlyPriceBreakdown: [NightlyPriceEntry] = []
+    @State private var loadingBreakdown = false
 
     private var hasSpotLevelPricing: Bool {
         (listing.spotMarkers ?? []).contains { $0.price != nil || !($0.extras?.isEmpty ?? true) }
@@ -137,7 +139,32 @@ struct BookingView: View {
         if hasSpotLevelPricing && !selectedSpots.isEmpty {
             return selectedSpots.reduce(0) { $0 + ($1.price ?? listing.price ?? 0) * nights }
         }
+        if !nightlyPriceBreakdown.isEmpty {
+            let perNight = nightlyPriceBreakdown.reduce(0) { $0 + $1.price }
+            let spotMultiplier = selectedSpots.count > 1 ? selectedSpots.count : 1
+            return perNight * spotMultiplier
+        }
         return nights * (listing.price ?? 0)
+    }
+
+    private func loadPriceBreakdown() {
+        guard let checkIn, let checkOut, nights > 0, !hasSpotLevelPricing else {
+            nightlyPriceBreakdown = []
+            return
+        }
+        loadingBreakdown = true
+        Task {
+            let breakdown = await PricingService.nightlyPrices(
+                listingId: listing.id,
+                basePrice: listing.price ?? 0,
+                checkIn: checkIn,
+                checkOut: checkOut,
+            )
+            await MainActor.run {
+                nightlyPriceBreakdown = breakdown
+                loadingBreakdown = false
+            }
+        }
     }
 
     private var listingExtrasTotal: Int {
@@ -332,12 +359,14 @@ struct BookingView: View {
             bookingService.clientSecret = nil
             deselectBlockedSpots()
             Task { await checkAvailability() }
+            loadPriceBreakdown()
         }
         .onChange(of: checkOut) {
             showCardForm = false
             bookingService.clientSecret = nil
             deselectBlockedSpots()
             Task { await checkAvailability() }
+            loadPriceBreakdown()
         }
     }
 
@@ -535,10 +564,38 @@ struct BookingView: View {
 
     private var priceBreakdown: some View {
         VStack(spacing: 10) {
-            HStack {
-                Text(baseLineLabel).font(.system(size: 14)).foregroundStyle(.neutral600)
-                Spacer()
-                Text("\(baseTotal) kr").font(.system(size: 14)).foregroundStyle(.neutral600)
+            if let groups = nightlyGroups, groups.count > 1 {
+                ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
+                    HStack(spacing: 4) {
+                        Text("\(g.price) kr × \(g.count) \(g.count == 1 ? "natt" : "netter")")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.neutral600)
+                        Text("(\(sourceLabel(g.source)))")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral400)
+                        Spacer()
+                        Text("\(g.price * g.count) kr")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.neutral600)
+                    }
+                }
+                if selectedSpots.count > 1 {
+                    HStack {
+                        Text("× \(selectedSpots.count) plasser")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral500)
+                        Spacer()
+                        Text("\(baseTotal) kr")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral500)
+                    }
+                }
+            } else {
+                HStack {
+                    Text(baseLineLabel).font(.system(size: 14)).foregroundStyle(.neutral600)
+                    Spacer()
+                    Text("\(baseTotal) kr").font(.system(size: 14)).foregroundStyle(.neutral600)
+                }
             }
             if listingExtrasTotal + spotExtrasTotal > 0 {
                 HStack {
@@ -562,6 +619,28 @@ struct BookingView: View {
         .padding(16)
         .background(Color.neutral50)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private var nightlyGroups: [(price: Int, source: String, count: Int)]? {
+        guard !nightlyPriceBreakdown.isEmpty, !hasSpotLevelPricing else { return nil }
+        var result: [(price: Int, source: String, count: Int)] = []
+        for entry in nightlyPriceBreakdown {
+            if let last = result.last, last.price == entry.price, last.source == entry.source {
+                result[result.count - 1].count += 1
+            } else {
+                result.append((price: entry.price, source: entry.source, count: 1))
+            }
+        }
+        return result
+    }
+
+    private func sourceLabel(_ source: String) -> String {
+        switch source {
+        case "weekend": return "helg"
+        case "season": return "sesong"
+        case "override": return "tilpasset"
+        default: return "standard"
+        }
     }
 
     private var baseLineLabel: String {
