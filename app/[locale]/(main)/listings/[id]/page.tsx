@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { MapPin, Users, Clock } from "lucide-react";
 import { getTranslations } from "next-intl/server";
@@ -18,6 +19,45 @@ import ListingDistanceBadge from "@/components/features/ListingDistanceBadge";
 import ReviewList from "@/components/features/ReviewList";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ id: string; locale: string }>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const listing = await getListingById(id);
+  if (!listing) return {};
+
+  const description = listing.description.length > 160
+    ? `${listing.description.slice(0, 157)}...`
+    : listing.description;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
+  const url = `${siteUrl}/listings/${listing.id}`;
+
+  return {
+    title: `${listing.title} — Tuno`,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title: listing.title,
+      description,
+      url,
+      siteName: "Tuno",
+      type: "website",
+      locale: "nb_NO",
+      images: listing.images.length > 0
+        ? [{ url: listing.images[0], alt: listing.title }]
+        : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: listing.title,
+      description,
+      images: listing.images[0] ? [listing.images[0]] : undefined,
+    },
+  };
+}
 
 export default async function ListingPage({
   params,

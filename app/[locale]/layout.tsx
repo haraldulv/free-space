@@ -21,9 +21,34 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "metadata" });
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
+  const localeMap: Record<string, string> = { nb: "nb_NO", en: "en_US", de: "de_DE" };
   return {
-    title: t("title"),
+    metadataBase: new URL(siteUrl),
+    title: {
+      default: t("title"),
+      template: `%s — Tuno`,
+    },
     description: t("description"),
+    openGraph: {
+      siteName: "Tuno",
+      type: "website",
+      url: siteUrl,
+      title: t("title"),
+      description: t("description"),
+      locale: localeMap[locale] ?? "nb_NO",
+      images: ["/tuno-logo.png"],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: t("title"),
+      description: t("description"),
+      images: ["/tuno-logo.png"],
+    },
+    icons: {
+      icon: "/favicon.ico",
+      apple: "/icons/icon-180.png",
+    },
   };
 }
 
