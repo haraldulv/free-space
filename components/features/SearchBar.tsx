@@ -196,6 +196,22 @@ export default function SearchBar({
     }
   };
 
+  const hasActiveFilter =
+    location.trim().length > 0 ||
+    !!dateRange?.from ||
+    vehicle !== "motorhome" ||
+    searchLat !== undefined;
+
+  const clearAll = () => {
+    setLocation("");
+    setSearchLat(undefined);
+    setSearchLng(undefined);
+    setDateRange(undefined);
+    setVehicle("motorhome");
+    setSuggestions([]);
+    setActiveSegment(null);
+  };
+
   // Shared suggestion list renderer
   const renderSuggestions = () => {
     if (activeSegment !== "where") return null;
@@ -273,6 +289,11 @@ export default function SearchBar({
                   <div className="text-xs font-semibold text-neutral-900">{t("vehicle")}</div>
                   <div className={`flex items-center gap-1.5 text-sm truncate ${vehicleLabel ? "text-neutral-700" : "text-neutral-400"}`}><VehicleIcon className="h-3.5 w-3.5" />{vehicleLabel || t("addVehicle")}</div>
                 </button>
+                {hasActiveFilter && (
+                  <button onClick={clearAll} className="mr-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-200 hover:text-neutral-900" aria-label={t("clearFilters")} title={t("clearFilters")}>
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
                 <button onClick={handleSearch} className="m-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md transition-all hover:shadow-lg active:scale-95" aria-label={t("button")}>
                   <Search className="h-3.5 w-3.5" />
                 </button>
@@ -415,6 +436,17 @@ export default function SearchBar({
             </div>
           </button>
 
+          {hasActiveFilter && (
+            <button
+              onClick={clearAll}
+              className="mr-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-200 hover:text-neutral-900"
+              aria-label={t("clearFilters")}
+              title={t("clearFilters")}
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+
           <button
             onClick={handleSearch}
             className="m-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-primary-600 to-primary-500 text-white shadow-md transition-all hover:shadow-lg hover:scale-105 active:scale-95"
@@ -476,7 +508,13 @@ export default function SearchBar({
               <X className="h-5 w-5" />
             </button>
             <span className="text-sm font-semibold">{t("title")}</span>
-            <div className="w-10" />
+            {hasActiveFilter ? (
+              <button onClick={clearAll} className="rounded-full px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
+                {t("clearFilters")}
+              </button>
+            ) : (
+              <div className="w-10" />
+            )}
           </div>
 
           <div className="space-y-4 p-4 overflow-y-auto flex-1">

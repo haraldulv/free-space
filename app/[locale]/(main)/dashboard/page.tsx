@@ -23,7 +23,7 @@ import { bcpLocale, numberLocale } from "@/lib/i18n-helpers";
 import { createClient } from "@/lib/supabase/client";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/[locale]/(main)/bli-utleier/actions";
 import { cancelBookingAction, approveBookingAction, declineBookingAction } from "@/app/[locale]/(main)/book/actions";
-import { getConversations } from "@/lib/supabase/chat";
+import { getConversations, subscribeToUserMessages } from "@/lib/supabase/chat";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
 import BookingCard from "@/components/features/BookingCard";
@@ -158,7 +158,15 @@ export default function DashboardPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [favorites, setFavorites] = useState<Listing[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [selectedConvo, setSelectedConvo] = useState<Conversation | null>(null);
+  const [selectedConvo, setSelectedConvoRaw] = useState<Conversation | null>(null);
+  // Når bruker åpner en samtale skal lokalt unread-count nullstilles øyeblikkelig
+  // (server-side mark-as-read håndteres av ChatView). Dette holder navbar-badgen korrekt.
+  const setSelectedConvo = (convo: Conversation | null) => {
+    setSelectedConvoRaw(convo);
+    if (convo) {
+      setConversations((prev) => prev.map((c) => c.id === convo.id ? { ...c, unreadCount: 0 } : c));
+    }
+  };
   const [userId, setUserId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -347,6 +355,32 @@ export default function DashboardPage() {
       setLoaded(true);
     });
   }, [conversationIdParam]);
+
+  // Realtime: lytt på nye meldinger i alle brukerens samtaler og oppdater
+  // unread-badge + lastMessageText uten å reloade siden.
+  useEffect(() => {
+    if (!userId || conversations.length === 0) return;
+    const convoIds = conversations.map((c) => c.id);
+    const channel = subscribeToUserMessages(userId, convoIds, ({ conversationId, content }) => {
+      setConversations((prev) => {
+        const idx = prev.findIndex((c) => c.id === conversationId);
+        if (idx < 0) return prev;
+        const bumpUnread = selectedConvo?.id !== conversationId;
+        const updated: Conversation = {
+          ...prev[idx],
+          lastMessageText: content,
+          lastMessageAt: new Date().toISOString(),
+          unreadCount: bumpUnread ? (prev[idx].unreadCount || 0) + 1 : prev[idx].unreadCount,
+        };
+        // Flytt samtalen til toppen
+        const next = [updated, ...prev.slice(0, idx), ...prev.slice(idx + 1)];
+        return next;
+      });
+    });
+    return () => {
+      channel.unsubscribe();
+    };
+  }, [userId, conversations.length, selectedConvo?.id]);
 
   const isHost = listings.length > 0 || rentals.length > 0;
   const sidebarItems = sidebarItemsBase.filter((item) => !item.hostOnly || isHost);

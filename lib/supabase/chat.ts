@@ -149,3 +149,47 @@ export function subscribeToMessages(
     )
     .subscribe();
 }
+
+/**
+ * Global subscription for new messages across ALL of a user's conversations.
+ * Trigges callback når en melding fra en annen bruker landes i en av brukerens
+ * samtaler — brukes for live unread-badge og toast-varsel i dashboard.
+ */
+export function subscribeToUserMessages(
+  userId: string,
+  conversationIds: string[],
+  onNewMessage: (payload: { conversationId: string; content: string; senderId: string }) => void,
+) {
+  const supabase = createClient();
+
+  if (conversationIds.length === 0) {
+    // Returner en dummy channel som kan unsubscribes trygt
+    return supabase.channel(`user-messages:${userId}:empty`).subscribe();
+  }
+
+  const convoSet = new Set(conversationIds);
+
+  return supabase
+    .channel(`user-messages:${userId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "INSERT",
+        schema: "public",
+        table: "messages",
+      },
+      (payload) => {
+        const row = payload.new as Record<string, unknown>;
+        const senderId = row.sender_id as string;
+        const conversationId = row.conversation_id as string;
+        if (senderId === userId) return;
+        if (!convoSet.has(conversationId)) return;
+        onNewMessage({
+          conversationId,
+          content: (row.content as string) ?? "",
+          senderId,
+        });
+      },
+    )
+    .subscribe();
+}
