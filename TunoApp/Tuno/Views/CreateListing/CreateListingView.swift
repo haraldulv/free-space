@@ -305,10 +305,12 @@ struct BasicInfoStepView: View {
                     Text("Beskrivelse")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.neutral600)
-                    TextEditor(text: $form.description)
-                        .frame(minHeight: 100)
-                        .padding(4)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.neutral200))
+                    TextEditorWithCounter(
+                        text: $form.description,
+                        maxLength: 2000,
+                        minHeight: 140,
+                        placeholder: "Beskriv plassen — hva kjennetegner den, hva er i nærheten, hva bør gjesten vite?"
+                    )
                 }
 
                 HStack(spacing: 16) {
@@ -373,6 +375,7 @@ struct LocationStepView: View {
     @State private var searchText = ""
     @State private var isSpotMode = false
     @State private var mapUpdateTrigger = UUID()
+    @State private var sendCheckinMessage = false
     @FocusState private var isSearchFocused: Bool
 
     var body: some View {
@@ -455,31 +458,65 @@ struct LocationStepView: View {
                 // Map
                 if form.lat != 0 || form.lng != 0 {
                     VStack(alignment: .leading, spacing: 10) {
-                        // Spot mode toggle
-                        HStack {
+                        // Spot mode toggle + progress + clear-all
+                        let atMaxSpots = form.spots > 0 && form.spotMarkers.count >= form.spots
+                        HStack(spacing: 10) {
                             Button {
-                                isSpotMode.toggle()
+                                if !atMaxSpots || isSpotMode {
+                                    isSpotMode.toggle()
+                                }
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "mappin.and.ellipse")
                                     Text("Marker plasser")
                                 }
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(isSpotMode ? .white : .primary600)
+                                .foregroundStyle(isSpotMode ? .white : (atMaxSpots ? .neutral400 : .primary600))
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
-                                .background(isSpotMode ? Color.primary600 : Color.primary50)
+                                .background(isSpotMode ? Color.primary600 : (atMaxSpots ? Color.neutral100 : Color.primary50))
                                 .clipShape(Capsule())
-                                .overlay(Capsule().stroke(Color.primary600, lineWidth: 1))
+                                .overlay(
+                                    Capsule().stroke(
+                                        atMaxSpots && !isSpotMode ? Color.neutral300 : Color.primary600,
+                                        lineWidth: 1,
+                                    ),
+                                )
+                            }
+                            .disabled(atMaxSpots && !isSpotMode)
+
+                            if !form.spotMarkers.isEmpty {
+                                Button {
+                                    form.spotMarkers.removeAll()
+                                    mapUpdateTrigger = UUID()
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "trash")
+                                        Text("Fjern alle")
+                                    }
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.neutral700)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.neutral100)
+                                    .clipShape(Capsule())
+                                }
                             }
 
                             Spacer()
 
-                            if isSpotMode {
-                                Text("Trykk på kartet for å plassere")
-                                    .font(.system(size: 12))
+                            if form.spots > 0 {
+                                Text("\(form.spotMarkers.count) / \(form.spots)")
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(.neutral500)
+                                    .monospacedDigit()
                             }
+                        }
+
+                        if isSpotMode && !atMaxSpots {
+                            Text("Trykk på kartet for å plassere")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral500)
                         }
 
                         LocationPickerMapView(
@@ -487,11 +524,26 @@ struct LocationStepView: View {
                             lng: $form.lng,
                             spotMarkers: $form.spotMarkers,
                             isSpotMode: isSpotMode,
-                            updateTrigger: mapUpdateTrigger
+                            maxSpots: form.spots,
+                            updateTrigger: mapUpdateTrigger,
+                            onMaxReached: { isSpotMode = false }
                         )
                         .frame(height: 300)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
+                        if isSpotMode && atMaxSpots {
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundStyle(.orange)
+                                    .font(.system(size: 13))
+                                Text("Du har plassert alle \(form.spots) plasser. Øk antallet i detaljer-steget for å legge til flere.")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.neutral700)
+                            }
+                            .padding(10)
+                            .background(Color.orange.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
                     }
                 }
 
@@ -500,12 +552,7 @@ struct LocationStepView: View {
                     pricingSection
                 }
 
-                // Velkomstmelding-seksjon
-                if form.lat != 0 || form.lng != 0 {
-                    checkinMessageSection
-                }
-
-                // Utbrettede plass-editors
+                // Utbrettede plass-editors (før velkomstmelding så pris-flyten ikke brytes)
                 if !form.spotMarkers.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Plasser (\(form.spotMarkers.count))")
@@ -515,6 +562,11 @@ struct LocationStepView: View {
                             inlineSpotCard(index: index)
                         }
                     }
+                }
+
+                // Velkomstmelding-seksjon — etter plasser så pris-flyten ikke brytes
+                if form.lat != 0 || form.lng != 0 {
+                    checkinMessageSection
                 }
 
                 // Privacy toggle
@@ -627,40 +679,66 @@ struct LocationStepView: View {
 
     private var checkinMessageSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Velkomstmelding ved innsjekk")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Velkomstmelding ved innsjekk")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { sendCheckinMessage },
+                    set: { newValue in
+                        sendCheckinMessage = newValue
+                        if !newValue {
+                            form.checkinMessage = ""
+                            form.perSpotCheckinMessage = false
+                            for i in form.spotMarkers.indices {
+                                form.spotMarkers[i].checkinMessage = nil
+                            }
+                        }
+                    }
+                ))
+                .labelsHidden()
+                .tint(.primary600)
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                pricingModeRow(
-                    title: "Samme melding for alle plasser",
-                    subtitle: "Én felles velkomstmelding til alle gjester.",
-                    isSelected: !form.perSpotCheckinMessage,
-                    onSelect: { setPerSpotCheckinMessage(false) }
-                )
-                pricingModeRow(
-                    title: "Individuell melding per plass",
-                    subtitle: "Sett ulik melding per plass (f.eks. ulike port-koder).",
-                    isSelected: form.perSpotCheckinMessage,
-                    onSelect: { setPerSpotCheckinMessage(true) }
-                )
-            }
+            if sendCheckinMessage {
+                VStack(alignment: .leading, spacing: 10) {
+                    pricingModeRow(
+                        title: "Samme melding for alle plasser",
+                        subtitle: "Én felles velkomstmelding til alle gjester.",
+                        isSelected: !form.perSpotCheckinMessage,
+                        onSelect: { setPerSpotCheckinMessage(false) }
+                    )
+                    pricingModeRow(
+                        title: "Individuell melding per plass",
+                        subtitle: "Sett ulik melding per plass (f.eks. ulike port-koder).",
+                        isSelected: form.perSpotCheckinMessage,
+                        onSelect: { setPerSpotCheckinMessage(true) }
+                    )
+                }
 
-            if !form.perSpotCheckinMessage {
-                TextEditor(text: $form.checkinMessage)
-                    .frame(minHeight: 90)
-                    .padding(8)
-                    .background(Color.neutral50)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            } else {
-                Text("Skriv individuell melding på hver plass nedenfor.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
+                if !form.perSpotCheckinMessage {
+                    TextEditorWithCounter(
+                        text: $form.checkinMessage,
+                        maxLength: 600,
+                        minHeight: 90,
+                        placeholder: "F.eks. Hei! Port-kode er 1234. Plassen din er ved ladepunktet."
+                    )
+                } else {
+                    Text("Skriv individuell melding på hver plass nedenfor.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
             }
+        }
+        .onAppear {
+            let hasMsg = !form.checkinMessage.isEmpty
+                || form.spotMarkers.contains(where: { !($0.checkinMessage?.isEmpty ?? true) })
+            sendCheckinMessage = hasMsg
         }
     }
 
@@ -815,23 +893,47 @@ struct LocationStepView: View {
                let extras = form.spotMarkers[spotIndex].extras,
                let idx = extras.firstIndex(where: { $0.id == preset.rawValue }) {
                 Divider().padding(.horizontal, 10)
-                HStack(spacing: 8) {
-                    Text("Pris").font(.system(size: 12)).foregroundStyle(.neutral600)
-                    TextField("", value: Binding(
-                        get: { extras[idx].price },
-                        set: { newVal in
-                            var updated = form.spotMarkers[spotIndex].extras ?? []
-                            if let i = updated.firstIndex(where: { $0.id == preset.rawValue }) {
-                                updated[i].price = max(0, newVal)
-                                form.spotMarkers[spotIndex].extras = updated
-                            }
-                        }
-                    ), format: .number)
-                    .textFieldStyle(.roundedBorder)
-                    .keyboardType(.numberPad)
-                    .frame(width: 80)
-                    Text(preset.perNight ? "kr/natt" : "kr").font(.system(size: 11)).foregroundStyle(.neutral400)
-                    Spacer()
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(spacing: 8) {
+                        Text("Pris").font(.system(size: 12)).foregroundStyle(.neutral600)
+                        TextField("", value: Binding(
+                            get: { extras[idx].price },
+                            set: { newVal in
+                                var updated = form.spotMarkers[spotIndex].extras ?? []
+                                if let i = updated.firstIndex(where: { $0.id == preset.rawValue }) {
+                                    updated[i].price = max(0, newVal)
+                                    form.spotMarkers[spotIndex].extras = updated
+                                }
+                            },
+                        ), format: .number)
+                        .textFieldStyle(.roundedBorder)
+                        .keyboardType(.numberPad)
+                        .frame(width: 80)
+                        Text(preset.perNight ? "kr/natt" : "kr").font(.system(size: 11)).foregroundStyle(.neutral400)
+                        Spacer()
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Melding til gjest (valgfri)")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.neutral600)
+                        TextField(
+                            "Sendes ved booking",
+                            text: Binding(
+                                get: { extras[idx].message ?? "" },
+                                set: { newMsg in
+                                    var updated = form.spotMarkers[spotIndex].extras ?? []
+                                    if let i = updated.firstIndex(where: { $0.id == preset.rawValue }) {
+                                        updated[i].message = newMsg.isEmpty ? nil : newMsg
+                                        form.spotMarkers[spotIndex].extras = updated
+                                    }
+                                },
+                            ),
+                            axis: .vertical,
+                        )
+                        .textFieldStyle(.roundedBorder)
+                        .font(.system(size: 12))
+                        .lineLimit(2...3)
+                    }
                 }
                 .padding(.horizontal, 10).padding(.vertical, 6)
             }
@@ -845,6 +947,86 @@ struct LocationStepView: View {
     @State private var customSpotExtraPerNight: [String: Bool] = [:]
 
     @ViewBuilder
+    private func customSpotExtraCard(spotIndex: Int, extra: ListingExtra) -> some View {
+        let extraId = extra.id
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles").foregroundStyle(.primary600).font(.system(size: 12))
+                TextField("Navn", text: Binding(
+                    get: { extra.name },
+                    set: { newName in
+                        var updated = form.spotMarkers[spotIndex].extras ?? []
+                        if let i = updated.firstIndex(where: { $0.id == extraId }) {
+                            updated[i].name = newName
+                            form.spotMarkers[spotIndex].extras = updated
+                        }
+                    },
+                ))
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 12, weight: .medium))
+                Spacer()
+                Button {
+                    var updated = form.spotMarkers[spotIndex].extras ?? []
+                    updated.removeAll { $0.id == extraId }
+                    form.spotMarkers[spotIndex].extras = updated.isEmpty ? nil : updated
+                } label: {
+                    Image(systemName: "trash").font(.system(size: 12)).foregroundStyle(.red.opacity(0.7))
+                }
+                .buttonStyle(.plain)
+            }
+
+            HStack(spacing: 8) {
+                TextField("Pris", value: Binding(
+                    get: { extra.price },
+                    set: { newPrice in
+                        var updated = form.spotMarkers[spotIndex].extras ?? []
+                        if let i = updated.firstIndex(where: { $0.id == extraId }) {
+                            updated[i].price = max(0, newPrice)
+                            form.spotMarkers[spotIndex].extras = updated
+                        }
+                    },
+                ), format: .number)
+                .textFieldStyle(.roundedBorder)
+                .keyboardType(.numberPad)
+                .frame(width: 80)
+                Toggle("Per natt", isOn: Binding(
+                    get: { extra.perNight },
+                    set: { newPN in
+                        var updated = form.spotMarkers[spotIndex].extras ?? []
+                        if let i = updated.firstIndex(where: { $0.id == extraId }) {
+                            updated[i].perNight = newPN
+                            form.spotMarkers[spotIndex].extras = updated
+                        }
+                    },
+                ))
+                .font(.system(size: 11))
+                .tint(.primary600)
+            }
+
+            TextField(
+                "Melding til gjest (valgfri)",
+                text: Binding(
+                    get: { extra.message ?? "" },
+                    set: { newMsg in
+                        var updated = form.spotMarkers[spotIndex].extras ?? []
+                        if let i = updated.firstIndex(where: { $0.id == extraId }) {
+                            updated[i].message = newMsg.isEmpty ? nil : newMsg
+                            form.spotMarkers[spotIndex].extras = updated
+                        }
+                    },
+                ),
+                axis: .vertical,
+            )
+            .textFieldStyle(.roundedBorder)
+            .font(.system(size: 12))
+            .lineLimit(2...3)
+        }
+        .padding(10)
+        .background(Color.primary50)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    @ViewBuilder
     private func customSpotExtrasSection(spotIndex: Int, spotId: String) -> some View {
         let presetIds = Set(ExtraType.allCases.map { $0.rawValue })
         let customExtras = (form.spotMarkers[spotIndex].extras ?? []).filter { !presetIds.contains($0.id) }
@@ -852,26 +1034,7 @@ struct LocationStepView: View {
         VStack(alignment: .leading, spacing: 6) {
             if !customExtras.isEmpty {
                 ForEach(customExtras) { extra in
-                    HStack(spacing: 8) {
-                        Image(systemName: "sparkles").foregroundStyle(.primary600).font(.system(size: 12))
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text(extra.name).font(.system(size: 12, weight: .medium))
-                            Text("\(extra.price) \(extra.perNight ? "kr/natt" : "kr")")
-                                .font(.system(size: 10)).foregroundStyle(.neutral500)
-                        }
-                        Spacer()
-                        Button {
-                            var updated = form.spotMarkers[spotIndex].extras ?? []
-                            updated.removeAll { $0.id == extra.id }
-                            form.spotMarkers[spotIndex].extras = updated.isEmpty ? nil : updated
-                        } label: {
-                            Image(systemName: "xmark.circle.fill").foregroundStyle(.neutral400)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(8)
-                    .background(Color.primary50)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    customSpotExtraCard(spotIndex: spotIndex, extra: extra)
                 }
             }
 
@@ -989,42 +1152,13 @@ struct ImageUploadStepView: View {
 
                 // Image grid
                 if !form.imageURLs.isEmpty || !form.uploadingPhotos.isEmpty {
+                    Text("Første bilde er forsidebilde. Bruk pilene for å endre rekkefølge.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral500)
+
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         ForEach(Array(form.imageURLs.enumerated()), id: \.offset) { index, url in
-                            ZStack(alignment: .topTrailing) {
-                                AsyncImage(url: URL(string: url)) { phase in
-                                    switch phase {
-                                    case .success(let image):
-                                        image.resizable().aspectRatio(contentMode: .fill)
-                                    default:
-                                        Rectangle().fill(Color.neutral100)
-                                    }
-                                }
-                                .frame(height: 100)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                                Button {
-                                    form.imageURLs.remove(at: index)
-                                } label: {
-                                    Image(systemName: "xmark.circle.fill")
-                                        .font(.system(size: 22))
-                                        .foregroundStyle(.white)
-                                        .shadow(radius: 2)
-                                }
-                                .padding(4)
-
-                                if index == 0 {
-                                    Text("Forsidebilde")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundStyle(.white)
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 3)
-                                        .background(Color.black.opacity(0.6))
-                                        .clipShape(RoundedRectangle(cornerRadius: 4))
-                                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-                                        .padding(4)
-                                }
-                            }
+                            imageCell(index: index, url: url)
                         }
 
                         ForEach(form.uploadingPhotos) { photo in
@@ -1050,6 +1184,104 @@ struct ImageUploadStepView: View {
             }
             .padding()
         }
+    }
+
+    @ViewBuilder
+    private func imageCell(index: Int, url: String) -> some View {
+        let isCover = index == 0
+        ZStack(alignment: .topTrailing) {
+            AsyncImage(url: URL(string: url)) { phase in
+                switch phase {
+                case .success(let image):
+                    image.resizable().aspectRatio(contentMode: .fill)
+                default:
+                    Rectangle().fill(Color.neutral100)
+                }
+            }
+            .frame(height: 100)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(isCover ? Color.primary600 : Color.clear, lineWidth: 2),
+            )
+
+            // Remove button — top right
+            Button {
+                form.imageURLs.remove(at: index)
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 22))
+                    .foregroundStyle(.white)
+                    .shadow(radius: 2)
+            }
+            .padding(4)
+
+            // Cover badge — top left
+            if isCover {
+                HStack(spacing: 3) {
+                    Image(systemName: "star.fill").font(.system(size: 8))
+                    Text("Forside").font(.system(size: 10, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 3)
+                .background(Color.primary600)
+                .clipShape(Capsule())
+                .padding(4)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            }
+
+            // Move controls — bottom bar
+            HStack(spacing: 4) {
+                Button {
+                    moveImage(from: index, to: index - 1)
+                } label: {
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(index == 0 ? .neutral300 : .neutral700)
+                        .frame(width: 24, height: 24)
+                        .background(Color.white.opacity(0.95))
+                        .clipShape(Circle())
+                }
+                .disabled(index == 0)
+
+                if !isCover {
+                    Button {
+                        moveImage(from: index, to: 0)
+                    } label: {
+                        Text("Sett som forside")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(.neutral700)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Color.white.opacity(0.95))
+                            .clipShape(Capsule())
+                    }
+                }
+
+                Button {
+                    moveImage(from: index, to: index + 1)
+                } label: {
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(index == form.imageURLs.count - 1 ? .neutral300 : .neutral700)
+                        .frame(width: 24, height: 24)
+                        .background(Color.white.opacity(0.95))
+                        .clipShape(Circle())
+                }
+                .disabled(index == form.imageURLs.count - 1)
+            }
+            .padding(4)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        }
+    }
+
+    private func moveImage(from: Int, to: Int) {
+        guard from >= 0, from < form.imageURLs.count else { return }
+        let target = max(0, min(form.imageURLs.count - 1, to))
+        if target == from { return }
+        let item = form.imageURLs.remove(at: from)
+        form.imageURLs.insert(item, at: target)
     }
 
     private func uploadPhotos(_ items: [PhotosPickerItem]) {
@@ -1220,29 +1452,50 @@ struct ExtrasStepView: View {
                                     .padding(.vertical, 12)
                                 }
 
-                                // Price input when selected
+                                // Price + message input when selected
                                 if isSelected, let currentExtra = selectedExtra {
                                     Divider()
                                         .padding(.horizontal, 14)
 
-                                    HStack(spacing: 12) {
-                                        Text("Pris (kr)")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundStyle(.neutral600)
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        HStack(spacing: 12) {
+                                            Text("Pris (kr)")
+                                                .font(.system(size: 14, weight: .medium))
+                                                .foregroundStyle(.neutral600)
 
-                                        TextField("Pris", value: Binding(
-                                            get: { currentExtra.price },
-                                            set: { newPrice in updateExtraPrice(extra.rawValue, price: newPrice) }
-                                        ), format: .number)
-                                        .textFieldStyle(.roundedBorder)
-                                        .keyboardType(.numberPad)
-                                        .frame(width: 100)
+                                            TextField("Pris", value: Binding(
+                                                get: { currentExtra.price },
+                                                set: { newPrice in updateExtraPrice(extra.rawValue, price: newPrice) }
+                                            ), format: .number)
+                                            .textFieldStyle(.roundedBorder)
+                                            .keyboardType(.numberPad)
+                                            .frame(width: 100)
 
-                                        Text(extra.perNight ? "kr/natt" : "kr")
-                                            .font(.system(size: 13))
-                                            .foregroundStyle(.neutral400)
+                                            Text(extra.perNight ? "kr/natt" : "kr")
+                                                .font(.system(size: 13))
+                                                .foregroundStyle(.neutral400)
 
-                                        Spacer()
+                                            Spacer()
+                                        }
+
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text("Melding til gjest (valgfri)")
+                                                .font(.system(size: 12, weight: .medium))
+                                                .foregroundStyle(.neutral600)
+                                            TextField(
+                                                "F.eks. Elbil-laderen har type 2-kontakt, passord TUNO123",
+                                                text: Binding(
+                                                    get: { currentExtra.message ?? "" },
+                                                    set: { updateExtraMessage(extra.rawValue, message: $0) }
+                                                ),
+                                                axis: .vertical,
+                                            )
+                                            .textFieldStyle(.roundedBorder)
+                                            .lineLimit(2...4)
+                                            Text("Sendes sammen med velkomstmeldingen hvis tillegget blir booket.")
+                                                .font(.system(size: 10))
+                                                .foregroundStyle(.neutral400)
+                                        }
                                     }
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 10)
@@ -1278,25 +1531,7 @@ struct ExtrasStepView: View {
                 .foregroundStyle(.neutral500)
 
             ForEach(customExtras) { extra in
-                HStack(spacing: 10) {
-                    Image(systemName: "sparkles")
-                        .foregroundStyle(.primary600)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(extra.name).font(.system(size: 14, weight: .medium))
-                        Text("\(extra.price) \(extra.perNight ? "kr/natt" : "kr")")
-                            .font(.system(size: 12)).foregroundStyle(.neutral500)
-                    }
-                    Spacer()
-                    Button {
-                        form.selectedExtras.removeAll { $0.id == extra.id }
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundStyle(.neutral400)
-                    }
-                }
-                .padding(10)
-                .background(Color.primary50)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
+                customListingExtraCard(extra: extra)
             }
 
             HStack(spacing: 8) {
@@ -1331,6 +1566,80 @@ struct ExtrasStepView: View {
 
     private var canAddCustom: Bool {
         !customName.trimmingCharacters(in: .whitespaces).isEmpty && Int(customPrice) ?? 0 > 0
+    }
+
+    private func updateExtraMessage(_ id: String, message: String) {
+        guard let idx = form.selectedExtras.firstIndex(where: { $0.id == id }) else { return }
+        form.selectedExtras[idx].message = message.isEmpty ? nil : message
+    }
+
+    @ViewBuilder
+    private func customListingExtraCard(extra: ListingExtra) -> some View {
+        let idxOpt = form.selectedExtras.firstIndex(where: { $0.id == extra.id })
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "sparkles").foregroundStyle(.primary600)
+                TextField("Navn", text: Binding(
+                    get: { extra.name },
+                    set: { newName in
+                        if let i = idxOpt { form.selectedExtras[i].name = newName }
+                    },
+                ))
+                .textFieldStyle(.roundedBorder)
+                .font(.system(size: 14, weight: .medium))
+                Spacer()
+                Button {
+                    form.selectedExtras.removeAll { $0.id == extra.id }
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.red.opacity(0.7))
+                }
+            }
+
+            HStack(spacing: 10) {
+                TextField("Pris", value: Binding(
+                    get: { extra.price },
+                    set: { newPrice in
+                        if let i = idxOpt { form.selectedExtras[i].price = max(0, newPrice) }
+                    },
+                ), format: .number)
+                .textFieldStyle(.roundedBorder)
+                .keyboardType(.numberPad)
+                .frame(width: 100)
+                Toggle("Per natt", isOn: Binding(
+                    get: { extra.perNight },
+                    set: { newPN in
+                        if let i = idxOpt { form.selectedExtras[i].perNight = newPN }
+                    },
+                ))
+                .font(.system(size: 13))
+                .tint(.primary600)
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Melding til gjest (valgfri)")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.neutral600)
+                TextField(
+                    "F.eks. Badstuen er klar fra 16:00, nøkkel ligger i postkassen.",
+                    text: Binding(
+                        get: { extra.message ?? "" },
+                        set: { newMsg in
+                            if let i = idxOpt {
+                                form.selectedExtras[i].message = newMsg.isEmpty ? nil : newMsg
+                            }
+                        },
+                    ),
+                    axis: .vertical,
+                )
+                .textFieldStyle(.roundedBorder)
+                .lineLimit(2...4)
+            }
+        }
+        .padding(12)
+        .background(Color.primary50)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     private func addCustomExtra() {
@@ -1783,7 +2092,9 @@ struct LocationPickerMapView: UIViewRepresentable {
     @Binding var lng: Double
     @Binding var spotMarkers: [SpotMarker]
     var isSpotMode: Bool
+    var maxSpots: Int = 0  // 0 = ingen grense
     var updateTrigger: UUID
+    var onMaxReached: (() -> Void)? = nil
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -1807,6 +2118,8 @@ struct LocationPickerMapView: UIViewRepresentable {
         context.coordinator.lngBinding = $lng
         context.coordinator.spotMarkersBinding = $spotMarkers
         context.coordinator.isSpotMode = isSpotMode
+        context.coordinator.maxSpots = maxSpots
+        context.coordinator.onMaxReached = onMaxReached
 
         addMarkers(to: mapView, coordinator: context.coordinator)
 
@@ -1816,6 +2129,8 @@ struct LocationPickerMapView: UIViewRepresentable {
     func updateUIView(_ mapView: GMSMapView, context: Context) {
         // Keep coordinator in sync with current state
         context.coordinator.isSpotMode = isSpotMode
+        context.coordinator.maxSpots = maxSpots
+        context.coordinator.onMaxReached = onMaxReached
 
         // Check if we need to recenter (new place selected)
         if context.coordinator.lastTrigger != updateTrigger {
@@ -1882,13 +2197,19 @@ struct LocationPickerMapView: UIViewRepresentable {
 
         // Updated by updateUIView each render
         nonisolated(unsafe) var isSpotMode = false
+        nonisolated(unsafe) var maxSpots = 0
         nonisolated(unsafe) var latBinding: Binding<Double>?
         nonisolated(unsafe) var lngBinding: Binding<Double>?
         nonisolated(unsafe) var spotMarkersBinding: Binding<[SpotMarker]>?
+        nonisolated(unsafe) var onMaxReached: (() -> Void)?
 
         func mapView(_ mapView: GMSMapView, didTapAt coordinate: CLLocationCoordinate2D) {
             if isSpotMode {
                 let count = spotMarkersBinding?.wrappedValue.count ?? 0
+                if maxSpots > 0 && count >= maxSpots {
+                    onMaxReached?()
+                    return
+                }
                 let newSpot = SpotMarker(
                     id: UUID().uuidString.lowercased(),
                     lat: coordinate.latitude,
@@ -1898,6 +2219,9 @@ struct LocationPickerMapView: UIViewRepresentable {
                     extras: nil
                 )
                 spotMarkersBinding?.wrappedValue.append(newSpot)
+                if maxSpots > 0 && count + 1 >= maxSpots {
+                    onMaxReached?()
+                }
             } else {
                 latBinding?.wrappedValue = coordinate.latitude
                 lngBinding?.wrappedValue = coordinate.longitude

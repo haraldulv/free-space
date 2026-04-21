@@ -104,11 +104,19 @@ struct SelectedExtraEntry: Codable, Hashable {
     let price: Int
     let perNight: Bool
     let quantity: Int
+    let message: String?
 }
 
 struct SelectedExtras: Codable, Hashable {
     var listing: [SelectedExtraEntry]?
     var spots: [String: [SelectedExtraEntry]]?
+}
+
+/// Per-natt pris-entry på en booking — snapshot tas ved booking-insert.
+struct NightlyPriceEntry: Codable, Hashable {
+    let date: String
+    let price: Int
+    let source: String  // "base" | "weekend" | "season" | "override"
 }
 
 enum ListingCategory: String, Codable, CaseIterable {
@@ -387,6 +395,8 @@ struct Booking: Codable, Identifiable {
     /// avtale selv om host endrer listingen senere. NULL for gamle bookinger.
     let checkInTimeSnapshot: String?
     let checkOutTimeSnapshot: String?
+    /// Per-natt pris-breakdown. Lagres ved booking-insert når regler er aktive.
+    let priceBreakdown: [NightlyPriceEntry]?
 
     // Joined data
     let listing: BookingListing?
@@ -417,6 +427,7 @@ struct Booking: Codable, Identifiable {
         case hostRespondedAt = "host_responded_at"
         case checkInTimeSnapshot = "check_in_time"
         case checkOutTimeSnapshot = "check_out_time"
+        case priceBreakdown = "price_breakdown"
     }
 }
 

@@ -25,6 +25,7 @@ struct EditListingView: View {
     @State private var lng: Double = 0
     @State private var spotMarkers: [SpotMarker] = []
     @State private var isSpotMode = false
+    @State private var sendCheckinMessage = false
     @State private var mapUpdateTrigger = UUID()
     @State private var perSpotPricing: Bool = false
     @State private var perSpotCheckinMessage: Bool = false
@@ -194,10 +195,12 @@ struct EditListingView: View {
                         .textFieldStyle(.roundedBorder)
                 }
                 field("Beskrivelse") {
-                    TextEditor(text: $description)
-                        .frame(minHeight: 100)
-                        .padding(4)
-                        .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.neutral200))
+                    TextEditorWithCounter(
+                        text: $description,
+                        maxLength: 2000,
+                        minHeight: 140,
+                        placeholder: "Beskriv plassen — hva kjennetegner den, hva er i nærheten, hva bør gjesten vite?"
+                    )
                 }
                 HStack(spacing: 16) {
                     field("Antall plasser") {
@@ -255,29 +258,64 @@ struct EditListingView: View {
 
                 // Map with spot markers
                 if lat != 0 || lng != 0 {
+                    let atMaxSpots = spots > 0 && spotMarkers.count >= spots
                     VStack(alignment: .leading, spacing: 10) {
-                        HStack {
+                        HStack(spacing: 10) {
                             Button {
-                                isSpotMode.toggle()
+                                if !atMaxSpots || isSpotMode {
+                                    isSpotMode.toggle()
+                                }
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "mappin.and.ellipse")
                                     Text("Marker plasser")
                                 }
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(isSpotMode ? .white : .primary600)
+                                .foregroundStyle(isSpotMode ? .white : (atMaxSpots ? .neutral400 : .primary600))
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
-                                .background(isSpotMode ? Color.primary600 : Color.primary50)
+                                .background(isSpotMode ? Color.primary600 : (atMaxSpots ? Color.neutral100 : Color.primary50))
                                 .clipShape(Capsule())
-                                .overlay(Capsule().stroke(Color.primary600, lineWidth: 1))
+                                .overlay(
+                                    Capsule().stroke(
+                                        atMaxSpots && !isSpotMode ? Color.neutral300 : Color.primary600,
+                                        lineWidth: 1,
+                                    ),
+                                )
                             }
+                            .disabled(atMaxSpots && !isSpotMode)
+
+                            if !spotMarkers.isEmpty {
+                                Button {
+                                    spotMarkers.removeAll()
+                                    mapUpdateTrigger = UUID()
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Image(systemName: "trash")
+                                        Text("Fjern alle")
+                                    }
+                                    .font(.system(size: 12, weight: .medium))
+                                    .foregroundStyle(.neutral700)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(Color.neutral100)
+                                    .clipShape(Capsule())
+                                }
+                            }
+
                             Spacer()
-                            if isSpotMode {
-                                Text("Trykk på kartet")
-                                    .font(.system(size: 12))
+
+                            if spots > 0 {
+                                Text("\(spotMarkers.count) / \(spots)")
+                                    .font(.system(size: 12, weight: .medium))
                                     .foregroundStyle(.neutral500)
+                                    .monospacedDigit()
                             }
+                        }
+                        if isSpotMode && !atMaxSpots {
+                            Text("Trykk på kartet for å plassere")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral500)
                         }
 
                         LocationPickerMapView(
@@ -285,21 +323,33 @@ struct EditListingView: View {
                             lng: $lng,
                             spotMarkers: $spotMarkers,
                             isSpotMode: isSpotMode,
-                            updateTrigger: mapUpdateTrigger
+                            maxSpots: spots,
+                            updateTrigger: mapUpdateTrigger,
+                            onMaxReached: { isSpotMode = false }
                         )
                         .frame(height: 300)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
+                        if isSpotMode && atMaxSpots {
+                            HStack(spacing: 8) {
+                                Image(systemName: "info.circle.fill")
+                                    .foregroundStyle(.orange)
+                                    .font(.system(size: 13))
+                                Text("Du har plassert alle \(spots) plasser. Øk antallet for å legge til flere.")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.neutral700)
+                            }
+                            .padding(10)
+                            .background(Color.orange.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
                     }
                 }
 
                 // Pris-seksjon
                 editLocationPricingSection
 
-                // Velkomstmelding-seksjon
-                editCheckinMessageSection
-
-                // Utbrettede plass-kort
+                // Utbrettede plass-kort (før velkomstmelding)
                 if !spotMarkers.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Plasser (\(spotMarkers.count))")
@@ -309,6 +359,9 @@ struct EditListingView: View {
                         }
                     }
                 }
+
+                // Velkomstmelding-seksjon (etter plasser så pris-flyten ikke brytes)
+                editCheckinMessageSection
 
                 Toggle(isOn: $hideExactLocation) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -407,40 +460,66 @@ struct EditListingView: View {
 
     private var editCheckinMessageSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Velkomstmelding ved innsjekk")
-                    .font(.system(size: 18, weight: .semibold))
-                Text("Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Velkomstmelding ved innsjekk")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { sendCheckinMessage },
+                    set: { newValue in
+                        sendCheckinMessage = newValue
+                        if !newValue {
+                            checkinMessage = ""
+                            perSpotCheckinMessage = false
+                            for i in spotMarkers.indices {
+                                spotMarkers[i].checkinMessage = nil
+                            }
+                        }
+                    }
+                ))
+                .labelsHidden()
+                .tint(.primary600)
             }
 
-            VStack(alignment: .leading, spacing: 10) {
-                editPricingModeRow(
-                    title: "Samme melding for alle plasser",
-                    subtitle: "Én felles velkomstmelding til alle gjester.",
-                    isSelected: !perSpotCheckinMessage,
-                    onSelect: { setEditPerSpotCheckinMessage(false) }
-                )
-                editPricingModeRow(
-                    title: "Individuell melding per plass",
-                    subtitle: "Sett ulik melding per plass (f.eks. ulike port-koder).",
-                    isSelected: perSpotCheckinMessage,
-                    onSelect: { setEditPerSpotCheckinMessage(true) }
-                )
-            }
+            if sendCheckinMessage {
+                VStack(alignment: .leading, spacing: 10) {
+                    editPricingModeRow(
+                        title: "Samme melding for alle plasser",
+                        subtitle: "Én felles velkomstmelding til alle gjester.",
+                        isSelected: !perSpotCheckinMessage,
+                        onSelect: { setEditPerSpotCheckinMessage(false) }
+                    )
+                    editPricingModeRow(
+                        title: "Individuell melding per plass",
+                        subtitle: "Sett ulik melding per plass (f.eks. ulike port-koder).",
+                        isSelected: perSpotCheckinMessage,
+                        onSelect: { setEditPerSpotCheckinMessage(true) }
+                    )
+                }
 
-            if !perSpotCheckinMessage {
-                TextEditor(text: $checkinMessage)
-                    .frame(minHeight: 90)
-                    .padding(8)
-                    .background(Color.neutral50)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-            } else {
-                Text("Skriv individuell melding på hver plass nedenfor.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
+                if !perSpotCheckinMessage {
+                    TextEditorWithCounter(
+                        text: $checkinMessage,
+                        maxLength: 600,
+                        minHeight: 90,
+                        placeholder: "F.eks. Hei! Port-kode er 1234. Plassen din er ved ladepunktet."
+                    )
+                } else {
+                    Text("Skriv individuell melding på hver plass nedenfor.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
             }
+        }
+        .onAppear {
+            let hasMsg = !checkinMessage.isEmpty
+                || spotMarkers.contains(where: { !($0.checkinMessage?.isEmpty ?? true) })
+            sendCheckinMessage = hasMsg
         }
     }
 

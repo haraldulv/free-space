@@ -26,6 +26,7 @@
 		414ACCF50897E595892BBE9B /* CreateListingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A8155F44B5F1E01A1FE767 /* CreateListingView.swift */; };
 		4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */; };
 		4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01854C020C64868465F39BDC /* Models.swift */; };
+		5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */; };
 		642AF85B63EEA4DB11DEA032 /* ListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6DFB7D23F06D079D826635 /* ListingDetailView.swift */; };
 		659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CE3CB213405AF521294421 /* TunoApp.swift */; };
 		694752864F4B0F93CA8B6433 /* InputField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4706792C26101B180693BACF /* InputField.swift */; };
@@ -120,6 +121,7 @@
 		E9E57AB4DC338617AB61C3E7 /* ListingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingService.swift; sourceTree = "<group>"; };
 		EB67EEF4A6A12892A1B1697E /* ListingFormModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingFormModel.swift; sourceTree = "<group>"; };
 		ED34354F8C7AAA6F81D0CB62 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
+		F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextEditorWithCounter.swift; sourceTree = "<group>"; };
 		F20335764277C2E44F7825D2 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		F9A10E906BFD039DCF513926 /* TimePickerField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePickerField.swift; sourceTree = "<group>"; };
 		F9C68D73AEFE78CC1D1DEE15 /* EarningsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarningsView.swift; sourceTree = "<group>"; };
@@ -236,6 +238,7 @@
 				4706792C26101B180693BACF /* InputField.swift */,
 				83B043C9DBACDB46B61E6148 /* ListingCard.swift */,
 				820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */,
+				F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */,
 				F9A10E906BFD039DCF513926 /* TimePickerField.swift */,
 			);
 			path = Components;
@@ -456,6 +459,7 @@
 				E912DD2299D28C54B1846A12 /* SearchView.swift in Sources */,
 				239CA481C3CC9C22AD9D3096 /* SettingsView.swift in Sources */,
 				9AE9EF8B07B0FB00DF4149AF /* SupabaseService.swift in Sources */,
+				5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */,
 				C76237D5837392B271673FB3 /* Theme.swift in Sources */,
 				3205E24587B15BBF7B75324D /* TimePickerField.swift in Sources */,
 				659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */,

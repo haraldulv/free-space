@@ -405,17 +405,34 @@ private struct HostRequestDetailSheet: View {
                     }
                 }
             }
-            metaRow(label: "Ankomst", value: booking.checkIn)
-            metaRow(label: "Avreise", value: booking.checkOut)
+            metaRow(label: "Ankomst", value: arrivalDisplay)
+            metaRow(label: "Avreise", value: departureDisplay)
             if let deadlineText = deadlineLabel(booking.approvalDeadline) {
                 metaRow(label: "Frist", value: deadlineText, highlight: true)
             }
         }
     }
 
+    private var arrivalDisplay: String {
+        if let t = booking.checkInTimeSnapshot, !t.isEmpty {
+            return "\(booking.checkIn) · \(t)"
+        }
+        return booking.checkIn
+    }
+
+    private var departureDisplay: String {
+        if let t = booking.checkOutTimeSnapshot, !t.isEmpty {
+            return "\(booking.checkOut) · \(t)"
+        }
+        return booking.checkOut
+    }
+
     private var priceSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             sectionHeader("Pris")
+
+            priceBreakdownRows
+
             HStack {
                 Text("Gjesten betaler")
                     .font(.system(size: 14))
@@ -436,6 +453,56 @@ private struct HostRequestDetailSheet: View {
             Text("Du får utbetalt din pris. Tunos servicegebyr betales av gjesten på toppen.")
                 .font(.system(size: 12))
                 .foregroundStyle(.neutral500)
+        }
+    }
+
+    @ViewBuilder
+    private var priceBreakdownRows: some View {
+        if let breakdown = booking.priceBreakdown, !breakdown.isEmpty {
+            let groups = groupBreakdown(breakdown)
+            if groups.count > 1 {
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
+                        HStack {
+                            Text("\(g.price) kr × \(g.count) \(g.count == 1 ? "natt" : "netter")")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral600)
+                            + Text(" (\(sourceLabel(g.source)))")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral400)
+                            Spacer()
+                            Text("\(g.price * g.count) kr")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral600)
+                        }
+                    }
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 10)
+                .background(Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+    }
+
+    private func groupBreakdown(_ breakdown: [NightlyPriceEntry]) -> [(price: Int, source: String, count: Int)] {
+        var result: [(price: Int, source: String, count: Int)] = []
+        for entry in breakdown {
+            if let last = result.last, last.price == entry.price, last.source == entry.source {
+                result[result.count - 1].count += 1
+            } else {
+                result.append((price: entry.price, source: entry.source, count: 1))
+            }
+        }
+        return result
+    }
+
+    private func sourceLabel(_ source: String) -> String {
+        switch source {
+        case "weekend": return "helg"
+        case "season": return "sesong"
+        case "override": return "tilpasset"
+        default: return "standard"
         }
     }
 

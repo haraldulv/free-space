@@ -4449,6 +4449,9 @@
         }
       }
     },
+    "Opphold på mer enn 7 netter krever godkjenning fra utleier. Beløpet reserveres på kortet ditt og belastes først når utleier godkjenner." : {
+
+    },
     "Opprett annonse" : {
       "extractionState" : "manual",
       "localizations" : {

@@ -139,6 +139,11 @@ struct BookingCard: View {
                     Text("\(booking.checkIn) → \(booking.checkOut)")
                         .font(.system(size: 13))
                         .foregroundStyle(.neutral600)
+                    if let t = booking.checkInTimeSnapshot {
+                        Text("Innsjekk fra \(t)")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.neutral400)
+                    }
                     Text("\(booking.totalPrice) kr")
                         .font(.system(size: 15, weight: .bold))
                 }
@@ -146,6 +151,32 @@ struct BookingCard: View {
                 Spacer()
 
                 StatusBadge(status: booking.status)
+            }
+
+            if let breakdown = booking.priceBreakdown, !breakdown.isEmpty {
+                let groups = groupBreakdownForBookingsView(breakdown)
+                if groups.count > 1 {
+                    VStack(alignment: .leading, spacing: 3) {
+                        ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
+                            HStack {
+                                Text("\(g.price) kr × \(g.count) \(g.count == 1 ? "natt" : "netter")")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.neutral600)
+                                + Text(" (\(bookingPriceSourceLabel(g.source)))")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.neutral400)
+                                Spacer()
+                                Text("\(g.price * g.count) kr")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.neutral600)
+                            }
+                        }
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                }
             }
 
             if booking.status == .cancelled, let refund = booking.refundAmount, refund > 0 {
@@ -437,6 +468,27 @@ struct BookingCard: View {
         updated.refundAmount = json["refundAmount"] as? Int
         onCancelled?(updated)
         cancelling = false
+    }
+}
+
+private func groupBreakdownForBookingsView(_ breakdown: [NightlyPriceEntry]) -> [(price: Int, source: String, count: Int)] {
+    var result: [(price: Int, source: String, count: Int)] = []
+    for entry in breakdown {
+        if let last = result.last, last.price == entry.price, last.source == entry.source {
+            result[result.count - 1].count += 1
+        } else {
+            result.append((price: entry.price, source: entry.source, count: 1))
+        }
+    }
+    return result
+}
+
+private func bookingPriceSourceLabel(_ source: String) -> String {
+    switch source {
+    case "weekend": return "helg"
+    case "season": return "sesong"
+    case "override": return "tilpasset"
+    default: return "standard"
     }
 }
 
