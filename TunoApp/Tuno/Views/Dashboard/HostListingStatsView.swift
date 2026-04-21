@@ -9,6 +9,7 @@ struct HostListingStatsView: View {
     @State private var stats30 = ListingStatsSnapshot.zero
     @State private var stats90 = ListingStatsSnapshot.zero
     @State private var pricingRules: [PricingService.Rule] = []
+    @State private var showPricingEditor = false
 
     private var spotMarkers: [SpotMarker] {
         (listing.spotMarkers ?? []).filter { $0.id != nil }
@@ -18,9 +19,7 @@ struct HostListingStatsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 statsBanner
-                if !pricingRules.isEmpty {
-                    pricingRulesSection
-                }
+                pricingRulesSection
                 if !spotMarkers.isEmpty {
                     spotGrid
                 }
@@ -31,6 +30,16 @@ struct HostListingStatsView: View {
         .navigationTitle(listing.title)
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
+        .sheet(isPresented: $showPricingEditor, onDismiss: {
+            Task {
+                pricingRules = await PricingService.fetchRules(listingId: listing.id)
+            }
+        }) {
+            PricingRulesEditorView(
+                listingId: listing.id,
+                basePrice: listing.price ?? 0
+            )
+        }
     }
 
     private var pricingRulesSection: some View {
@@ -39,24 +48,38 @@ struct HostListingStatsView: View {
                 Text("Prisregler")
                     .font(.system(size: 18, weight: .semibold))
                 Spacer()
-                if let url = URL(string: "https://tuno.no/dashboard/annonse/\(listing.id)") {
-                    Link(destination: url) {
-                        Text("Rediger")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(Color.primary600)
+                Button {
+                    showPricingEditor = true
+                } label: {
+                    Text(pricingRules.isEmpty ? "Legg til" : "Rediger")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(Color.primary600)
+                        .clipShape(Capsule())
+                }
+            }
+
+            if pricingRules.isEmpty {
+                HStack(spacing: 10) {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.neutral500)
+                        .font(.system(size: 13))
+                    Text("Ingen aktive regler. Alle netter bruker annonsens standardpris (\(listing.price ?? 0) kr).")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral600)
+                }
+                .padding(12)
+                .background(Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(Array(pricingRules.enumerated()), id: \.offset) { _, rule in
+                        pricingRuleRow(rule)
                     }
                 }
             }
-
-            VStack(spacing: 8) {
-                ForEach(Array(pricingRules.enumerated()), id: \.offset) { _, rule in
-                    pricingRuleRow(rule)
-                }
-            }
-
-            Text("Administrer prisregler på tuno.no.")
-                .font(.system(size: 11))
-                .foregroundStyle(.neutral500)
         }
     }
 

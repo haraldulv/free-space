@@ -5,7 +5,7 @@ import Foundation
 /// Brukes i BookingView for korrekt preview før booking faktisk opprettes —
 /// server rekalkulerer autoritativt og lagrer snapshot ved insert.
 enum PricingService {
-    struct Rule: Decodable {
+    struct Rule: Codable, Identifiable, Hashable {
         let id: String
         let listing_id: String
         let kind: String
@@ -15,10 +15,93 @@ enum PricingService {
         let price: Int
     }
 
-    struct Override: Decodable {
+    struct Override: Codable, Identifiable, Hashable {
+        var id: String { "\(listing_id):\(date)" }
         let listing_id: String
         let date: String
         let price: Int
+    }
+
+    private struct NewRule: Encodable {
+        let listing_id: String
+        let kind: String
+        let day_mask: Int?
+        let start_date: String?
+        let end_date: String?
+        let price: Int
+    }
+
+    // MARK: - CRUD mot regler
+
+    /// Sett helg-pris (null sletter eksisterende regel).
+    /// Kun én helg-regel per listing tillatt — eksisterende slettes først.
+    static func setWeekendPrice(listingId: String, price: Int?) async throws {
+        try await supabase
+            .from("listing_pricing_rules")
+            .delete()
+            .eq("listing_id", value: listingId)
+            .eq("kind", value: "weekend")
+            .execute()
+
+        if let price, price > 0 {
+            let rule = NewRule(
+                listing_id: listingId,
+                kind: "weekend",
+                day_mask: weekendDayMask,
+                start_date: nil,
+                end_date: nil,
+                price: price,
+            )
+            try await supabase
+                .from("listing_pricing_rules")
+                .insert(rule)
+                .execute()
+        }
+    }
+
+    /// Legg til en sesong-regel.
+    static func addSeasonRule(
+        listingId: String,
+        startDate: String,
+        endDate: String,
+        price: Int,
+    ) async throws {
+        let rule = NewRule(
+            listing_id: listingId,
+            kind: "season",
+            day_mask: nil,
+            start_date: startDate,
+            end_date: endDate,
+            price: price,
+        )
+        try await supabase
+            .from("listing_pricing_rules")
+            .insert(rule)
+            .execute()
+    }
+
+    /// Slett en regel ved id.
+    static func removeRule(ruleId: String) async throws {
+        try await supabase
+            .from("listing_pricing_rules")
+            .delete()
+            .eq("id", value: ruleId)
+            .execute()
+    }
+
+    /// Hent alle regler for et listing.
+    static func fetchRules(listingId: String) async -> [Rule] {
+        do {
+            let rules: [Rule] = try await supabase
+                .from("listing_pricing_rules")
+                .select()
+                .eq("listing_id", value: listingId)
+                .execute()
+                .value
+            return rules
+        } catch {
+            return []
+        }
     }
 
     /// Helg-maske: fredag (bit 4), lørdag (bit 5), søndag (bit 6).

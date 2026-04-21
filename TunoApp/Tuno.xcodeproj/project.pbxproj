@@ -66,6 +66,7 @@
 		EB7B66E8A8376F8B8FF74300 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F76B3BFE9867FFEFA9DFEAB /* ForgotPasswordView.swift */; };
 		F5C607CAFB1A650AC022C486 /* MotorhomeIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */; };
 		F633782D650F9CAF614C16E2 /* HostOnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */; };
+		F648BF7042F00623CBB97B0E /* PricingRulesEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8C8998814E0ADDB7774E056F /* PricingRulesEditorView.swift */; };
 		F67F9C6B23D453F78B1C7ED9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FFF7A576FF6BA28D9AC107D /* AuthManager.swift */; };
 		F7F6F0104883482373D27D01 /* BookingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF1513FE906EE61E579B662D /* BookingService.swift */; };
 /* End PBXBuildFile section */
@@ -107,6 +108,7 @@
 		8372F9628ACCC2AB21993B03 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		83B043C9DBACDB46B61E6148 /* ListingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingCard.swift; sourceTree = "<group>"; };
 		8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotPlacementSheet.swift; sourceTree = "<group>"; };
+		8C8998814E0ADDB7774E056F /* PricingRulesEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingRulesEditorView.swift; sourceTree = "<group>"; };
 		8CF2C4D557CBB8DCF564CD2A /* ChatService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatService.swift; sourceTree = "<group>"; };
 		905014F6D3B1C983862933A1 /* QRCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift; sourceTree = "<group>"; };
 		92E48039F546D58654A8CF5E /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabBar.swift; sourceTree = "<group>"; };
@@ -157,6 +159,7 @@
 				2B20C25D2CAFBCC5DB2693EF /* HostListingStatsView.swift */,
 				77A959B31DE4731320F9A990 /* HostRequestsView.swift */,
 				26E78282D80E5F27037C4EC4 /* HostSpotDetailView.swift */,
+				8C8998814E0ADDB7774E056F /* PricingRulesEditorView.swift */,
 			);
 			path = Dashboard;
 			sourceTree = "<group>";
@@ -458,6 +461,7 @@
 				4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */,
 				F5C607CAFB1A650AC022C486 /* MotorhomeIcon.swift in Sources */,
 				B61A0EA246DD9BEF82475048 /* PlacesService.swift in Sources */,
+				F648BF7042F00623CBB97B0E /* PricingRulesEditorView.swift in Sources */,
 				53A0D526B1C2D389C36E2A64 /* PricingService.swift in Sources */,
 				D66A3C676F36A7AC0C7FA620 /* ProfileView.swift in Sources */,
 				1A1B9BC09172D4EBECCDB2C3 /* PushNotificationManager.swift in Sources */,
