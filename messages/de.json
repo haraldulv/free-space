@@ -356,7 +356,12 @@
     "online": "Online",
     "lastSeen": "Zuletzt gesehen {time}",
     "typing": "tippt ...",
-    "startConversation": "Noch keine Nachrichten. Starte die Unterhaltung!"
+    "startConversation": "Noch keine Nachrichten. Starte die Unterhaltung!",
+    "searchPlaceholder": "Unterhaltungen durchsuchen ...",
+    "clearSearch": "Suche zurücksetzen",
+    "filterAll": "Alle",
+    "filterUnread": "Ungelesen",
+    "noFilterMatches": "Keine Treffer."
   },
   "reviews": {
     "title": "Bewertungen",
@@ -485,7 +490,12 @@
       "coverBadge": "Titelbild",
       "imageAlt": "Foto {number}",
       "uploadErrorPrefix": "Upload-Fehler:",
-      "moderationBlocked": "Das Bild wurde vom Inhaltsfilter blockiert."
+      "moderationBlocked": "Das Bild wurde vom Inhaltsfilter blockiert.",
+      "reorderHint": "Ziehe die Bilder, um die Reihenfolge zu ändern, oder nutze die Pfeile. Das erste Bild ist dein Titelbild.",
+      "removeImage": "Bild entfernen",
+      "moveLeft": "Nach links verschieben",
+      "moveRight": "Nach rechts verschieben",
+      "setAsCover": "Als Titelbild festlegen"
     },
     "extras": {
       "title": "Gemeinsame Extras",

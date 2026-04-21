@@ -356,7 +356,12 @@
     "online": "På nett",
     "lastSeen": "Sist sett {time}",
     "typing": "skriver...",
-    "startConversation": "Ingen meldinger ennå. Start samtalen!"
+    "startConversation": "Ingen meldinger ennå. Start samtalen!",
+    "searchPlaceholder": "Søk i samtaler...",
+    "clearSearch": "Nullstill søk",
+    "filterAll": "Alle",
+    "filterUnread": "Uleste",
+    "noFilterMatches": "Ingen treff."
   },
   "reviews": {
     "title": "Anmeldelser",
@@ -485,7 +490,12 @@
       "coverBadge": "Forsidebilde",
       "imageAlt": "Bilde {number}",
       "uploadErrorPrefix": "Feil ved opplasting:",
-      "moderationBlocked": "Bildet ble blokkert av innholdsfilter."
+      "moderationBlocked": "Bildet ble blokkert av innholdsfilter.",
+      "reorderHint": "Dra bildene for å endre rekkefølge, eller bruk pilene. Første bilde er forsidebilde.",
+      "removeImage": "Fjern bilde",
+      "moveLeft": "Flytt til venstre",
+      "moveRight": "Flytt til høyre",
+      "setAsCover": "Sett som forside"
     },
     "extras": {
       "title": "Felles tillegg",

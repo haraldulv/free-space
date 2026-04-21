@@ -356,7 +356,12 @@
     "online": "Online",
     "lastSeen": "Last seen {time}",
     "typing": "typing...",
-    "startConversation": "No messages yet. Start the conversation!"
+    "startConversation": "No messages yet. Start the conversation!",
+    "searchPlaceholder": "Search conversations...",
+    "clearSearch": "Clear search",
+    "filterAll": "All",
+    "filterUnread": "Unread",
+    "noFilterMatches": "No matches."
   },
   "reviews": {
     "title": "Reviews",
@@ -485,7 +490,12 @@
       "coverBadge": "Cover photo",
       "imageAlt": "Photo {number}",
       "uploadErrorPrefix": "Upload error:",
-      "moderationBlocked": "The image was blocked by the content filter."
+      "moderationBlocked": "The image was blocked by the content filter.",
+      "reorderHint": "Drag to reorder, or use the arrows. The first image is your cover.",
+      "removeImage": "Remove image",
+      "moveLeft": "Move left",
+      "moveRight": "Move right",
+      "setAsCover": "Set as cover"
     },
     "extras": {
       "title": "Shared extras",

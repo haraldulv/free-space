@@ -49,6 +49,10 @@ export default function LocationStep({
   errors,
 }: LocationStepProps) {
   const t = useTranslations("host.location");
+  const hasInitialMessage =
+    (checkinMessage?.trim().length ?? 0) > 0 ||
+    spotMarkers.some((s) => (s.checkinMessage?.trim().length ?? 0) > 0);
+  const [sendWelcomeMessage, setSendWelcomeMessage] = useState<boolean>(hasInitialMessage);
   const setPerSpotCheckinMessage = (enabled: boolean) => {
     onChange("perSpotCheckinMessage", enabled);
     if (enabled) {
@@ -56,6 +60,15 @@ export default function LocationStep({
     } else {
       const next = spotMarkers.map((s) => ({ ...s, checkinMessage: undefined }));
       onChange("spotMarkers", next);
+    }
+  };
+  const toggleWelcomeMessage = (enabled: boolean) => {
+    setSendWelcomeMessage(enabled);
+    if (!enabled) {
+      onChange("checkinMessage", "");
+      const next = spotMarkers.map((s) => ({ ...s, checkinMessage: undefined }));
+      onChange("spotMarkers", next);
+      onChange("perSpotCheckinMessage", false);
     }
   };
   const setPerSpotPricing = (enabled: boolean) => {
@@ -437,53 +450,64 @@ export default function LocationStep({
       {/* Velkomstmelding (etter prising/plasser så pris-flyten ikke brytes) */}
       {(lat !== 0 || lng !== 0) && (
         <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-4">
-          <div>
-            <h3 className="text-base font-semibold text-neutral-900">{t("welcomeHeader")}</h3>
-            <p className="mt-0.5 text-xs text-neutral-500">
-              {t("welcomeHelp")}
-            </p>
-          </div>
-
-          <div className="space-y-2">
-            <button
-              type="button"
-              onClick={() => setPerSpotCheckinMessage(false)}
-              className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${!perSpotCheckinMessage ? "border-primary-600 bg-primary-50" : "border-neutral-200 bg-white"}`}
-            >
-              <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${!perSpotCheckinMessage ? "border-primary-600" : "border-neutral-300"}`}>
-                {!perSpotCheckinMessage && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-neutral-900">{t("welcomeSameTitle")}</div>
-                <div className="text-xs text-neutral-500">{t("welcomeSameDesc")}</div>
-              </div>
-            </button>
-            <button
-              type="button"
-              onClick={() => setPerSpotCheckinMessage(true)}
-              className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${perSpotCheckinMessage ? "border-primary-600 bg-primary-50" : "border-neutral-200 bg-white"}`}
-            >
-              <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${perSpotCheckinMessage ? "border-primary-600" : "border-neutral-300"}`}>
-                {perSpotCheckinMessage && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
-              </div>
-              <div className="flex-1">
-                <div className="text-sm font-medium text-neutral-900">{t("welcomePerSpotTitle")}</div>
-                <div className="text-xs text-neutral-500">{t("welcomePerSpotDesc")}</div>
-              </div>
-            </button>
-          </div>
-
-          {!perSpotCheckinMessage && (
-            <textarea
-              value={checkinMessage ?? ""}
-              onChange={(e) => onChange("checkinMessage", e.target.value)}
-              placeholder={t("welcomePlaceholder")}
-              rows={4}
-              className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm placeholder:text-neutral-400"
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h3 className="text-base font-semibold text-neutral-900">{t("welcomeHeader")}</h3>
+              <p className="mt-0.5 text-xs text-neutral-500">
+                {t("welcomeHelp")}
+              </p>
+            </div>
+            <Toggle
+              checked={sendWelcomeMessage}
+              onChange={toggleWelcomeMessage}
+              label=""
             />
-          )}
-          {perSpotCheckinMessage && (
-            <p className="text-xs text-neutral-500">{t("welcomePerSpotNote")}</p>
+          </div>
+
+          {sendWelcomeMessage && (
+            <>
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setPerSpotCheckinMessage(false)}
+                  className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${!perSpotCheckinMessage ? "border-primary-600 bg-primary-50" : "border-neutral-200 bg-white"}`}
+                >
+                  <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${!perSpotCheckinMessage ? "border-primary-600" : "border-neutral-300"}`}>
+                    {!perSpotCheckinMessage && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-neutral-900">{t("welcomeSameTitle")}</div>
+                    <div className="text-xs text-neutral-500">{t("welcomeSameDesc")}</div>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPerSpotCheckinMessage(true)}
+                  className={`flex w-full items-start gap-3 rounded-lg border p-3 text-left transition ${perSpotCheckinMessage ? "border-primary-600 bg-primary-50" : "border-neutral-200 bg-white"}`}
+                >
+                  <div className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${perSpotCheckinMessage ? "border-primary-600" : "border-neutral-300"}`}>
+                    {perSpotCheckinMessage && <div className="h-2.5 w-2.5 rounded-full bg-primary-600" />}
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-neutral-900">{t("welcomePerSpotTitle")}</div>
+                    <div className="text-xs text-neutral-500">{t("welcomePerSpotDesc")}</div>
+                  </div>
+                </button>
+              </div>
+
+              {!perSpotCheckinMessage && (
+                <textarea
+                  value={checkinMessage ?? ""}
+                  onChange={(e) => onChange("checkinMessage", e.target.value)}
+                  placeholder={t("welcomePlaceholder")}
+                  rows={4}
+                  className="w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm placeholder:text-neutral-400"
+                />
+              )}
+              {perSpotCheckinMessage && (
+                <p className="text-xs text-neutral-500">{t("welcomePerSpotNote")}</p>
+              )}
+            </>
           )}
         </div>
       )}

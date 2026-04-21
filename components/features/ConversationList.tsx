@@ -1,7 +1,8 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle, Search, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { dateFnsLocale } from "@/lib/i18n-helpers";
 import type { Conversation } from "@/types";
@@ -20,6 +21,20 @@ export default function ConversationList({
   const t = useTranslations("messages");
   const locale = useLocale();
   const dateLocale = dateFnsLocale(locale);
+  const [query, setQuery] = useState("");
+  const [unreadOnly, setUnreadOnly] = useState(false);
+
+  const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return conversations.filter((c) => {
+      if (unreadOnly && !(c.unreadCount && c.unreadCount > 0)) return false;
+      if (!q) return true;
+      const hay = `${c.otherUserName ?? ""} ${c.listingTitle ?? ""} ${c.lastMessageText ?? ""}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }, [conversations, query, unreadOnly]);
 
   if (conversations.length === 0) {
     return (
@@ -36,8 +51,62 @@ export default function ConversationList({
   }
 
   return (
-    <div className="divide-y divide-neutral-100">
-      {conversations.map((convo) => (
+    <div>
+      <div className="sticky top-0 z-10 space-y-2 border-b border-neutral-100 bg-white p-3">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-neutral-400" />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className="w-full rounded-full border border-neutral-200 bg-neutral-50 py-1.5 pl-8 pr-8 text-xs focus:border-primary-500 focus:bg-white focus:outline-none"
+          />
+          {query && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600"
+              aria-label={t("clearSearch")}
+            >
+              <X className="h-3.5 w-3.5" />
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setUnreadOnly(false)}
+            className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+              !unreadOnly ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+            }`}
+          >
+            {t("filterAll")}
+          </button>
+          <button
+            type="button"
+            onClick={() => setUnreadOnly(true)}
+            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-medium transition ${
+              unreadOnly ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200"
+            }`}
+          >
+            {t("filterUnread")}
+            {totalUnread > 0 && (
+              <span className={`inline-flex h-4 min-w-[16px] items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+                unreadOnly ? "bg-white text-neutral-900" : "bg-primary-600 text-white"
+              }`}>
+                {totalUnread}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {filtered.length === 0 ? (
+        <p className="px-4 py-8 text-center text-xs text-neutral-400">{t("noFilterMatches")}</p>
+      ) : (
+      <div className="divide-y divide-neutral-100">
+      {filtered.map((convo) => (
         <button
           key={convo.id}
           onClick={() => onSelect(convo)}
@@ -73,6 +142,8 @@ export default function ConversationList({
           )}
         </button>
       ))}
+      </div>
+      )}
     </div>
   );
 }
