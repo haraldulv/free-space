@@ -8,6 +8,7 @@ struct HostListingStatsView: View {
     @State private var isLoading = true
     @State private var stats30 = ListingStatsSnapshot.zero
     @State private var stats90 = ListingStatsSnapshot.zero
+    @State private var pricingRules: [PricingService.Rule] = []
 
     private var spotMarkers: [SpotMarker] {
         (listing.spotMarkers ?? []).filter { $0.id != nil }
@@ -17,6 +18,9 @@ struct HostListingStatsView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 statsBanner
+                if !pricingRules.isEmpty {
+                    pricingRulesSection
+                }
                 if !spotMarkers.isEmpty {
                     spotGrid
                 }
@@ -27,6 +31,63 @@ struct HostListingStatsView: View {
         .navigationTitle(listing.title)
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
+    }
+
+    private var pricingRulesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Prisregler")
+                    .font(.system(size: 18, weight: .semibold))
+                Spacer()
+                if let url = URL(string: "https://tuno.no/dashboard/annonse/\(listing.id)") {
+                    Link(destination: url) {
+                        Text("Rediger")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(Color.primary600)
+                    }
+                }
+            }
+
+            VStack(spacing: 8) {
+                ForEach(Array(pricingRules.enumerated()), id: \.offset) { _, rule in
+                    pricingRuleRow(rule)
+                }
+            }
+
+            Text("Administrer prisregler på tuno.no.")
+                .font(.system(size: 11))
+                .foregroundStyle(.neutral500)
+        }
+    }
+
+    private func pricingRuleRow(_ rule: PricingService.Rule) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: rule.kind == "weekend" ? "calendar" : "sun.max")
+                .foregroundStyle(Color.primary600)
+                .font(.system(size: 13))
+                .frame(width: 20)
+            VStack(alignment: .leading, spacing: 2) {
+                if rule.kind == "weekend" {
+                    Text("Helg-pris")
+                        .font(.system(size: 14, weight: .medium))
+                } else {
+                    Text("Sesong-pris")
+                        .font(.system(size: 14, weight: .medium))
+                    if let start = rule.start_date, let end = rule.end_date {
+                        Text("\(start) – \(end)")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.neutral500)
+                    }
+                }
+            }
+            Spacer()
+            Text("\(rule.price) kr/natt")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral900)
+        }
+        .padding(10)
+        .background(Color.neutral50)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
     private var statsBanner: some View {
@@ -214,6 +275,18 @@ struct HostListingStatsView: View {
             stats90 = ListingStatsSnapshot.compute(listing: listing, bookings: bookings, days: 90)
         } catch {
             print("HostListingStats load error: \(error)")
+        }
+
+        // Last pris-regler separat — ikke-kritisk, faller bare til tom array ved feil.
+        do {
+            pricingRules = try await supabase
+                .from("listing_pricing_rules")
+                .select()
+                .eq("listing_id", value: listing.id)
+                .execute()
+                .value
+        } catch {
+            pricingRules = []
         }
     }
 
