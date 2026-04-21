@@ -92,7 +92,7 @@ export default function LocationStep({
     el.className = "spot-pin";
     el.style.cssText = `
       width: 28px; height: 28px; border-radius: 50%;
-      background: #1a4fd6; color: white; font-size: 12px; font-weight: 700;
+      background: #46C185; color: white; font-size: 12px; font-weight: 700;
       display: flex; align-items: center; justify-content: center;
       border: 2px solid white; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
       cursor: pointer;
@@ -226,12 +226,20 @@ export default function LocationStep({
       if (!e.latLng) return;
 
       if (placingSpots) {
+        if (spots > 0 && spotMarkers.length >= spots) {
+          setPlacingSpots(false);
+          return;
+        }
         const newMarker: SpotMarker = {
           id: crypto.randomUUID(),
           lat: e.latLng.lat(),
           lng: e.latLng.lng(),
         };
-        onChange("spotMarkers", [...spotMarkers, newMarker]);
+        const next = [...spotMarkers, newMarker];
+        onChange("spotMarkers", next);
+        if (spots > 0 && next.length >= spots) {
+          setPlacingSpots(false);
+        }
       } else {
         updatePosition(e.latLng.lat(), e.latLng.lng());
         map.panTo(e.latLng);
@@ -239,11 +247,17 @@ export default function LocationStep({
     });
 
     return () => google.maps.event.removeListener(listener);
-  }, [mapReady, placingSpots, spotMarkers, onChange, updatePosition]);
+  }, [mapReady, placingSpots, spotMarkers, spots, onChange, updatePosition]);
 
   const removeSpot = (index: number) => {
     onChange("spotMarkers", spotMarkers.filter((_, i) => i !== index));
   };
+
+  const clearAllSpots = () => {
+    onChange("spotMarkers", []);
+  };
+
+  const atMaxSpots = spots > 0 && spotMarkers.length >= spots;
 
   return (
     <div className="space-y-6">
@@ -283,27 +297,52 @@ export default function LocationStep({
 
       {/* Map */}
       <div>
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center justify-between gap-2 flex-wrap">
           <p className="text-sm font-medium text-neutral-700">
             {placingSpots ? t("mapHintPlacing") : t("mapHintDefault")}
+            {spots > 0 && (
+              <span className="ml-2 text-xs text-neutral-500">
+                ({t("spotsPlacedOf", { count: spotMarkers.length, total: spots })})
+              </span>
+            )}
           </p>
-          <button
-            type="button"
-            onClick={() => setPlacingSpots(!placingSpots)}
-            className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-              placingSpots
-                ? "bg-primary-600 text-white"
-                : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
-            }`}
-          >
-            <MapPin className="h-3.5 w-3.5" />
-            {placingSpots ? t("placingSpots") : t("markSpots")}
-          </button>
+          <div className="flex items-center gap-2">
+            {spotMarkers.length > 0 && (
+              <button
+                type="button"
+                onClick={clearAllSpots}
+                className="flex items-center gap-1 rounded-full bg-neutral-100 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:bg-neutral-200"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                {t("clearAll")}
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setPlacingSpots(!placingSpots)}
+              disabled={!placingSpots && atMaxSpots}
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
+                placingSpots
+                  ? "bg-primary-600 text-white"
+                  : atMaxSpots
+                    ? "bg-neutral-100 text-neutral-400 cursor-not-allowed"
+                    : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+              }`}
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              {placingSpots ? t("placingSpots") : t("markSpots")}
+            </button>
+          </div>
         </div>
         <div
           ref={mapRef}
           className="h-[350px] w-full rounded-xl border border-neutral-200 overflow-hidden"
         />
+        {placingSpots && atMaxSpots && (
+          <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-700">
+            {t("spotsLimitReached", { total: spots })}
+          </p>
+        )}
         {errors.lat && <p className="mt-1 text-sm text-red-500">{errors.lat}</p>}
       </div>
 
@@ -365,7 +404,37 @@ export default function LocationStep({
         </div>
       )}
 
-      {/* Velkomstmelding */}
+      {/* Plasser (utbrettet) */}
+      {spotMarkers.length > 0 && (
+        <div>
+          <p className="text-sm font-medium text-neutral-700 mb-3">
+            {spots > 0
+              ? t("spotsHeaderOfTotal", { count: spotMarkers.length, total: spots })
+              : t("spotsHeader", { count: spotMarkers.length })}
+          </p>
+          <div className="space-y-4">
+            {spotMarkers.map((spot, i) => (
+              <SpotInlineCard
+                key={spot.id ?? i}
+                index={i}
+                spot={spot}
+                category={category}
+                defaultPrice={defaultPrice}
+                showPrice={perSpotPricing}
+                showCheckinMessage={perSpotCheckinMessage}
+                onChange={(updated) => {
+                  const next = [...spotMarkers];
+                  next[i] = { ...updated, id: updated.id ?? crypto.randomUUID() };
+                  onChange("spotMarkers", next);
+                }}
+                onRemove={() => removeSpot(i)}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Velkomstmelding (etter prising/plasser så pris-flyten ikke brytes) */}
       {(lat !== 0 || lng !== 0) && (
         <div className="space-y-4 rounded-xl border border-neutral-200 bg-white p-4">
           <div>
@@ -416,36 +485,6 @@ export default function LocationStep({
           {perSpotCheckinMessage && (
             <p className="text-xs text-neutral-500">{t("welcomePerSpotNote")}</p>
           )}
-        </div>
-      )}
-
-      {/* Plasser (utbrettet) */}
-      {spotMarkers.length > 0 && (
-        <div>
-          <p className="text-sm font-medium text-neutral-700 mb-3">
-            {spots > 0
-              ? t("spotsHeaderOfTotal", { count: spotMarkers.length, total: spots })
-              : t("spotsHeader", { count: spotMarkers.length })}
-          </p>
-          <div className="space-y-4">
-            {spotMarkers.map((spot, i) => (
-              <SpotInlineCard
-                key={spot.id ?? i}
-                index={i}
-                spot={spot}
-                category={category}
-                defaultPrice={defaultPrice}
-                showPrice={perSpotPricing}
-                showCheckinMessage={perSpotCheckinMessage}
-                onChange={(updated) => {
-                  const next = [...spotMarkers];
-                  next[i] = { ...updated, id: updated.id ?? crypto.randomUUID() };
-                  onChange("spotMarkers", next);
-                }}
-                onRemove={() => removeSpot(i)}
-              />
-            ))}
-          </div>
         </div>
       )}
 

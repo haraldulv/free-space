@@ -67,7 +67,9 @@ export default async function ListingPage({
           <div className="mt-2 flex items-center gap-4 text-neutral-500">
             <div className="flex items-center gap-1">
               <MapPin className="h-4 w-4" />
-              {listing.location.address}, {listing.location.city}
+              {listing.hideExactLocation
+                ? `${listing.location.city}, ${listing.location.region}`
+                : `${listing.location.address}, ${listing.location.city}`}
             </div>
             <div className="flex items-center gap-1">
               <Users className="h-4 w-4" />

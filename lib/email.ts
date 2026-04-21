@@ -1,9 +1,35 @@
 import { Resend } from "resend";
 import { splitHostAndFee } from "@/lib/config";
+import type { SelectedExtras } from "@/types";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = "Tuno <noreply@tuno.no>";
 const LOGO_URL = "https://tuno.no/tuno-logo.png";
+
+function extrasBlock(extras: SelectedExtras | null | undefined, nights: number): string {
+  if (!extras) return "";
+  const listingEntries = extras.listing ?? [];
+  const spotEntries = Object.values(extras.spots ?? {}).flat();
+  const all = [...listingEntries, ...spotEntries];
+  if (all.length === 0) return "";
+
+  const rows = all.map((extra) => {
+    const amount = extra.price * (extra.perNight ? nights : 1) * extra.quantity;
+    const qty = extra.quantity > 1 ? ` × ${extra.quantity}` : "";
+    const nightly = extra.perNight ? ` × ${nights}n` : "";
+    return `
+      <tr>
+        <td style="padding:4px 0;font-size:13px;color:#525252;">${extra.name}<span style="color:#a3a3a3;">${qty}${nightly}</span></td>
+        <td style="padding:4px 0;font-size:13px;color:#525252;text-align:right;">${amount} kr</td>
+      </tr>`;
+  }).join("");
+
+  return `
+    <div style="margin:12px 0 0;padding:12px 16px;background:#fafafa;border:1px solid #e5e5e5;border-radius:8px;">
+      <p style="margin:0 0 4px;font-size:11px;font-weight:700;color:#737373;text-transform:uppercase;letter-spacing:0.06em;">Tilleggstjenester</p>
+      <table style="width:100%;border-collapse:collapse;">${rows}</table>
+    </div>`;
+}
 
 function wrap(title: string, content: string) {
   return `<!DOCTYPE html>
@@ -59,6 +85,12 @@ function listingCard(opts: {
     </div>`;
 }
 
+function nightsBetween(checkIn: string, checkOut: string): number {
+  const a = new Date(checkIn);
+  const b = new Date(checkOut);
+  return Math.max(1, Math.round((b.getTime() - a.getTime()) / 86400000));
+}
+
 export async function sendBookingConfirmation(to: string, data: {
   guestName: string;
   listingTitle: string;
@@ -68,7 +100,9 @@ export async function sendBookingConfirmation(to: string, data: {
   checkOut: string;
   totalPrice: number;
   bookingId: string;
+  selectedExtras?: SelectedExtras | null;
 }) {
+  const nights = nightsBetween(data.checkIn, data.checkOut);
   await resend.emails.send({
     from: FROM,
     to,
@@ -85,6 +119,7 @@ export async function sendBookingConfirmation(to: string, data: {
         checkOut: data.checkOut,
         bottomLine: `${data.totalPrice} kr`,
       })}
+      ${extrasBlock(data.selectedExtras, nights)}
       ${btn("Se bestillingen", `https://tuno.no/dashboard?tab=bookings`)}
     `),
   });
@@ -99,8 +134,10 @@ export async function sendBookingNotificationToHost(to: string, data: {
   checkIn: string;
   checkOut: string;
   totalPrice: number;
+  selectedExtras?: SelectedExtras | null;
 }) {
   const hostAmount = splitHostAndFee(data.totalPrice).hostShareNok;
+  const nights = nightsBetween(data.checkIn, data.checkOut);
   await resend.emails.send({
     from: FROM,
     to,
@@ -117,6 +154,7 @@ export async function sendBookingNotificationToHost(to: string, data: {
         checkOut: data.checkOut,
         bottomLine: `Din utbetaling: ${hostAmount} kr`,
       })}
+      ${extrasBlock(data.selectedExtras, nights)}
       ${btn("Se utleien", `https://tuno.no/dashboard?tab=rentals`)}
     `),
   });
@@ -181,8 +219,10 @@ export async function sendBookingRequestToHost(to: string, data: {
   checkOut: string;
   totalPrice: number;
   approvalDeadline?: string | null;
+  selectedExtras?: SelectedExtras | null;
 }) {
   const hostAmount = splitHostAndFee(data.totalPrice).hostShareNok;
+  const nights = nightsBetween(data.checkIn, data.checkOut);
   const deadlineLine = data.approvalDeadline
     ? `<p style="color:#d97706;font-size:14px;font-weight:600;margin:16px 0 0;">⏱ Du har 24 timer på å svare — ellers blir forespørselen automatisk avvist.</p>`
     : "";
@@ -202,6 +242,7 @@ export async function sendBookingRequestToHost(to: string, data: {
         checkOut: data.checkOut,
         bottomLine: `Din utbetaling: ${hostAmount} kr`,
       })}
+      ${extrasBlock(data.selectedExtras, nights)}
       ${deadlineLine}
       ${btn("Godkjenn eller avvis", `https://tuno.no/dashboard?tab=rentals`)}
     `),
@@ -216,7 +257,9 @@ export async function sendBookingRequestPendingToGuest(to: string, data: {
   checkIn: string;
   checkOut: string;
   totalPrice: number;
+  selectedExtras?: SelectedExtras | null;
 }) {
+  const nights = nightsBetween(data.checkIn, data.checkOut);
   await resend.emails.send({
     from: FROM,
     to,
@@ -234,6 +277,7 @@ export async function sendBookingRequestPendingToGuest(to: string, data: {
         checkOut: data.checkOut,
         bottomLine: `${data.totalPrice} kr`,
       })}
+      ${extrasBlock(data.selectedExtras, nights)}
       <p style="color:#737373;font-size:13px;margin-top:16px;">
         Utleier har 24 timer på å svare. Vi varsler deg så snart vi hører noe.
       </p>
@@ -250,7 +294,9 @@ export async function sendBookingApprovedToGuest(to: string, data: {
   checkIn: string;
   checkOut: string;
   totalPrice: number;
+  selectedExtras?: SelectedExtras | null;
 }) {
+  const nights = nightsBetween(data.checkIn, data.checkOut);
   await resend.emails.send({
     from: FROM,
     to,
@@ -267,6 +313,7 @@ export async function sendBookingApprovedToGuest(to: string, data: {
         checkOut: data.checkOut,
         bottomLine: `${data.totalPrice} kr`,
       })}
+      ${extrasBlock(data.selectedExtras, nights)}
       ${btn("Se bestillingen", `https://tuno.no/dashboard?tab=bookings`)}
     `),
   });

@@ -320,10 +320,29 @@ export async function getListingsByTag(tag: string, limit = 20): Promise<Listing
     .from("listings")
     .select("*")
     .contains("tags", [tag])
+    .neq("is_active", false)
     .limit(limit);
 
   if (error) {
     console.error("getListingsByTag error:", error.message);
+    return [];
+  }
+
+  return (data || []).map(rowToListing);
+}
+
+export async function getRecentListings(limit = 12): Promise<Listing[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select("*")
+    .neq("is_active", false)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("getRecentListings error:", error.message);
     return [];
   }
 

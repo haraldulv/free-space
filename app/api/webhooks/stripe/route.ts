@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       // Bare oppdater hvis status fortsatt er 'pending' (idempotent ved retry).
       const { data: existing } = await supabase
         .from("bookings")
-        .select("status, user_id, host_id, listing_id, check_in, check_out, total_price, approval_deadline")
+        .select("status, user_id, host_id, listing_id, check_in, check_out, total_price, approval_deadline, selected_extras")
         .eq("id", bookingId)
         .single();
 
@@ -107,6 +107,7 @@ export async function POST(request: NextRequest) {
               checkOut: existing.check_out,
               totalPrice: existing.total_price,
               approvalDeadline: existing.approval_deadline,
+              selectedExtras: existing.selected_extras,
             }).catch((err) => console.error("[Email] Host request failed:", err)),
           );
         }
@@ -120,6 +121,7 @@ export async function POST(request: NextRequest) {
               checkIn: existing.check_in,
               checkOut: existing.check_out,
               totalPrice: existing.total_price,
+              selectedExtras: existing.selected_extras,
             }).catch((err) => console.error("[Email] Guest pending failed:", err)),
           );
         }
@@ -147,7 +149,7 @@ export async function POST(request: NextRequest) {
       // Get booking + profiles for notifications and emails
       const { data: booking } = await supabase
         .from("bookings")
-        .select("user_id, host_id, listing_id, check_in, check_out, total_price")
+        .select("user_id, host_id, listing_id, check_in, check_out, total_price, selected_extras")
         .eq("id", bookingId)
         .single();
 
@@ -223,6 +225,7 @@ export async function POST(request: NextRequest) {
               checkOut: booking.check_out,
               totalPrice: booking.total_price,
               bookingId,
+              selectedExtras: booking.selected_extras,
             })
               .then(() => console.log(`[Email] Booking confirmation sent to ${guestEmail}`))
               .catch((err) => console.error(`[Email] Failed to send to ${guestEmail}:`, err)),
@@ -242,6 +245,7 @@ export async function POST(request: NextRequest) {
               checkIn: booking.check_in,
               checkOut: booking.check_out,
               totalPrice: booking.total_price,
+              selectedExtras: booking.selected_extras,
             })
               .then(() => console.log(`[Email] Host notification sent to ${hostEmail}`))
               .catch((err) => console.error(`[Email] Failed to send to ${hostEmail}:`, err)),

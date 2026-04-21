@@ -3,6 +3,7 @@ import { DM_Sans } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
+import { Analytics } from "@vercel/analytics/next";
 import PasswordGate from "@/components/PasswordGate";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
@@ -78,6 +79,7 @@ export default async function LocaleLayout({
         <NextIntlClientProvider>
           <PasswordGate>{children}</PasswordGate>
         </NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   );

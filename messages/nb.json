@@ -16,7 +16,8 @@
   "home": {
     "popular": "Populære i Norge",
     "featured": "Fremhevede i Norge",
-    "availableToday": "Tilgjengelig i dag"
+    "availableToday": "Tilgjengelig i dag",
+    "recent": "Nylig opprettet"
   },
   "footer": {
     "tagline": "Finn og book parkeringsplasser og campingplasser over hele Norge.",
@@ -142,6 +143,8 @@
     "spotLabel": "Plass {number}",
     "exactLocationHidden": "Eksakt adresse vises etter booking",
     "exactLocationSharedAfterBooking": "Eksakt adresse deles etter bekreftet booking.",
+    "showSatellite": "Satellitt",
+    "showMap": "Kart",
     "seeAllPhotos": "Vis alle bilder",
     "closePhotos": "Lukk",
     "share": "Del",
@@ -629,6 +632,9 @@
       "welcomePerSpotNote": "Skriv individuell melding på hver plass nedenfor.",
       "spotsHeader": "Plasser ({count})",
       "spotsHeaderOfTotal": "Plasser ({count} av {total})",
+      "spotsPlacedOf": "{count} av {total} plassert",
+      "spotsLimitReached": "Du har plassert alle {total} plasser. Øk antall i detaljer-steget for å legge til flere.",
+      "clearAll": "Fjern alle",
       "hideAddressLabel": "Skjul eksakt adresse",
       "hideAddressDesc": "Leietakere ser omtrentlig område, ikke nøyaktig posisjon. Eksakt adresse deles etter booking.",
       "spotNamePlaceholder": "Navn på plassen",

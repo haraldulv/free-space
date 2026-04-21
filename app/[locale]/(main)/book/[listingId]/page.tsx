@@ -286,6 +286,9 @@ export default function BookPage() {
             checkIn={checkIn}
             checkOut={checkOut}
             nights={nights}
+            baseAmount={baseTotal}
+            selectedExtras={buildSelectedExtras()}
+            selectedSpotCount={selectedSpots.length || undefined}
             subtotal={subtotal}
             serviceFee={serviceFee}
             total={total}

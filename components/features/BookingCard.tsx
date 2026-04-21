@@ -305,6 +305,37 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
             )}
           </div>
 
+          {(() => {
+            const listingExtras = booking.selectedExtras?.listing ?? [];
+            const spotExtras = Object.values(booking.selectedExtras?.spots ?? {}).flat();
+            const allExtras = [...listingExtras, ...spotExtras];
+            if (allExtras.length === 0) return null;
+            const nights = Math.max(1, Math.round((new Date(booking.checkOut).getTime() - new Date(booking.checkIn).getTime()) / 86400000));
+            return (
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-3 text-sm">
+                <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+                  {t("extrasLabel")}
+                </p>
+                <div className="space-y-1">
+                  {allExtras.map((extra, idx) => {
+                    const amount = extra.price * (extra.perNight ? nights : 1) * extra.quantity;
+                    const qty = extra.quantity > 1 ? ` × ${extra.quantity}` : "";
+                    const nightly = extra.perNight ? ` × ${nights}n` : "";
+                    return (
+                      <div key={`${extra.id}-${idx}`} className="flex justify-between text-neutral-600">
+                        <span>
+                          {extra.name}
+                          <span className="text-neutral-400">{qty}{nightly}</span>
+                        </span>
+                        <span>{amount} kr</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
           {isRequested && deadlineHours != null && (
             <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm">
               <p className="font-medium text-amber-800">

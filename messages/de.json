@@ -16,7 +16,8 @@
   "home": {
     "popular": "Beliebt in Norwegen",
     "featured": "Empfohlen in Norwegen",
-    "availableToday": "Heute verfügbar"
+    "availableToday": "Heute verfügbar",
+    "recent": "Neu hinzugefügt"
   },
   "footer": {
     "tagline": "Finde und buche Parkplätze und Campingplätze in ganz Norwegen.",
@@ -142,6 +143,8 @@
     "spotLabel": "Stellplatz {number}",
     "exactLocationHidden": "Genaue Adresse wird nach der Buchung angezeigt",
     "exactLocationSharedAfterBooking": "Die genaue Adresse wird nach bestätigter Buchung geteilt.",
+    "showSatellite": "Satellit",
+    "showMap": "Karte",
     "seeAllPhotos": "Alle Fotos anzeigen",
     "closePhotos": "Schließen",
     "share": "Teilen",
@@ -629,6 +632,9 @@
       "welcomePerSpotNote": "Schreibe unten eine individuelle Nachricht für jeden Stellplatz.",
       "spotsHeader": "Stellplätze ({count})",
       "spotsHeaderOfTotal": "Stellplätze ({count} von {total})",
+      "spotsPlacedOf": "{count} von {total} platziert",
+      "spotsLimitReached": "Du hast alle {total} Stellplätze platziert. Erhöhe die Anzahl im Detailschritt, um weitere hinzuzufügen.",
+      "clearAll": "Alle entfernen",
       "hideAddressLabel": "Genaue Adresse ausblenden",
       "hideAddressDesc": "Mieter sehen nur ein ungefähres Gebiet, nicht die genaue Position. Die genaue Adresse wird nach der Buchung geteilt.",
       "spotNamePlaceholder": "Name des Stellplatzes",

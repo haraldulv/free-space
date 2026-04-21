@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
+import { useTranslations } from "next-intl";
 import type { SpotMarker } from "@/types";
 import { isNative } from "@/lib/capacitor";
 
@@ -16,6 +17,11 @@ interface ListingMapProps {
 
 export default function ListingMap({ lat, lng, spotMarkers = [], hideExactLocation }: ListingMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const t = useTranslations("listing");
+  const [mapType, setMapType] = useState<"roadmap" | "hybrid">(
+    hideExactLocation ? "roadmap" : "hybrid",
+  );
 
   useEffect(() => {
     if (!mapRef.current || !API_KEY) return;
@@ -31,29 +37,40 @@ export default function ListingMap({ lat, lng, spotMarkers = [], hideExactLocati
 
       const map = new GoogleMap(mapRef.current!, {
         center: { lat, lng },
-        zoom: hideExactLocation ? 14 : 17,
+        zoom: hideExactLocation ? 13 : 17,
         mapId: "listing-detail-map",
         disableDefaultUI: true,
         zoomControl: !isNative(),
         gestureHandling: "cooperative",
         clickableIcons: false,
-        mapTypeId: "hybrid",
+        mapTypeId: mapType,
       });
 
+      mapInstanceRef.current = map;
+
       if (hideExactLocation) {
-        // Show approximate circle
+        // Airbnb-inspirert flerlags-ring for skjult lokasjon
         new Circle({
           map,
           center: { lat, lng },
-          radius: 500,
+          radius: 600,
           fillColor: "#46C185",
-          fillOpacity: 0.1,
+          fillOpacity: 0.22,
           strokeColor: "#46C185",
-          strokeOpacity: 0.3,
-          strokeWeight: 2,
+          strokeOpacity: 0.85,
+          strokeWeight: 2.5,
+        });
+        new Circle({
+          map,
+          center: { lat, lng },
+          radius: 300,
+          fillColor: "#46C185",
+          fillOpacity: 0.18,
+          strokeColor: "#46C185",
+          strokeOpacity: 0,
+          strokeWeight: 0,
         });
       } else if (spotMarkers.length > 0) {
-        // Show individual spot markers
         spotMarkers.forEach((spot, i) => {
           const el = document.createElement("div");
           el.style.cssText = `
@@ -71,7 +88,6 @@ export default function ListingMap({ lat, lng, spotMarkers = [], hideExactLocati
           });
         });
       } else {
-        // Show single main marker
         new AdvancedMarkerElement({
           map,
           position: { lat, lng },
@@ -81,12 +97,30 @@ export default function ListingMap({ lat, lng, spotMarkers = [], hideExactLocati
 
     init();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [lat, lng, spotMarkers, hideExactLocation]);
 
+  useEffect(() => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.setMapTypeId(mapType);
+    }
+  }, [mapType]);
+
+  const toggleMapType = () => setMapType((t) => (t === "roadmap" ? "hybrid" : "roadmap"));
+
   return (
-    <div
-      ref={mapRef}
-      className="h-[350px] w-full rounded-xl border border-neutral-200 overflow-hidden"
-    />
+    <div className="relative">
+      <div
+        ref={mapRef}
+        className="h-[350px] w-full rounded-xl border border-neutral-200 overflow-hidden"
+      />
+      <button
+        type="button"
+        onClick={toggleMapType}
+        className="absolute top-3 right-3 rounded-full bg-white/95 backdrop-blur px-3 py-1.5 text-xs font-medium text-neutral-700 shadow-md hover:bg-white"
+      >
+        {mapType === "roadmap" ? t("showSatellite") : t("showMap")}
+      </button>
+    </div>
   );
 }

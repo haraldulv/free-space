@@ -220,6 +220,7 @@ export default function DashboardPage() {
               hostId: row.host_id as string,
               hostName: (row.host as Record<string, unknown>)?.full_name as string || "",
               hostPhone: (row.host as Record<string, unknown>)?.show_phone ? (row.host as Record<string, unknown>)?.phone as string || "" : "",
+              selectedExtras: row.selected_extras || undefined,
             }))
         );
 
@@ -274,6 +275,7 @@ export default function DashboardPage() {
             cancelledBy: row.cancelled_by,
             cancellationReason: row.cancellation_reason,
             refundAmount: row.refund_amount,
+            selectedExtras: row.selected_extras || undefined,
           }))
         );
       }

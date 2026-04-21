@@ -52,7 +52,9 @@ export default function BasicInfoStep({
         id="description"
         label={t("descriptionLabel")}
         placeholder={t("descriptionPlaceholder")}
-        rows={4}
+        rows={6}
+        maxLength={2000}
+        showCount
         value={description}
         onChange={(e) => onChange("description", e.target.value)}
         error={errors.description}

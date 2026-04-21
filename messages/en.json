@@ -16,7 +16,8 @@
   "home": {
     "popular": "Popular in Norway",
     "featured": "Featured in Norway",
-    "availableToday": "Available today"
+    "availableToday": "Available today",
+    "recent": "Recently added"
   },
   "footer": {
     "tagline": "Find and book parking spots and camping sites across Norway.",
@@ -142,6 +143,8 @@
     "spotLabel": "Spot {number}",
     "exactLocationHidden": "Exact address shown after booking",
     "exactLocationSharedAfterBooking": "Exact address shared after confirmed booking.",
+    "showSatellite": "Satellite",
+    "showMap": "Map",
     "seeAllPhotos": "Show all photos",
     "closePhotos": "Close",
     "share": "Share",
@@ -629,6 +632,9 @@
       "welcomePerSpotNote": "Write an individual message on each spot below.",
       "spotsHeader": "Spots ({count})",
       "spotsHeaderOfTotal": "Spots ({count} of {total})",
+      "spotsPlacedOf": "{count} of {total} placed",
+      "spotsLimitReached": "You've placed all {total} spots. Increase the count in the details step to add more.",
+      "clearAll": "Clear all",
       "hideAddressLabel": "Hide exact address",
       "hideAddressDesc": "Renters see an approximate area, not the exact position. The exact address is shared after booking.",
       "spotNamePlaceholder": "Spot name",
