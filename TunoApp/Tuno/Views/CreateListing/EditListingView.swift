@@ -26,6 +26,7 @@ struct EditListingView: View {
     @State private var spotMarkers: [SpotMarker] = []
     @State private var isSpotMode = false
     @State private var sendCheckinMessage = false
+    @State private var showSpotPlacementSheet = false
     @State private var mapUpdateTrigger = UUID()
     @State private var perSpotPricing: Bool = false
     @State private var perSpotCheckinMessage: Bool = false
@@ -256,51 +257,24 @@ struct EditListingView: View {
                     }
                 }
 
-                // Map with spot markers
+                // Map + Marker plasser-knapp
                 if lat != 0 || lng != 0 {
-                    let atMaxSpots = spots > 0 && spotMarkers.count >= spots
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(spacing: 10) {
                             Button {
-                                if !atMaxSpots || isSpotMode {
-                                    isSpotMode.toggle()
-                                }
+                                showSpotPlacementSheet = true
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "mappin.and.ellipse")
-                                    Text("Marker plasser")
+                                    Text(spotMarkers.isEmpty ? "Marker plasser" : "Rediger plasser")
                                 }
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(isSpotMode ? .white : (atMaxSpots ? .neutral400 : .primary600))
+                                .foregroundStyle(.primary600)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
-                                .background(isSpotMode ? Color.primary600 : (atMaxSpots ? Color.neutral100 : Color.primary50))
+                                .background(Color.primary50)
                                 .clipShape(Capsule())
-                                .overlay(
-                                    Capsule().stroke(
-                                        atMaxSpots && !isSpotMode ? Color.neutral300 : Color.primary600,
-                                        lineWidth: 1,
-                                    ),
-                                )
-                            }
-                            .disabled(atMaxSpots && !isSpotMode)
-
-                            if !spotMarkers.isEmpty {
-                                Button {
-                                    spotMarkers.removeAll()
-                                    mapUpdateTrigger = UUID()
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "trash")
-                                        Text("Fjern alle")
-                                    }
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(.neutral700)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.neutral100)
-                                    .clipShape(Capsule())
-                                }
+                                .overlay(Capsule().stroke(Color.primary600, lineWidth: 1))
                             }
 
                             Spacer()
@@ -312,37 +286,30 @@ struct EditListingView: View {
                                     .monospacedDigit()
                             }
                         }
-                        if isSpotMode && !atMaxSpots {
-                            Text("Trykk på kartet for å plassere")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.neutral500)
-                        }
 
                         LocationPickerMapView(
                             lat: $lat,
                             lng: $lng,
                             spotMarkers: $spotMarkers,
-                            isSpotMode: isSpotMode,
+                            isSpotMode: false,
                             maxSpots: spots,
                             updateTrigger: mapUpdateTrigger,
-                            onMaxReached: { isSpotMode = false }
+                            onMaxReached: nil
                         )
                         .frame(height: 300)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                        if isSpotMode && atMaxSpots {
-                            HStack(spacing: 8) {
-                                Image(systemName: "info.circle.fill")
-                                    .foregroundStyle(.orange)
-                                    .font(.system(size: 13))
-                                Text("Du har plassert alle \(spots) plasser. Øk antallet for å legge til flere.")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.neutral700)
-                            }
-                            .padding(10)
-                            .background(Color.orange.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
+                        Text("Tap på kartet for å justere hovedposisjon. Bruk \"Marker plasser\" for å plassere individuelle plass-markører.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.neutral500)
+                    }
+                    .sheet(isPresented: $showSpotPlacementSheet) {
+                        SpotPlacementSheet(
+                            spotMarkers: $spotMarkers,
+                            mainLat: lat,
+                            mainLng: lng,
+                            maxSpots: spots
+                        )
                     }
                 }
 

@@ -26,6 +26,7 @@
 		414ACCF50897E595892BBE9B /* CreateListingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A8155F44B5F1E01A1FE767 /* CreateListingView.swift */; };
 		4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */; };
 		4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01854C020C64868465F39BDC /* Models.swift */; };
+		53263F543ED69E31B489D2D5 /* SpotPlacementSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */; };
 		5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */; };
 		642AF85B63EEA4DB11DEA032 /* ListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6DFB7D23F06D079D826635 /* ListingDetailView.swift */; };
 		659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CE3CB213405AF521294421 /* TunoApp.swift */; };
@@ -103,6 +104,7 @@
 		820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotorhomeIcon.swift; sourceTree = "<group>"; };
 		8372F9628ACCC2AB21993B03 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		83B043C9DBACDB46B61E6148 /* ListingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingCard.swift; sourceTree = "<group>"; };
+		8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotPlacementSheet.swift; sourceTree = "<group>"; };
 		8CF2C4D557CBB8DCF564CD2A /* ChatService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatService.swift; sourceTree = "<group>"; };
 		905014F6D3B1C983862933A1 /* QRCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift; sourceTree = "<group>"; };
 		92E48039F546D58654A8CF5E /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabBar.swift; sourceTree = "<group>"; };
@@ -238,6 +240,7 @@
 				4706792C26101B180693BACF /* InputField.swift */,
 				83B043C9DBACDB46B61E6148 /* ListingCard.swift */,
 				820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */,
+				8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */,
 				F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */,
 				F9A10E906BFD039DCF513926 /* TimePickerField.swift */,
 			);
@@ -458,6 +461,7 @@
 				30DB0664F70CAF9A54C49E83 /* RegisterView.swift in Sources */,
 				E912DD2299D28C54B1846A12 /* SearchView.swift in Sources */,
 				239CA481C3CC9C22AD9D3096 /* SettingsView.swift in Sources */,
+				53263F543ED69E31B489D2D5 /* SpotPlacementSheet.swift in Sources */,
 				9AE9EF8B07B0FB00DF4149AF /* SupabaseService.swift in Sources */,
 				5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */,
 				C76237D5837392B271673FB3 /* Theme.swift in Sources */,

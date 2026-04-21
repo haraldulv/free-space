@@ -376,6 +376,7 @@ struct LocationStepView: View {
     @State private var isSpotMode = false
     @State private var mapUpdateTrigger = UUID()
     @State private var sendCheckinMessage = false
+    @State private var showSpotPlacementSheet = false
     @FocusState private var isSearchFocused: Bool
 
     var body: some View {
@@ -455,52 +456,24 @@ struct LocationStepView: View {
                     }
                 }
 
-                // Map
+                // Map + Marker plasser-knapp
                 if form.lat != 0 || form.lng != 0 {
                     VStack(alignment: .leading, spacing: 10) {
-                        // Spot mode toggle + progress + clear-all
-                        let atMaxSpots = form.spots > 0 && form.spotMarkers.count >= form.spots
                         HStack(spacing: 10) {
                             Button {
-                                if !atMaxSpots || isSpotMode {
-                                    isSpotMode.toggle()
-                                }
+                                showSpotPlacementSheet = true
                             } label: {
                                 HStack(spacing: 6) {
                                     Image(systemName: "mappin.and.ellipse")
-                                    Text("Marker plasser")
+                                    Text(form.spotMarkers.isEmpty ? "Marker plasser" : "Rediger plasser")
                                 }
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(isSpotMode ? .white : (atMaxSpots ? .neutral400 : .primary600))
+                                .foregroundStyle(.primary600)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
-                                .background(isSpotMode ? Color.primary600 : (atMaxSpots ? Color.neutral100 : Color.primary50))
+                                .background(Color.primary50)
                                 .clipShape(Capsule())
-                                .overlay(
-                                    Capsule().stroke(
-                                        atMaxSpots && !isSpotMode ? Color.neutral300 : Color.primary600,
-                                        lineWidth: 1,
-                                    ),
-                                )
-                            }
-                            .disabled(atMaxSpots && !isSpotMode)
-
-                            if !form.spotMarkers.isEmpty {
-                                Button {
-                                    form.spotMarkers.removeAll()
-                                    mapUpdateTrigger = UUID()
-                                } label: {
-                                    HStack(spacing: 4) {
-                                        Image(systemName: "trash")
-                                        Text("Fjern alle")
-                                    }
-                                    .font(.system(size: 12, weight: .medium))
-                                    .foregroundStyle(.neutral700)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .background(Color.neutral100)
-                                    .clipShape(Capsule())
-                                }
+                                .overlay(Capsule().stroke(Color.primary600, lineWidth: 1))
                             }
 
                             Spacer()
@@ -513,37 +486,29 @@ struct LocationStepView: View {
                             }
                         }
 
-                        if isSpotMode && !atMaxSpots {
-                            Text("Trykk på kartet for å plassere")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.neutral500)
-                        }
-
                         LocationPickerMapView(
                             lat: $form.lat,
                             lng: $form.lng,
                             spotMarkers: $form.spotMarkers,
-                            isSpotMode: isSpotMode,
+                            isSpotMode: false,
                             maxSpots: form.spots,
                             updateTrigger: mapUpdateTrigger,
-                            onMaxReached: { isSpotMode = false }
+                            onMaxReached: nil
                         )
                         .frame(height: 300)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                        if isSpotMode && atMaxSpots {
-                            HStack(spacing: 8) {
-                                Image(systemName: "info.circle.fill")
-                                    .foregroundStyle(.orange)
-                                    .font(.system(size: 13))
-                                Text("Du har plassert alle \(form.spots) plasser. Øk antallet i detaljer-steget for å legge til flere.")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.neutral700)
-                            }
-                            .padding(10)
-                            .background(Color.orange.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                        }
+                        Text("Tap på kartet for å justere hovedposisjon. Bruk \"Marker plasser\" for å plassere individuelle plass-markører.")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.neutral500)
+                    }
+                    .sheet(isPresented: $showSpotPlacementSheet) {
+                        SpotPlacementSheet(
+                            spotMarkers: $form.spotMarkers,
+                            mainLat: form.lat,
+                            mainLng: form.lng,
+                            maxSpots: form.spots
+                        )
                     }
                 }
 
