@@ -66,7 +66,6 @@ final class ListingFormModel: ObservableObject {
             if category == nil { return "Velg en kategori" }
         case 1:
             if title.trimmingCharacters(in: .whitespaces).count < 3 { return "Tittel må ha minst 3 tegn" }
-            if description.trimmingCharacters(in: .whitespaces).count < 10 { return "Beskrivelse må ha minst 10 tegn" }
             if spots < 1 { return "Minst 1 plass" }
         case 2:
             if address.trimmingCharacters(in: .whitespaces).isEmpty { return "Adresse er påkrevd" }

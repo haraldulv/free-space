@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "nb",
   "strings" : {
+    " (%@)" : {
+
+    },
     " og " : {
       "localizations" : {
         "de" : {
@@ -63,6 +66,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ – %2$@"
+          }
+        }
+      }
+    },
+    "%@ / %@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ / %2$@"
           }
         }
       }
@@ -151,6 +164,16 @@
         }
       }
     },
+    "%@ kr × %@ %@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ kr × %2$@ %3$@"
+          }
+        }
+      }
+    },
     "%@ kr per natt" : {
       "localizations" : {
         "de" : {
@@ -176,6 +199,9 @@
           }
         }
       }
+    },
+    "%@ kr/natt" : {
+
     },
     "%@ kr%@" : {
       "localizations" : {
@@ -400,6 +426,9 @@
         }
       }
     },
+    "× %@ plasser" : {
+
+    },
     "Administrer push-varslinger i iOS-innstillinger." : {
 
     },
@@ -453,6 +482,9 @@
           }
         }
       }
+    },
+    "Alle %@ plassert" : {
+
     },
     "Alle %lld QR-koder lagret i Bilder" : {
       "extractionState" : "manual",
@@ -555,6 +587,9 @@
           }
         }
       }
+    },
+    "Annonsens standardpris er %@ kr/natt. Legg til helg-pris eller sesong-regler som overstyrer." : {
+
     },
     "Antall plasser" : {
       "extractionState" : "manual",
@@ -793,23 +828,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Description"
-          }
-        }
-      }
-    },
-    "Beskrivelse må ha minst 10 tegn" : {
-      "extractionState" : "manual",
-      "localizations" : {
-        "de" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Beschreibung muss mindestens 10 Zeichen haben"
-          }
-        },
-        "en" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Description must be at least 10 characters"
           }
         }
       }
@@ -1571,6 +1589,9 @@
         }
       }
     },
+    "Endringene i plasser-markeringene vil gå tapt." : {
+
+    },
     "engangspris" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2084,6 +2105,9 @@
         }
       }
     },
+    "Forside" : {
+
+    },
     "Forsidebilde" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2100,6 +2124,9 @@
           }
         }
       }
+    },
+    "Første bilde er forsidebilde. Bruk pilene for å endre rekkefølge." : {
+
     },
     "Fortell om plassen din" : {
       "extractionState" : "manual",
@@ -2169,6 +2196,9 @@
         }
       }
     },
+    "Fortsett redigering" : {
+
+    },
     "Fortsett til annonse" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2186,6 +2216,9 @@
         }
       }
     },
+    "Fra" : {
+
+    },
     "Fra %@ — velg utsjekk" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2202,6 +2235,9 @@
           }
         }
       }
+    },
+    "Fredag, lørdag og søndag får egen pris. Presedens: sesong > helg > standard." : {
+
     },
     "Fremhevede i Norge" : {
       "extractionState" : "manual",
@@ -2512,6 +2548,9 @@
         }
       }
     },
+    "Helg-pris" : {
+
+    },
     "Hjelp" : {
 
     },
@@ -2746,6 +2785,9 @@
         }
       }
     },
+    "Ingen aktive regler. Alle netter bruker annonsens standardpris (%@ kr)." : {
+
+    },
     "Ingen bestillinger" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2935,6 +2977,9 @@
           }
         }
       }
+    },
+    "Innsjekk fra %@" : {
+
     },
     "Innstillinger" : {
       "extractionState" : "manual",
@@ -3563,6 +3608,9 @@
         }
       }
     },
+    "Lagre helg-pris" : {
+
+    },
     "Lagret" : {
       "localizations" : {
         "de" : {
@@ -3684,6 +3732,9 @@
           }
         }
       }
+    },
+    "Legg til sesong" : {
+
     },
     "Legitimasjon (kommer senere — du kan opprette annonse nå)" : {
       "extractionState" : "manual",
@@ -4017,6 +4068,9 @@
           }
         }
       }
+    },
+    "Melding til gjest (valgfri)" : {
+
     },
     "Meldinger" : {
       "extractionState" : "manual",
@@ -4805,6 +4859,9 @@
         }
       }
     },
+    "Plasser plassene dine" : {
+
+    },
     "Plassering" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5025,6 +5082,9 @@
           }
         }
       }
+    },
+    "Prisregler" : {
+
     },
     "Profil" : {
       "extractionState" : "manual",
@@ -5259,6 +5319,9 @@
         }
       }
     },
+    "Reset" : {
+
+    },
     "Rullestoltilgjengelig" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5432,6 +5495,9 @@
         }
       }
     },
+    "Sendes sammen med velkomstmeldingen hvis tillegget blir booket." : {
+
+    },
     "Sengetøy" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5483,6 +5549,9 @@
         }
       }
     },
+    "Sesong-pris" : {
+
+    },
     "Sett pris" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5499,6 +5568,12 @@
           }
         }
       }
+    },
+    "Sett pris for en periode (f.eks. sommeruker). Overstyrer helg og standard." : {
+
+    },
+    "Sett som forside" : {
+
     },
     "Sett ulik melding per plass (f.eks. ulike port-koder)." : {
       "extractionState" : "manual",
@@ -5601,6 +5676,9 @@
           }
         }
       }
+    },
+    "Skjønner!" : {
+
     },
     "Skjul eksakt adresse" : {
       "extractionState" : "manual",
@@ -5918,6 +5996,12 @@
         }
       }
     },
+    "Tap for å plassere" : {
+
+    },
+    "Tap på kartet for å justere hovedposisjon. Bruk \"Marker plasser\" for å plassere individuelle plass-markører." : {
+
+    },
     "Telefonnummer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5934,6 +6018,9 @@
           }
         }
       }
+    },
+    "Til" : {
+
     },
     "Tilbake" : {
       "extractionState" : "manual",

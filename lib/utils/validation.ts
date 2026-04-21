@@ -44,7 +44,7 @@ export const listingStep1Schema = z.object({
 
 export const listingStep2Schema = z.object({
   title: z.string().min(3, "Tittel må ha minst 3 tegn").max(100, "Maks 100 tegn"),
-  description: z.string().min(10, "Beskrivelse må ha minst 10 tegn").max(2000, "Maks 2000 tegn"),
+  description: z.string().max(2000, "Maks 2000 tegn"),
   spots: z.number().int().min(1, "Minst 1 plass").max(100),
   maxVehicleLength: z.number().int().min(1).max(30).optional(),
   checkInTime: z.string().regex(/^\d{2}:\d{2}$/, "Ugyldig format (HH:MM)").optional(),
