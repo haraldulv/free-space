@@ -513,6 +513,7 @@ struct LocationStepView: View {
     @State private var isSpotMode = false
     @State private var mapUpdateTrigger = UUID()
     @State private var sendCheckinMessage = false
+    @State private var sendCheckoutMessage = false
     @State private var showSpotPlacementSheet = false
     @FocusState private var isSearchFocused: Bool
 
@@ -657,6 +658,7 @@ struct LocationStepView: View {
                 // Velkomstmelding-seksjon — før plasser så hint-teksten ("nedenfor") stemmer
                 if form.lat != 0 || form.lng != 0 {
                     checkinMessageSection
+                    checkoutMessageSection
                 }
 
                 // Utbrettede plass-editors
@@ -847,6 +849,62 @@ struct LocationStepView: View {
             for i in form.spotMarkers.indices {
                 form.spotMarkers[i].checkinMessage = nil
             }
+        }
+    }
+
+    // MARK: - Utsjekkmelding-seksjon
+
+    private var checkoutMessageSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Utsjekkmelding")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("Sendes automatisk før utsjekk som en vennlig påminnelse.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { sendCheckoutMessage },
+                    set: { newValue in
+                        sendCheckoutMessage = newValue
+                        if !newValue { form.checkoutMessage = "" }
+                    }
+                ))
+                .labelsHidden()
+                .tint(.primary600)
+            }
+
+            if sendCheckoutMessage {
+                TextEditorWithCounter(
+                    text: $form.checkoutMessage,
+                    maxLength: 600,
+                    minHeight: 90,
+                    placeholder: "F.eks. Hei! Husk at utsjekk er kl. \(form.checkOutTime). Legg nøkkelen i postkassen.",
+                    showCopyPaste: true
+                )
+
+                HStack(spacing: 8) {
+                    Text("Sendes")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral600)
+                    Picker("", selection: $form.checkoutMessageSendHoursBefore) {
+                        Text("1 time før").tag(1)
+                        Text("2 timer før").tag(2)
+                        Text("3 timer før").tag(3)
+                        Text("6 timer før").tag(6)
+                        Text("12 timer før").tag(12)
+                        Text("24 timer før").tag(24)
+                    }
+                    .tint(.primary600)
+                    Spacer()
+                }
+                .padding(.top, 4)
+            }
+        }
+        .onAppear {
+            sendCheckoutMessage = !form.checkoutMessage.trimmingCharacters(in: .whitespaces).isEmpty
         }
     }
 

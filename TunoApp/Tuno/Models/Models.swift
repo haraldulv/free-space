@@ -28,6 +28,8 @@ struct Listing: Codable, Identifiable, Hashable {
     let checkInTime: String?
     let checkOutTime: String?
     let checkinMessage: String?
+    let checkoutMessage: String?
+    let checkoutMessageSendHoursBefore: Int?
     let isActive: Bool?
     let extras: [ListingExtra]?
     let rating: Double?
@@ -55,6 +57,8 @@ struct Listing: Codable, Identifiable, Hashable {
         case checkInTime = "check_in_time"
         case checkOutTime = "check_out_time"
         case checkinMessage = "checkin_message"
+        case checkoutMessage = "checkout_message"
+        case checkoutMessageSendHoursBefore = "checkout_message_send_hours_before"
         case isActive = "is_active"
         case extras
         case reviewCount = "review_count"
@@ -522,6 +526,12 @@ struct Conversation: Codable, Identifiable {
     let bookingId: String?
     let lastMessageAt: String?
     let createdAt: String?
+    let archivedByGuest: Bool?
+    let archivedByHost: Bool?
+    let starredByGuest: Bool?
+    let starredByHost: Bool?
+    let mutedByGuest: Bool?
+    let mutedByHost: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -531,6 +541,12 @@ struct Conversation: Codable, Identifiable {
         case bookingId = "booking_id"
         case lastMessageAt = "last_message_at"
         case createdAt = "created_at"
+        case archivedByGuest = "archived_by_guest"
+        case archivedByHost = "archived_by_host"
+        case starredByGuest = "starred_by_guest"
+        case starredByHost = "starred_by_host"
+        case mutedByGuest = "muted_by_guest"
+        case mutedByHost = "muted_by_host"
     }
 }
 

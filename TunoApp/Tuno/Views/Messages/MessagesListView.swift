@@ -4,6 +4,7 @@ enum MessagesFilter: String, CaseIterable {
     case all = "Alle"
     case host = "Som vert"
     case guest = "Som gjest"
+    case archived = "Arkivert"
 }
 
 struct MessagesListView: View {
@@ -18,9 +19,14 @@ struct MessagesListView: View {
     private var filtered: [ConversationPreview] {
         var result = chatService.conversations
         switch filter {
-        case .all: break
-        case .host: result = result.filter { $0.selfRole == "host" }
-        case .guest: result = result.filter { $0.selfRole == "guest" }
+        case .all:
+            result = result.filter { !$0.isArchived }
+        case .host:
+            result = result.filter { $0.selfRole == "host" && !$0.isArchived }
+        case .guest:
+            result = result.filter { $0.selfRole == "guest" && !$0.isArchived }
+        case .archived:
+            result = result.filter { $0.isArchived }
         }
         let q = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         if !q.isEmpty {
@@ -31,6 +37,16 @@ struct MessagesListView: View {
             }
         }
         return result
+    }
+
+    private var archivedCount: Int {
+        chatService.conversations.filter { $0.isArchived }.count
+    }
+
+    private var visibleFilters: [MessagesFilter] {
+        var options: [MessagesFilter] = [.all, .host, .guest]
+        if archivedCount > 0 { options.append(.archived) }
+        return options
     }
 
     var body: some View {
@@ -150,7 +166,7 @@ struct MessagesListView: View {
     private var filterTabs: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(MessagesFilter.allCases, id: \.self) { option in
+                ForEach(visibleFilters, id: \.self) { option in
                     Button {
                         withAnimation { filter = option }
                     } label: {
@@ -200,6 +216,37 @@ struct MessagesListView: View {
                             AirbnbConversationRow(conversation: conversation)
                         }
                         .buttonStyle(.plain)
+                        .contextMenu {
+                            Button {
+                                Task { await chatService.toggleStar(conversation: conversation) }
+                            } label: {
+                                Label(conversation.isStarred ? "Fjern stjerne" : "Stjernemerk",
+                                      systemImage: conversation.isStarred ? "star.slash" : "star.fill")
+                            }
+                            Button {
+                                Task {
+                                    guard let userId = authManager.currentUser?.id else { return }
+                                    await chatService.markLatestAsUnread(
+                                        conversationId: conversation.id,
+                                        currentUserId: userId.uuidString.lowercased()
+                                    )
+                                }
+                            } label: {
+                                Label("Merk som ulest", systemImage: "envelope.badge")
+                            }
+                            Button {
+                                Task { await chatService.toggleMute(conversation: conversation) }
+                            } label: {
+                                Label(conversation.isMuted ? "Slå på varsler" : "Slå av varsler",
+                                      systemImage: conversation.isMuted ? "bell" : "bell.slash")
+                            }
+                            Button(role: .destructive) {
+                                Task { await chatService.toggleArchive(conversation: conversation) }
+                            } label: {
+                                Label(conversation.isArchived ? "Flytt ut av arkiv" : "Arkiver",
+                                      systemImage: conversation.isArchived ? "tray.and.arrow.up" : "archivebox")
+                            }
+                        }
                         Divider().padding(.leading, 82)
                     }
                 }
@@ -247,11 +294,21 @@ struct AirbnbConversationRow: View {
             }
 
             VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(conversation.otherUserName)
                         .font(.system(size: 15, weight: conversation.unreadCount > 0 ? .bold : .semibold))
                         .foregroundStyle(.neutral900)
                         .lineLimit(1)
+                    if conversation.isStarred {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color(hex: "#f59e0b"))
+                    }
+                    if conversation.isMuted {
+                        Image(systemName: "bell.slash.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.neutral400)
+                    }
                     Spacer()
                     if let dateStr = conversation.lastMessageAt {
                         Text(formatDate(dateStr))

@@ -191,6 +191,8 @@ export interface Listing {
   checkOutTime?: string;
   extras?: ListingExtra[];
   checkinMessage?: string;
+  checkoutMessage?: string;
+  checkoutMessageSendHoursBefore?: number;
 }
 
 export interface Booking {

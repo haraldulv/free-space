@@ -103,9 +103,19 @@ class ChatService: ObservableObject {
                 let otherUserId = convo.guestId == userId ? convo.hostId : convo.guestId
                 let profile = profileMap[otherUserId]
                 let listing = listingMap[convo.listingId]
-                let selfRole = convo.hostId == userId ? "host" : "guest"
+                let isHost = convo.hostId == userId
+                let selfRole = isHost ? "host" : "guest"
                 let bookingKey = "\(convo.listingId)|\(convo.guestId)"
                 let booking = latestBookingByPair[bookingKey]
+                let isArchived = isHost
+                    ? (convo.archivedByHost ?? false)
+                    : (convo.archivedByGuest ?? false)
+                let isStarred = isHost
+                    ? (convo.starredByHost ?? false)
+                    : (convo.starredByGuest ?? false)
+                let isMuted = isHost
+                    ? (convo.mutedByHost ?? false)
+                    : (convo.mutedByGuest ?? false)
                 return ConversationPreview(
                     id: convo.id,
                     listingId: convo.listingId,
@@ -121,12 +131,17 @@ class ChatService: ObservableObject {
                     selfRole: selfRole,
                     bookingStatus: booking?.status,
                     bookingDates: booking.flatMap { formatDateRange($0.checkIn, $0.checkOut) },
-                    listingCity: listing?.city
+                    listingCity: listing?.city,
+                    isArchived: isArchived,
+                    isStarred: isStarred,
+                    isMuted: isMuted
                 )
             }
 
             conversations = previews
-            unreadCount = previews.reduce(0) { $0 + $1.unreadCount }
+            // Arkiverte samtaler teller ikke mot tab-badgen — brukeren har signalisert
+            // at de ikke vil forholde seg til dem lenger.
+            unreadCount = previews.reduce(0) { $1.isArchived ? $0 : $0 + $1.unreadCount }
         } catch {
             print("Failed to load conversations: \(error)")
         }
@@ -240,6 +255,126 @@ class ChatService: ObservableObject {
         }
     }
 
+    // MARK: - Samtalehandlinger
+
+    /// Marker siste melding fra motparten som ulest, så samtalen dukker opp igjen med unread-indikator.
+    func markLatestAsUnread(conversationId: String, currentUserId: String) async {
+        do {
+            struct MsgId: Decodable { let id: String }
+            let latest: [MsgId] = try await supabase
+                .from("messages")
+                .select("id")
+                .eq("conversation_id", value: conversationId)
+                .neq("sender_id", value: currentUserId)
+                .order("created_at", ascending: false)
+                .limit(1)
+                .execute()
+                .value
+            guard let target = latest.first else { return }
+            try await supabase
+                .from("messages")
+                .update(["read": false])
+                .eq("id", value: target.id)
+                .execute()
+            // Oppdater lokal state
+            if let idx = conversations.firstIndex(where: { $0.id == conversationId }) {
+                let old = conversations[idx]
+                conversations[idx] = replaceUnread(old, with: max(old.unreadCount, 1))
+                if !old.isArchived {
+                    unreadCount = conversations.reduce(0) { $1.isArchived ? $0 : $0 + $1.unreadCount }
+                }
+            }
+        } catch {
+            print("markLatestAsUnread failed: \(error)")
+        }
+    }
+
+    /// Toggle arkivert-flagg basert på brukerens rolle i samtalen.
+    func toggleArchive(conversation: ConversationPreview) async {
+        let column = conversation.selfRole == "host" ? "archived_by_host" : "archived_by_guest"
+        let newValue = !conversation.isArchived
+        await updateConversationFlag(conversationId: conversation.id, column: column, value: newValue) { old in
+            ConversationPreview(
+                id: old.id, listingId: old.listingId, guestId: old.guestId, hostId: old.hostId,
+                otherUserName: old.otherUserName, otherUserAvatar: old.otherUserAvatar,
+                lastMessage: old.lastMessage, lastMessageAt: old.lastMessageAt,
+                unreadCount: old.unreadCount, listingTitle: old.listingTitle,
+                listingImage: old.listingImage, selfRole: old.selfRole,
+                bookingStatus: old.bookingStatus, bookingDates: old.bookingDates,
+                listingCity: old.listingCity,
+                isArchived: newValue, isStarred: old.isStarred, isMuted: old.isMuted
+            )
+        }
+    }
+
+    func toggleStar(conversation: ConversationPreview) async {
+        let column = conversation.selfRole == "host" ? "starred_by_host" : "starred_by_guest"
+        let newValue = !conversation.isStarred
+        await updateConversationFlag(conversationId: conversation.id, column: column, value: newValue) { old in
+            ConversationPreview(
+                id: old.id, listingId: old.listingId, guestId: old.guestId, hostId: old.hostId,
+                otherUserName: old.otherUserName, otherUserAvatar: old.otherUserAvatar,
+                lastMessage: old.lastMessage, lastMessageAt: old.lastMessageAt,
+                unreadCount: old.unreadCount, listingTitle: old.listingTitle,
+                listingImage: old.listingImage, selfRole: old.selfRole,
+                bookingStatus: old.bookingStatus, bookingDates: old.bookingDates,
+                listingCity: old.listingCity,
+                isArchived: old.isArchived, isStarred: newValue, isMuted: old.isMuted
+            )
+        }
+    }
+
+    func toggleMute(conversation: ConversationPreview) async {
+        let column = conversation.selfRole == "host" ? "muted_by_host" : "muted_by_guest"
+        let newValue = !conversation.isMuted
+        await updateConversationFlag(conversationId: conversation.id, column: column, value: newValue) { old in
+            ConversationPreview(
+                id: old.id, listingId: old.listingId, guestId: old.guestId, hostId: old.hostId,
+                otherUserName: old.otherUserName, otherUserAvatar: old.otherUserAvatar,
+                lastMessage: old.lastMessage, lastMessageAt: old.lastMessageAt,
+                unreadCount: old.unreadCount, listingTitle: old.listingTitle,
+                listingImage: old.listingImage, selfRole: old.selfRole,
+                bookingStatus: old.bookingStatus, bookingDates: old.bookingDates,
+                listingCity: old.listingCity,
+                isArchived: old.isArchived, isStarred: old.isStarred, isMuted: newValue
+            )
+        }
+    }
+
+    private func updateConversationFlag(
+        conversationId: String,
+        column: String,
+        value: Bool,
+        apply: (ConversationPreview) -> ConversationPreview
+    ) async {
+        do {
+            try await supabase
+                .from("conversations")
+                .update([column: value])
+                .eq("id", value: conversationId)
+                .execute()
+            if let idx = conversations.firstIndex(where: { $0.id == conversationId }) {
+                conversations[idx] = apply(conversations[idx])
+            }
+            unreadCount = conversations.reduce(0) { $1.isArchived ? $0 : $0 + $1.unreadCount }
+        } catch {
+            print("updateConversationFlag(\(column)) failed: \(error)")
+        }
+    }
+
+    private func replaceUnread(_ old: ConversationPreview, with count: Int) -> ConversationPreview {
+        ConversationPreview(
+            id: old.id, listingId: old.listingId, guestId: old.guestId, hostId: old.hostId,
+            otherUserName: old.otherUserName, otherUserAvatar: old.otherUserAvatar,
+            lastMessage: old.lastMessage, lastMessageAt: old.lastMessageAt,
+            unreadCount: count, listingTitle: old.listingTitle,
+            listingImage: old.listingImage, selfRole: old.selfRole,
+            bookingStatus: old.bookingStatus, bookingDates: old.bookingDates,
+            listingCity: old.listingCity,
+            isArchived: old.isArchived, isStarred: old.isStarred, isMuted: old.isMuted
+        )
+    }
+
     // MARK: - Realtime
 
     func subscribeToMessages(conversationId: String) async {
@@ -306,6 +441,12 @@ struct ConversationPreview: Identifiable {
     let bookingDates: String?
     /// By fra listing for secondary-tekst i raden.
     let listingCity: String?
+    /// Har gjeldende bruker arkivert denne samtalen (basert på sin rolle).
+    let isArchived: Bool
+    /// Har gjeldende bruker stjernemerket denne samtalen.
+    let isStarred: Bool
+    /// Har gjeldende bruker slått av push for denne samtalen.
+    let isMuted: Bool
 }
 
 struct ChatMessage: Identifiable {

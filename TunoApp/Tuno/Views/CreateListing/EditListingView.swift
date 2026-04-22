@@ -19,6 +19,9 @@ struct EditListingView: View {
     @State private var checkInTime: String = "15:00"
     @State private var checkOutTime: String = "11:00"
     @State private var checkinMessage: String = ""
+    @State private var checkoutMessage: String = ""
+    @State private var checkoutMessageSendHoursBefore: Int = 2
+    @State private var sendCheckoutMessage: Bool = false
     @State private var address: String = ""
     @State private var city: String = ""
     @State private var region: String = ""
@@ -336,6 +339,8 @@ struct EditListingView: View {
                 // Velkomstmelding-seksjon (før plasser så hint-teksten "nedenfor" stemmer)
                 editCheckinMessageSection
 
+                editCheckoutMessageSection
+
                 // Utbrettede plass-kort
                 if !spotMarkers.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
@@ -511,6 +516,59 @@ struct EditListingView: View {
         } else {
             for i in spotMarkers.indices {
                 spotMarkers[i].checkinMessage = nil
+            }
+        }
+    }
+
+    // MARK: - Utsjekkmelding-seksjon (Edit)
+
+    private var editCheckoutMessageSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Utsjekkmelding")
+                        .font(.system(size: 18, weight: .semibold))
+                    Text("Sendes automatisk før utsjekk som en vennlig påminnelse.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                Toggle("", isOn: Binding(
+                    get: { sendCheckoutMessage },
+                    set: { newValue in
+                        sendCheckoutMessage = newValue
+                        if !newValue { checkoutMessage = "" }
+                    }
+                ))
+                .labelsHidden()
+                .tint(.primary600)
+            }
+
+            if sendCheckoutMessage {
+                TextEditorWithCounter(
+                    text: $checkoutMessage,
+                    maxLength: 600,
+                    minHeight: 90,
+                    placeholder: "F.eks. Hei! Husk at utsjekk er kl. \(checkOutTime). Legg nøkkelen i postkassen.",
+                    showCopyPaste: true
+                )
+
+                HStack(spacing: 8) {
+                    Text("Sendes")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral600)
+                    Picker("", selection: $checkoutMessageSendHoursBefore) {
+                        Text("1 time før").tag(1)
+                        Text("2 timer før").tag(2)
+                        Text("3 timer før").tag(3)
+                        Text("6 timer før").tag(6)
+                        Text("12 timer før").tag(12)
+                        Text("24 timer før").tag(24)
+                    }
+                    .tint(.primary600)
+                    Spacer()
+                }
+                .padding(.top, 4)
             }
         }
     }
@@ -1081,6 +1139,9 @@ struct EditListingView: View {
         title = listing.title
         internalName = listing.internalName ?? ""
         description = listing.description ?? ""
+        checkoutMessage = listing.checkoutMessage ?? ""
+        checkoutMessageSendHoursBefore = listing.checkoutMessageSendHoursBefore ?? 2
+        sendCheckoutMessage = !(listing.checkoutMessage ?? "").trimmingCharacters(in: .whitespaces).isEmpty
         spots = listing.spots ?? 1
         maxVehicleLength = listing.maxVehicleLength.map { Int($0) }
         checkInTime = listing.checkInTime ?? "15:00"
@@ -1125,6 +1186,8 @@ struct EditListingView: View {
                     title: title,
                     internalName: internalName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : internalName.trimmingCharacters(in: .whitespaces),
                     description: description,
+                    checkoutMessage: sendCheckoutMessage && !checkoutMessage.trimmingCharacters(in: .whitespaces).isEmpty ? checkoutMessage : nil,
+                    checkoutMessageSendHoursBefore: checkoutMessageSendHoursBefore,
                     spots: spots,
                     checkInTime: checkInTime,
                     checkOutTime: checkOutTime,
@@ -1425,6 +1488,8 @@ private struct UpdateListingInput: Encodable {
     let title: String
     let internalName: String?
     let description: String
+    let checkoutMessage: String?
+    let checkoutMessageSendHoursBefore: Int
     let spots: Int
     let checkInTime: String
     let checkOutTime: String
@@ -1449,6 +1514,8 @@ private struct UpdateListingInput: Encodable {
     enum CodingKeys: String, CodingKey {
         case title, description, spots, address, city, region, lat, lng, price, amenities, images, extras
         case internalName = "internal_name"
+        case checkoutMessage = "checkout_message"
+        case checkoutMessageSendHoursBefore = "checkout_message_send_hours_before"
         case checkInTime = "check_in_time"
         case checkOutTime = "check_out_time"
         case checkinMessage = "checkin_message"

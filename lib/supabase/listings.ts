@@ -51,6 +51,8 @@ export interface CreateListingData {
   checkInTime?: string;
   checkOutTime?: string;
   checkinMessage?: string;
+  checkoutMessage?: string;
+  checkoutMessageSendHoursBefore?: number;
   extras?: { id: string; name: string; price: number; perNight: boolean }[];
   /** UI-only flag — bestemmer om pris settes per-plass eller uniform. Persisteres ikke. */
   perSpotPricing?: boolean;
@@ -114,6 +116,8 @@ function rowToListing(row: Record<string, unknown>): Listing {
     checkInTime: (row.check_in_time as string) || "15:00",
     checkOutTime: (row.check_out_time as string) || "11:00",
     checkinMessage: row.checkin_message as string | undefined,
+    checkoutMessage: row.checkout_message as string | undefined,
+    checkoutMessageSendHoursBefore: row.checkout_message_send_hours_before as number | undefined,
     extras: (row.extras as Listing["extras"]) || [],
   };
 }
@@ -470,6 +474,8 @@ export async function createListing(input: CreateListingData, hostId: string): P
     check_in_time: input.checkInTime || "15:00",
     check_out_time: input.checkOutTime || "11:00",
     checkin_message: input.checkinMessage || null,
+    checkout_message: input.checkoutMessage || null,
+    checkout_message_send_hours_before: input.checkoutMessageSendHoursBefore ?? 2,
     extras: input.extras || [],
     host_name: profile?.full_name || "Anonym",
     host_avatar: profile?.avatar_url || "",
@@ -510,6 +516,10 @@ export async function updateListing(id: string, input: Partial<CreateListingData
   if (input.checkInTime !== undefined) updateData.check_in_time = input.checkInTime;
   if (input.checkOutTime !== undefined) updateData.check_out_time = input.checkOutTime;
   if (input.checkinMessage !== undefined) updateData.checkin_message = input.checkinMessage || null;
+  if (input.checkoutMessage !== undefined) updateData.checkout_message = input.checkoutMessage || null;
+  if (input.checkoutMessageSendHoursBefore !== undefined) {
+    updateData.checkout_message_send_hours_before = input.checkoutMessageSendHoursBefore;
+  }
   if (input.extras !== undefined) updateData.extras = input.extras;
 
   const { error } = await supabase

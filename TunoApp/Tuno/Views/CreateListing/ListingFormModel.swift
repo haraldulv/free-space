@@ -24,6 +24,8 @@ final class ListingFormModel: ObservableObject {
     @Published var checkInTime = "15:00"
     @Published var checkOutTime = "11:00"
     @Published var checkinMessage = ""
+    @Published var checkoutMessage = ""
+    @Published var checkoutMessageSendHoursBefore: Int = 2
 
     // MARK: - Step 2: Location
     @Published var address = ""
@@ -150,6 +152,8 @@ final class ListingFormModel: ObservableObject {
             checkInTime: checkInTime,
             checkOutTime: checkOutTime,
             checkinMessage: checkinMessage.trimmingCharacters(in: .whitespaces).isEmpty ? nil : checkinMessage,
+            checkoutMessage: checkoutMessage.trimmingCharacters(in: .whitespaces).isEmpty ? nil : checkoutMessage,
+            checkoutMessageSendHoursBefore: checkoutMessageSendHoursBefore,
             extras: selectedExtras,
             hostName: profile?.fullName ?? "",
             hostAvatar: profile?.avatarUrl ?? "",
@@ -226,6 +230,8 @@ struct CreateListingInput: Encodable {
     let checkInTime: String
     let checkOutTime: String
     let checkinMessage: String?
+    let checkoutMessage: String?
+    let checkoutMessageSendHoursBefore: Int
     let extras: [ListingExtra]
     let hostName: String
     let hostAvatar: String
@@ -245,6 +251,8 @@ struct CreateListingInput: Encodable {
         case checkInTime = "check_in_time"
         case checkOutTime = "check_out_time"
         case checkinMessage = "checkin_message"
+        case checkoutMessage = "checkout_message"
+        case checkoutMessageSendHoursBefore = "checkout_message_send_hours_before"
         case hostName = "host_name"
         case hostAvatar = "host_avatar"
         case isActive = "is_active"

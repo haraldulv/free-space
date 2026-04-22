@@ -175,6 +175,8 @@ export default function ListingFormWizard({
             priceUnit={formData.priceUnit || "natt"}
             checkinMessage={formData.checkinMessage}
             perSpotCheckinMessage={formData.perSpotCheckinMessage || false}
+            checkoutMessage={formData.checkoutMessage}
+            checkoutMessageSendHoursBefore={formData.checkoutMessageSendHoursBefore}
             onChange={updateField}
             errors={errors}
           />

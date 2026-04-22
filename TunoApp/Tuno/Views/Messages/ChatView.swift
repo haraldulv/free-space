@@ -8,6 +8,7 @@ struct ChatView: View {
     var listingImage: String? = nil
 
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var globalChat: ChatService
     @StateObject private var chatService = ChatService()
     @State private var messageText = ""
     @State private var showListingDetail = false
@@ -15,8 +16,13 @@ struct ChatView: View {
     @State private var showQuickReplies = false
     @State private var showHostProfile = false
     @State private var conversationDetails: ConversationDetails?
+    @State private var actionToast: String?
     @FocusState private var isInputFocused: Bool
     @Environment(\.dismiss) private var dismiss
+
+    private var currentPreview: ConversationPreview? {
+        globalChat.conversations.first(where: { $0.id == conversationId })
+    }
 
     private var currentUserId: String {
         authManager.currentUser?.id.uuidString.lowercased() ?? ""
@@ -135,6 +141,20 @@ struct ChatView: View {
                 .background(.white)
             }
         }
+        .overlay(alignment: .top) {
+            if let toast = actionToast {
+                Text(toast)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .background(Color.neutral900)
+                    .clipShape(Capsule())
+                    .padding(.top, 70)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                    .shadow(color: .black.opacity(0.2), radius: 6)
+            }
+        }
         .navigationBarHidden(true)
         .navigationDestination(isPresented: $showListingDetail) {
             if let listingId {
@@ -144,6 +164,7 @@ struct ChatView: View {
         .sheet(isPresented: $showOpplysninger) {
             OpplysningerSheet(
                 details: conversationDetails,
+                preview: currentPreview,
                 listingImage: listingImage,
                 listingTitle: listingTitle,
                 listingId: listingId,
@@ -157,6 +178,43 @@ struct ChatView: View {
                     showOpplysninger = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         showHostProfile = true
+                    }
+                },
+                onMarkUnread: {
+                    guard let convo = currentPreview else { return }
+                    Task {
+                        await globalChat.markLatestAsUnread(conversationId: convo.id, currentUserId: currentUserId)
+                        showOpplysninger = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                            dismiss()
+                        }
+                    }
+                },
+                onToggleStar: {
+                    guard let convo = currentPreview else { return }
+                    Task {
+                        await globalChat.toggleStar(conversation: convo)
+                        flashToast(convo.isStarred ? "Fjernet stjerne" : "Stjernemerket")
+                    }
+                },
+                onToggleArchive: {
+                    guard let convo = currentPreview else { return }
+                    Task {
+                        await globalChat.toggleArchive(conversation: convo)
+                        showOpplysninger = false
+                        if !convo.isArchived {
+                            // Brukeren arkiverte nå — gå tilbake til listen
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                                dismiss()
+                            }
+                        }
+                    }
+                },
+                onToggleMute: {
+                    guard let convo = currentPreview else { return }
+                    Task {
+                        await globalChat.toggleMute(conversation: convo)
+                        flashToast(convo.isMuted ? "Varsler slått på" : "Varsler slått av")
                     }
                 }
             )
@@ -272,6 +330,13 @@ struct ChatView: View {
     }
 
     // MARK: - Helpers
+
+    private func flashToast(_ text: String) {
+        withAnimation { actionToast = text }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+            withAnimation { actionToast = nil }
+        }
+    }
 
     private func sendMessage() async {
         let text = messageText
@@ -506,11 +571,16 @@ private struct ConversationRow: Decodable {
 
 struct OpplysningerSheet: View {
     let details: ConversationDetails?
+    let preview: ConversationPreview?
     let listingImage: String?
     let listingTitle: String
     let listingId: String?
     let onShowListing: () -> Void
     let onShowHostProfile: () -> Void
+    let onMarkUnread: () -> Void
+    let onToggleStar: () -> Void
+    let onToggleArchive: () -> Void
+    let onToggleMute: () -> Void
 
     @Environment(\.dismiss) private var dismiss
 
@@ -614,13 +684,22 @@ struct OpplysningerSheet: View {
                             .font(.system(size: 18, weight: .bold))
                             .padding(.bottom, 8)
 
-                        actionRow(icon: "envelope.open", label: "Merk som ulest") { dismiss() }
+                        actionRow(icon: "envelope.open", label: "Merk som ulest") { onMarkUnread() }
                         Divider()
-                        actionRow(icon: "star", label: "Stjernemerk") { dismiss() }
+                        actionRow(
+                            icon: (preview?.isStarred ?? false) ? "star.fill" : "star",
+                            label: (preview?.isStarred ?? false) ? "Fjern stjerne" : "Stjernemerk"
+                        ) { onToggleStar() }
                         Divider()
-                        actionRow(icon: "archivebox", label: "Arkiver") { dismiss() }
+                        actionRow(
+                            icon: (preview?.isArchived ?? false) ? "tray.and.arrow.up" : "archivebox",
+                            label: (preview?.isArchived ?? false) ? "Flytt ut av arkiv" : "Arkiver"
+                        ) { onToggleArchive() }
                         Divider()
-                        actionRow(icon: "bell.slash", label: "Slå av varsler for denne samtalen") { dismiss() }
+                        actionRow(
+                            icon: (preview?.isMuted ?? false) ? "bell" : "bell.slash",
+                            label: (preview?.isMuted ?? false) ? "Slå på varsler igjen" : "Slå av varsler for denne samtalen"
+                        ) { onToggleMute() }
                     }
                 }
                 .padding(20)
