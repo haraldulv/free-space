@@ -7,147 +7,148 @@ struct ProfileView: View {
     @State private var showLogoutConfirm = false
     @State private var showLogin = false
     @State private var pendingRequestCount: Int = 0
+    @State private var unreadNotifications: Int = 0
+    @State private var tripCount: Int = 0
+    @State private var reviewCount: Int = 0
+    @State private var monthlyNet: Int = 0
+    @State private var monthlyBookings: Int = 0
     @State private var navigateToHostRequests = false
+    @State private var navigateToNotifications = false
+    @State private var showSelfProfile = false
 
     var body: some View {
         if !authManager.isAuthenticated {
-            // Not logged in — show login prompt
-            VStack(spacing: 20) {
-                Spacer()
-
-                Image(systemName: "person.crop.circle")
-                    .font(.system(size: 60))
-                    .foregroundStyle(.neutral300)
-
-                Text("Logg inn for å se profilen din")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.neutral500)
-
-                Button {
-                    showLogin = true
-                } label: {
-                    Text("Logg inn")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.primary600)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .padding(.horizontal, 40)
-
-                Spacer()
-            }
-            .navigationTitle("Profil")
-            .fullScreenCover(isPresented: $showLogin) {
-                LoginView()
-            }
+            loggedOutView
         } else {
             loggedInView
         }
     }
 
-    var loggedInView: some View {
-        List {
-            // Profile header
-            Section {
-                HStack(spacing: 14) {
-                    if let avatarUrl = authManager.profile?.avatarUrl,
-                       let url = URL(string: avatarUrl) {
-                        CachedAsyncImage(url: url) { image in
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Circle().fill(Color.neutral200)
-                        }
-                        .frame(width: 60, height: 60)
-                        .clipShape(Circle())
-                    } else {
-                        Circle()
-                            .fill(Color.primary100)
-                            .frame(width: 60, height: 60)
-                            .overlay(
-                                Text(String(authManager.displayName.prefix(1)).uppercased())
-                                    .font(.system(size: 24, weight: .semibold))
-                                    .foregroundStyle(.primary600)
-                            )
-                    }
+    // MARK: - Logged-out
 
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(authManager.displayName)
-                            .font(.system(size: 17, weight: .semibold))
-                        Text(authManager.currentUser?.email ?? "")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.neutral500)
-                    }
-                }
-                .padding(.vertical, 4)
+    private var loggedOutView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            Image(systemName: "person.crop.circle")
+                .font(.system(size: 60))
+                .foregroundStyle(.neutral300)
+            Text("Logg inn for å se profilen din")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.neutral500)
+            Button {
+                showLogin = true
+            } label: {
+                Text("Logg inn")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.primary600)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
             }
+            .padding(.horizontal, 40)
+            Spacer()
+        }
+        .navigationTitle("Profil")
+        .fullScreenCover(isPresented: $showLogin) {
+            LoginView()
+        }
+    }
 
-            // Actions
-            Section {
-                NavigationLink {
-                    EditProfileView()
-                } label: {
-                    Label("Rediger profil", systemImage: "person.fill")
-                }
+    // MARK: - Logged-in
+
+    private var loggedInView: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                ProfileSummaryCard(
+                    name: authManager.profile?.fullName ?? authManager.displayName,
+                    avatarUrl: authManager.profile?.avatarUrl,
+                    location: nil,
+                    trips: tripCount,
+                    reviews: reviewCount,
+                    joinedYear: authManager.profile?.joinedYear,
+                    isVerified: authManager.isHost && (authManager.profile?.stripeOnboardingComplete ?? false)
+                )
+                .onTapGesture { showSelfProfile = true }
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
 
                 if authManager.isHost {
                     NavigationLink {
-                        HostRequestsView()
-                    } label: {
-                        HStack {
-                            Label("Forespørsler", systemImage: "tray.full.fill")
-                            if pendingRequestCount > 0 {
-                                Spacer()
-                                Text("\(pendingRequestCount)")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 8)
-                                    .padding(.vertical, 2)
-                                    .background(Color.red)
-                                    .clipShape(Capsule())
-                            }
-                        }
-                    }
-                    NavigationLink {
-                        MyListingsView()
-                    } label: {
-                        Label("Mine annonser", systemImage: "house.fill")
-                    }
-                    NavigationLink {
                         EarningsView()
                     } label: {
-                        Label("Inntekter", systemImage: "chart.line.uptrend.xyaxis")
+                        HostInntektCard(
+                            monthName: currentMonthName,
+                            netIncome: monthlyNet,
+                            bookingCount: monthlyBookings,
+                            trend: nil
+                        )
                     }
-                } else {
-                    NavigationLink {
-                        BecomeHostView()
-                    } label: {
-                        Label("Bli utleier", systemImage: "plus.circle.fill")
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 16)
+                }
+
+                if authManager.isHost {
+                    hostSection
+                        .padding(.horizontal, 16)
+                }
+
+                accountSection
+                    .padding(.horizontal, 16)
+
+                if !authManager.isHost {
+                    becomeHostCard
+                        .padding(.horizontal, 16)
+                }
+
+                logoutRow
+                    .padding(.horizontal, 16)
+
+                Spacer(minLength: 40)
+            }
+        }
+        .background(Color.neutral50)
+        .navigationTitle("Profil")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    navigateToNotifications = true
+                } label: {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "bell")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.neutral900)
+                            .frame(width: 36, height: 36)
+                            .background(Color.neutral100)
+                            .clipShape(Circle())
+                        if unreadNotifications > 0 {
+                            Circle()
+                                .fill(Color.red)
+                                .frame(width: 9, height: 9)
+                                .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                                .offset(x: 2, y: -2)
+                        }
                     }
-                }
-            }
-
-            Section {
-                NavigationLink {
-                    SettingsView()
-                } label: {
-                    Label("Innstillinger", systemImage: "gearshape.fill")
-                }
-            }
-
-            // Logout
-            Section {
-                Button(role: .destructive) {
-                    showLogoutConfirm = true
-                } label: {
-                    Label("Logg ut", systemImage: "rectangle.portrait.and.arrow.right")
                 }
             }
         }
-        .navigationTitle("Profil")
         .navigationDestination(isPresented: $navigateToHostRequests) {
             HostRequestsView()
+        }
+        .navigationDestination(isPresented: $navigateToNotifications) {
+            NotificationsView()
+        }
+        .sheet(isPresented: $showSelfProfile) {
+            if let userId = authManager.currentUser?.id {
+                PublicProfileView(
+                    hostId: userId.uuidString.lowercased(),
+                    initialName: authManager.profile?.fullName,
+                    initialAvatar: authManager.profile?.avatarUrl,
+                    initialJoinedYear: authManager.profile?.joinedYear,
+                    initialListingsCount: nil
+                )
+            }
         }
         .alert("Logg ut", isPresented: $showLogoutConfirm) {
             Button("Logg ut", role: .destructive) {
@@ -158,11 +159,9 @@ struct ProfileView: View {
             Text("Er du sikker på at du vil logge ut?")
         }
         .task(id: authManager.currentUser?.id) {
-            await loadPendingCount()
+            await loadAll()
         }
         .onAppear {
-            // Hvis push allerede har satt type før dette viewet mountes
-            // (typisk når tab-switch skjer fra kald push), fanger vi det her.
             if pushRouter.pendingBookingType == "booking_request" {
                 navigateToHostRequests = true
                 pushRouter.clearBooking()
@@ -172,6 +171,183 @@ struct ProfileView: View {
             if newType == "booking_request" {
                 navigateToHostRequests = true
                 pushRouter.clearBooking()
+            }
+        }
+    }
+
+    // MARK: - Sections
+
+    private var hostSection: some View {
+        VStack(spacing: 0) {
+            sectionHeader("Vertskap")
+
+            menuRow(
+                icon: "tray.full.fill",
+                label: "Forespørsler",
+                badge: pendingRequestCount > 0 ? "\(pendingRequestCount)" : nil,
+                destination: AnyView(HostRequestsView())
+            )
+            menuRow(
+                icon: "calendar",
+                label: "Kalender",
+                destination: AnyView(CalendarRootView())
+            )
+            menuRow(
+                icon: "house.fill",
+                label: "Mine annonser",
+                destination: AnyView(MyListingsView())
+            )
+            menuRow(
+                icon: "chart.line.uptrend.xyaxis",
+                label: "Inntekter",
+                destination: AnyView(EarningsView())
+            )
+        }
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
+    }
+
+    private var accountSection: some View {
+        VStack(spacing: 0) {
+            sectionHeader("Konto")
+            menuRow(
+                icon: "person.fill",
+                label: "Rediger profil",
+                destination: AnyView(EditProfileView())
+            )
+            menuRow(
+                icon: "gearshape.fill",
+                label: "Innstillinger",
+                destination: AnyView(SettingsView())
+            )
+        }
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
+    }
+
+    private var becomeHostCard: some View {
+        NavigationLink {
+            BecomeHostView()
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(Color.primary100).frame(width: 44, height: 44)
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color.primary600)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Bli utleier")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text("Det er lett å komme i gang og tjene ekstra penger.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                        .lineLimit(2)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral400)
+            }
+            .padding(16)
+            .background(Color.primary50)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var logoutRow: some View {
+        Button {
+            showLogoutConfirm = true
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: "rectangle.portrait.and.arrow.right")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.red)
+                    .frame(width: 24)
+                Text("Logg ut")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.red)
+                Spacer()
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func sectionHeader(_ title: String) -> some View {
+        HStack {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.neutral500)
+                .textCase(.uppercase)
+                .tracking(0.5)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 14)
+        .padding(.bottom, 4)
+    }
+
+    @ViewBuilder
+    private func menuRow(icon: String, label: String, badge: String? = nil, destination: AnyView) -> some View {
+        NavigationLink {
+            destination
+        } label: {
+            HStack(spacing: 14) {
+                Image(systemName: icon)
+                    .font(.system(size: 15))
+                    .foregroundStyle(.neutral600)
+                    .frame(width: 24)
+                Text(label)
+                    .font(.system(size: 15))
+                    .foregroundStyle(.neutral900)
+                Spacer()
+                if let badge {
+                    Text(badge)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 2)
+                        .background(Color.red)
+                        .clipShape(Capsule())
+                }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral400)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var currentMonthName: String {
+        let df = DateFormatter()
+        df.locale = Locale(identifier: "nb_NO")
+        df.dateFormat = "MMMM yyyy"
+        return df.string(from: Date()).capitalized
+    }
+
+    // MARK: - Data loading
+
+    private func loadAll() async {
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask { await loadPendingCount() }
+            group.addTask { await loadUnreadCount() }
+            group.addTask { await loadTripCount() }
+            group.addTask { await loadReviewCount() }
+            if authManager.isHost {
+                group.addTask { await loadMonthlyRevenue() }
             }
         }
     }
@@ -195,7 +371,89 @@ struct ProfileView: View {
             print("loadPendingCount error: \(error)")
         }
     }
+
+    private func loadUnreadCount() async {
+        guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
+        do {
+            let count = try await supabase
+                .from("notifications")
+                .select("id", head: true, count: .exact)
+                .eq("user_id", value: userId)
+                .eq("read", value: false)
+                .execute()
+                .count ?? 0
+            unreadNotifications = count
+        } catch {
+            print("loadUnreadCount error: \(error)")
+        }
+    }
+
+    private func loadTripCount() async {
+        guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
+        do {
+            let count = try await supabase
+                .from("bookings")
+                .select("id", head: true, count: .exact)
+                .eq("user_id", value: userId)
+                .eq("status", value: "confirmed")
+                .execute()
+                .count ?? 0
+            tripCount = count
+        } catch {
+            print("loadTripCount error: \(error)")
+        }
+    }
+
+    private func loadReviewCount() async {
+        guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
+        do {
+            let count = try await supabase
+                .from("reviews")
+                .select("id", head: true, count: .exact)
+                .eq("reviewee_id", value: userId)
+                .execute()
+                .count ?? 0
+            reviewCount = count
+        } catch {
+            print("loadReviewCount error: \(error)")
+        }
+    }
+
+    private func loadMonthlyRevenue() async {
+        guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
+        // Første dag i inneværende måned i Oslo-tz
+        let cal = Calendar.current
+        var comps = cal.dateComponents([.year, .month], from: Date())
+        comps.day = 1
+        guard let monthStart = cal.date(from: comps) else { return }
+        let iso = ISO8601DateFormatter()
+        iso.timeZone = TimeZone(identifier: "Europe/Oslo")
+        let from = iso.string(from: monthStart)
+
+        struct Row: Decodable { let totalPrice: Int
+            enum CodingKeys: String, CodingKey { case totalPrice = "total_price" }
+        }
+
+        do {
+            let rows: [Row] = try await supabase
+                .from("bookings")
+                .select("total_price")
+                .eq("host_id", value: userId)
+                .eq("status", value: "confirmed")
+                .eq("payment_status", value: "paid")
+                .gte("created_at", value: from)
+                .execute()
+                .value
+            let serviceFee = 0.10
+            monthlyNet = rows.reduce(0) { $0 + Int(Double($1.totalPrice) * (1 - serviceFee)) }
+            monthlyBookings = rows.count
+        } catch {
+            print("loadMonthlyRevenue error: \(error)")
+        }
+    }
 }
+
+// MARK: - EditProfileView (uendret fra tidligere — bio + avatar-crop)
 
 struct EditProfileView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -313,8 +571,6 @@ struct EditProfileView: View {
         Button {
             showImagePicker = true
         } label: {
-            // Avatar-sirkel (clippet) med kamera-badge som sitter UTENFOR clip-maska
-            // så den ikke kuttes av sirkelen.
             ZStack(alignment: .bottomTrailing) {
                 Group {
                     if let urlStr = authManager.profile?.avatarUrl, let url = URL(string: urlStr) {
@@ -391,6 +647,8 @@ struct EditProfileView: View {
         }
     }
 }
+
+// MARK: - Mine annonser
 
 struct MyListingsView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -469,7 +727,6 @@ struct MyListingsView: View {
 
                                 Spacer()
 
-                                // Action buttons
                                 HStack(spacing: 12) {
                                     Button {
                                         qrTarget = listing

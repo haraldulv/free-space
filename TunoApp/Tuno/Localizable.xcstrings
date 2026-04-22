@@ -99,6 +99,9 @@
         }
       }
     },
+    "%@ / 500" : {
+
+    },
     "%@ %@" : {
       "localizations" : {
         "de" : {
@@ -1285,6 +1288,9 @@
         }
       }
     },
+    "Dette vises til gjester som trykker på profilen din. Hold det kort og vennlig." : {
+
+    },
     "Din andel" : {
 
     },
@@ -1304,6 +1310,9 @@
           }
         }
       }
+    },
+    "Dine hurtigsvar" : {
+
     },
     "Direkte" : {
       "extractionState" : "manual",
@@ -2642,6 +2651,9 @@
           }
         }
       }
+    },
+    "Hurtigsvar vises i meldingsfeltet når du trykker +. Tap for å redigere, sveip for å slette." : {
+
     },
     "Hva slags plass leier du ut?" : {
       "extractionState" : "manual",
@@ -4142,6 +4154,9 @@
     "Medlem siden %@" : {
 
     },
+    "Melding" : {
+
+    },
     "Melding til gjest (valgfri)" : {
 
     },
@@ -4522,7 +4537,13 @@
         }
       }
     },
+    "Om" : {
+
+    },
     "Om appen" : {
+
+    },
+    "Om deg" : {
 
     },
     "Om denne plassen" : {
@@ -6223,6 +6244,9 @@
         }
       }
     },
+    "Tips: bruk {listing}, {checkin} eller {checkout} for å sette inn navn og tider automatisk." : {
+
+    },
     "Tittel" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6352,7 +6376,7 @@
         }
       }
     },
-    "Trykk på et hurtigsvar for å sette det inn i meldingsfeltet. Du kan redigere teksten før du sender." : {
+    "Trykk på et hurtigsvar for å sette det inn i meldingsfeltet. Bruk {listing}, {checkin} og {checkout} i egne svar for å sette inn aktuell info automatisk." : {
 
     },
     "Trykk på kartet" : {

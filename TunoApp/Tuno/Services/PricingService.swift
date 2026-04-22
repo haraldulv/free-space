@@ -89,6 +89,76 @@ enum PricingService {
             .execute()
     }
 
+    /// Sett override-pris for én dato. Nil/0 sletter eksisterende.
+    static func setOverride(listingId: String, date: String, price: Int?) async throws {
+        try await supabase
+            .from("listing_pricing_overrides")
+            .delete()
+            .eq("listing_id", value: listingId)
+            .eq("date", value: date)
+            .execute()
+
+        if let price, price > 0 {
+            struct NewOverride: Encodable {
+                let listing_id: String
+                let date: String
+                let price: Int
+            }
+            try await supabase
+                .from("listing_pricing_overrides")
+                .insert(NewOverride(listing_id: listingId, date: date, price: price))
+                .execute()
+        }
+    }
+
+    /// Sett override for mange datoer samtidig (upsert pattern — slett alle først, insert så).
+    static func setOverrides(listingId: String, dates: [String], price: Int) async throws {
+        guard !dates.isEmpty, price > 0 else { return }
+        try await supabase
+            .from("listing_pricing_overrides")
+            .delete()
+            .eq("listing_id", value: listingId)
+            .in("date", values: dates)
+            .execute()
+
+        struct NewOverride: Encodable {
+            let listing_id: String
+            let date: String
+            let price: Int
+        }
+        let rows = dates.map { NewOverride(listing_id: listingId, date: $0, price: price) }
+        try await supabase
+            .from("listing_pricing_overrides")
+            .insert(rows)
+            .execute()
+    }
+
+    /// Slett flere override på én gang.
+    static func clearOverrides(listingId: String, dates: [String]) async throws {
+        guard !dates.isEmpty else { return }
+        try await supabase
+            .from("listing_pricing_overrides")
+            .delete()
+            .eq("listing_id", value: listingId)
+            .in("date", values: dates)
+            .execute()
+    }
+
+    /// Hent alle overrides for et listing.
+    static func fetchOverrides(listingId: String) async -> [Override] {
+        do {
+            let overrides: [Override] = try await supabase
+                .from("listing_pricing_overrides")
+                .select()
+                .eq("listing_id", value: listingId)
+                .execute()
+                .value
+            return overrides
+        } catch {
+            return []
+        }
+    }
+
     /// Hent alle regler for et listing.
     static func fetchRules(listingId: String) async -> [Rule] {
         do {
