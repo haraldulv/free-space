@@ -157,6 +157,16 @@ enum VehicleType: String, Codable, CaseIterable {
         case .motorhome: return "box.truck.fill"
         }
     }
+
+    /// Asset-navn for Lucide-ikoner (samme som web-appen). Bruk `Image(lucideIcon)`
+    /// i SwiftUI — Xcode-assets er satt opp som template-rendering SVG-er.
+    var lucideIcon: String {
+        switch self {
+        case .car: return "lucide-car"
+        case .campervan: return "lucide-caravan"
+        case .motorhome: return "lucide-caravan"
+        }
+    }
 }
 
 // MARK: - Listing Extra
