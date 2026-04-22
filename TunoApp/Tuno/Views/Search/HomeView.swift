@@ -42,7 +42,7 @@ struct HomeView: View {
                         .shadow(color: .black.opacity(0.08), radius: 10, y: 3)
                     }
 
-                    // Kategori-picker (Airbnb-stil med større ikoner og mer plass)
+                    // Kategori-picker med Tuno-grønn på aktiv state
                     HStack(spacing: 0) {
                         ForEach([VehicleType.motorhome, .car], id: \.self) { type in
                             Button {
@@ -53,12 +53,12 @@ struct HomeView: View {
                             } label: {
                                 VStack(spacing: 6) {
                                     Image(systemName: type.icon)
-                                        .font(.system(size: 22, weight: .regular))
+                                        .font(.system(size: 22, weight: selectedVehicle == type ? .semibold : .regular))
                                         .frame(height: 28)
                                     Text(type.displayName)
                                         .font(.system(size: 12, weight: selectedVehicle == type ? .semibold : .medium))
                                 }
-                                .foregroundStyle(selectedVehicle == type ? .neutral900 : .neutral500)
+                                .foregroundStyle(selectedVehicle == type ? Color.primary600 : .neutral400)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 8)
                             }
@@ -67,7 +67,7 @@ struct HomeView: View {
                     .overlay(alignment: .bottom) {
                         GeometryReader { geo in
                             Rectangle()
-                                .fill(Color.neutral900)
+                                .fill(Color.primary600)
                                 .frame(width: geo.size.width / 2 - 40, height: 2)
                                 .offset(
                                     x: selectedVehicle == .motorhome ? 20 : geo.size.width / 2 + 20,
@@ -101,23 +101,23 @@ struct HomeView: View {
                     }
                     .padding(.top, 40)
                 } else {
-                    // Popular listings
-                    if !listingService.popularListings.isEmpty {
-                        ListingSection(
-                            title: "Populære i Norge",
-                            listings: listingService.popularListings
-                        )
-                    }
-
-                    // Featured
+                    // Nye plasser (alle ekte bruker-annonser, sortert nyest først)
                     if !listingService.featuredListings.isEmpty {
                         ListingSection(
-                            title: "Fremhevede i Norge",
+                            title: "Nye plasser",
                             listings: listingService.featuredListings
                         )
                     }
 
-                    // Available today
+                    // Populære (med rating)
+                    if !listingService.popularListings.isEmpty {
+                        ListingSection(
+                            title: "Populære nå",
+                            listings: listingService.popularListings
+                        )
+                    }
+
+                    // Tilgjengelig i dag (direktebestilling, ikke blokkert)
                     if !listingService.availableTodayListings.isEmpty {
                         ListingSection(
                             title: "Tilgjengelig i dag",

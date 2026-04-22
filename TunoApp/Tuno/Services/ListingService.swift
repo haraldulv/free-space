@@ -14,6 +14,7 @@ final class ListingService: ObservableObject {
                 .from("listings")
                 .select()
                 .or("is_active.eq.true,is_active.is.null")
+                .not("host_id", operator: .is, value: "null")  // Ekskluder seed-data (har ingen host_id)
                 .contains("tags", value: [tag])
 
             if let vehicleType {
@@ -34,6 +35,40 @@ final class ListingService: ObservableObject {
             return listings
         } catch {
             print("Failed to fetch listings by tag \(tag): \(error)")
+            return []
+        }
+    }
+
+    /// Henter ekte bruker-annonser (har host_id satt) — brukes på forsiden
+    /// i stedet for (eller som supplement til) tag-baserte lister. Nye
+    /// opprettede annonser vises selv uten 'popular'/'featured'-tags.
+    func fetchRealListings(vehicleType: VehicleType? = nil, limit: Int = 20) async -> [Listing] {
+        do {
+            var request = supabase
+                .from("listings")
+                .select()
+                .or("is_active.eq.true,is_active.is.null")
+                .not("host_id", operator: .is, value: "null")
+
+            if let vehicleType {
+                switch vehicleType {
+                case .car:
+                    request = request.in("vehicle_type", values: ["car", "campervan", "motorhome"])
+                case .campervan:
+                    request = request.in("vehicle_type", values: ["campervan", "motorhome"])
+                case .motorhome:
+                    request = request.in("vehicle_type", values: ["motorhome"])
+                }
+            }
+
+            let listings: [Listing] = try await request
+                .order("created_at", ascending: false)
+                .limit(limit)
+                .execute()
+                .value
+            return listings
+        } catch {
+            print("Failed to fetch real listings: \(error)")
             return []
         }
     }
@@ -70,13 +105,28 @@ final class ListingService: ObservableObject {
     func fetchHomeListings(vehicleType: VehicleType? = nil) async {
         isLoading = true
 
-        async let popular = fetchByTag("popular", vehicleType: vehicleType, limit: 20)
-        async let featured = fetchByTag("featured", vehicleType: vehicleType, limit: 20)
-        async let available = fetchByTag("available_today", vehicleType: vehicleType, limit: 20)
+        // Viser kun ekte bruker-annonser. Seeds (uten host_id) filtreres ut.
+        let all = await fetchRealListings(vehicleType: vehicleType, limit: 40)
 
-        popularListings = await popular
-        featuredListings = await featured
-        availableTodayListings = await available
+        // "Populære" = alle med rating > 0 sortert etter rating+review_count
+        popularListings = all.filter { ($0.reviewCount ?? 0) > 0 }
+            .sorted { lhs, rhs in
+                let lhsScore = (lhs.rating ?? 0) * Double(lhs.reviewCount ?? 0)
+                let rhsScore = (rhs.rating ?? 0) * Double(rhs.reviewCount ?? 0)
+                return lhsScore > rhsScore
+            }
+        // "Nye" = alle nyeste, som er standard rekkefølge
+        featuredListings = all
+        // "Tilgjengelig i dag" = direktebestilling + ikke blokkert i dag
+        let todayIso: String = {
+            let f = DateFormatter()
+            f.dateFormat = "yyyy-MM-dd"
+            f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+            return f.string(from: Date())
+        }()
+        availableTodayListings = all.filter {
+            ($0.instantBooking == true) && !($0.blockedDates?.contains(todayIso) ?? false)
+        }
 
         isLoading = false
     }
