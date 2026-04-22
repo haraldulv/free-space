@@ -83,8 +83,7 @@ struct ProfileView: View {
                             monthName: currentMonthName,
                             netIncome: monthlyNet,
                             bookingCount: monthlyBookings,
-                            recentMonths: recentMonthsEarnings,
-                            trend: nil
+                            recentMonths: recentMonthsEarnings
                         )
                         .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
                     }
@@ -120,18 +119,14 @@ struct ProfileView: View {
                     navigateToNotifications = true
                 } label: {
                     Image(systemName: "bell")
-                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.neutral900)
-                        .frame(width: 38, height: 38)
-                        .background(Color.neutral100)
-                        .clipShape(Circle())
                         .overlay(alignment: .topTrailing) {
                             if unreadNotifications > 0 {
                                 Circle()
                                     .fill(Color.red)
-                                    .frame(width: 10, height: 10)
-                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                    .offset(x: -2, y: 2)
+                                    .frame(width: 8, height: 8)
+                                    .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
+                                    .offset(x: 4, y: -2)
                             }
                         }
                 }
@@ -447,11 +442,11 @@ struct ProfileView: View {
         var comps = cal.dateComponents([.year, .month], from: Date())
         comps.day = 1
         guard let currentMonthStart = cal.date(from: comps) else { return }
-        guard let sixMonthsAgo = cal.date(byAdding: .month, value: -5, to: currentMonthStart) else { return }
+        guard let threeMonthsAgo = cal.date(byAdding: .month, value: -2, to: currentMonthStart) else { return }
 
         let iso = ISO8601DateFormatter()
         iso.timeZone = TimeZone(identifier: "Europe/Oslo")
-        let fromRecent = iso.string(from: sixMonthsAgo)
+        let fromRecent = iso.string(from: threeMonthsAgo)
         let fromThisMonth = iso.string(from: currentMonthStart)
 
         struct Row: Decodable {
@@ -507,7 +502,7 @@ struct ProfileView: View {
             }
 
             var months: [HostInntektCard.MonthlyEarning] = []
-            for offset in (0...5).reversed() {
+            for offset in (0...2).reversed() {
                 guard let monthDate = cal.date(byAdding: .month, value: -offset, to: currentMonthStart) else { continue }
                 let key = keyFormatter.string(from: monthDate)
                 let label = shortMonthFormatter.string(from: monthDate).lowercased()
@@ -528,6 +523,7 @@ struct ProfileView: View {
 
 struct EditProfileView: View {
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.dismiss) private var dismiss
     @State private var fullName = ""
     @State private var bio = ""
     @State private var location = ""
@@ -535,6 +531,8 @@ struct EditProfileView: View {
     @State private var showImagePicker = false
     @State private var isUploadingAvatar = false
     @State private var avatarError: String?
+    @State private var saveError: String?
+    @State private var showSavedBanner = false
 
     var body: some View {
         Form {
@@ -586,39 +584,52 @@ struct EditProfileView: View {
                 Text("Om deg")
             }
 
+            if let err = saveError {
+                Section {
+                    Text(err)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.red)
+                }
+            }
+
             Section {
                 Button {
-                    Task {
-                        isSaving = true
-                        struct Payload: Encodable {
-                            let full_name: String
-                            let bio: String?
-                            let location: String?
-                        }
-                        let trimmedBio = bio.trimmingCharacters(in: .whitespaces)
-                        let trimmedLoc = location.trimmingCharacters(in: .whitespaces)
-                        try? await supabase
-                            .from("profiles")
-                            .update(Payload(
-                                full_name: fullName,
-                                bio: trimmedBio.isEmpty ? nil : trimmedBio,
-                                location: trimmedLoc.isEmpty ? nil : trimmedLoc
-                            ))
-                            .eq("id", value: authManager.currentUser?.id.uuidString ?? "")
-                            .execute()
-                        await authManager.loadProfile()
-                        isSaving = false
-                    }
+                    Task { await saveProfile() }
                 } label: {
-                    if isSaving {
-                        ProgressView()
-                    } else {
-                        Text("Lagre endringer")
+                    HStack {
+                        if isSaving {
+                            ProgressView().tint(.primary600)
+                            Text("Lagrer …").foregroundStyle(.neutral500)
+                        } else {
+                            Text("Lagre endringer")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.primary600)
+                        }
+                        Spacer()
                     }
                 }
+                .disabled(isSaving)
             }
         }
         .navigationTitle("Rediger profil")
+        .overlay(alignment: .top) {
+            if showSavedBanner {
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.system(size: 16))
+                    Text("Lagret!")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 10)
+                .background(Color(hex: "#10b981"))
+                .clipShape(Capsule())
+                .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
+                .padding(.top, 10)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
         .onAppear {
             fullName = authManager.profile?.fullName ?? ""
             location = authManager.profile?.location ?? ""
@@ -692,6 +703,50 @@ struct EditProfileView: View {
         }
         .buttonStyle(.plain)
         .disabled(isUploadingAvatar)
+    }
+
+    @MainActor
+    private func saveProfile() async {
+        guard let userId = authManager.currentUser?.id else {
+            saveError = "Ikke innlogget"
+            return
+        }
+        isSaving = true
+        saveError = nil
+        defer { isSaving = false }
+
+        struct Payload: Encodable {
+            let full_name: String
+            let bio: String?
+            let location: String?
+        }
+        let trimmedBio = bio.trimmingCharacters(in: .whitespaces)
+        let trimmedLoc = location.trimmingCharacters(in: .whitespaces)
+        let trimmedName = fullName.trimmingCharacters(in: .whitespaces)
+
+        guard !trimmedName.isEmpty else {
+            saveError = "Navn kan ikke være tomt"
+            return
+        }
+
+        do {
+            try await supabase
+                .from("profiles")
+                .update(Payload(
+                    full_name: trimmedName,
+                    bio: trimmedBio.isEmpty ? nil : trimmedBio,
+                    location: trimmedLoc.isEmpty ? nil : trimmedLoc
+                ))
+                .eq("id", value: userId.uuidString)
+                .execute()
+            await authManager.loadProfile()
+            withAnimation { showSavedBanner = true }
+            // Vent 1,0 s så bannerenslik user faktisk ser det, og naviger tilbake
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            dismiss()
+        } catch {
+            saveError = "Kunne ikke lagre: \(error.localizedDescription)"
+        }
     }
 
     private func uploadAvatar(_ image: UIImage) async {

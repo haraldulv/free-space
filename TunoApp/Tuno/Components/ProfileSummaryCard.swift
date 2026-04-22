@@ -86,19 +86,19 @@ struct ProfileSummaryCard: View {
         .shadow(color: .black.opacity(0.06), radius: 10, y: 3)
     }
 
-    /// Grønn sjekkmerke-badge med hvit ring. Bygget uten SF `checkmark.seal.fill`
-    /// som har interne transparent-punkter — vi lager emblemet manuelt i ZStack
-    /// så det aldri blir hvite kanter rundt.
+    /// Blå "verifisert"-badge bygget som to lagrede seal-symboler (hvit halo +
+    /// blå fyll) med en hvit sjekkmerke oppå. Inspirert av Twitter/X's verifisert-
+    /// badge og Airbnbs shield-emblem — men i Tunos sekundære blåfarge.
     private var verifiedBadge: some View {
         ZStack {
-            Circle()
-                .fill(Color.white)
-                .frame(width: 28, height: 28)
-            Circle()
-                .fill(Color.primary600)
-                .frame(width: 24, height: 24)
+            Image(systemName: "seal.fill")
+                .font(.system(size: 34))
+                .foregroundStyle(.white)
+            Image(systemName: "seal.fill")
+                .font(.system(size: 28))
+                .foregroundStyle(Color(hex: "#1d9bf0"))
             Image(systemName: "checkmark")
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 12, weight: .heavy))
                 .foregroundStyle(.white)
         }
     }

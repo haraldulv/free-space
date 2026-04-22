@@ -105,10 +105,14 @@ struct PublicProfileView: View {
 
             if isVerified {
                 ZStack {
-                    Circle().fill(Color.white).frame(width: 32, height: 32)
-                    Circle().fill(Color.primary600).frame(width: 28, height: 28)
+                    Image(systemName: "seal.fill")
+                        .font(.system(size: 38))
+                        .foregroundStyle(.white)
+                    Image(systemName: "seal.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(Color(hex: "#1d9bf0"))
                     Image(systemName: "checkmark")
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 14, weight: .heavy))
                         .foregroundStyle(.white)
                 }
             }

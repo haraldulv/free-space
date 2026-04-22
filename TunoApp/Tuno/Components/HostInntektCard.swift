@@ -2,14 +2,13 @@ import SwiftUI
 import Charts
 
 /// Full-bredde kompakt inntekt-kort for verter. Viser denne månedens
-/// netto-inntekt (etter Tunos fee), antall bookings, og en mini bar chart
-/// med de siste 6 månedene.
+/// netto-inntekt (etter Tunos fee), antall bookings, og en liten bar chart
+/// med de siste 3 månedene plassert mellom label og beløp.
 struct HostInntektCard: View {
     let monthName: String
     let netIncome: Int
     let bookingCount: Int
     let recentMonths: [MonthlyEarning]
-    let trend: Trend?
 
     struct MonthlyEarning: Identifiable, Hashable {
         let id: String  // YYYY-MM
@@ -17,68 +16,45 @@ struct HostInntektCard: View {
         let earnings: Int
     }
 
-    enum Trend {
-        case up(Int)
-        case down(Int)
-        case flat
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(alignment: .center, spacing: 16) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "chart.line.uptrend.xyaxis")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text("Inntekt")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-                    .foregroundStyle(.neutral600)
-                    Text(monthName)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
+        HStack(alignment: .center, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Image(systemName: "chart.line.uptrend.xyaxis")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text("Inntekt")
+                        .font(.system(size: 14, weight: .semibold))
                 }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 4) {
-                    Text(formatKr(netIncome))
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(.neutral900)
-                    HStack(spacing: 4) {
-                        if let trend {
-                            switch trend {
-                            case .up(let pct):
-                                Image(systemName: "arrow.up.right")
-                                    .font(.system(size: 10, weight: .bold))
-                                Text("\(pct)%")
-                                    .font(.system(size: 11, weight: .semibold))
-                            case .down(let pct):
-                                Image(systemName: "arrow.down.right")
-                                    .font(.system(size: 10, weight: .bold))
-                                Text("\(pct)%")
-                                    .font(.system(size: 11, weight: .semibold))
-                            case .flat:
-                                EmptyView()
-                            }
-                        }
-                        Text(bookingText)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.neutral500)
-                    }
-                    .foregroundStyle(trendColor)
-                }
+                .foregroundStyle(.neutral600)
+                Text(monthName)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
             }
+            .fixedSize()
 
             if !recentMonths.isEmpty {
                 miniChart
-                    .frame(height: 48)
+                    .frame(height: 36)
+                    .frame(maxWidth: .infinity)
+            } else {
+                Spacer()
             }
+
+            VStack(alignment: .trailing, spacing: 3) {
+                Text(formatKr(netIncome))
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                Text(bookingText)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral500)
+            }
+            .fixedSize()
         }
-        .padding(16)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
     }
 
     private var miniChart: some View {
@@ -87,21 +63,21 @@ struct HostInntektCard: View {
                 BarMark(
                     x: .value("Måned", month.shortLabel),
                     y: .value("kr", month.earnings),
-                    width: .ratio(0.6)
+                    width: .fixed(10)
                 )
                 .foregroundStyle(
                     month.id == currentMonthKey
                         ? Color.primary600
-                        : Color.primary600.opacity(0.35)
+                        : Color.primary600.opacity(0.28)
                 )
-                .cornerRadius(4)
+                .cornerRadius(3)
             }
         }
         .chartYAxis(.hidden)
         .chartXAxis {
             AxisMarks { _ in
                 AxisValueLabel()
-                    .font(.system(size: 10))
+                    .font(.system(size: 9))
                     .foregroundStyle(.neutral500)
             }
         }
@@ -113,15 +89,6 @@ struct HostInntektCard: View {
 
     private var bookingText: String {
         "\(bookingCount) \(bookingCount == 1 ? "booking" : "bookinger")"
-    }
-
-    private var trendColor: Color {
-        guard let trend else { return .neutral500 }
-        switch trend {
-        case .up: return Color(hex: "#10b981")
-        case .down: return Color(hex: "#dc2626")
-        case .flat: return .neutral500
-        }
     }
 
     private func formatKr(_ value: Int) -> String {
