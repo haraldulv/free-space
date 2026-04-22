@@ -95,25 +95,13 @@ struct CalendarRootView: View {
     }
 }
 
-// MARK: - PreferenceKey for måned-grid-rammer (brukt til drag-select)
+// MARK: - HostCalendarView (SwiftUI-shell rundt UICalendarView)
 
-private struct MonthGridFrame: Equatable {
-    let monthStart: Date       // første dag i måneden (midnatt, Europe/Oslo)
-    let rect: CGRect           // gridens rect i calendarContent-rommet
-    let rows: Int              // antall rader (days.count / 7)
-}
-
-private struct MonthGridFramesPreference: PreferenceKey {
-    static var defaultValue: [MonthGridFrame] { [] }
-    static func reduce(value: inout [MonthGridFrame], nextValue: () -> [MonthGridFrame]) {
-        value.append(contentsOf: nextValue())
-    }
-}
-
-/// Kalender for én annonse — multi-select via tap-anker-pattern (tap start,
-/// tap slutt = område) og valgfritt penselvalg-modus (dra over datoene med
-/// scroll låst). Bulk-actions (blokker, sett pris, fjern overstyring) med
-/// plass-velger.
+/// Kalender for én annonse. Bruker Apples native `UICalendarView` via
+/// `UIViewRepresentable` for scroll + tap, og Airbnb-stil tap-anker-pattern
+/// (tap start → tap slutt = område) for range-valg. Flere disjunkte områder
+/// kan akkumuleres. Bulk-actions (blokker, sett pris, fjern overstyring) med
+/// plass-velger for host som har flere plasser.
 struct HostCalendarView: View {
     let listing: Listing
 
@@ -134,15 +122,7 @@ struct HostCalendarView: View {
     @State private var selectedSpotIds: Set<String> = []
     @State private var showSpotPicker = false
 
-    // Penselvalg-modus (paint mode) + måned-grid-rammer for celle-oppslag
-    @State private var paintMode = false
-    @State private var paintAnchorIso: String?
-    @State private var prePaintSelection: Set<String> = []
-    @State private var monthGridFrames: [MonthGridFrame] = []
-
-    private let monthsAhead = 12
     private var basePrice: Int { listing.price ?? 0 }
-
     private var hasMultipleSpots: Bool { spotMarkers.count > 1 }
 
     private var spotSelectionLabel: String {
@@ -153,62 +133,39 @@ struct HostCalendarView: View {
         return "\(selectedSpotIds.count) av \(spotMarkers.count)"
     }
 
-    private let isoFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
-        f.locale = Locale(identifier: "en_US_POSIX")
-        return f
-    }()
-
-    private let monthNameFormatter: DateFormatter = {
-        let f = DateFormatter()
-        f.dateFormat = "MMMM yyyy"
-        f.locale = Locale(identifier: "nb_NO")
-        f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
-        return f
-    }()
-
     var body: some View {
         ZStack(alignment: .bottom) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    if hasMultipleSpots {
-                        spotPickerButton
-                            .padding(.horizontal, 16)
-                            .padding(.top, 12)
-                            .padding(.bottom, 4)
-                    }
-
-                    if paintMode {
-                        paintModeBanner
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
-                    } else if rangeAnchor != nil {
-                        rangeHint
-                            .padding(.horizontal, 16)
-                            .padding(.top, 6)
-                    }
-
-                    if isLoading {
-                        ProgressView().padding(.top, 40)
-                    }
-
-                    LazyVStack(spacing: 28, pinnedViews: []) {
-                        ForEach(visibleMonthList, id: \.self) { monthStart in
-                            monthSection(monthStart)
-                        }
-                    }
-                    .padding(.vertical, 16)
-                    .padding(.bottom, selectedDates.isEmpty ? 16 : 140)
+            VStack(spacing: 0) {
+                if hasMultipleSpots {
+                    spotPickerButton
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 4)
                 }
-                .coordinateSpace(name: "calendarContent")
+
+                if rangeAnchor != nil {
+                    rangeHint
+                        .padding(.horizontal, 16)
+                        .padding(.top, 6)
+                        .padding(.bottom, 4)
+                }
+
+                if isLoading {
+                    ProgressView().padding(.top, 40)
+                    Spacer()
+                } else {
+                    HostCalendarUIView(
+                        selectedDates: $selectedDates,
+                        rangeAnchor: $rangeAnchor,
+                        blockedDates: blockedDates,
+                        bookedDates: bookedDates,
+                        overrides: overrides,
+                        rules: rules,
+                        basePrice: basePrice
+                    )
+                }
             }
-            .scrollDisabled(paintMode)
-            .onPreferenceChange(MonthGridFramesPreference.self) { frames in
-                monthGridFrames = frames
-            }
-            .gesture(paintGesture, including: paintMode ? .gesture : .subviews)
+            .padding(.bottom, selectedDates.isEmpty ? 0 : 140)
 
             if !selectedDates.isEmpty {
                 selectionBar
@@ -232,14 +189,6 @@ struct HostCalendarView: View {
         .navigationTitle(listing.internalName ?? listing.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    togglePaintMode()
-                } label: {
-                    Image(systemName: paintMode ? "hand.draw.fill" : "hand.draw")
-                        .foregroundStyle(paintMode ? Color.primary600 : .neutral900)
-                }
-            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showPricingRulesEditor = true
@@ -275,7 +224,7 @@ struct HostCalendarView: View {
         .task(id: listing.id) { await loadAll() }
     }
 
-    // MARK: - Spot-velger
+    // MARK: - Spot-velger-knapp
 
     @ViewBuilder
     private var spotPickerButton: some View {
@@ -309,7 +258,7 @@ struct HostCalendarView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Range-hint bar (tap-anker) og paint-mode-banner
+    // MARK: - Range-hint bar
 
     @ViewBuilder
     private var rangeHint: some View {
@@ -333,323 +282,7 @@ struct HostCalendarView: View {
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
-    @ViewBuilder
-    private var paintModeBanner: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "hand.draw.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-            Text("Dra fingeren over datoene for å male valget")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.white)
-            Spacer()
-            Button("Ferdig") {
-                togglePaintMode()
-            }
-            .font(.system(size: 12, weight: .bold))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.white.opacity(0.22))
-            .clipShape(Capsule())
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .background(Color.primary600)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    private func togglePaintMode() {
-        withAnimation(.easeInOut(duration: 0.2)) {
-            paintMode.toggle()
-        }
-        paintAnchorIso = nil
-        prePaintSelection = []
-        if paintMode {
-            rangeAnchor = nil
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        }
-    }
-
-    // MARK: - Month section
-
-    @ViewBuilder
-    private func monthSection(_ monthStart: Date) -> some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text(monthNameFormatter.string(from: monthStart).capitalized)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.neutral900)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-
-            HStack(spacing: 0) {
-                ForEach(["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"], id: \.self) { day in
-                    Text(day)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.neutral500)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .padding(.horizontal, 12)
-
-            let days = daysInMonthGrid(monthStart)
-            let rows = days.count / 7
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 2) {
-                ForEach(Array(days.enumerated()), id: \.offset) { _, date in
-                    if let date {
-                        dayCell(for: date)
-                    } else {
-                        Color.clear.frame(height: 56)
-                    }
-                }
-            }
-            .padding(.horizontal, 12)
-            .background(
-                GeometryReader { geo in
-                    Color.clear.preference(
-                        key: MonthGridFramesPreference.self,
-                        value: [MonthGridFrame(
-                            monthStart: monthStart,
-                            rect: geo.frame(in: .named("calendarContent")),
-                            rows: rows
-                        )]
-                    )
-                }
-            )
-        }
-    }
-
-    @ViewBuilder
-    private func dayCell(for date: Date) -> some View {
-        let iso = isoFormatter.string(from: date)
-        let isPast = Calendar.current.compare(date, to: Calendar.current.startOfDay(for: Date()), toGranularity: .day) == .orderedAscending
-        let isBooked = bookedDates.contains(iso)
-        let isBlocked = blockedDates.contains(iso)
-        let isSelected = selectedDates.contains(iso)
-        let isAnchor = rangeAnchor == iso
-        let override = overrides[iso]
-        let price = priceForDate(date)
-        let source = sourceForDate(date, iso: iso)
-
-        Button {
-            if !paintMode { handleTap(iso: iso) }
-        } label: {
-            VStack(spacing: 2) {
-                Text("\(Calendar.current.component(.day, from: date))")
-                    .font(.system(size: 15, weight: isSelected ? .bold : .medium))
-                    .foregroundStyle(textColor(isPast: isPast, isBooked: isBooked, isBlocked: isBlocked, isSelected: isSelected))
-                if !isPast && !isBooked && !isBlocked {
-                    Text("\(price)")
-                        .font(.system(size: 10))
-                        .foregroundStyle(priceColor(source: source, isSelected: isSelected))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-                if isBooked {
-                    Image(systemName: "calendar.badge.checkmark")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.neutral500)
-                }
-                if isBlocked {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10))
-                        .foregroundStyle(.neutral500)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .frame(height: 56)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(cellBackground(isPast: isPast, isBooked: isBooked, isBlocked: isBlocked, isSelected: isSelected, isOverride: override != nil))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(isAnchor ? Color.primary600 : (isSelected ? Color.primary600.opacity(0.6) : Color.clear),
-                            lineWidth: isAnchor ? 2.5 : 2)
-            )
-        }
-        .buttonStyle(.plain)
-        .disabled(isPast || isBooked)
-    }
-
-    private func canSelect(isPast: Bool, isBooked: Bool) -> Bool {
-        !isPast && !isBooked
-    }
-
-    private func canSelectIso(_ iso: String) -> Bool {
-        guard let date = isoFormatter.date(from: iso) else { return false }
-        let isPast = Calendar.current.compare(date, to: Calendar.current.startOfDay(for: Date()), toGranularity: .day) == .orderedAscending
-        return canSelect(isPast: isPast, isBooked: bookedDates.contains(iso))
-    }
-
-    // MARK: - Tap-handling (anker-pattern)
-
-    private func handleTap(iso: String) {
-        guard canSelectIso(iso) else { return }
-
-        if let anchor = rangeAnchor {
-            // Tap #2 → fyll område
-            if anchor == iso {
-                // Samme dato tappet igjen → fjern valg + anker
-                selectedDates.remove(iso)
-                rangeAnchor = nil
-            } else {
-                // Område fra anker til ny dato
-                let range = isoRange(from: anchor, to: iso)
-                for d in range where canSelectIso(d) {
-                    selectedDates.insert(d)
-                }
-                rangeAnchor = nil
-                UIImpactFeedbackGenerator(style: .light).impactOccurred()
-            }
-        } else {
-            // Tap #1 → toggle + sett anker hvis nå valgt
-            if selectedDates.contains(iso) {
-                selectedDates.remove(iso)
-            } else {
-                selectedDates.insert(iso)
-                rangeAnchor = iso
-            }
-        }
-    }
-
-    private func isoRange(from a: String, to b: String) -> [String] {
-        guard let dateA = isoFormatter.date(from: a),
-              let dateB = isoFormatter.date(from: b) else { return [] }
-        let (start, end) = dateA < dateB ? (dateA, dateB) : (dateB, dateA)
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
-        var cursor = start
-        var result: [String] = []
-        while cursor <= end {
-            result.append(isoFormatter.string(from: cursor))
-            guard let next = cal.date(byAdding: .day, value: 1, to: cursor) else { break }
-            cursor = next
-        }
-        return result
-    }
-
-    // MARK: - Penselvalg (paint mode)
-
-    /// Drag-gesture som kun er aktiv i paint-modus. Scroll er låst
-    /// (`.scrollDisabled`), så drag-en får eksklusiv kontroll over touch-
-    /// events og fyrer umiddelbart — ingen hold-delay, ingen scroll-konflikt.
-    private var paintGesture: some Gesture {
-        DragGesture(minimumDistance: 0, coordinateSpace: .named("calendarContent"))
-            .onChanged { value in
-                guard let currentIso = findCell(at: value.location),
-                      canSelectIso(currentIso) else { return }
-
-                if paintAnchorIso == nil {
-                    // Første touch — start området
-                    paintAnchorIso = currentIso
-                    prePaintSelection = selectedDates
-                    selectedDates.insert(currentIso)
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    return
-                }
-
-                guard let anchor = paintAnchorIso else { return }
-                let range = isoRange(from: anchor, to: currentIso).filter { canSelectIso($0) }
-                selectedDates = prePaintSelection.union(range)
-            }
-            .onEnded { _ in
-                if paintAnchorIso != nil {
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                }
-                paintAnchorIso = nil
-                prePaintSelection = []
-            }
-    }
-
-    /// Finn hvilken dato brukeren peker på ved å regne matematisk —
-    /// ingen per-celle PreferenceKey, ingen race-conditions. Én ramme per
-    /// måned-grid + math.
-    private func findCell(at point: CGPoint) -> String? {
-        guard let frame = monthGridFrames.first(where: { $0.rect.contains(point) }),
-              frame.rows > 0 else { return nil }
-
-        let rect = frame.rect
-        let cellWidth = rect.width / 7
-        let cellHeight = rect.height / CGFloat(frame.rows)
-
-        let col = min(max(Int((point.x - rect.minX) / cellWidth), 0), 6)
-        let row = min(max(Int((point.y - rect.minY) / cellHeight), 0), frame.rows - 1)
-
-        let days = daysInMonthGrid(frame.monthStart)
-        let index = row * 7 + col
-        guard index < days.count, let date = days[index] else { return nil }
-        return isoFormatter.string(from: date)
-    }
-
-    // MARK: - Cell styling
-
-    private func textColor(isPast: Bool, isBooked: Bool, isBlocked: Bool, isSelected: Bool) -> Color {
-        if isPast { return .neutral300 }
-        if isBooked { return .neutral500 }
-        if isBlocked { return .neutral400 }
-        if isSelected { return Color.primary600 }
-        return .neutral900
-    }
-
-    private func priceColor(source: String, isSelected: Bool) -> Color {
-        if isSelected { return Color.primary600 }
-        switch source {
-        case "override": return Color(hex: "#10b981")
-        case "season": return Color(hex: "#f59e0b")
-        case "weekend": return Color(hex: "#3b82f6")
-        default: return .neutral500
-        }
-    }
-
-    private func cellBackground(isPast: Bool, isBooked: Bool, isBlocked: Bool, isSelected: Bool, isOverride: Bool) -> Color {
-        if isSelected { return Color.primary50 }
-        if isBooked { return Color(hex: "#fee2e2") }
-        if isBlocked { return Color.neutral100 }
-        if isOverride { return Color(hex: "#ecfdf5") }
-        return Color.white
-    }
-
-    private func priceForDate(_ date: Date) -> Int {
-        let iso = isoFormatter.string(from: date)
-        if let o = overrides[iso] { return o }
-        if let season = rules.first(where: { r in
-            guard r.kind == "season",
-                  let start = r.start_date, let end = r.end_date else { return false }
-            return iso >= start && iso <= end
-        }) {
-            return season.price
-        }
-        if let weekend = rules.first(where: { r in
-            r.kind == "weekend" && ((r.day_mask ?? 0) & (1 << weekdayBit(date))) != 0
-        }) {
-            return weekend.price
-        }
-        return basePrice
-    }
-
-    private func sourceForDate(_ date: Date, iso: String) -> String {
-        if overrides[iso] != nil { return "override" }
-        if rules.contains(where: { r in
-            guard r.kind == "season", let s = r.start_date, let e = r.end_date else { return false }
-            return iso >= s && iso <= e
-        }) { return "season" }
-        if rules.contains(where: { r in
-            r.kind == "weekend" && ((r.day_mask ?? 0) & (1 << weekdayBit(date))) != 0
-        }) { return "weekend" }
-        return "base"
-    }
-
-    private func weekdayBit(_ date: Date) -> Int {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
-        let wd = cal.component(.weekday, from: date)
-        return wd == 1 ? 6 : wd - 2
-    }
-
-    // MARK: - Selection bar
+    // MARK: - Selection bar (bunnen)
 
     private var selectionBar: some View {
         VStack(spacing: 10) {
@@ -723,39 +356,7 @@ struct HostCalendarView: View {
         .disabled(saving)
     }
 
-    // MARK: - Data
-
-    private var visibleMonthList: [Date] {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
-        cal.firstWeekday = 2
-        var comps = cal.dateComponents([.year, .month], from: Date())
-        comps.day = 1
-        guard let first = cal.date(from: comps) else { return [] }
-        return (0..<monthsAhead).compactMap { i in
-            cal.date(byAdding: .month, value: i, to: first)
-        }
-    }
-
-    private func daysInMonthGrid(_ monthStart: Date) -> [Date?] {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
-        cal.firstWeekday = 2
-        let range = cal.range(of: .day, in: .month, for: monthStart) ?? 1..<32
-        let firstWeekdayOfMonth = cal.component(.weekday, from: monthStart)
-        let leading = (firstWeekdayOfMonth + 5) % 7
-
-        var result: [Date?] = Array(repeating: nil, count: leading)
-        for day in range {
-            if let d = cal.date(byAdding: .day, value: day - 1, to: monthStart) {
-                result.append(d)
-            }
-        }
-        while result.count % 7 != 0 {
-            result.append(nil)
-        }
-        return result
-    }
+    // MARK: - Data-lasting
 
     private func loadAll() async {
         isLoading = true
@@ -764,7 +365,7 @@ struct HostCalendarView: View {
         let fetchedOverrides = await PricingService.fetchOverrides(listingId: listing.id)
         overrides = Dictionary(uniqueKeysWithValues: fetchedOverrides.map { ($0.date, $0.price) })
 
-        // Last spot_markers fra DB (fresh) — listing.spotMarkers kan være utdatert
+        // Last spot_markers fra DB — listing.spotMarkers kan være utdatert
         let markers = await fetchSpotMarkers()
         spotMarkers = markers
         if selectedSpotIds.isEmpty {
@@ -815,12 +416,16 @@ struct HostCalendarView: View {
                 .execute()
                 .value
             var set = Set<String>()
+            let f = DateFormatter()
+            f.dateFormat = "yyyy-MM-dd"
+            f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+            f.locale = Locale(identifier: "en_US_POSIX")
             for b in rows {
-                guard let start = isoFormatter.date(from: b.checkIn),
-                      let end = isoFormatter.date(from: b.checkOut) else { continue }
+                guard let start = f.date(from: b.checkIn),
+                      let end = f.date(from: b.checkOut) else { continue }
                 var cursor = start
                 while cursor < end {
-                    set.insert(isoFormatter.string(from: cursor))
+                    set.insert(f.string(from: cursor))
                     cursor = Calendar.current.date(byAdding: .day, value: 1, to: cursor) ?? end
                 }
             }
@@ -830,7 +435,7 @@ struct HostCalendarView: View {
         }
     }
 
-    // MARK: - Actions
+    // MARK: - Actions (blokker, pris, fjern overstyring)
 
     @MainActor
     private func applyBlockToggle() async {
@@ -842,7 +447,6 @@ struct HostCalendarView: View {
         let selectingAll = !hasMultipleSpots || selectedSpotIds.count == allSpots
 
         if selectingAll {
-            // Listing-level blokk — eksisterende flyt
             var next = blockedDates
             for iso in selectedDates {
                 if shouldBlock { next.insert(iso) } else { next.remove(iso) }
@@ -863,7 +467,6 @@ struct HostCalendarView: View {
                 print("block toggle error: \(error)")
             }
         } else {
-            // Per-spot blokk — oppdater hver valgte plass via spot_markers jsonb
             var updatedMarkers = spotMarkers
             for i in 0..<updatedMarkers.count {
                 guard let sid = updatedMarkers[i].id, selectedSpotIds.contains(sid) else { continue }
@@ -933,6 +536,339 @@ struct HostCalendarView: View {
         withAnimation { toast = text }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             withAnimation { toast = nil }
+        }
+    }
+}
+
+// MARK: - HostCalendarUIView — UICalendarView wrapper
+
+/// Wrapper rundt Apples native `UICalendarView` (iOS 16+). Gir native scroll
+/// + tap-hit-testing uten gestus-krig. Coordinator håndterer tap-anker-pattern
+/// (tap start → tap slutt = område) via `UICalendarSelectionSingleDate`-
+/// delegaten, og tegner valg/blokk/booking/pris per dag via `decorationFor`.
+private struct HostCalendarUIView: UIViewRepresentable {
+    @Binding var selectedDates: Set<String>
+    @Binding var rangeAnchor: String?
+    let blockedDates: Set<String>
+    let bookedDates: Set<String>
+    let overrides: [String: Int]
+    let rules: [PricingService.Rule]
+    let basePrice: Int
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(parent: self)
+    }
+
+    func makeUIView(context: Context) -> UICalendarView {
+        let view = UICalendarView()
+
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+        cal.firstWeekday = 2  // Mandag først
+        view.calendar = cal
+        view.locale = Locale(identifier: "nb")
+        view.tintColor = UIColor(red: 70/255, green: 193/255, blue: 133/255, alpha: 1) // #46C185
+
+        // Tilgjengelig område: i dag → +2 år
+        let startOfToday = cal.startOfDay(for: Date())
+        let end = cal.date(byAdding: .year, value: 2, to: startOfToday) ?? startOfToday
+        view.availableDateRange = DateInterval(start: startOfToday, end: end)
+
+        let selection = UICalendarSelectionSingleDate(delegate: context.coordinator)
+        view.selectionBehavior = selection
+        context.coordinator.selection = selection
+        context.coordinator.calendarView = view
+
+        view.delegate = context.coordinator
+        return view
+    }
+
+    func updateUIView(_ uiView: UICalendarView, context: Context) {
+        context.coordinator.parent = self
+        uiView.reloadDecorations(
+            forDateComponents: context.coordinator.decorableComponents(),
+            animated: false
+        )
+    }
+
+    // MARK: Coordinator
+
+    @MainActor
+    final class Coordinator: NSObject, UICalendarViewDelegate, UICalendarSelectionSingleDateDelegate {
+        var parent: HostCalendarUIView
+        weak var calendarView: UICalendarView?
+        weak var selection: UICalendarSelectionSingleDate?
+
+        private let isoFormatter: DateFormatter = {
+            let f = DateFormatter()
+            f.dateFormat = "yyyy-MM-dd"
+            f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+            f.locale = Locale(identifier: "en_US_POSIX")
+            return f
+        }()
+
+        private var calendar: Calendar {
+            var cal = Calendar(identifier: .gregorian)
+            cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+            cal.firstWeekday = 2
+            return cal
+        }
+
+        init(parent: HostCalendarUIView) {
+            self.parent = parent
+        }
+
+        /// Datoer som skal re-dekoreres — 14 måneder frem i tid dekker
+        /// `availableDateRange`. UICalendarView kaller bare `decorationFor`
+        /// for synlige måneder internt, så performance er OK.
+        func decorableComponents() -> [DateComponents] {
+            var out: [DateComponents] = []
+            let today = Date()
+            for monthOffset in 0..<14 {
+                guard let monthStart = calendar.date(byAdding: .month, value: monthOffset, to: today) else { continue }
+                let comps = calendar.dateComponents([.year, .month], from: monthStart)
+                guard let firstOfMonth = calendar.date(from: comps),
+                      let range = calendar.range(of: .day, in: .month, for: firstOfMonth) else { continue }
+                for day in range {
+                    if let d = calendar.date(bySetting: .day, value: day, of: firstOfMonth) {
+                        out.append(calendar.dateComponents([.year, .month, .day], from: d))
+                    }
+                }
+            }
+            return out
+        }
+
+        // MARK: Selection-delegate
+
+        func dateSelection(_ selection: UICalendarSelectionSingleDate, canSelectDate dateComponents: DateComponents?) -> Bool {
+            guard let dc = dateComponents, let date = calendar.date(from: dc) else { return false }
+            let startOfToday = calendar.startOfDay(for: Date())
+            if calendar.startOfDay(for: date) < startOfToday { return false }
+            let iso = isoFormatter.string(from: date)
+            // Booket dag kan ikke velges; blokkert dag kan velges (så host
+            // kan fjerne blokkeringen via bulk-action).
+            return !parent.bookedDates.contains(iso)
+        }
+
+        func dateSelection(_ selection: UICalendarSelectionSingleDate, didSelectDate dateComponents: DateComponents?) {
+            guard let dc = dateComponents, let date = calendar.date(from: dc) else { return }
+            let iso = isoFormatter.string(from: date)
+
+            // Oppdater modellen via bindings — dette trigger updateUIView →
+            // reloadDecorations og tegner fersk state.
+            handleTap(iso: iso)
+
+            // Fjern Apple sitt selection-ring umiddelbart — vi tegner alt selv
+            // via dekorasjoner, så seleksjonsringen ville vært duplisering.
+            DispatchQueue.main.async { [weak self] in
+                self?.selection?.setSelected(nil, animated: false)
+            }
+        }
+
+        private func handleTap(iso: String) {
+            if let anchor = parent.rangeAnchor {
+                if anchor == iso {
+                    // Samme dato tappet → fjern valg + anker
+                    parent.selectedDates.remove(iso)
+                    parent.rangeAnchor = nil
+                } else {
+                    // Tap #2: fyll området fra anker til tappet dato
+                    let range = isoRange(from: anchor, to: iso).filter { canSelectIso($0) }
+                    for d in range {
+                        parent.selectedDates.insert(d)
+                    }
+                    parent.rangeAnchor = nil
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
+            } else {
+                if parent.selectedDates.contains(iso) {
+                    // Toggle av allerede-valgt dato
+                    parent.selectedDates.remove(iso)
+                } else {
+                    // Tap #1: velg + sett som anker
+                    parent.selectedDates.insert(iso)
+                    parent.rangeAnchor = iso
+                }
+            }
+        }
+
+        private func canSelectIso(_ iso: String) -> Bool {
+            guard let date = isoFormatter.date(from: iso) else { return false }
+            if calendar.startOfDay(for: date) < calendar.startOfDay(for: Date()) { return false }
+            return !parent.bookedDates.contains(iso)
+        }
+
+        private func isoRange(from a: String, to b: String) -> [String] {
+            guard let dateA = isoFormatter.date(from: a),
+                  let dateB = isoFormatter.date(from: b) else { return [] }
+            let (start, end) = dateA < dateB ? (dateA, dateB) : (dateB, dateA)
+            var cursor = start
+            var result: [String] = []
+            while cursor <= end {
+                result.append(isoFormatter.string(from: cursor))
+                guard let next = calendar.date(byAdding: .day, value: 1, to: cursor) else { break }
+                cursor = next
+            }
+            return result
+        }
+
+        // MARK: Decorations — valg, status, pris
+
+        func calendarView(_ calendarView: UICalendarView, decorationFor dateComponents: DateComponents) -> UICalendarView.Decoration? {
+            guard let date = calendar.date(from: dateComponents) else { return nil }
+            let iso = isoFormatter.string(from: date)
+
+            let isSelected = parent.selectedDates.contains(iso)
+            let isAnchor = parent.rangeAnchor == iso
+            let isBlocked = parent.blockedDates.contains(iso)
+            let isBooked = parent.bookedDates.contains(iso)
+            let override = parent.overrides[iso]
+
+            let price = priceForDate(date, iso: iso)
+            let source = sourceForDate(date, iso: iso)
+
+            return .customView {
+                Self.buildDecoration(
+                    isSelected: isSelected,
+                    isAnchor: isAnchor,
+                    isBlocked: isBlocked,
+                    isBooked: isBooked,
+                    hasOverride: override != nil,
+                    price: price,
+                    source: source
+                )
+            }
+        }
+
+        /// Prioritet: anker (tykk ring) → valgt (fyld dot) → booking-ikon →
+        /// blokkert-xmark → pris-label (farge etter kilde).
+        static func buildDecoration(
+            isSelected: Bool,
+            isAnchor: Bool,
+            isBlocked: Bool,
+            isBooked: Bool,
+            hasOverride: Bool,
+            price: Int,
+            source: String
+        ) -> UIView {
+            let container = UIView()
+            container.translatesAutoresizingMaskIntoConstraints = false
+
+            let primary600 = UIColor(red: 70/255, green: 193/255, blue: 133/255, alpha: 1)
+
+            if isAnchor {
+                // Tykk ring for anker (start av aktivt område)
+                let ring = UIView()
+                ring.translatesAutoresizingMaskIntoConstraints = false
+                ring.layer.borderColor = primary600.cgColor
+                ring.layer.borderWidth = 2
+                ring.layer.cornerRadius = 6
+                container.addSubview(ring)
+                NSLayoutConstraint.activate([
+                    ring.widthAnchor.constraint(equalToConstant: 12),
+                    ring.heightAnchor.constraint(equalToConstant: 12),
+                    ring.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+                    ring.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                ])
+            } else if isSelected {
+                // Grønn fyld-dot for alminnelige valgte datoer
+                let dot = UIView()
+                dot.translatesAutoresizingMaskIntoConstraints = false
+                dot.backgroundColor = primary600
+                dot.layer.cornerRadius = 5
+                container.addSubview(dot)
+                NSLayoutConstraint.activate([
+                    dot.widthAnchor.constraint(equalToConstant: 10),
+                    dot.heightAnchor.constraint(equalToConstant: 10),
+                    dot.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+                    dot.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                ])
+            } else if isBooked {
+                let img = UIImageView(image: UIImage(systemName: "calendar.badge.checkmark"))
+                img.translatesAutoresizingMaskIntoConstraints = false
+                img.tintColor = UIColor(red: 239/255, green: 68/255, blue: 68/255, alpha: 1)
+                img.contentMode = .scaleAspectFit
+                container.addSubview(img)
+                NSLayoutConstraint.activate([
+                    img.widthAnchor.constraint(equalToConstant: 12),
+                    img.heightAnchor.constraint(equalToConstant: 12),
+                    img.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+                    img.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                ])
+            } else if isBlocked {
+                let img = UIImageView(image: UIImage(systemName: "xmark"))
+                img.translatesAutoresizingMaskIntoConstraints = false
+                img.tintColor = .systemGray
+                img.contentMode = .scaleAspectFit
+                container.addSubview(img)
+                NSLayoutConstraint.activate([
+                    img.widthAnchor.constraint(equalToConstant: 10),
+                    img.heightAnchor.constraint(equalToConstant: 10),
+                    img.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+                    img.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                ])
+            } else {
+                // Pris-label — farge etter kilde
+                let label = UILabel()
+                label.translatesAutoresizingMaskIntoConstraints = false
+                label.text = "\(price)"
+                label.font = .systemFont(ofSize: 9, weight: .medium)
+                label.textColor = priceColor(source: source, hasOverride: hasOverride)
+                label.textAlignment = .center
+                container.addSubview(label)
+                NSLayoutConstraint.activate([
+                    label.centerXAnchor.constraint(equalTo: container.centerXAnchor),
+                    label.centerYAnchor.constraint(equalTo: container.centerYAnchor),
+                    label.leadingAnchor.constraint(greaterThanOrEqualTo: container.leadingAnchor),
+                    label.trailingAnchor.constraint(lessThanOrEqualTo: container.trailingAnchor),
+                ])
+            }
+            return container
+        }
+
+        private static func priceColor(source: String, hasOverride: Bool) -> UIColor {
+            if hasOverride { return UIColor(red: 16/255, green: 185/255, blue: 129/255, alpha: 1) }
+            switch source {
+            case "season": return UIColor(red: 245/255, green: 158/255, blue: 11/255, alpha: 1)
+            case "weekend": return UIColor(red: 59/255, green: 130/255, blue: 246/255, alpha: 1)
+            default: return UIColor.systemGray
+            }
+        }
+
+        // MARK: Pris-logikk (speiler PricingService)
+
+        private func priceForDate(_ date: Date, iso: String) -> Int {
+            if let o = parent.overrides[iso] { return o }
+            if let season = parent.rules.first(where: { r in
+                guard r.kind == "season",
+                      let start = r.start_date, let end = r.end_date else { return false }
+                return iso >= start && iso <= end
+            }) {
+                return season.price
+            }
+            if let weekend = parent.rules.first(where: { r in
+                r.kind == "weekend" && ((r.day_mask ?? 0) & (1 << weekdayBit(date))) != 0
+            }) {
+                return weekend.price
+            }
+            return parent.basePrice
+        }
+
+        private func sourceForDate(_ date: Date, iso: String) -> String {
+            if parent.overrides[iso] != nil { return "override" }
+            if parent.rules.contains(where: { r in
+                guard r.kind == "season", let s = r.start_date, let e = r.end_date else { return false }
+                return iso >= s && iso <= e
+            }) { return "season" }
+            if parent.rules.contains(where: { r in
+                r.kind == "weekend" && ((r.day_mask ?? 0) & (1 << weekdayBit(date))) != 0
+            }) { return "weekend" }
+            return "base"
+        }
+
+        private func weekdayBit(_ date: Date) -> Int {
+            let wd = calendar.component(.weekday, from: date)
+            return wd == 1 ? 6 : wd - 2
         }
     }
 }
