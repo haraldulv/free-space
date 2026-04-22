@@ -51,16 +51,19 @@ struct HomeView: View {
                                 }
                                 Task { await listingService.fetchHomeListings(vehicleType: type) }
                             } label: {
-                                VStack(spacing: 6) {
+                                VStack(spacing: 7) {
                                     Image(systemName: type.icon)
-                                        .font(.system(size: 22, weight: selectedVehicle == type ? .semibold : .regular))
-                                        .frame(height: 28)
+                                        .font(.system(size: 28, weight: selectedVehicle == type ? .regular : .regular))
+                                        .symbolRenderingMode(.hierarchical)
+                                        .frame(height: 30)
+                                        .scaleEffect(selectedVehicle == type ? 1.0 : 0.88)
+                                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedVehicle)
                                     Text(type.displayName)
                                         .font(.system(size: 12, weight: selectedVehicle == type ? .semibold : .medium))
                                 }
                                 .foregroundStyle(selectedVehicle == type ? Color.primary600 : .neutral400)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
+                                .padding(.vertical, 6)
                             }
                         }
                     }
