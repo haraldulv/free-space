@@ -116,11 +116,10 @@ struct PublicProfileView: View {
         .padding(.top, 20)
     }
 
-    /// En host som har fullført identitets-verifisering har vanligvis et review-hit eller
-    /// nok aktivitet. Vi avgjør dette indirekte: reviewCount > 0 → verifisert-badge.
-    /// (Matcher Airbnb-logikken: verifiserte verter har rating fra ekte gjester.)
+    /// Verifisert = fullført Stripe-onboarding. Matcher logikken i
+    /// ProfileSummaryCard på ens egen profil. Kan utvides senere med BankID o.l.
     private var isVerified: Bool {
-        (profile?.reviewCount ?? 0) > 0
+        profile?.stripeOnboardingComplete ?? false
     }
 
     private var nameSection: some View {
@@ -264,7 +263,7 @@ struct PublicProfileView: View {
         do {
             async let profileTask: [PublicHostProfile] = supabase
                 .from("profiles")
-                .select("id, full_name, avatar_url, joined_year, rating, review_count, bio")
+                .select("id, full_name, avatar_url, joined_year, rating, review_count, bio, stripe_onboarding_complete")
                 .eq("id", value: hostId)
                 .limit(1)
                 .execute()
@@ -322,6 +321,7 @@ struct PublicHostProfile: Codable {
     let rating: Double?
     let reviewCount: Int?
     let bio: String?
+    let stripeOnboardingComplete: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -331,5 +331,6 @@ struct PublicHostProfile: Codable {
         case rating
         case reviewCount = "review_count"
         case bio
+        case stripeOnboardingComplete = "stripe_onboarding_complete"
     }
 }
