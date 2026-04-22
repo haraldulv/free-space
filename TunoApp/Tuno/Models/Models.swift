@@ -356,6 +356,7 @@ struct Profile: Codable, Identifiable {
     let responseRate: Double?
     let responseTime: String?
     let joinedYear: Int?
+    let location: String?
     let stripeAccountId: String?
     let stripeOnboardingComplete: Bool?
 
@@ -366,6 +367,7 @@ struct Profile: Codable, Identifiable {
         case responseRate = "response_rate"
         case responseTime = "response_time"
         case joinedYear = "joined_year"
+        case location
         case stripeAccountId = "stripe_account_id"
         case stripeOnboardingComplete = "stripe_onboarding_complete"
     }

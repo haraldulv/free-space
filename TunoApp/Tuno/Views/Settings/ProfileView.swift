@@ -13,6 +13,7 @@ struct ProfileView: View {
     @State private var rating: Double? = nil
     @State private var monthlyNet: Int = 0
     @State private var monthlyBookings: Int = 0
+    @State private var recentMonthsEarnings: [HostInntektCard.MonthlyEarning] = []
     @State private var navigateToHostRequests = false
     @State private var navigateToNotifications = false
     @State private var showSelfProfile = false
@@ -64,7 +65,7 @@ struct ProfileView: View {
                 ProfileSummaryCard(
                     name: authManager.profile?.fullName ?? authManager.displayName,
                     avatarUrl: authManager.profile?.avatarUrl,
-                    location: nil,
+                    location: authManager.profile?.location,
                     trips: tripCount,
                     reviews: reviewCount,
                     rating: rating,
@@ -82,6 +83,7 @@ struct ProfileView: View {
                             monthName: currentMonthName,
                             netIncome: monthlyNet,
                             bookingCount: monthlyBookings,
+                            recentMonths: recentMonthsEarnings,
                             trend: nil
                         )
                         .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
@@ -117,22 +119,21 @@ struct ProfileView: View {
                 Button {
                     navigateToNotifications = true
                 } label: {
-                    ZStack(alignment: .topTrailing) {
-                        Circle()
-                            .fill(Color.neutral100)
-                            .frame(width: 40, height: 40)
-                        Image(systemName: "bell")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.neutral900)
-                        if unreadNotifications > 0 {
-                            Circle()
-                                .fill(Color.red)
-                                .frame(width: 10, height: 10)
-                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
-                                .padding(4)
+                    Image(systemName: "bell")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .frame(width: 38, height: 38)
+                        .background(Color.neutral100)
+                        .clipShape(Circle())
+                        .overlay(alignment: .topTrailing) {
+                            if unreadNotifications > 0 {
+                                Circle()
+                                    .fill(Color.red)
+                                    .frame(width: 10, height: 10)
+                                    .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                    .offset(x: -2, y: 2)
+                            }
                         }
-                    }
-                    .frame(width: 40, height: 40)
                 }
             }
         }
@@ -439,32 +440,84 @@ struct ProfileView: View {
 
     private func loadMonthlyRevenue() async {
         guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
-        // Første dag i inneværende måned i Oslo-tz
-        let cal = Calendar.current
+
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+
         var comps = cal.dateComponents([.year, .month], from: Date())
         comps.day = 1
-        guard let monthStart = cal.date(from: comps) else { return }
+        guard let currentMonthStart = cal.date(from: comps) else { return }
+        guard let sixMonthsAgo = cal.date(byAdding: .month, value: -5, to: currentMonthStart) else { return }
+
         let iso = ISO8601DateFormatter()
         iso.timeZone = TimeZone(identifier: "Europe/Oslo")
-        let from = iso.string(from: monthStart)
+        let fromRecent = iso.string(from: sixMonthsAgo)
+        let fromThisMonth = iso.string(from: currentMonthStart)
 
-        struct Row: Decodable { let totalPrice: Int
-            enum CodingKeys: String, CodingKey { case totalPrice = "total_price" }
+        struct Row: Decodable {
+            let totalPrice: Int
+            let createdAt: String?
+            enum CodingKeys: String, CodingKey {
+                case totalPrice = "total_price"
+                case createdAt = "created_at"
+            }
         }
 
         do {
             let rows: [Row] = try await supabase
                 .from("bookings")
-                .select("total_price")
+                .select("total_price, created_at")
                 .eq("host_id", value: userId)
                 .eq("status", value: "confirmed")
                 .eq("payment_status", value: "paid")
-                .gte("created_at", value: from)
+                .gte("created_at", value: fromRecent)
                 .execute()
                 .value
+
             let serviceFee = 0.10
-            monthlyNet = rows.reduce(0) { $0 + Int(Double($1.totalPrice) * (1 - serviceFee)) }
-            monthlyBookings = rows.count
+
+            // Denne-måneden-snapshot
+            let thisMonthRows = rows.filter { ($0.createdAt ?? "") >= fromThisMonth }
+            monthlyNet = thisMonthRows.reduce(0) { $0 + Int(Double($1.totalPrice) * (1 - serviceFee)) }
+            monthlyBookings = thisMonthRows.count
+
+            // Bygg 6 måneder tilbake → grupper etter YYYY-MM
+            let keyFormatter = DateFormatter()
+            keyFormatter.dateFormat = "yyyy-MM"
+            keyFormatter.locale = Locale(identifier: "en_US_POSIX")
+            keyFormatter.timeZone = TimeZone(identifier: "Europe/Oslo")
+
+            let shortMonthFormatter = DateFormatter()
+            shortMonthFormatter.dateFormat = "MMM"
+            shortMonthFormatter.locale = Locale(identifier: "nb_NO")
+            shortMonthFormatter.timeZone = TimeZone(identifier: "Europe/Oslo")
+
+            let parser = ISO8601DateFormatter()
+            parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+
+            var bucket: [String: Int] = [:]
+            for row in rows {
+                guard let isoDate = row.createdAt,
+                      let date = parser.date(from: isoDate) ?? {
+                          parser.formatOptions = [.withInternetDateTime]
+                          return parser.date(from: isoDate)
+                      }() else { continue }
+                let key = keyFormatter.string(from: date)
+                bucket[key, default: 0] += Int(Double(row.totalPrice) * (1 - serviceFee))
+            }
+
+            var months: [HostInntektCard.MonthlyEarning] = []
+            for offset in (0...5).reversed() {
+                guard let monthDate = cal.date(byAdding: .month, value: -offset, to: currentMonthStart) else { continue }
+                let key = keyFormatter.string(from: monthDate)
+                let label = shortMonthFormatter.string(from: monthDate).lowercased()
+                months.append(HostInntektCard.MonthlyEarning(
+                    id: key,
+                    shortLabel: label,
+                    earnings: bucket[key] ?? 0
+                ))
+            }
+            recentMonthsEarnings = months
         } catch {
             print("loadMonthlyRevenue error: \(error)")
         }
@@ -477,6 +530,7 @@ struct EditProfileView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var fullName = ""
     @State private var bio = ""
+    @State private var location = ""
     @State private var isSaving = false
     @State private var showImagePicker = false
     @State private var isUploadingAvatar = false
@@ -507,6 +561,8 @@ struct EditProfileView: View {
 
             Section("Personlig informasjon") {
                 TextField("Fullt navn", text: $fullName)
+                TextField("Sted (f.eks. Oslo, Norge)", text: $location)
+                    .textInputAutocapitalization(.words)
             }
 
             Section {
@@ -537,11 +593,17 @@ struct EditProfileView: View {
                         struct Payload: Encodable {
                             let full_name: String
                             let bio: String?
+                            let location: String?
                         }
                         let trimmedBio = bio.trimmingCharacters(in: .whitespaces)
+                        let trimmedLoc = location.trimmingCharacters(in: .whitespaces)
                         try? await supabase
                             .from("profiles")
-                            .update(Payload(full_name: fullName, bio: trimmedBio.isEmpty ? nil : trimmedBio))
+                            .update(Payload(
+                                full_name: fullName,
+                                bio: trimmedBio.isEmpty ? nil : trimmedBio,
+                                location: trimmedLoc.isEmpty ? nil : trimmedLoc
+                            ))
                             .eq("id", value: authManager.currentUser?.id.uuidString ?? "")
                             .execute()
                         await authManager.loadProfile()
@@ -559,6 +621,7 @@ struct EditProfileView: View {
         .navigationTitle("Rediger profil")
         .onAppear {
             fullName = authManager.profile?.fullName ?? ""
+            location = authManager.profile?.location ?? ""
         }
         .task {
             guard let userId = authManager.currentUser?.id else { return }

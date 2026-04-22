@@ -126,10 +126,15 @@ struct PublicProfileView: View {
         VStack(spacing: 6) {
             Text(profile?.fullName ?? initialName ?? "Utleier")
                 .font(.system(size: 22, weight: .bold))
+            if let loc = profile?.location, !loc.isEmpty {
+                Text(loc)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral600)
+            }
             if let joined = profile?.joinedYear ?? initialJoinedYear {
                 // String(joined) omgår Norwegian locale thousand-separator ("2 026")
                 Text("Medlem siden \(String(joined))")
-                    .font(.system(size: 14))
+                    .font(.system(size: 13))
                     .foregroundStyle(.neutral500)
             }
         }
@@ -263,7 +268,7 @@ struct PublicProfileView: View {
         do {
             async let profileTask: [PublicHostProfile] = supabase
                 .from("profiles")
-                .select("id, full_name, avatar_url, joined_year, rating, review_count, bio, stripe_onboarding_complete")
+                .select("id, full_name, avatar_url, joined_year, rating, review_count, bio, location, stripe_onboarding_complete")
                 .eq("id", value: hostId)
                 .limit(1)
                 .execute()
@@ -321,6 +326,7 @@ struct PublicHostProfile: Codable {
     let rating: Double?
     let reviewCount: Int?
     let bio: String?
+    let location: String?
     let stripeOnboardingComplete: Bool?
 
     enum CodingKeys: String, CodingKey {
@@ -331,6 +337,7 @@ struct PublicHostProfile: Codable {
         case rating
         case reviewCount = "review_count"
         case bio
+        case location
         case stripeOnboardingComplete = "stripe_onboarding_complete"
     }
 }

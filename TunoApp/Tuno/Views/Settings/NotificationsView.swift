@@ -7,6 +7,7 @@ struct NotificationsView: View {
     @StateObject private var store = NotificationsStore()
     @Environment(\.dismiss) private var dismiss
     @State private var navigateTo: NotificationTarget?
+    @State private var showClearConfirm = false
 
     var body: some View {
         Group {
@@ -20,6 +21,29 @@ struct NotificationsView: View {
         }
         .navigationTitle("Varsler")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if !store.notifications.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showClearConfirm = true
+                    } label: {
+                        Image(systemName: "trash")
+                            .foregroundStyle(.neutral700)
+                    }
+                }
+            }
+        }
+        .alert("Tøm varsler?", isPresented: $showClearConfirm) {
+            Button("Tøm alle", role: .destructive) {
+                Task {
+                    guard let userId = authManager.currentUser?.id else { return }
+                    await store.deleteAll(userId: userId.uuidString.lowercased())
+                }
+            }
+            Button("Avbryt", role: .cancel) {}
+        } message: {
+            Text("Alle varsler vil slettes permanent.")
+        }
         .task {
             guard let userId = authManager.currentUser?.id else { return }
             await store.load(userId: userId.uuidString.lowercased())
@@ -254,6 +278,21 @@ final class NotificationsStore: ObservableObject {
             unreadCount = 0
         } catch {
             print("NotificationsStore markAllRead error: \(error)")
+        }
+    }
+
+    /// Slett alle varsler for denne brukeren permanent.
+    func deleteAll(userId: String) async {
+        do {
+            try await supabase
+                .from("notifications")
+                .delete()
+                .eq("user_id", value: userId)
+                .execute()
+            notifications = []
+            unreadCount = 0
+        } catch {
+            print("NotificationsStore deleteAll error: \(error)")
         }
     }
 }

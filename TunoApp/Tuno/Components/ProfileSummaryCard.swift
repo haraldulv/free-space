@@ -19,7 +19,7 @@ struct ProfileSummaryCard: View {
         if let rating, reviews > 0 {
             return String(format: "%.1f", rating).replacingOccurrences(of: ".", with: ",")
         }
-        return "Ny"
+        return "0"
     }
 
     var body: some View {
@@ -73,7 +73,7 @@ struct ProfileSummaryCard: View {
                 Divider().padding(.vertical, 2)
                 statRow(value: "\(reviews)", label: reviews == 1 ? "Anmeldelse" : "Anmeldelser")
                 Divider().padding(.vertical, 2)
-                statRow(value: ratingDisplay, label: "Vurdering", icon: reviews > 0 ? "star.fill" : nil)
+                statRow(value: ratingDisplay, label: "Vurdering", icon: "star.fill")
             }
             .frame(maxWidth: .infinity)
         }
