@@ -117,6 +117,9 @@ struct HostCalendarView: View {
     @State private var showPricingRulesEditor = false
     @State private var anchorPulse = false
 
+    // Hint-bar: persistent "ikke vis igjen"
+    @AppStorage("hostCalendarHintDismissed") private var hintDismissed = false
+
     // Plass-velger
     @State private var spotMarkers: [SpotMarker] = []
     @State private var selectedSpotIds: Set<String> = []
@@ -170,11 +173,6 @@ struct HostCalendarView: View {
                             .padding(.top, 12)
                     }
 
-                    if rangeAnchor != nil {
-                        rangeHint
-                            .padding(.horizontal, 16)
-                    }
-
                     if isLoading {
                         ProgressView().padding(.top, 40)
                     } else {
@@ -194,6 +192,16 @@ struct HostCalendarView: View {
         }
         .animation(.easeInOut(duration: 0.25), value: selectedDates.isEmpty)
         .overlay(alignment: .top) {
+            // Hint-bar som floating overlay — påvirker ikke scroll-posisjon.
+            // Vises kun når ankeret er satt OG brukeren ikke har dismissed den.
+            if rangeAnchor != nil && !hintDismissed {
+                rangeHint
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .top) {
             if let toast {
                 Text(toast)
                     .font(.system(size: 13, weight: .medium))
@@ -206,6 +214,7 @@ struct HostCalendarView: View {
                     .shadow(radius: 6)
             }
         }
+        .animation(.easeInOut(duration: 0.22), value: rangeAnchor)
         .navigationTitle(listing.internalName ?? listing.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -288,37 +297,53 @@ struct HostCalendarView: View {
 
     @ViewBuilder
     private var rangeHint: some View {
-        HStack(spacing: 10) {
-            ZStack {
-                Circle()
-                    .fill(Color.primary600)
-                    .frame(width: 22, height: 22)
-                Text("1")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.white)
+        VStack(spacing: 6) {
+            HStack(spacing: 10) {
+                ZStack {
+                    Circle()
+                        .fill(Color.primary600)
+                        .frame(width: 22, height: 22)
+                    Text("1")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Start-dato satt")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text("Trykk slutt-dato for å velge hele området")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral600)
+                }
+                Spacer()
+                Button("Avbryt") {
+                    rangeAnchor = nil
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary600)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.white)
+                .clipShape(Capsule())
             }
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Start-dato satt")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                Text("Trykk slutt-dato for å velge hele området")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral600)
+            HStack {
+                Spacer()
+                Button {
+                    hintDismissed = true
+                } label: {
+                    Text("Ikke vis denne meldingen igjen")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral500)
+                        .underline()
+                }
             }
-            Spacer()
-            Button("Avbryt") {
-                rangeAnchor = nil
-            }
-            .font(.system(size: 13, weight: .semibold))
-            .foregroundStyle(.primary600)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 6)
-            .background(Color.white)
-            .clipShape(Capsule())
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Color.primary50)
+        .background(
+            Color.primary50
+                .shadow(color: .black.opacity(0.08), radius: 10, y: 3)
+        )
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
@@ -400,7 +425,7 @@ struct HostCalendarView: View {
                         lineWidth: isAnchor ? 2.5 : (isSelected ? 1.5 : 0)
                     )
 
-                VStack(spacing: 2) {
+                VStack(spacing: 1) {
                     Text("\(dayNumber)")
                         .font(.system(size: 15, weight: (isSelected || isAnchor) ? .bold : .medium))
                         .foregroundStyle(textColor(isPast: isPast, isBooked: isBooked, isBlocked: isBlocked, isSelected: isSelected, isAnchor: isAnchor))
@@ -412,9 +437,11 @@ struct HostCalendarView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                     } else if isBooked {
-                        Image(systemName: "calendar.badge.checkmark")
-                            .font(.system(size: 10))
-                            .foregroundStyle(Color(hex: "#ef4444"))
+                        // Tydelig BOOKET-label så det ikke forveksles med valgt
+                        Text("BOOKET")
+                            .font(.system(size: 7, weight: .heavy))
+                            .tracking(0.4)
+                            .foregroundStyle(.neutral500)
                     } else if isBlocked {
                         Image(systemName: "xmark")
                             .font(.system(size: 10, weight: .semibold))
@@ -495,7 +522,10 @@ struct HostCalendarView: View {
     private func cellBackground(isPast: Bool, isBooked: Bool, isBlocked: Bool, isSelected: Bool, isAnchor: Bool, isOverride: Bool) -> Color {
         if isAnchor { return Color.primary600.opacity(0.22) }
         if isSelected { return Color.primary600.opacity(0.13) }
-        if isBooked { return Color(hex: "#fee2e2") }
+        // Booked + blokkert: begge er grå og tydelig "ikke tilgjengelig" —
+        // skal aldri forveksles med valg (som er grønt). Booked får en litt
+        // varmere grå for å skille seg fra manuelt blokkert.
+        if isBooked { return Color(hex: "#f5f1ef") }
         if isBlocked { return Color.neutral100 }
         if isOverride { return Color(hex: "#ecfdf5") }
         return Color.white
