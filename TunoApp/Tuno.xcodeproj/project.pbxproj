@@ -37,6 +37,7 @@
 		73EB17FC0ED9BAA06099EA92 /* MainTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72853CC232D491F9F2AEC20B /* MainTabView.swift */; };
 		79F6757D7436EF3EEF1EEAC2 /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5065BE9CC3C749754F554F /* BookingsView.swift */; };
 		7AF18FF996F0B291CFB71478 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDD24B1220789582C10AF6F /* ChatView.swift */; };
+		826D4094CB6C79BB766161D3 /* PublicProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69D03627A981C3C64EF47F06 /* PublicProfileView.swift */; };
 		8B3FFD2821A8DBF0C4752B71 /* BookingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A031A3724EC9DE0FAFF7A4A /* BookingView.swift */; };
 		90D70482683053BEFF821336 /* EarningsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C68D73AEFE78CC1D1DEE15 /* EarningsView.swift */; };
 		96BC4BC4EB06699B3E5A5D69 /* HostSpotDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E78282D80E5F27037C4EC4 /* HostSpotDetailView.swift */; };
@@ -51,6 +52,7 @@
 		C25D7B4AA951AAD25EF7FD36 /* HostOnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */; };
 		C34BE6B3922A411B534762E6 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = A2D7BAFCCFBB3E087B97786C /* GoogleMaps */; };
 		C76237D5837392B271673FB3 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD96E8DCCD58804E7D8E5F9 /* Theme.swift */; };
+		CA48E2836B846266237AD524 /* ImageCropPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 537CD1B9259B6FDD9DBA8E37 /* ImageCropPicker.swift */; };
 		CBF09B2CA4A4927619137D59 /* CachedAsyncImage.swift in Sources */ = {isa = PBXBuildFile; fileRef = D49112D9A0860BD7EB235BDE /* CachedAsyncImage.swift */; };
 		CF469E1FC5E6FD6315FD4442 /* FavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 728D58EED8EDC45FC329EE6F /* FavoritesView.swift */; };
 		D419BBEA241B1C886CA82778 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 177959CBC6EFAB9035701BA2 /* Supabase */; };
@@ -91,12 +93,14 @@
 		4706792C26101B180693BACF /* InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputField.swift; sourceTree = "<group>"; };
 		49328B9F033AAE32F12579CD /* Tuno.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tuno.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D9B33BBC5E75BE977852EBE /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
+		537CD1B9259B6FDD9DBA8E37 /* ImageCropPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCropPicker.swift; sourceTree = "<group>"; };
 		5416B142A121192B7EDCA9A2 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		54806C1D2B79947D8E8CE6C9 /* HostOnboardingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingService.swift; sourceTree = "<group>"; };
 		56E3029710A8D3475494799E /* PricingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingService.swift; sourceTree = "<group>"; };
 		5C5065BE9CC3C749754F554F /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
 		64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingViewModel.swift; sourceTree = "<group>"; };
 		653B4F2F1D411111416483A4 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
+		69D03627A981C3C64EF47F06 /* PublicProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicProfileView.swift; sourceTree = "<group>"; };
 		6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingFlowView.swift; sourceTree = "<group>"; };
 		72853CC232D491F9F2AEC20B /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		728D58EED8EDC45FC329EE6F /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
@@ -243,9 +247,11 @@
 				D49112D9A0860BD7EB235BDE /* CachedAsyncImage.swift */,
 				92E48039F546D58654A8CF5E /* CustomTabBar.swift */,
 				145471A0700B346EE653A3F5 /* GoogleMapView.swift */,
+				537CD1B9259B6FDD9DBA8E37 /* ImageCropPicker.swift */,
 				4706792C26101B180693BACF /* InputField.swift */,
 				83B043C9DBACDB46B61E6148 /* ListingCard.swift */,
 				820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */,
+				69D03627A981C3C64EF47F06 /* PublicProfileView.swift */,
 				8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */,
 				F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */,
 				F9A10E906BFD039DCF513926 /* TimePickerField.swift */,
@@ -447,6 +453,7 @@
 				F633782D650F9CAF614C16E2 /* HostOnboardingViewModel.swift in Sources */,
 				C20A38400F387BEF58A71667 /* HostRequestsView.swift in Sources */,
 				96BC4BC4EB06699B3E5A5D69 /* HostSpotDetailView.swift in Sources */,
+				CA48E2836B846266237AD524 /* ImageCropPicker.swift in Sources */,
 				694752864F4B0F93CA8B6433 /* InputField.swift in Sources */,
 				EA6ED6282BB3420E464B2A4D /* LaunchScreen.swift in Sources */,
 				EA6458ECC1DE539DADF94299 /* ListingCard.swift in Sources */,
@@ -464,6 +471,7 @@
 				F648BF7042F00623CBB97B0E /* PricingRulesEditorView.swift in Sources */,
 				53A0D526B1C2D389C36E2A64 /* PricingService.swift in Sources */,
 				D66A3C676F36A7AC0C7FA620 /* ProfileView.swift in Sources */,
+				826D4094CB6C79BB766161D3 /* PublicProfileView.swift in Sources */,
 				1A1B9BC09172D4EBECCDB2C3 /* PushNotificationManager.swift in Sources */,
 				C0BA2DBEE5876C34B94A911D /* QRCodeView.swift in Sources */,
 				30DB0664F70CAF9A54C49E83 /* RegisterView.swift in Sources */,
@@ -516,7 +524,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -616,7 +624,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 16;
+				CURRENT_PROJECT_VERSION = 17;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

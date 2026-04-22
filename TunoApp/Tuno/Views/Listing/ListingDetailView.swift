@@ -11,6 +11,7 @@ struct ListingDetailView: View {
     @State private var chatConversationId: String?
     @State private var chatHostName: String?
     @State private var showChat = false
+    @State private var showHostProfile = false
     @StateObject private var chatService = ChatService()
 
     var body: some View {
@@ -199,6 +200,54 @@ struct ListingDetailView: View {
                                             .font(.system(size: 12))
                                             .foregroundStyle(.neutral400)
                                     }
+                                }
+
+                                Divider()
+                            }
+
+                            // Host-kort (tappbar for profil-visning)
+                            if let hostId = listing.hostId {
+                                Button {
+                                    showHostProfile = true
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        CachedAsyncImage(url: URL(string: listing.hostAvatar ?? "")) { image in
+                                            image.resizable().aspectRatio(contentMode: .fill)
+                                        } placeholder: {
+                                            Circle().fill(Color.neutral100).overlay(
+                                                Image(systemName: "person.fill").foregroundStyle(.neutral400)
+                                            )
+                                        }
+                                        .frame(width: 50, height: 50)
+                                        .clipShape(Circle())
+
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(listing.hostName ?? "Utleier")
+                                                .font(.system(size: 15, weight: .semibold))
+                                                .foregroundStyle(.neutral900)
+                                            if let year = listing.hostJoinedYear {
+                                                Text("Medlem siden \(year)")
+                                                    .font(.system(size: 12))
+                                                    .foregroundStyle(.neutral500)
+                                            }
+                                        }
+
+                                        Spacer()
+
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.neutral400)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .sheet(isPresented: $showHostProfile) {
+                                    PublicProfileView(
+                                        hostId: hostId,
+                                        initialName: listing.hostName,
+                                        initialAvatar: listing.hostAvatar,
+                                        initialJoinedYear: listing.hostJoinedYear,
+                                        initialListingsCount: listing.hostListingsCount
+                                    )
                                 }
 
                                 Divider()

@@ -201,7 +201,7 @@ struct EditProfileView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var fullName = ""
     @State private var isSaving = false
-    @State private var selectedPhoto: PhotosPickerItem?
+    @State private var showImagePicker = false
     @State private var isUploadingAvatar = false
     @State private var avatarError: String?
 
@@ -257,15 +257,19 @@ struct EditProfileView: View {
         .onAppear {
             fullName = authManager.profile?.fullName ?? ""
         }
-        .onChange(of: selectedPhoto) { _, newItem in
-            guard let item = newItem else { return }
-            Task { await uploadAvatar(item) }
+        .sheet(isPresented: $showImagePicker) {
+            ImageCropPicker { picked in
+                Task { await uploadAvatar(picked) }
+            }
+            .ignoresSafeArea()
         }
     }
 
     @ViewBuilder
     private var avatarView: some View {
-        PhotosPicker(selection: $selectedPhoto, matching: .images, photoLibrary: .shared()) {
+        Button {
+            showImagePicker = true
+        } label: {
             // Avatar-sirkel (clippet) med kamera-badge som sitter UTENFOR clip-maska
             // så den ikke kuttes av sirkelen.
             ZStack(alignment: .bottomTrailing) {
@@ -306,19 +310,20 @@ struct EditProfileView: View {
                 }
             }
         }
+        .buttonStyle(.plain)
         .disabled(isUploadingAvatar)
     }
 
-    private func uploadAvatar(_ item: PhotosPickerItem) async {
+    private func uploadAvatar(_ image: UIImage) async {
         avatarError = nil
         isUploadingAvatar = true
         defer { isUploadingAvatar = false }
 
-        guard let raw = try? await item.loadTransferable(type: Data.self) else {
+        guard let jpegData = image.jpegData(compressionQuality: 0.85) else {
             avatarError = "Kunne ikke lese bildet"
             return
         }
-        let compressed = ImageCompression.compressForUpload(raw) ?? raw
+        let compressed = ImageCompression.compressForUpload(jpegData) ?? jpegData
         guard let userId = authManager.currentUser?.id.uuidString.lowercased() else {
             avatarError = "Ikke innlogget"
             return
