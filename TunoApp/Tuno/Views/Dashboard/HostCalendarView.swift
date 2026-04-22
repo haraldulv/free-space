@@ -95,16 +95,17 @@ struct CalendarRootView: View {
     }
 }
 
-// MARK: - PreferenceKey for cell-frames (brukt til drag-select)
+// MARK: - PreferenceKey for måned-grid-rammer (brukt til drag-select)
 
-private struct CellFrameEntry: Equatable {
-    let iso: String
-    let rect: CGRect
+private struct MonthGridFrame: Equatable {
+    let monthStart: Date       // første dag i måneden (midnatt, Europe/Oslo)
+    let rect: CGRect           // gridens rect i calendarContent-rommet
+    let rows: Int              // antall rader (days.count / 7)
 }
 
-private struct CellFramesPreference: PreferenceKey {
-    static var defaultValue: [CellFrameEntry] { [] }
-    static func reduce(value: inout [CellFrameEntry], nextValue: () -> [CellFrameEntry]) {
+private struct MonthGridFramesPreference: PreferenceKey {
+    static var defaultValue: [MonthGridFrame] { [] }
+    static func reduce(value: inout [MonthGridFrame], nextValue: () -> [MonthGridFrame]) {
         value.append(contentsOf: nextValue())
     }
 }
@@ -133,11 +134,11 @@ struct HostCalendarView: View {
     @State private var selectedSpotIds: Set<String> = []
     @State private var showSpotPicker = false
 
-    // Penselvalg-modus (paint mode)
+    // Penselvalg-modus (paint mode) + måned-grid-rammer for celle-oppslag
     @State private var paintMode = false
     @State private var paintAnchorIso: String?
     @State private var prePaintSelection: Set<String> = []
-    @State private var cellFrames: [String: CGRect] = [:]
+    @State private var monthGridFrames: [MonthGridFrame] = []
 
     private let monthsAhead = 12
     private var basePrice: Int { listing.price ?? 0 }
@@ -204,10 +205,8 @@ struct HostCalendarView: View {
                 .coordinateSpace(name: "calendarContent")
             }
             .scrollDisabled(paintMode)
-            .onPreferenceChange(CellFramesPreference.self) { frames in
-                var map: [String: CGRect] = [:]
-                for f in frames { map[f.iso] = f.rect }
-                cellFrames = map
+            .onPreferenceChange(MonthGridFramesPreference.self) { frames in
+                monthGridFrames = frames
             }
             .gesture(paintGesture, including: paintMode ? .gesture : .subviews)
 
@@ -396,6 +395,7 @@ struct HostCalendarView: View {
             .padding(.horizontal, 12)
 
             let days = daysInMonthGrid(monthStart)
+            let rows = days.count / 7
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 2) {
                 ForEach(Array(days.enumerated()), id: \.offset) { _, date in
                     if let date {
@@ -406,6 +406,18 @@ struct HostCalendarView: View {
                 }
             }
             .padding(.horizontal, 12)
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: MonthGridFramesPreference.self,
+                        value: [MonthGridFrame(
+                            monthStart: monthStart,
+                            rect: geo.frame(in: .named("calendarContent")),
+                            rows: rows
+                        )]
+                    )
+                }
+            )
         }
     }
 
@@ -456,16 +468,6 @@ struct HostCalendarView: View {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(isAnchor ? Color.primary600 : (isSelected ? Color.primary600.opacity(0.6) : Color.clear),
                             lineWidth: isAnchor ? 2.5 : 2)
-            )
-            .background(
-                GeometryReader { geo in
-                    Color.clear.preference(
-                        key: CellFramesPreference.self,
-                        value: canSelect(isPast: isPast, isBooked: isBooked)
-                            ? [CellFrameEntry(iso: iso, rect: geo.frame(in: .named("calendarContent")))]
-                            : []
-                    )
-                }
             )
         }
         .buttonStyle(.plain)
@@ -562,11 +564,24 @@ struct HostCalendarView: View {
             }
     }
 
+    /// Finn hvilken dato brukeren peker på ved å regne matematisk —
+    /// ingen per-celle PreferenceKey, ingen race-conditions. Én ramme per
+    /// måned-grid + math.
     private func findCell(at point: CGPoint) -> String? {
-        for (iso, rect) in cellFrames {
-            if rect.contains(point) { return iso }
-        }
-        return nil
+        guard let frame = monthGridFrames.first(where: { $0.rect.contains(point) }),
+              frame.rows > 0 else { return nil }
+
+        let rect = frame.rect
+        let cellWidth = rect.width / 7
+        let cellHeight = rect.height / CGFloat(frame.rows)
+
+        let col = min(max(Int((point.x - rect.minX) / cellWidth), 0), 6)
+        let row = min(max(Int((point.y - rect.minY) / cellHeight), 0), frame.rows - 1)
+
+        let days = daysInMonthGrid(frame.monthStart)
+        let index = row * 7 + col
+        guard index < days.count, let date = days[index] else { return nil }
+        return isoFormatter.string(from: date)
     }
 
     // MARK: - Cell styling
