@@ -5,6 +5,7 @@ struct MainTabView: View {
     @EnvironmentObject var deepLinkManager: DeepLinkManager
     @EnvironmentObject var pushRouter: PushRouter
     @StateObject private var chatService = ChatService()
+    @StateObject private var profileStats = ProfileStatsStore()
     @State private var selectedTab = 0
     @State private var homeNavPath = NavigationPath()
     @State private var messagesNavPath = NavigationPath()
@@ -52,10 +53,15 @@ struct MainTabView: View {
             )
         }
         .environmentObject(chatService)
+        .environmentObject(profileStats)
         .ignoresSafeArea(.keyboard)
         .task {
             await loadUnreadCount()
             await loadPendingHostRequests()
+            await refreshProfileStats()
+        }
+        .onChange(of: authManager.currentUser?.id) { _, _ in
+            Task { await refreshProfileStats() }
         }
         .onChange(of: selectedTab) { _, newTab in
             // Refresh unread count when leaving messages tab
@@ -65,6 +71,11 @@ struct MainTabView: View {
             // Refresh pending-count når vi forlater Profil-tab (etter at host svarte)
             if newTab != 4 {
                 Task { await loadPendingHostRequests() }
+            }
+            // Refresh profil-stats i bakgrunnen når vi går INN på Profil-tab —
+            // cached verdier vises umiddelbart, nye verdier kommer inn uten flicker.
+            if newTab == 4 {
+                Task { await refreshProfileStats() }
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
@@ -117,6 +128,14 @@ struct MainTabView: View {
     private func loadUnreadCount() async {
         guard let userId = authManager.currentUser?.id else { return }
         await chatService.loadConversations(userId: userId.uuidString.lowercased())
+    }
+
+    private func refreshProfileStats() async {
+        guard let userId = authManager.currentUser?.id.uuidString.lowercased() else {
+            profileStats.clear()
+            return
+        }
+        await profileStats.refresh(userId: userId, isHost: authManager.isHost)
     }
 
     private func loadPendingHostRequests() async {

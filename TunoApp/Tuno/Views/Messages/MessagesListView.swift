@@ -15,6 +15,7 @@ struct MessagesListView: View {
     @State private var searchActive = false
     @State private var searchText = ""
     @State private var showSettings = false
+    @FocusState private var searchFocused: Bool
 
     private var filtered: [ConversationPreview] {
         var result = chatService.conversations
@@ -73,13 +74,17 @@ struct MessagesListView: View {
                 }
             }
         }
-        .navigationTitle("Meldinger")
+        .navigationTitle(searchActive ? "" : "Meldinger")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar(searchActive ? .hidden : .visible, for: .navigationBar)
         .toolbar {
             if authManager.isAuthenticated && !searchActive {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        withAnimation { searchActive = true }
+                        withAnimation(.easeInOut(duration: 0.2)) { searchActive = true }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            searchFocused = true
+                        }
                     } label: {
                         Image(systemName: "magnifyingglass")
                             .foregroundStyle(.neutral900)
@@ -132,7 +137,9 @@ struct MessagesListView: View {
                     .font(.system(size: 14))
                     .foregroundStyle(.neutral500)
                 TextField("Søk i alle meldinger", text: $searchText)
+                    .focused($searchFocused)
                     .autocorrectionDisabled()
+                    .submitLabel(.search)
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
@@ -140,11 +147,11 @@ struct MessagesListView: View {
             .clipShape(Capsule())
 
             Button("Avbryt") {
-                withAnimation {
+                searchFocused = false
+                withAnimation(.easeInOut(duration: 0.2)) {
                     searchActive = false
                     searchText = ""
                 }
-                hideKeyboard()
             }
             .font(.system(size: 15))
             .foregroundStyle(.neutral900)

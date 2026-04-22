@@ -4,16 +4,9 @@ import PhotosUI
 struct ProfileView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var pushRouter: PushRouter
+    @EnvironmentObject var profileStats: ProfileStatsStore
     @State private var showLogoutConfirm = false
     @State private var showLogin = false
-    @State private var pendingRequestCount: Int = 0
-    @State private var unreadNotifications: Int = 0
-    @State private var tripCount: Int = 0
-    @State private var reviewCount: Int = 0
-    @State private var rating: Double? = nil
-    @State private var monthlyNet: Int = 0
-    @State private var monthlyBookings: Int = 0
-    @State private var recentMonthsEarnings: [HostInntektCard.MonthlyEarning] = []
     @State private var navigateToHostRequests = false
     @State private var navigateToNotifications = false
     @State private var showSelfProfile = false
@@ -66,9 +59,9 @@ struct ProfileView: View {
                     name: authManager.profile?.fullName ?? authManager.displayName,
                     avatarUrl: authManager.profile?.avatarUrl,
                     location: authManager.profile?.location,
-                    trips: tripCount,
-                    reviews: reviewCount,
-                    rating: rating,
+                    trips: profileStats.tripCount,
+                    reviews: profileStats.reviewCount,
+                    rating: profileStats.rating,
                     isVerified: authManager.isHost && (authManager.profile?.stripeOnboardingComplete ?? false)
                 )
                 .onTapGesture { showSelfProfile = true }
@@ -81,9 +74,9 @@ struct ProfileView: View {
                     } label: {
                         HostInntektCard(
                             monthName: currentMonthName,
-                            netIncome: monthlyNet,
-                            bookingCount: monthlyBookings,
-                            recentMonths: recentMonthsEarnings
+                            netIncome: profileStats.monthlyNet,
+                            bookingCount: profileStats.monthlyBookings,
+                            recentMonths: profileStats.recentMonthsEarnings
                         )
                         .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
                     }
@@ -121,7 +114,7 @@ struct ProfileView: View {
                     Image(systemName: "bell")
                         .foregroundStyle(.neutral900)
                         .overlay(alignment: .topTrailing) {
-                            if unreadNotifications > 0 {
+                            if profileStats.unreadNotifications > 0 {
                                 Circle()
                                     .fill(Color.red)
                                     .frame(width: 8, height: 8)
@@ -157,8 +150,11 @@ struct ProfileView: View {
         } message: {
             Text("Er du sikker på at du vil logge ut?")
         }
-        .task(id: authManager.currentUser?.id) {
-            await loadAll()
+        .task {
+            // Bakgrunns-refresh — cached verdier vises med én gang fra storen,
+            // så ingen 0 → 3 flicker. Nye verdier kommer uten visuelt sprang.
+            guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
+            await profileStats.refresh(userId: userId, isHost: authManager.isHost)
         }
         .onAppear {
             if pushRouter.pendingBookingType == "booking_request" {
@@ -183,7 +179,7 @@ struct ProfileView: View {
             menuRow(
                 icon: "tray.full.fill",
                 label: "Forespørsler",
-                badge: pendingRequestCount > 0 ? "\(pendingRequestCount)" : nil,
+                badge: profileStats.pendingRequestCount > 0 ? "\(profileStats.pendingRequestCount)" : nil,
                 destination: AnyView(HostRequestsView())
             )
             menuRow(
@@ -338,184 +334,6 @@ struct ProfileView: View {
         df.locale = Locale(identifier: "nb_NO")
         df.dateFormat = "MMMM yyyy"
         return df.string(from: Date()).capitalized
-    }
-
-    // MARK: - Data loading
-
-    private func loadAll() async {
-        await withTaskGroup(of: Void.self) { group in
-            group.addTask { await loadPendingCount() }
-            group.addTask { await loadUnreadCount() }
-            group.addTask { await loadTripCount() }
-            group.addTask { await loadReviewCount() }
-            if authManager.isHost {
-                group.addTask { await loadMonthlyRevenue() }
-            }
-        }
-    }
-
-    private func loadPendingCount() async {
-        guard let userId = authManager.currentUser?.id.uuidString.lowercased(),
-              authManager.isHost else {
-            pendingRequestCount = 0
-            return
-        }
-        do {
-            let count = try await supabase
-                .from("bookings")
-                .select("id", head: true, count: .exact)
-                .eq("host_id", value: userId)
-                .eq("status", value: "requested")
-                .execute()
-                .count ?? 0
-            pendingRequestCount = count
-        } catch {
-            print("loadPendingCount error: \(error)")
-        }
-    }
-
-    private func loadUnreadCount() async {
-        guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
-        do {
-            let count = try await supabase
-                .from("notifications")
-                .select("id", head: true, count: .exact)
-                .eq("user_id", value: userId)
-                .eq("read", value: false)
-                .execute()
-                .count ?? 0
-            unreadNotifications = count
-        } catch {
-            print("loadUnreadCount error: \(error)")
-        }
-    }
-
-    private func loadTripCount() async {
-        guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
-        do {
-            let count = try await supabase
-                .from("bookings")
-                .select("id", head: true, count: .exact)
-                .eq("user_id", value: userId)
-                .eq("status", value: "confirmed")
-                .execute()
-                .count ?? 0
-            tripCount = count
-        } catch {
-            print("loadTripCount error: \(error)")
-        }
-    }
-
-    private func loadReviewCount() async {
-        guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
-        do {
-            struct RatingRow: Decodable {
-                let rating: Double?
-                let reviewCount: Int?
-                enum CodingKeys: String, CodingKey {
-                    case rating
-                    case reviewCount = "review_count"
-                }
-            }
-            let rows: [RatingRow] = try await supabase
-                .from("profiles")
-                .select("rating, review_count")
-                .eq("id", value: userId)
-                .limit(1)
-                .execute()
-                .value
-            if let row = rows.first {
-                reviewCount = row.reviewCount ?? 0
-                rating = row.rating
-            }
-        } catch {
-            print("loadReviewCount error: \(error)")
-        }
-    }
-
-    private func loadMonthlyRevenue() async {
-        guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
-
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
-
-        var comps = cal.dateComponents([.year, .month], from: Date())
-        comps.day = 1
-        guard let currentMonthStart = cal.date(from: comps) else { return }
-        guard let threeMonthsAgo = cal.date(byAdding: .month, value: -2, to: currentMonthStart) else { return }
-
-        let iso = ISO8601DateFormatter()
-        iso.timeZone = TimeZone(identifier: "Europe/Oslo")
-        let fromRecent = iso.string(from: threeMonthsAgo)
-        let fromThisMonth = iso.string(from: currentMonthStart)
-
-        struct Row: Decodable {
-            let totalPrice: Int
-            let createdAt: String?
-            enum CodingKeys: String, CodingKey {
-                case totalPrice = "total_price"
-                case createdAt = "created_at"
-            }
-        }
-
-        do {
-            let rows: [Row] = try await supabase
-                .from("bookings")
-                .select("total_price, created_at")
-                .eq("host_id", value: userId)
-                .eq("status", value: "confirmed")
-                .eq("payment_status", value: "paid")
-                .gte("created_at", value: fromRecent)
-                .execute()
-                .value
-
-            let serviceFee = 0.10
-
-            // Denne-måneden-snapshot
-            let thisMonthRows = rows.filter { ($0.createdAt ?? "") >= fromThisMonth }
-            monthlyNet = thisMonthRows.reduce(0) { $0 + Int(Double($1.totalPrice) * (1 - serviceFee)) }
-            monthlyBookings = thisMonthRows.count
-
-            // Bygg 6 måneder tilbake → grupper etter YYYY-MM
-            let keyFormatter = DateFormatter()
-            keyFormatter.dateFormat = "yyyy-MM"
-            keyFormatter.locale = Locale(identifier: "en_US_POSIX")
-            keyFormatter.timeZone = TimeZone(identifier: "Europe/Oslo")
-
-            let shortMonthFormatter = DateFormatter()
-            shortMonthFormatter.dateFormat = "MMM"
-            shortMonthFormatter.locale = Locale(identifier: "nb_NO")
-            shortMonthFormatter.timeZone = TimeZone(identifier: "Europe/Oslo")
-
-            let parser = ISO8601DateFormatter()
-            parser.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-
-            var bucket: [String: Int] = [:]
-            for row in rows {
-                guard let isoDate = row.createdAt,
-                      let date = parser.date(from: isoDate) ?? {
-                          parser.formatOptions = [.withInternetDateTime]
-                          return parser.date(from: isoDate)
-                      }() else { continue }
-                let key = keyFormatter.string(from: date)
-                bucket[key, default: 0] += Int(Double(row.totalPrice) * (1 - serviceFee))
-            }
-
-            var months: [HostInntektCard.MonthlyEarning] = []
-            for offset in (0...2).reversed() {
-                guard let monthDate = cal.date(byAdding: .month, value: -offset, to: currentMonthStart) else { continue }
-                let key = keyFormatter.string(from: monthDate)
-                let label = shortMonthFormatter.string(from: monthDate).lowercased()
-                months.append(HostInntektCard.MonthlyEarning(
-                    id: key,
-                    shortLabel: label,
-                    earnings: bucket[key] ?? 0
-                ))
-            }
-            recentMonthsEarnings = months
-        } catch {
-            print("loadMonthlyRevenue error: \(error)")
-        }
     }
 }
 
