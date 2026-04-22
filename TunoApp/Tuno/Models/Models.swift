@@ -152,9 +152,9 @@ enum VehicleType: String, Codable, CaseIterable {
 
     var icon: String {
         switch self {
-        case .car: return "car.side.fill"
-        case .campervan: return "bus.fill"
-        case .motorhome: return "bus.fill"
+        case .car: return "car.fill"
+        case .campervan: return "box.truck.fill"
+        case .motorhome: return "box.truck.fill"
         }
     }
 }

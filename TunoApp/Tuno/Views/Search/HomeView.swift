@@ -53,15 +53,17 @@ struct HomeView: View {
                             } label: {
                                 VStack(spacing: 7) {
                                     Image(systemName: type.icon)
-                                        .font(.system(size: 28, weight: selectedVehicle == type ? .regular : .regular))
+                                        .font(.system(size: 28))
                                         .symbolRenderingMode(.hierarchical)
+                                        .foregroundStyle(selectedVehicle == type ? Color.primary600 : .neutral400)
                                         .frame(height: 30)
+                                        .symbolEffect(.bounce.up, options: .nonRepeating, value: selectedVehicle)
                                         .scaleEffect(selectedVehicle == type ? 1.0 : 0.88)
-                                        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: selectedVehicle)
+                                        .animation(.spring(response: 0.35, dampingFraction: 0.65), value: selectedVehicle)
                                     Text(type.displayName)
                                         .font(.system(size: 12, weight: selectedVehicle == type ? .semibold : .medium))
+                                        .foregroundStyle(selectedVehicle == type ? Color.primary600 : .neutral400)
                                 }
-                                .foregroundStyle(selectedVehicle == type ? Color.primary600 : .neutral400)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 6)
                             }
