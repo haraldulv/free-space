@@ -176,13 +176,10 @@ struct HostCalendarView: View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 LazyVStack(spacing: 24, pinnedViews: []) {
-                    listingHeader
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-
                     if hasMultipleSpots {
                         spotPickerButton
                             .padding(.horizontal, 16)
+                            .padding(.top, 12)
                     }
 
                     if isLoading {
@@ -193,7 +190,7 @@ struct HostCalendarView: View {
                         }
                     }
                 }
-                .padding(.top, 4)
+                .padding(.top, 8)
                 .padding(.bottom, selectedDates.isEmpty ? 20 : 160)
             }
 
@@ -230,6 +227,34 @@ struct HostCalendarView: View {
         .navigationTitle(listing.internalName ?? listing.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                HStack(spacing: 8) {
+                    Group {
+                        if let urlStr = listing.images?.first, let url = URL(string: urlStr) {
+                            CachedAsyncImage(url: url) { image in
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Rectangle().fill(Color.neutral100)
+                            }
+                        } else {
+                            Rectangle()
+                                .fill(Color.neutral100)
+                                .overlay(
+                                    Image(systemName: "photo")
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(.neutral300)
+                                )
+                        }
+                    }
+                    .frame(width: 28, height: 28)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                    Text(listing.internalName ?? listing.title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .lineLimit(1)
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showPricingRulesEditor = true
@@ -268,52 +293,6 @@ struct HostCalendarView: View {
             withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) {
                 anchorPulse.toggle()
             }
-        }
-    }
-
-    // MARK: - Annonse-header (miniatyr + tittel)
-
-    @ViewBuilder
-    private var listingHeader: some View {
-        HStack(spacing: 12) {
-            Group {
-                if let urlStr = listing.images?.first, let url = URL(string: urlStr) {
-                    CachedAsyncImage(url: url) { image in
-                        image.resizable().aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Rectangle().fill(Color.neutral100)
-                    }
-                } else {
-                    Rectangle()
-                        .fill(Color.neutral100)
-                        .overlay(
-                            Image(systemName: "photo")
-                                .font(.system(size: 16))
-                                .foregroundStyle(.neutral300)
-                        )
-                }
-            }
-            .frame(width: 54, height: 54)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(listing.internalName ?? listing.title)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                    .lineLimit(1)
-                if let internalName = listing.internalName, !internalName.isEmpty {
-                    Text(listing.title)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral500)
-                        .lineLimit(1)
-                } else if let city = listing.city {
-                    Text(city)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral500)
-                        .lineLimit(1)
-                }
-            }
-            Spacer()
         }
     }
 
