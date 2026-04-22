@@ -111,11 +111,61 @@ export async function sendPushToUser(
   title: string,
   body: string,
   data?: Record<string, string>,
+  options?: { conversationId?: string },
 ) {
   try {
+    // Sjekk globale + per-samtale mute-flagg før vi bruker energi på APNs
+    const blocked = await shouldSuppressPush(userId, options?.conversationId);
+    if (blocked) {
+      console.log(`[Push] Suppressed for user ${userId.slice(0, 8)}... (reason: ${blocked})`);
+      return;
+    }
     console.log(`[Push] Sending to user ${userId.slice(0, 8)}...: "${title}" — "${body.slice(0, 50)}"`);
     await sendPushNotification(userId, title, body, data);
   } catch (err) {
     console.error("[Push] sendPushToUser error:", err);
+  }
+}
+
+/**
+ * Returnerer en string-grunn for å blokkere push (for logging), eller null hvis OK å sende.
+ * - Globalt: profiles.push_notifications_enabled = false → "global_disabled"
+ * - Per-samtale: conversations.muted_by_host|guest = true (avhengig av mottakerens rolle) → "conversation_muted"
+ * Kalles fra sendPushToUser. Ved DB-feil: la push gå gjennom (fail-open).
+ */
+async function shouldSuppressPush(userId: string, conversationId?: string): Promise<string | null> {
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("push_notifications_enabled")
+      .eq("id", userId)
+      .maybeSingle();
+    if (profile && profile.push_notifications_enabled === false) {
+      return "global_disabled";
+    }
+
+    if (conversationId) {
+      const { data: convo } = await supabase
+        .from("conversations")
+        .select("host_id, guest_id, muted_by_host, muted_by_guest")
+        .eq("id", conversationId)
+        .maybeSingle();
+      if (convo) {
+        const isHost = convo.host_id === userId;
+        const isGuest = convo.guest_id === userId;
+        const muted = (isHost && convo.muted_by_host) || (isGuest && convo.muted_by_guest);
+        if (muted) return "conversation_muted";
+      }
+    }
+    return null;
+  } catch (err) {
+    console.error("[Push] shouldSuppressPush error (fail-open):", err);
+    return null;
   }
 }

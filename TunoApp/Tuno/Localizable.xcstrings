@@ -14,6 +14,12 @@
         }
       }
     },
+    "·" : {
+
+    },
+    "· Vert" : {
+
+    },
     "(%@ anmeldelser)" : {
       "localizations" : {
         "de" : {
@@ -33,6 +39,9 @@
           }
         }
       }
+    },
+    "(valgfritt)" : {
+
     },
     "/ %@" : {
       "localizations" : {
@@ -66,6 +75,16 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ – %2$@"
+          }
+        }
+      }
+    },
+    "%@ · %@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ · %2$@"
           }
         }
       }
@@ -429,6 +448,24 @@
     "× %@ plasser" : {
 
     },
+    "1 time før" : {
+
+    },
+    "2 timer før" : {
+
+    },
+    "3 timer før" : {
+
+    },
+    "6 timer før" : {
+
+    },
+    "12 timer før" : {
+
+    },
+    "24 timer før" : {
+
+    },
     "Administrer push-varslinger i iOS-innstillinger." : {
 
     },
@@ -502,6 +539,9 @@
           }
         }
       }
+    },
+    "Angre" : {
+
     },
     "Anmeldelse sendt" : {
       "extractionState" : "manual",
@@ -587,6 +627,9 @@
           }
         }
       }
+    },
+    "Annonsen er publisert! 🎉" : {
+
     },
     "Annonsens standardpris er %@ kr/natt. Legg til helg-pris eller sesong-regler som overstyrer." : {
 
@@ -1205,6 +1248,9 @@
         }
       }
     },
+    "Del aldri betalings- eller kontaktinfo utenfor appen — da er du ikke beskyttet." : {
+
+    },
     "Denne handlingen kan ikke angres." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1309,6 +1355,9 @@
           }
         }
       }
+    },
+    "Dra og slipp for å endre rekkefølge. Bildet lengst til venstre er forsidebildet." : {
+
     },
     "Du får utbetalt din andel etter oppholdet (minus Tunos servicegebyr)." : {
       "extractionState" : "stale",
@@ -1983,6 +2032,9 @@
         }
       }
     },
+    "Flott!" : {
+
+    },
     "Fødselsdato" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2124,9 +2176,6 @@
           }
         }
       }
-    },
-    "Første bilde er forsidebilde. Bruk pilene for å endre rekkefølge." : {
-
     },
     "Fortell om plassen din" : {
       "extractionState" : "manual",
@@ -2361,6 +2410,9 @@
         }
       }
     },
+    "Gjester kan nå se og booke plassen din." : {
+
+    },
     "Gjester kan reservere uten å vente på bekreftelse fra deg." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2571,6 +2623,9 @@
         }
       }
     },
+    "Hold samtaler i Tuno" : {
+
+    },
     "Hovedposisjon" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2683,6 +2738,9 @@
         }
       }
     },
+    "I denne samtalen" : {
+
+    },
     "I går" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2733,6 +2791,9 @@
           }
         }
       }
+    },
+    "Ikke spør meg igjen" : {
+
     },
     "Ikke tilgjengelig for disse datoene" : {
       "extractionState" : "manual",
@@ -3048,6 +3109,9 @@
           }
         }
       }
+    },
+    "Internnavn" : {
+
     },
     "Jeg godtar og fortsetter" : {
       "extractionState" : "manual",
@@ -3420,6 +3484,9 @@
           }
         }
       }
+    },
+    "Kun synlig for deg — nyttig hvis du har flere annonser." : {
+
     },
     "Kunne ikke lagre: %@" : {
       "extractionState" : "manual",
@@ -3804,6 +3871,9 @@
         }
       }
     },
+    "Lim inn" : {
+
+    },
     "Logg inn" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4068,6 +4138,9 @@
           }
         }
       }
+    },
+    "Medlem siden %@" : {
+
     },
     "Melding til gjest (valgfri)" : {
 
@@ -4504,6 +4577,12 @@
       }
     },
     "Opphold på mer enn 7 netter krever godkjenning fra utleier. Beløpet reserveres på kortet ditt og belastes først når utleier godkjenner." : {
+
+    },
+    "Opplysninger" : {
+
+    },
+    "Opplysninger om turen" : {
 
     },
     "Opprett annonse" : {
@@ -5319,9 +5398,6 @@
         }
       }
     },
-    "Reset" : {
-
-    },
     "Rullestoltilgjengelig" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5372,6 +5448,9 @@
           }
         }
       }
+    },
+    "Samtalehandlinger" : {
+
     },
     "Se gjennom" : {
       "localizations" : {
@@ -5485,6 +5564,12 @@
         }
       }
     },
+    "Sendes" : {
+
+    },
+    "Sendes automatisk før utsjekk som en vennlig påminnelse." : {
+
+    },
     "Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen." : {
       "localizations" : {
         "de" : {
@@ -5570,9 +5655,6 @@
       }
     },
     "Sett pris for en periode (f.eks. sommeruker). Overstyrer helg og standard." : {
-
-    },
-    "Sett som forside" : {
 
     },
     "Sett ulik melding per plass (f.eks. ulike port-koder)." : {
@@ -6270,6 +6352,9 @@
         }
       }
     },
+    "Trykk på et hurtigsvar for å sette det inn i meldingsfeltet. Du kan redigere teksten før du sender." : {
+
+    },
     "Trykk på kartet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6303,6 +6388,9 @@
           }
         }
       }
+    },
+    "Typisk svartid: %@" : {
+
     },
     "Ugyldig norsk IBAN (NO + 13 siffer)" : {
       "extractionState" : "manual",
@@ -6439,6 +6527,9 @@
           }
         }
       }
+    },
+    "Utsjekkmelding" : {
+
     },
     "Uventet svar fra serveren" : {
       "extractionState" : "manual",
@@ -6675,6 +6766,9 @@
       }
     },
     "Versjon" : {
+
+    },
+    "Vert" : {
 
     },
     "Vi har sendt en bekreftelseslenke til %@. Klikk på lenken for å aktivere kontoen din, og logg deretter inn." : {

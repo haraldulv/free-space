@@ -435,15 +435,43 @@ struct AirbnbConversationRow: View {
 
 struct MessagesSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("tuno.messages.pushEnabled") private var pushEnabled = true
+    @EnvironmentObject var authManager: AuthManager
+    @State private var pushEnabled = true
+    @State private var isSaving = false
+    @State private var showQuickRepliesEditor = false
 
     var body: some View {
         NavigationStack {
             Form {
                 Section("Varsler") {
-                    Toggle("Push-varsler for nye meldinger", isOn: $pushEnabled)
-                        .tint(.primary600)
+                    Toggle("Push-varsler for nye meldinger", isOn: Binding(
+                        get: { pushEnabled },
+                        set: { newValue in
+                            pushEnabled = newValue
+                            Task { await savePushEnabled(newValue) }
+                        }
+                    ))
+                    .tint(.primary600)
+                    .disabled(isSaving)
                 }
+
+                Section("Hurtigsvar") {
+                    Button {
+                        showQuickRepliesEditor = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "text.bubble")
+                                .foregroundStyle(.primary600)
+                            Text("Dine hurtigsvar")
+                                .foregroundStyle(.neutral900)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral400)
+                        }
+                    }
+                }
+
                 Section("Om meldinger") {
                     HStack {
                         Image(systemName: "shield.lefthalf.filled")
@@ -462,6 +490,267 @@ struct MessagesSettingsSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Lukk") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $showQuickRepliesEditor) {
+                QuickRepliesEditorSheet()
+            }
+            .task { await loadPushEnabled() }
+        }
+    }
+
+    private func loadPushEnabled() async {
+        guard let userId = authManager.currentUser?.id else { return }
+        do {
+            struct Row: Decodable { let pushNotificationsEnabled: Bool?
+                enum CodingKeys: String, CodingKey { case pushNotificationsEnabled = "push_notifications_enabled" }
+            }
+            let rows: [Row] = try await supabase
+                .from("profiles")
+                .select("push_notifications_enabled")
+                .eq("id", value: userId.uuidString.lowercased())
+                .limit(1)
+                .execute()
+                .value
+            pushEnabled = rows.first?.pushNotificationsEnabled ?? true
+        } catch {
+            print("loadPushEnabled: \(error)")
+        }
+    }
+
+    private func savePushEnabled(_ value: Bool) async {
+        guard let userId = authManager.currentUser?.id else { return }
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            try await supabase
+                .from("profiles")
+                .update(["push_notifications_enabled": value])
+                .eq("id", value: userId.uuidString.lowercased())
+                .execute()
+        } catch {
+            print("savePushEnabled: \(error)")
+        }
+    }
+}
+
+// MARK: - Quick reply model + editor
+
+struct QuickReply: Codable, Identifiable, Hashable {
+    let id: String
+    var title: String
+    var body: String
+
+    static let defaults: [QuickReply] = [
+        QuickReply(id: "welcome", title: "Velkommen", body: "Hei! Takk for bookingen. Velkommen til plassen 👋"),
+        QuickReply(id: "checkin", title: "Innsjekk-info", body: "Innsjekk er fra kl. 15. Kjør inn som avtalt — gi beskjed når du er fremme!"),
+        QuickReply(id: "checkout", title: "Utsjekk-påminnelse", body: "Hei! Bare en liten påminnelse om at utsjekk er kl. 11. Håper du har hatt det fint!"),
+        QuickReply(id: "thanks", title: "Takk for oppholdet", body: "Tusen takk for oppholdet — kom gjerne tilbake! 🚐"),
+        QuickReply(id: "contact", title: "Kontaktinfo", body: "Hvis du trenger noe, bare ring eller send en melding her. Jeg svarer så fort jeg kan."),
+        QuickReply(id: "confirm", title: "Bekreft", body: "Bekreftet! Ser frem til å ha deg her.")
+    ]
+}
+
+@MainActor
+final class QuickRepliesStore: ObservableObject {
+    @Published var replies: [QuickReply] = []
+    @Published var isLoading = false
+
+    func load(userId: String) async {
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            struct Row: Decodable {
+                let quickReplies: [QuickReply]?
+                enum CodingKeys: String, CodingKey { case quickReplies = "quick_replies" }
+            }
+            let rows: [Row] = try await supabase
+                .from("profiles")
+                .select("quick_replies")
+                .eq("id", value: userId)
+                .limit(1)
+                .execute()
+                .value
+            let stored = rows.first?.quickReplies ?? []
+            replies = stored.isEmpty ? QuickReply.defaults : stored
+        } catch {
+            print("QuickReplies load error: \(error)")
+            replies = QuickReply.defaults
+        }
+    }
+
+    func save(userId: String) async {
+        do {
+            struct Payload: Encodable {
+                let quick_replies: [QuickReply]
+            }
+            try await supabase
+                .from("profiles")
+                .update(Payload(quick_replies: replies))
+                .eq("id", value: userId)
+                .execute()
+        } catch {
+            print("QuickReplies save error: \(error)")
+        }
+    }
+}
+
+struct QuickRepliesEditorSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authManager: AuthManager
+    @StateObject private var store = QuickRepliesStore()
+    @State private var editing: QuickReply?
+    @State private var showAdd = false
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if store.isLoading {
+                    ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    List {
+                        Section {
+                            ForEach(store.replies) { reply in
+                                Button {
+                                    editing = reply
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(reply.title)
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .foregroundStyle(.neutral900)
+                                        Text(reply.body)
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(.neutral600)
+                                            .lineLimit(2)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            .onDelete { offsets in
+                                store.replies.remove(atOffsets: offsets)
+                                Task {
+                                    guard let userId = authManager.currentUser?.id else { return }
+                                    await store.save(userId: userId.uuidString.lowercased())
+                                }
+                            }
+                            .onMove { from, to in
+                                store.replies.move(fromOffsets: from, toOffset: to)
+                                Task {
+                                    guard let userId = authManager.currentUser?.id else { return }
+                                    await store.save(userId: userId.uuidString.lowercased())
+                                }
+                            }
+                        } footer: {
+                            Text("Hurtigsvar vises i meldingsfeltet når du trykker +. Tap for å redigere, sveip for å slette.")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral500)
+                        }
+
+                        Section {
+                            Button {
+                                showAdd = true
+                            } label: {
+                                Label("Legg til nytt", systemImage: "plus.circle.fill")
+                                    .foregroundStyle(.primary600)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Hurtigsvar")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) { EditButton() }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Ferdig") { dismiss() }
+                }
+            }
+            .sheet(item: $editing) { reply in
+                QuickReplyEditorView(
+                    initial: reply,
+                    onSave: { updated in
+                        if let idx = store.replies.firstIndex(where: { $0.id == reply.id }) {
+                            store.replies[idx] = updated
+                        }
+                        Task {
+                            guard let userId = authManager.currentUser?.id else { return }
+                            await store.save(userId: userId.uuidString.lowercased())
+                        }
+                        editing = nil
+                    },
+                    onCancel: { editing = nil }
+                )
+            }
+            .sheet(isPresented: $showAdd) {
+                QuickReplyEditorView(
+                    initial: QuickReply(id: UUID().uuidString, title: "", body: ""),
+                    onSave: { new in
+                        store.replies.append(new)
+                        Task {
+                            guard let userId = authManager.currentUser?.id else { return }
+                            await store.save(userId: userId.uuidString.lowercased())
+                        }
+                        showAdd = false
+                    },
+                    onCancel: { showAdd = false }
+                )
+            }
+            .task {
+                guard let userId = authManager.currentUser?.id else { return }
+                await store.load(userId: userId.uuidString.lowercased())
+            }
+        }
+    }
+}
+
+struct QuickReplyEditorView: View {
+    let initial: QuickReply
+    let onSave: (QuickReply) -> Void
+    let onCancel: () -> Void
+
+    @State private var title: String
+    @State private var message: String
+
+    init(initial: QuickReply, onSave: @escaping (QuickReply) -> Void, onCancel: @escaping () -> Void) {
+        self.initial = initial
+        self.onSave = onSave
+        self.onCancel = onCancel
+        self._title = State(initialValue: initial.title)
+        self._message = State(initialValue: initial.body)
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Tittel") {
+                    TextField("F.eks. Velkommen", text: $title)
+                }
+                Section {
+                    TextEditor(text: $message)
+                        .frame(minHeight: 140)
+                } header: {
+                    Text("Melding")
+                } footer: {
+                    Text("Tips: bruk {listing}, {checkin} eller {checkout} for å sette inn navn og tider automatisk.")
+                        .font(.system(size: 12))
+                }
+            }
+            .navigationTitle(initial.title.isEmpty ? "Nytt hurtigsvar" : "Rediger")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Avbryt", action: onCancel)
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Lagre") {
+                        onSave(QuickReply(
+                            id: initial.id,
+                            title: title.trimmingCharacters(in: .whitespaces),
+                            body: message.trimmingCharacters(in: .whitespaces)
+                        ))
+                    }
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || message.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .fontWeight(.semibold)
                 }
             }
         }

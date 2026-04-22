@@ -188,6 +188,8 @@ export async function GET(request: NextRequest) {
         booking.user_id,
         "Melding fra utleier",
         content.slice(0, 120),
+        undefined,
+        { conversationId: convo.id },
       );
 
       await supabase

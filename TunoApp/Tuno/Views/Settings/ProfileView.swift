@@ -200,6 +200,7 @@ struct ProfileView: View {
 struct EditProfileView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var fullName = ""
+    @State private var bio = ""
     @State private var isSaving = false
     @State private var showImagePicker = false
     @State private var isUploadingAvatar = false
@@ -233,12 +234,38 @@ struct EditProfileView: View {
             }
 
             Section {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Dette vises til gjester som trykker på profilen din. Hold det kort og vennlig.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                    TextEditor(text: $bio)
+                        .frame(minHeight: 100)
+                        .onChange(of: bio) { _, new in
+                            if new.count > 500 { bio = String(new.prefix(500)) }
+                        }
+                    HStack {
+                        Spacer()
+                        Text("\(bio.count) / 500")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.neutral400)
+                    }
+                }
+            } header: {
+                Text("Om deg")
+            }
+
+            Section {
                 Button {
                     Task {
                         isSaving = true
+                        struct Payload: Encodable {
+                            let full_name: String
+                            let bio: String?
+                        }
+                        let trimmedBio = bio.trimmingCharacters(in: .whitespaces)
                         try? await supabase
                             .from("profiles")
-                            .update(["full_name": fullName])
+                            .update(Payload(full_name: fullName, bio: trimmedBio.isEmpty ? nil : trimmedBio))
                             .eq("id", value: authManager.currentUser?.id.uuidString ?? "")
                             .execute()
                         await authManager.loadProfile()
@@ -256,6 +283,22 @@ struct EditProfileView: View {
         .navigationTitle("Rediger profil")
         .onAppear {
             fullName = authManager.profile?.fullName ?? ""
+        }
+        .task {
+            guard let userId = authManager.currentUser?.id else { return }
+            do {
+                struct BioRow: Decodable { let bio: String? }
+                let rows: [BioRow] = try await supabase
+                    .from("profiles")
+                    .select("bio")
+                    .eq("id", value: userId.uuidString.lowercased())
+                    .limit(1)
+                    .execute()
+                    .value
+                bio = rows.first?.bio ?? ""
+            } catch {
+                print("load bio: \(error)")
+            }
         }
         .sheet(isPresented: $showImagePicker) {
             ImageCropPicker { picked in

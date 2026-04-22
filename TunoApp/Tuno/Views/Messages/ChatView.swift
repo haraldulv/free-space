@@ -755,52 +755,54 @@ struct QuickRepliesSheet: View {
     let listing: Listing?
     let onSelect: (String) -> Void
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject var authManager: AuthManager
+    @StateObject private var store = QuickRepliesStore()
+    @State private var showEditor = false
 
-    private var templates: [(title: String, body: String)] {
-        let title = listing?.title ?? "plassen"
-        let checkin = listing?.checkInTime ?? "15:00"
-        let checkout = listing?.checkOutTime ?? "11:00"
-        return [
-            ("Velkommen", "Hei! Takk for bookingen. Velkommen til \(title) 👋"),
-            ("Innsjekk-info", "Innsjekk er fra kl. \(checkin). Kjør inn som avtalt — gi beskjed når du er fremme!"),
-            ("Utsjekk-påminnelse", "Hei! Bare en liten påminnelse om at utsjekk er kl. \(checkout). Håper du har hatt det fint!"),
-            ("Takk for oppholdet", "Tusen takk for oppholdet — kom gjerne tilbake! 🚐"),
-            ("Kontaktinfo", "Hvis du trenger noe, bare ring eller send en melding her. Jeg svarer så fort jeg kan."),
-            ("Bekreft", "Bekreftet! Ser frem til å ha deg her.")
-        ]
+    /// Substituerer {listing}, {checkin}, {checkout} med faktiske verdier fra booking-listingen.
+    /// Slik trenger host bare skrive én mal og få aktuell tid/navn inn automatisk.
+    private func expand(_ body: String) -> String {
+        body
+            .replacingOccurrences(of: "{listing}", with: listing?.title ?? "plassen")
+            .replacingOccurrences(of: "{checkin}", with: listing?.checkInTime ?? "15:00")
+            .replacingOccurrences(of: "{checkout}", with: listing?.checkOutTime ?? "11:00")
     }
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("Trykk på et hurtigsvar for å sette det inn i meldingsfeltet. Du kan redigere teksten før du sender.")
+                    Text("Trykk på et hurtigsvar for å sette det inn i meldingsfeltet. Bruk {listing}, {checkin} og {checkout} i egne svar for å sette inn aktuell info automatisk.")
                         .font(.system(size: 12))
                         .foregroundStyle(.neutral500)
                         .padding(.horizontal, 20)
                         .padding(.bottom, 12)
 
-                    ForEach(Array(templates.enumerated()), id: \.offset) { _, template in
-                        Button {
-                            onSelect(template.body)
-                        } label: {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(template.title)
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(.neutral900)
-                                Text(template.body)
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(.neutral600)
-                                    .multilineTextAlignment(.leading)
+                    if store.isLoading {
+                        ProgressView().padding(.top, 20)
+                    } else {
+                        ForEach(store.replies) { reply in
+                            Button {
+                                onSelect(expand(reply.body))
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(reply.title)
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.neutral900)
+                                    Text(expand(reply.body))
+                                        .font(.system(size: 13))
+                                        .foregroundStyle(.neutral600)
+                                        .multilineTextAlignment(.leading)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(16)
+                                .background(Color.neutral50)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .padding(.horizontal, 20)
                             }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(16)
-                            .background(Color.neutral50)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .padding(.horizontal, 20)
+                            .buttonStyle(.plain)
+                            .padding(.vertical, 4)
                         }
-                        .buttonStyle(.plain)
-                        .padding(.vertical, 4)
                     }
                 }
                 .padding(.vertical, 12)
@@ -808,9 +810,29 @@ struct QuickRepliesSheet: View {
             .navigationTitle("Hurtigsvar")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showEditor = true
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Lukk") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $showEditor, onDismiss: {
+                // Reload etter redigering så listen speiler eventuelle endringer
+                Task {
+                    guard let userId = authManager.currentUser?.id else { return }
+                    await store.load(userId: userId.uuidString.lowercased())
+                }
+            }) {
+                QuickRepliesEditorSheet()
+            }
+            .task {
+                guard let userId = authManager.currentUser?.id else { return }
+                await store.load(userId: userId.uuidString.lowercased())
             }
         }
     }
