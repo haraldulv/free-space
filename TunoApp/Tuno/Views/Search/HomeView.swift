@@ -12,56 +12,76 @@ struct HomeView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Search bar + vehicle picker
-                VStack(spacing: 14) {
-                    // Search bar
+                VStack(spacing: 16) {
+                    // Search bar — Airbnb-style pille med svak skygge
                     Button {
                         showSearch = true
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "magnifyingglass")
-                                .font(.system(size: 16, weight: .medium))
-                                .foregroundStyle(.neutral500)
-                            Text("Hvor skal du?")
-                                .font(.system(size: 15))
-                                .foregroundStyle(.neutral400)
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(.neutral900)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Hvor skal du?")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(.neutral900)
+                                Text("Plasser · Når som helst · Hvem som helst")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.neutral500)
+                            }
                             Spacer()
                         }
-                        .padding(14)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 12)
                         .background(.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 32))
-                        .shadow(color: .black.opacity(0.08), radius: 8, y: 2)
+                        .clipShape(RoundedRectangle(cornerRadius: 36))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 36)
+                                .stroke(Color.neutral200.opacity(0.8), lineWidth: 0.5)
+                        )
+                        .shadow(color: .black.opacity(0.08), radius: 10, y: 3)
                     }
 
-                    // Vehicle type picker
+                    // Kategori-picker (Airbnb-stil med større ikoner og mer plass)
                     HStack(spacing: 0) {
                         ForEach([VehicleType.motorhome, .car], id: \.self) { type in
                             Button {
-                                withAnimation(.easeInOut(duration: 0.2)) {
+                                withAnimation(.easeInOut(duration: 0.22)) {
                                     selectedVehicle = type
                                 }
                                 Task { await listingService.fetchHomeListings(vehicleType: type) }
                             } label: {
                                 VStack(spacing: 6) {
                                     Image(systemName: type.icon)
-                                        .font(.system(size: 20))
+                                        .font(.system(size: 22, weight: .regular))
+                                        .frame(height: 28)
                                     Text(type.displayName)
-                                        .font(.system(size: 12, weight: .medium))
+                                        .font(.system(size: 12, weight: selectedVehicle == type ? .semibold : .medium))
                                 }
-                                .foregroundStyle(selectedVehicle == type ? .primary600 : .neutral400)
+                                .foregroundStyle(selectedVehicle == type ? .neutral900 : .neutral500)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
+                                .padding(.vertical, 8)
                             }
                         }
                     }
                     .overlay(alignment: .bottom) {
                         GeometryReader { geo in
                             Rectangle()
-                                .fill(Color.primary600)
-                                .frame(width: geo.size.width / 2, height: 2)
-                                .offset(x: selectedVehicle == .motorhome ? 0 : geo.size.width / 2)
-                                .animation(.easeInOut(duration: 0.2), value: selectedVehicle)
+                                .fill(Color.neutral900)
+                                .frame(width: geo.size.width / 2 - 40, height: 2)
+                                .offset(
+                                    x: selectedVehicle == .motorhome ? 20 : geo.size.width / 2 + 20,
+                                    y: 0
+                                )
+                                .animation(.easeInOut(duration: 0.22), value: selectedVehicle)
                         }
                         .frame(height: 2)
+                    }
+                    .overlay(alignment: .bottom) {
+                        Rectangle()
+                            .fill(Color.neutral200.opacity(0.7))
+                            .frame(height: 0.5)
+                            .offset(y: 1)
                     }
                 }
                 .padding(.horizontal, 20)
