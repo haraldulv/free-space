@@ -67,6 +67,7 @@ export default function EditListingPage() {
         category: row.category,
         vehicleType: row.vehicle_type || "motorhome",
         title: row.title,
+        internalName: row.internal_name || "",
         description: row.description,
         spots: row.spots,
         maxVehicleLength: row.max_vehicle_length,
@@ -189,6 +190,7 @@ export default function EditListingPage() {
         {tab === "info" && (
           <BasicInfoStep
             title={formData.title || ""}
+            internalName={formData.internalName || ""}
             description={formData.description || ""}
             spots={formData.spots || 1}
             maxVehicleLength={formData.maxVehicleLength}

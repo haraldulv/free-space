@@ -422,6 +422,22 @@ struct BasicInfoStepView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Text("Internnavn")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.neutral600)
+                        Text("(valgfritt)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral400)
+                    }
+                    TextField("F.eks. Garasjen hjemme", text: $form.internalName)
+                        .textFieldStyle(.roundedBorder)
+                    Text("Kun synlig for deg — nyttig hvis du har flere annonser.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral500)
+                }
+
+                VStack(alignment: .leading, spacing: 6) {
                     Text("Beskrivelse")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(.neutral600)
@@ -1197,6 +1213,7 @@ struct LocationStepView: View {
 struct ImageUploadStepView: View {
     @ObservedObject var form: ListingFormModel
     @State private var showPicker = false
+    @State private var draggedURL: String?
 
     var body: some View {
         ScrollView {
@@ -1237,13 +1254,22 @@ struct ImageUploadStepView: View {
 
                 // Image grid
                 if !form.imageURLs.isEmpty || !form.uploadingPhotos.isEmpty {
-                    Text("Første bilde er forsidebilde. Bruk pilene for å endre rekkefølge.")
+                    Text("Dra og slipp for å endre rekkefølge. Bildet lengst til venstre er forsidebildet.")
                         .font(.system(size: 11))
                         .foregroundStyle(.neutral500)
 
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         ForEach(Array(form.imageURLs.enumerated()), id: \.offset) { index, url in
                             imageCell(index: index, url: url)
+                                .onDrag {
+                                    draggedURL = url
+                                    return NSItemProvider(object: url as NSString)
+                                }
+                                .onDrop(of: [.text], delegate: ImageDropDelegate(
+                                    item: url,
+                                    items: $form.imageURLs,
+                                    draggedItem: $draggedURL
+                                ))
                         }
 
                         ForEach(form.uploadingPhotos) { photo in
@@ -1274,6 +1300,7 @@ struct ImageUploadStepView: View {
     @ViewBuilder
     private func imageCell(index: Int, url: String) -> some View {
         let isCover = index == 0
+        let isDragging = draggedURL == url
         ZStack(alignment: .topTrailing) {
             AsyncImage(url: URL(string: url)) { phase in
                 switch phase {
@@ -1289,6 +1316,7 @@ struct ImageUploadStepView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(isCover ? Color.primary600 : Color.clear, lineWidth: 2),
             )
+            .opacity(isDragging ? 0.4 : 1)
 
             // Remove button — top right
             Button {
@@ -1316,57 +1344,16 @@ struct ImageUploadStepView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
 
-            // Move controls — bottom bar
-            HStack(spacing: 4) {
-                Button {
-                    moveImage(from: index, to: index - 1)
-                } label: {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(index == 0 ? .neutral300 : .neutral700)
-                        .frame(width: 24, height: 24)
-                        .background(Color.white.opacity(0.95))
-                        .clipShape(Circle())
-                }
-                .disabled(index == 0)
-
-                if !isCover {
-                    Button {
-                        moveImage(from: index, to: 0)
-                    } label: {
-                        Text("Sett som forside")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.neutral700)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 4)
-                            .background(Color.white.opacity(0.95))
-                            .clipShape(Capsule())
-                    }
-                }
-
-                Button {
-                    moveImage(from: index, to: index + 1)
-                } label: {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(index == form.imageURLs.count - 1 ? .neutral300 : .neutral700)
-                        .frame(width: 24, height: 24)
-                        .background(Color.white.opacity(0.95))
-                        .clipShape(Circle())
-                }
-                .disabled(index == form.imageURLs.count - 1)
-            }
-            .padding(4)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            // Drag-hint ikon nederst til venstre
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.neutral700)
+                .padding(5)
+                .background(Color.white.opacity(0.9))
+                .clipShape(Circle())
+                .padding(4)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
-    }
-
-    private func moveImage(from: Int, to: Int) {
-        guard from >= 0, from < form.imageURLs.count else { return }
-        let target = max(0, min(form.imageURLs.count - 1, to))
-        if target == from { return }
-        let item = form.imageURLs.remove(at: from)
-        form.imageURLs.insert(item, at: target)
     }
 
     private func uploadPhotos(_ items: [PhotosPickerItem]) {
@@ -2692,5 +2679,40 @@ struct SpotEditorSheet: View {
         if spot.id == nil {
             spot.id = UUID().uuidString.lowercased()
         }
+    }
+}
+
+// MARK: - Drag & drop delegate for image reordering
+
+/// Drop-delegat for å omrekkefølge bilder via drag & drop.
+/// Flytter bildet "live" mens brukeren drar, så rekkefølgen oppdateres kontinuerlig.
+struct ImageDropDelegate: DropDelegate {
+    let item: String
+    @Binding var items: [String]
+    @Binding var draggedItem: String?
+
+    func dropEntered(info: DropInfo) {
+        guard let current = draggedItem,
+              current != item,
+              let fromIndex = items.firstIndex(of: current),
+              let toIndex = items.firstIndex(of: item)
+        else { return }
+        if items[toIndex] != current {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                items.move(
+                    fromOffsets: IndexSet(integer: fromIndex),
+                    toOffset: toIndex > fromIndex ? toIndex + 1 : toIndex
+                )
+            }
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        draggedItem = nil
+        return true
     }
 }

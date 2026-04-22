@@ -394,8 +394,15 @@ struct MyListingsView: View {
                                 .opacity(listing.isActive == true ? 1 : 0.5)
 
                                 VStack(alignment: .leading, spacing: 4) {
-                                    Text(listing.title)
+                                    Text(listing.internalName ?? listing.title)
                                         .font(.system(size: 15, weight: .medium))
+                                        .lineLimit(1)
+                                    if let internalName = listing.internalName, !internalName.isEmpty {
+                                        Text(listing.title)
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.neutral500)
+                                            .lineLimit(1)
+                                    }
                                     HStack(spacing: 4) {
                                         Circle()
                                             .fill(listing.isActive == true ? Color.green : Color.neutral400)

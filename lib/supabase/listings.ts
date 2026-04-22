@@ -31,6 +31,7 @@ export interface CreateListingData {
   category: ListingCategory;
   vehicleType: VehicleType;
   title: string;
+  internalName?: string;
   description: string;
   spots: number;
   maxVehicleLength?: number;
@@ -76,6 +77,7 @@ function rowToListing(row: Record<string, unknown>): Listing {
   return {
     id,
     title: row.title as string,
+    internalName: (row.internal_name as string | null) ?? undefined,
     description: row.description as string,
     category: row.category as Listing["category"],
     images: row.images as string[],
@@ -446,6 +448,7 @@ export async function createListing(input: CreateListingData, hostId: string): P
     id,
     host_id: hostId,
     title: input.title,
+    internal_name: input.internalName?.trim() || null,
     description: input.description,
     category: input.category,
     vehicle_type: input.vehicleType || "motorhome",
@@ -485,6 +488,7 @@ export async function updateListing(id: string, input: Partial<CreateListingData
 
   const updateData: Record<string, unknown> = {};
   if (input.title !== undefined) updateData.title = input.title;
+  if (input.internalName !== undefined) updateData.internal_name = input.internalName?.trim() || null;
   if (input.description !== undefined) updateData.description = input.description;
   if (input.category !== undefined) updateData.category = input.category;
   if (input.vehicleType !== undefined) updateData.vehicle_type = input.vehicleType;

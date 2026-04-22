@@ -8,6 +8,7 @@ import type { ListingCategory } from "@/types";
 
 interface BasicInfoStepProps {
   title: string;
+  internalName?: string;
   description: string;
   spots: number;
   maxVehicleLength?: number;
@@ -21,6 +22,7 @@ interface BasicInfoStepProps {
 
 export default function BasicInfoStep({
   title,
+  internalName,
   description,
   spots,
   maxVehicleLength,
@@ -47,6 +49,18 @@ export default function BasicInfoStep({
         onChange={(e) => onChange("title", e.target.value)}
         error={errors.title}
       />
+
+      <div>
+        <Input
+          id="internalName"
+          label={t("internalNameLabel")}
+          placeholder={t("internalNamePlaceholder")}
+          value={internalName || ""}
+          onChange={(e) => onChange("internalName", e.target.value)}
+          error={errors.internalName}
+        />
+        <p className="mt-1 text-xs text-neutral-500">{t("internalNameHint")}</p>
+      </div>
 
       <Textarea
         id="description"

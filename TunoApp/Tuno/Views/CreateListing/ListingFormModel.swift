@@ -17,6 +17,7 @@ final class ListingFormModel: ObservableObject {
 
     // MARK: - Step 1: Basic Info
     @Published var title = ""
+    @Published var internalName = ""
     @Published var description = ""
     @Published var spots = 1
     @Published var maxVehicleLength: Int?
@@ -127,6 +128,7 @@ final class ListingFormModel: ObservableObject {
             id: UUID().uuidString.lowercased(),
             hostId: hostId,
             title: title.trimmingCharacters(in: .whitespaces),
+            internalName: internalName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : internalName.trimmingCharacters(in: .whitespaces),
             description: description.trimmingCharacters(in: .whitespaces),
             category: category?.rawValue ?? "camping",
             vehicleType: vehicleType.rawValue,
@@ -202,6 +204,7 @@ struct CreateListingInput: Encodable {
     let id: String
     let hostId: String
     let title: String
+    let internalName: String?
     let description: String
     let category: String
     let vehicleType: String
@@ -231,6 +234,7 @@ struct CreateListingInput: Encodable {
     enum CodingKeys: String, CodingKey {
         case id, title, description, category, city, region, address, lat, lng, price, spots, images, amenities, extras
         case hostId = "host_id"
+        case internalName = "internal_name"
         case vehicleType = "vehicle_type"
         case priceUnit = "price_unit"
         case instantBooking = "instant_booking"

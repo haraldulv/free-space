@@ -57,7 +57,9 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
       <Link href={`/dashboard/annonse/${listing.id}`} className="flex flex-1 flex-col justify-between min-w-0">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold text-neutral-900 truncate">{listing.title}</h3>
+            <h3 className="text-sm font-semibold text-neutral-900 truncate">
+              {listing.internalName || listing.title}
+            </h3>
             {listing.instantBooking && (
               <Badge variant="primary">
                 <Zap className="mr-0.5 h-3 w-3" />
@@ -68,6 +70,9 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
               <Badge variant="secondary">{t("inactive")}</Badge>
             )}
           </div>
+          {listing.internalName && (
+            <p className="text-xs text-neutral-500 truncate">{listing.title}</p>
+          )}
           <p className="text-xs text-neutral-500">
             {listing.location.city}, {listing.location.region}
           </p>

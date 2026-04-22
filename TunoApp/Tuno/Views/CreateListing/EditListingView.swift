@@ -12,6 +12,7 @@ struct EditListingView: View {
 
     // Editable fields
     @State private var title: String = ""
+    @State private var internalName: String = ""
     @State private var description: String = ""
     @State private var spots: Int = 1
     @State private var maxVehicleLength: Int?
@@ -49,6 +50,7 @@ struct EditListingView: View {
     @State private var customExtraName: String = ""
     @State private var customExtraPrice: String = ""
     @State private var customExtraPerNight: Bool = false
+    @State private var draggedImageURL: String?
 
     private let tabs = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Felles tillegg", "Tilgjengelighet"]
 
@@ -194,6 +196,21 @@ struct EditListingView: View {
                 field("Tittel") {
                     TextField("Tittel", text: $title)
                         .textFieldStyle(.roundedBorder)
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(spacing: 6) {
+                        Text("Internnavn")
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.neutral600)
+                        Text("(valgfritt)")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral400)
+                    }
+                    TextField("F.eks. Garasjen hjemme", text: $internalName)
+                        .textFieldStyle(.roundedBorder)
+                    Text("Kun synlig for deg — nyttig hvis du har flere annonser.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral500)
                 }
                 field("Beskrivelse") {
                     TextEditorWithCounter(
@@ -750,7 +767,7 @@ struct EditListingView: View {
                 }
 
                 if !imageURLs.isEmpty {
-                    Text("Første bilde er forsidebilde. Bruk pilene for å endre rekkefølge.")
+                    Text("Dra og slipp for å endre rekkefølge. Bildet lengst til venstre er forsidebildet.")
                         .font(.system(size: 11))
                         .foregroundStyle(.neutral500)
                 }
@@ -758,6 +775,15 @@ struct EditListingView: View {
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                     ForEach(Array(imageURLs.enumerated()), id: \.offset) { index, url in
                         editImageCell(index: index, url: url)
+                            .onDrag {
+                                draggedImageURL = url
+                                return NSItemProvider(object: url as NSString)
+                            }
+                            .onDrop(of: [.text], delegate: ImageDropDelegate(
+                                item: url,
+                                items: $imageURLs,
+                                draggedItem: $draggedImageURL
+                            ))
                     }
 
                     ForEach(uploadingPhotos) { photo in
@@ -1053,6 +1079,7 @@ struct EditListingView: View {
 
     private func populateFields() {
         title = listing.title
+        internalName = listing.internalName ?? ""
         description = listing.description ?? ""
         spots = listing.spots ?? 1
         maxVehicleLength = listing.maxVehicleLength.map { Int($0) }
@@ -1096,6 +1123,7 @@ struct EditListingView: View {
             do {
                 let updates = UpdateListingInput(
                     title: title,
+                    internalName: internalName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : internalName.trimmingCharacters(in: .whitespaces),
                     description: description,
                     spots: spots,
                     checkInTime: checkInTime,
@@ -1149,6 +1177,7 @@ struct EditListingView: View {
     @ViewBuilder
     private func editImageCell(index: Int, url: String) -> some View {
         let isCover = index == 0
+        let isDragging = draggedImageURL == url
         ZStack(alignment: .topTrailing) {
             AsyncImage(url: URL(string: url)) { phase in
                 switch phase {
@@ -1164,6 +1193,7 @@ struct EditListingView: View {
                 RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(isCover ? Color.primary600 : Color.clear, lineWidth: 2),
             )
+            .opacity(isDragging ? 0.4 : 1)
 
             Button { imageURLs.remove(at: index) } label: {
                 Image(systemName: "xmark.circle.fill")
@@ -1187,56 +1217,15 @@ struct EditListingView: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
 
-            HStack(spacing: 4) {
-                Button {
-                    moveEditImage(from: index, to: index - 1)
-                } label: {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(index == 0 ? .neutral300 : .neutral700)
-                        .frame(width: 24, height: 24)
-                        .background(Color.white.opacity(0.95))
-                        .clipShape(Circle())
-                }
-                .disabled(index == 0)
-
-                if !isCover {
-                    Button {
-                        moveEditImage(from: index, to: 0)
-                    } label: {
-                        Text("Forside")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.neutral700)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 4)
-                            .background(Color.white.opacity(0.95))
-                            .clipShape(Capsule())
-                    }
-                }
-
-                Button {
-                    moveEditImage(from: index, to: index + 1)
-                } label: {
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(index == imageURLs.count - 1 ? .neutral300 : .neutral700)
-                        .frame(width: 24, height: 24)
-                        .background(Color.white.opacity(0.95))
-                        .clipShape(Circle())
-                }
-                .disabled(index == imageURLs.count - 1)
-            }
-            .padding(4)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.neutral700)
+                .padding(5)
+                .background(Color.white.opacity(0.9))
+                .clipShape(Circle())
+                .padding(4)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
         }
-    }
-
-    private func moveEditImage(from: Int, to: Int) {
-        guard from >= 0, from < imageURLs.count else { return }
-        let target = max(0, min(imageURLs.count - 1, to))
-        if target == from { return }
-        let item = imageURLs.remove(at: from)
-        imageURLs.insert(item, at: target)
     }
 
     @ViewBuilder
@@ -1434,6 +1423,7 @@ struct EditListingView: View {
 
 private struct UpdateListingInput: Encodable {
     let title: String
+    let internalName: String?
     let description: String
     let spots: Int
     let checkInTime: String
@@ -1458,6 +1448,7 @@ private struct UpdateListingInput: Encodable {
 
     enum CodingKeys: String, CodingKey {
         case title, description, spots, address, city, region, lat, lng, price, amenities, images, extras
+        case internalName = "internal_name"
         case checkInTime = "check_in_time"
         case checkOutTime = "check_out_time"
         case checkinMessage = "checkin_message"

@@ -6,6 +6,7 @@ struct Listing: Codable, Identifiable, Hashable {
     let id: String
     let hostId: String?
     let title: String
+    let internalName: String?
     let description: String?
     let category: ListingCategory?
     let vehicleType: VehicleType?
@@ -43,6 +44,7 @@ struct Listing: Codable, Identifiable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, title, description, category, city, region, address, lat, lng, price, amenities, spots, images, rating, tags
         case hostId = "host_id"
+        case internalName = "internal_name"
         case vehicleType = "vehicle_type"
         case priceUnit = "price_unit"
         case maxVehicleLength = "max_vehicle_length"

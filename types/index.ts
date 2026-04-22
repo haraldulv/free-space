@@ -160,6 +160,7 @@ export interface NightlyPriceEntry {
 export interface Listing {
   id: string;
   title: string;
+  internalName?: string;
   description: string;
   category: ListingCategory;
   images: string[];

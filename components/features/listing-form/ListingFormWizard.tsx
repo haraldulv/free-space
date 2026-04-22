@@ -45,6 +45,7 @@ export default function ListingFormWizard({
     category: "camping",
     vehicleType: "motorhome",
     title: "",
+    internalName: "",
     description: "",
     spots: 1,
     maxVehicleLength: undefined,
@@ -145,6 +146,7 @@ export default function ListingFormWizard({
         {step === 1 && (
           <BasicInfoStep
             title={formData.title || ""}
+            internalName={formData.internalName || ""}
             description={formData.description || ""}
             spots={formData.spots || 1}
             maxVehicleLength={formData.maxVehicleLength}
