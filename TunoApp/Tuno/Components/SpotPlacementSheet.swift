@@ -13,6 +13,7 @@ struct SpotPlacementSheet: View {
 
     @State private var workingMarkers: [SpotMarker]
     @State private var showTooltip: Bool
+    @State private var dontAskAgain = false
     @State private var showSaveConfirm = false
     @State private var mapUpdateTrigger = UUID()
 
@@ -24,6 +25,7 @@ struct SpotPlacementSheet: View {
         self.mainLng = mainLng
         self.maxSpots = maxSpots
         self._workingMarkers = State(initialValue: spotMarkers.wrappedValue)
+        // Tooltip vises hver gang med mindre bruker har huket av "ikke spør meg igjen"
         self._showTooltip = State(initialValue: !UserDefaults.standard.bool(forKey: Self.tooltipKey))
     }
 
@@ -45,7 +47,8 @@ struct SpotPlacementSheet: View {
                 isSpotMode: true,
                 maxSpots: maxSpots,
                 updateTrigger: mapUpdateTrigger,
-                onMaxReached: nil
+                onMaxReached: nil,
+                mainMarkerDraggable: false
             )
             .ignoresSafeArea(edges: [.bottom, .horizontal])
 
@@ -103,12 +106,13 @@ struct SpotPlacementSheet: View {
                 HStack(spacing: 10) {
                     if !workingMarkers.isEmpty {
                         Button {
-                            withAnimation { workingMarkers.removeAll() }
-                            mapUpdateTrigger = UUID()
+                            withAnimation {
+                                _ = workingMarkers.popLast()
+                            }
                         } label: {
                             HStack(spacing: 6) {
-                                Image(systemName: "arrow.counterclockwise")
-                                Text("Reset")
+                                Image(systemName: "arrow.uturn.backward")
+                                Text("Angre")
                             }
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.neutral900)
@@ -186,12 +190,29 @@ struct SpotPlacementSheet: View {
                 }
 
                 tooltipStep(number: "1", text: "Tap på kartet for å plassere en plass")
-                tooltipStep(number: "2", text: "Dra en plass for å flytte den")
-                tooltipStep(number: "3", text: "Tap 'Reset' for å fjerne alle og starte på nytt")
+                tooltipStep(number: "2", text: "Trykk og hold på en plass for å flytte den")
+                tooltipStep(number: "3", text: "Tap 'Angre' for å fjerne siste plass")
                 tooltipStep(number: "4", text: "Tap 'Lagre' når du er ferdig")
 
                 Button {
-                    UserDefaults.standard.set(true, forKey: Self.tooltipKey)
+                    dontAskAgain.toggle()
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: dontAskAgain ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 18))
+                            .foregroundStyle(dontAskAgain ? Color.primary600 : Color.neutral400)
+                        Text("Ikke spør meg igjen")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.neutral700)
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    if dontAskAgain {
+                        UserDefaults.standard.set(true, forKey: Self.tooltipKey)
+                    }
                     withAnimation { showTooltip = false }
                 } label: {
                     Text("Skjønner!")

@@ -316,7 +316,10 @@ struct EditListingView: View {
                 // Pris-seksjon
                 editLocationPricingSection
 
-                // Utbrettede plass-kort (før velkomstmelding)
+                // Velkomstmelding-seksjon (før plasser så hint-teksten "nedenfor" stemmer)
+                editCheckinMessageSection
+
+                // Utbrettede plass-kort
                 if !spotMarkers.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Plasser (\(spotMarkers.count))")
@@ -326,9 +329,6 @@ struct EditListingView: View {
                         }
                     }
                 }
-
-                // Velkomstmelding-seksjon (etter plasser så pris-flyten ikke brytes)
-                editCheckinMessageSection
 
                 Toggle(isOn: $hideExactLocation) {
                     VStack(alignment: .leading, spacing: 4) {
@@ -413,16 +413,12 @@ struct EditListingView: View {
 
     private func setEditPerSpotPricing(_ enabled: Bool) {
         perSpotPricing = enabled
-        let defaultPrice = Int(price)
-        if enabled {
-            for i in spotMarkers.indices where spotMarkers[i].price == nil {
-                spotMarkers[i].price = defaultPrice
-            }
-        } else {
+        if !enabled {
             for i in spotMarkers.indices {
                 spotMarkers[i].price = nil
             }
         }
+        // Ved aktivering: la spots være nil så feltene vises tomme med standardpris som placeholder
     }
 
     private var editCheckinMessageSection: some View {
@@ -474,7 +470,8 @@ struct EditListingView: View {
                         text: $checkinMessage,
                         maxLength: 600,
                         minHeight: 90,
-                        placeholder: "F.eks. Hei! Port-kode er 1234. Plassen din er ved ladepunktet."
+                        placeholder: "F.eks. Hei! Port-kode er 1234. Plassen din er ved ladepunktet.",
+                        showCopyPaste: true
                     )
                 } else {
                     Text("Skriv individuell melding på hver plass nedenfor.")
@@ -531,9 +528,9 @@ struct EditListingView: View {
                 HStack(spacing: 8) {
                     Text("Pris").font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.neutral600).frame(width: 60, alignment: .leading)
-                    TextField("", value: Binding(
-                        get: { spotMarkers[index].price ?? Int(price) ?? 0 },
-                        set: { spotMarkers[index].price = max(0, $0) }
+                    TextField(price.isEmpty ? "kr" : price, value: Binding(
+                        get: { spotMarkers[index].price },
+                        set: { spotMarkers[index].price = $0.map { max(0, $0) } }
                     ), format: .number)
                     .textFieldStyle(.roundedBorder)
                     .keyboardType(.numberPad)
@@ -562,6 +559,10 @@ struct EditListingView: View {
                     Text("Velkomstmelding for denne plassen")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.neutral700)
+                    CopyPasteRow(text: Binding(
+                        get: { spotMarkers[index].checkinMessage ?? "" },
+                        set: { spotMarkers[index].checkinMessage = $0.isEmpty ? nil : $0 }
+                    ))
                     TextEditor(text: Binding(
                         get: { spotMarkers[index].checkinMessage ?? "" },
                         set: { spotMarkers[index].checkinMessage = $0.isEmpty ? nil : $0 }

@@ -10,7 +10,6 @@ struct CreateListingView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showSuccess = false
     @State private var showBackAlert = false
-    @State private var keyboardVisible = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -47,12 +46,13 @@ struct CreateListingView: View {
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
             .animation(.easeInOut(duration: 0.3), value: form.currentStep)
-
-            // Navigation buttons — skjult når tastaturet er oppe, siden "Ferdig" i keyboard-toolbar tar den plassen
-            if !keyboardVisible {
+        }
+        .safeAreaInset(edge: .bottom) {
+            // Nav-knappene sitter alltid over tastaturet via safeAreaInset
             HStack(spacing: 12) {
                 if form.currentStep > 0 {
                     Button {
+                        hideKeyboard()
                         form.goBack()
                     } label: {
                         HStack(spacing: 6) {
@@ -69,6 +69,7 @@ struct CreateListingView: View {
                 }
 
                 Button {
+                    hideKeyboard()
                     if form.currentStep == form.totalSteps - 1 {
                         submitListing()
                     } else {
@@ -95,11 +96,10 @@ struct CreateListingView: View {
                 .disabled(form.isSubmitting)
             }
             .padding(.horizontal)
+            .padding(.top, 8)
             .padding(.bottom, 8)
-            } // end if !keyboardVisible
+            .background(Color(UIColor.systemBackground))
         }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardVisible = false }
         .navigationTitle("Ny annonse")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
@@ -129,11 +129,13 @@ struct CreateListingView: View {
         } message: {
             Text("Du mister alt du har skrevet inn.")
         }
-        .alert("Annonse opprettet!", isPresented: $showSuccess) {
-            Button("Flott") { dismiss() }
-        } message: {
-            Text("Annonsen din er nå publisert og synlig for gjester.")
+        .overlay {
+            if showSuccess {
+                ListingCreatedCelebration(onDismiss: { dismiss() })
+                    .transition(.opacity)
+            }
         }
+        .animation(.easeInOut(duration: 0.3), value: showSuccess)
     }
 
     private func submitListing() {
@@ -163,6 +165,124 @@ struct CreateListingView: View {
                 form.isSubmitting = false
             }
         }
+    }
+}
+
+// MARK: - Celebration
+
+private struct ListingCreatedCelebration: View {
+    let onDismiss: () -> Void
+    @State private var checkmarkBounce = false
+    @State private var confettiOn = false
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.55)
+                .ignoresSafeArea()
+
+            // Konfetti i bakgrunnen
+            ConfettiLayer(active: confettiOn)
+                .allowsHitTesting(false)
+
+            VStack(spacing: 20) {
+                ZStack {
+                    Circle()
+                        .fill(Color.primary600.opacity(0.15))
+                        .frame(width: 110, height: 110)
+                    Circle()
+                        .fill(Color.primary600)
+                        .frame(width: 80, height: 80)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 38, weight: .bold))
+                        .foregroundStyle(.white)
+                        .symbolEffect(.bounce, value: checkmarkBounce)
+                }
+
+                VStack(spacing: 6) {
+                    Text("Annonsen er publisert! 🎉")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.neutral900)
+                        .multilineTextAlignment(.center)
+                    Text("Gjester kan nå se og booke plassen din.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.neutral600)
+                        .multilineTextAlignment(.center)
+                }
+
+                Button(action: onDismiss) {
+                    Text("Flott!")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.primary600)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+            }
+            .padding(28)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: .black.opacity(0.2), radius: 20)
+            .padding(.horizontal, 32)
+        }
+        .onAppear {
+            confettiOn = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                checkmarkBounce.toggle()
+            }
+        }
+    }
+}
+
+private struct ConfettiLayer: View {
+    let active: Bool
+    private let emojis = ["🎉", "🎊", "✨", "⭐️", "🥳"]
+    private let pieceCount = 24
+
+    var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                ForEach(0..<pieceCount, id: \.self) { i in
+                    ConfettiPiece(
+                        emoji: emojis[i % emojis.count],
+                        xStart: CGFloat.random(in: 0...proxy.size.width),
+                        yEnd: proxy.size.height + 50,
+                        delay: Double(i) * 0.05,
+                        active: active
+                    )
+                }
+            }
+        }
+    }
+}
+
+private struct ConfettiPiece: View {
+    let emoji: String
+    let xStart: CGFloat
+    let yEnd: CGFloat
+    let delay: Double
+    let active: Bool
+
+    @State private var y: CGFloat = -50
+    @State private var rotation: Double = 0
+    @State private var opacity: Double = 1
+
+    var body: some View {
+        Text(emoji)
+            .font(.system(size: CGFloat.random(in: 18...28)))
+            .position(x: xStart, y: y)
+            .rotationEffect(.degrees(rotation))
+            .opacity(opacity)
+            .onAppear {
+                guard active else { return }
+                withAnimation(.easeIn(duration: Double.random(in: 2.0...3.2)).delay(delay)) {
+                    y = yEnd
+                    rotation = Double.random(in: -360...360)
+                }
+                withAnimation(.easeIn(duration: 2.8).delay(delay + 1.5)) {
+                    opacity = 0
+                }
+            }
     }
 }
 
@@ -364,6 +484,7 @@ struct BasicInfoStepView: View {
             }
             .padding()
         }
+        .scrollDismissesKeyboard(.interactively)
     }
 }
 
@@ -512,12 +633,17 @@ struct LocationStepView: View {
                     }
                 }
 
-                // Pris-seksjon — settes sammen med plassene
+                // Pris-seksjon
                 if form.lat != 0 || form.lng != 0 {
                     pricingSection
                 }
 
-                // Utbrettede plass-editors (før velkomstmelding så pris-flyten ikke brytes)
+                // Velkomstmelding-seksjon — før plasser så hint-teksten ("nedenfor") stemmer
+                if form.lat != 0 || form.lng != 0 {
+                    checkinMessageSection
+                }
+
+                // Utbrettede plass-editors
                 if !form.spotMarkers.isEmpty {
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Plasser (\(form.spotMarkers.count))")
@@ -527,11 +653,6 @@ struct LocationStepView: View {
                             inlineSpotCard(index: index)
                         }
                     }
-                }
-
-                // Velkomstmelding-seksjon — etter plasser så pris-flyten ikke brytes
-                if form.lat != 0 || form.lng != 0 {
-                    checkinMessageSection
                 }
 
                 // Privacy toggle
@@ -626,18 +747,12 @@ struct LocationStepView: View {
 
     private func setPerSpotPricing(_ enabled: Bool) {
         form.perSpotPricing = enabled
-        let defaultPrice = Int(form.price)
-        if enabled {
-            // Pre-fyll alle spots med listing.price om de ikke har egen
-            for i in form.spotMarkers.indices where form.spotMarkers[i].price == nil {
-                form.spotMarkers[i].price = defaultPrice
-            }
-        } else {
-            // Clear alle individuelle priser — fall tilbake til listing.price
+        if !enabled {
             for i in form.spotMarkers.indices {
                 form.spotMarkers[i].price = nil
             }
         }
+        // Ved aktivering: la spots være nil så feltene vises tomme med standardpris som placeholder
     }
 
     // MARK: - Check-in message section
@@ -691,7 +806,8 @@ struct LocationStepView: View {
                         text: $form.checkinMessage,
                         maxLength: 600,
                         minHeight: 90,
-                        placeholder: "F.eks. Hei! Port-kode er 1234. Plassen din er ved ladepunktet."
+                        placeholder: "F.eks. Hei! Port-kode er 1234. Plassen din er ved ladepunktet.",
+                        showCopyPaste: true
                     )
                 } else {
                     Text("Skriv individuell melding på hver plass nedenfor.")
@@ -752,9 +868,9 @@ struct LocationStepView: View {
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.neutral600)
                         .frame(width: 60, alignment: .leading)
-                    TextField("", value: Binding(
-                        get: { form.spotMarkers[index].price ?? Int(form.price) ?? 0 },
-                        set: { form.spotMarkers[index].price = max(0, $0) }
+                    TextField(form.price.isEmpty ? "kr" : form.price, value: Binding(
+                        get: { form.spotMarkers[index].price },
+                        set: { form.spotMarkers[index].price = $0.map { max(0, $0) } }
                     ), format: .number)
                     .textFieldStyle(.roundedBorder)
                     .keyboardType(.numberPad)
@@ -785,6 +901,10 @@ struct LocationStepView: View {
                     Text("Velkomstmelding for denne plassen")
                         .font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.neutral700)
+                    CopyPasteRow(text: Binding(
+                        get: { form.spotMarkers[index].checkinMessage ?? "" },
+                        set: { form.spotMarkers[index].checkinMessage = $0.isEmpty ? nil : $0 }
+                    ))
                     TextEditor(text: Binding(
                         get: { form.spotMarkers[index].checkinMessage ?? "" },
                         set: { form.spotMarkers[index].checkinMessage = $0.isEmpty ? nil : $0 }
@@ -2060,6 +2180,7 @@ struct LocationPickerMapView: UIViewRepresentable {
     var maxSpots: Int = 0  // 0 = ingen grense
     var updateTrigger: UUID
     var onMaxReached: (() -> Void)? = nil
+    var mainMarkerDraggable: Bool = true
 
     func makeCoordinator() -> Coordinator {
         Coordinator()
@@ -2112,10 +2233,10 @@ struct LocationPickerMapView: UIViewRepresentable {
     }
 
     private func addMarkers(to mapView: GMSMapView, coordinator: Coordinator) {
-        // Main location marker (draggable)
+        // Main location marker
         let main = GMSMarker()
         main.position = CLLocationCoordinate2D(latitude: lat, longitude: lng)
-        main.isDraggable = true
+        main.isDraggable = mainMarkerDraggable
         main.title = "Hovedposisjon"
         main.map = mapView
         coordinator.mainMarker = main

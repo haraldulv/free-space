@@ -351,7 +351,7 @@ struct MyListingsView: View {
     @State private var showCreateListing = false
     @State private var deleteTarget: Listing?
     @State private var qrTarget: Listing?
-    @State private var editTarget: Listing?
+    @State private var statsTarget: Listing?
 
     var body: some View {
         Group {
@@ -379,9 +379,7 @@ struct MyListingsView: View {
             } else {
                 List {
                     ForEach(listings) { listing in
-                        NavigationLink {
-                            HostListingStatsView(listing: listing)
-                        } label: {
+                        NavigationLink(value: listing) {
                             HStack(spacing: 12) {
                                 AsyncImage(url: URL(string: listing.images?.first ?? "")) { phase in
                                     switch phase {
@@ -428,9 +426,9 @@ struct MyListingsView: View {
                                     .buttonStyle(.plain)
 
                                     Button {
-                                        editTarget = listing
+                                        statsTarget = listing
                                     } label: {
-                                        Image(systemName: "pencil")
+                                        Image(systemName: "chart.bar")
                                             .font(.system(size: 16))
                                             .foregroundStyle(.neutral500)
                                     }
@@ -468,12 +466,15 @@ struct MyListingsView: View {
         .sheet(item: $qrTarget) { listing in
             QRCodeModal(listing: listing)
         }
-        .navigationDestination(item: $editTarget) { listing in
+        .navigationDestination(for: Listing.self) { listing in
             EditListingView(listing: listing, onSaved: { updated in
                 if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
                     listings[idx] = updated
                 }
             })
+        }
+        .navigationDestination(item: $statsTarget) { listing in
+            HostListingStatsView(listing: listing)
         }
         .alert("Slett annonse?", isPresented: .init(
             get: { deleteTarget != nil },
