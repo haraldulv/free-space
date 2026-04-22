@@ -95,6 +95,14 @@ struct CalendarRootView: View {
     }
 }
 
+// MARK: - Booking-gjest-info (for avatar-visning på kalenderen)
+
+struct BookingGuestInfo: Equatable {
+    let guestId: String
+    let fullName: String?
+    let avatarUrl: String?
+}
+
 // MARK: - HostCalendarView
 
 /// Rullende multi-måned-kalender med tap-anker-range-select. INGEN
@@ -110,6 +118,7 @@ struct HostCalendarView: View {
     @State private var rules: [PricingService.Rule] = []
     @State private var overrides: [String: Int] = [:]
     @State private var bookedDates: Set<String> = []
+    @State private var bookingsByDate: [String: BookingGuestInfo] = [:]
     @State private var isLoading = true
     @State private var saving = false
     @State private var toast: String?
@@ -437,11 +446,9 @@ struct HostCalendarView: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                     } else if isBooked {
-                        // Tydelig BOOKET-label så det ikke forveksles med valgt
-                        Text("BOOKET")
-                            .font(.system(size: 7, weight: .heavy))
-                            .tracking(0.4)
-                            .foregroundStyle(.neutral500)
+                        // Liten avatar på booking-dagen — host ser hvem som
+                        // har booket. Fallback: initial av gjestenavnet.
+                        bookingAvatarView(info: bookingsByDate[iso])
                     } else if isBlocked {
                         Image(systemName: "xmark")
                             .font(.system(size: 10, weight: .semibold))
@@ -491,6 +498,37 @@ struct HostCalendarView: View {
                 UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }
         }
+    }
+
+    @ViewBuilder
+    private func bookingAvatarView(info: BookingGuestInfo?) -> some View {
+        let initial = String((info?.fullName ?? "?").prefix(1)).uppercased()
+        Group {
+            if let urlStr = info?.avatarUrl, let url = URL(string: urlStr) {
+                CachedAsyncImage(url: url) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Circle()
+                        .fill(Color.primary100)
+                        .overlay(
+                            Text(initial)
+                                .font(.system(size: 9, weight: .semibold))
+                                .foregroundStyle(Color.primary600)
+                        )
+                }
+            } else {
+                Circle()
+                    .fill(Color.primary100)
+                    .overlay(
+                        Text(initial)
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundStyle(Color.primary600)
+                    )
+            }
+        }
+        .frame(width: 20, height: 20)
+        .clipShape(Circle())
+        .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
     }
 
     private func canSelectIso(_ iso: String) -> Bool {
@@ -743,32 +781,71 @@ struct HostCalendarView: View {
 
     private func loadBookings() async {
         do {
-            struct BookingDates: Decodable {
+            struct BookingRow: Decodable {
+                let userId: String
                 let checkIn: String
                 let checkOut: String
-                enum CodingKeys: String, CodingKey { case checkIn = "check_in"; case checkOut = "check_out" }
+                enum CodingKeys: String, CodingKey {
+                    case userId = "user_id"
+                    case checkIn = "check_in"
+                    case checkOut = "check_out"
+                }
             }
-            let rows: [BookingDates] = try await supabase
+            let rows: [BookingRow] = try await supabase
                 .from("bookings")
-                .select("check_in, check_out")
+                .select("user_id, check_in, check_out")
                 .eq("listing_id", value: listing.id)
                 .eq("status", value: "confirmed")
                 .execute()
                 .value
+
+            // Hent gjesteprofiler for avatar-visning
+            let userIds = Array(Set(rows.map { $0.userId }))
+            struct ProfileRow: Decodable {
+                let id: String
+                let fullName: String?
+                let avatarUrl: String?
+                enum CodingKeys: String, CodingKey {
+                    case id
+                    case fullName = "full_name"
+                    case avatarUrl = "avatar_url"
+                }
+            }
+            var profileMap: [String: ProfileRow] = [:]
+            if !userIds.isEmpty {
+                let profiles: [ProfileRow] = try await supabase
+                    .from("profiles")
+                    .select("id, full_name, avatar_url")
+                    .in("id", values: userIds)
+                    .execute()
+                    .value
+                profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+            }
+
             var set = Set<String>()
+            var byDate: [String: BookingGuestInfo] = [:]
             let cal = Self.osloCalendar
             for b in rows {
                 guard let start = Self.isoFormatter.date(from: b.checkIn),
                       let end = Self.isoFormatter.date(from: b.checkOut) else { continue }
+                let profile = profileMap[b.userId]
+                let info = BookingGuestInfo(
+                    guestId: b.userId,
+                    fullName: profile?.fullName,
+                    avatarUrl: profile?.avatarUrl
+                )
                 var cursor = cal.startOfDay(for: start)
                 let lastNight = cal.startOfDay(for: end)
                 while cursor < lastNight {
-                    set.insert(Self.isoFormatter.string(from: cursor))
+                    let iso = Self.isoFormatter.string(from: cursor)
+                    set.insert(iso)
+                    byDate[iso] = info
                     guard let next = cal.date(byAdding: .day, value: 1, to: cursor) else { break }
                     cursor = next
                 }
             }
             bookedDates = set
+            bookingsByDate = byDate
         } catch {
             print("loadBookings error: \(error)")
         }
