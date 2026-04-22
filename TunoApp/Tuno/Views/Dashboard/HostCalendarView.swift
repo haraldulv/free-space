@@ -110,8 +110,9 @@ private struct CellFramesPreference: PreferenceKey {
 }
 
 /// Kalender for én annonse — multi-select via tap-anker-pattern (tap start,
-/// tap slutt = område) OG long-press + drag (penselvalg). Bulk-actions
-/// (blokker, sett pris, fjern overstyring) med plass-velger.
+/// tap slutt = område) og valgfritt penselvalg-modus (dra over datoene med
+/// scroll låst). Bulk-actions (blokker, sett pris, fjern overstyring) med
+/// plass-velger.
 struct HostCalendarView: View {
     let listing: Listing
 
@@ -132,11 +133,11 @@ struct HostCalendarView: View {
     @State private var selectedSpotIds: Set<String> = []
     @State private var showSpotPicker = false
 
-    // Drag-select-state
+    // Penselvalg-modus (paint mode)
+    @State private var paintMode = false
+    @State private var paintAnchorIso: String?
+    @State private var prePaintSelection: Set<String> = []
     @State private var cellFrames: [String: CGRect] = [:]
-    @State private var dragAnchorIso: String?
-    @State private var preDragSelection: Set<String> = []
-    @State private var isDragSelecting = false
 
     private let monthsAhead = 12
     private var basePrice: Int { listing.price ?? 0 }
@@ -178,7 +179,11 @@ struct HostCalendarView: View {
                             .padding(.bottom, 4)
                     }
 
-                    if rangeAnchor != nil || isDragSelecting {
+                    if paintMode {
+                        paintModeBanner
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                    } else if rangeAnchor != nil {
                         rangeHint
                             .padding(.horizontal, 16)
                             .padding(.top, 6)
@@ -198,12 +203,13 @@ struct HostCalendarView: View {
                 }
                 .coordinateSpace(name: "calendarContent")
             }
+            .scrollDisabled(paintMode)
             .onPreferenceChange(CellFramesPreference.self) { frames in
                 var map: [String: CGRect] = [:]
                 for f in frames { map[f.iso] = f.rect }
                 cellFrames = map
             }
-            .simultaneousGesture(dragSelectGesture)
+            .gesture(paintGesture, including: paintMode ? .gesture : .subviews)
 
             if !selectedDates.isEmpty {
                 selectionBar
@@ -227,6 +233,14 @@ struct HostCalendarView: View {
         .navigationTitle(listing.internalName ?? listing.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    togglePaintMode()
+                } label: {
+                    Image(systemName: paintMode ? "hand.draw.fill" : "hand.draw")
+                        .foregroundStyle(paintMode ? Color.primary600 : .neutral900)
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     showPricingRulesEditor = true
@@ -296,23 +310,17 @@ struct HostCalendarView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Range-hint bar
+    // MARK: - Range-hint bar (tap-anker) og paint-mode-banner
 
     @ViewBuilder
     private var rangeHint: some View {
         HStack(spacing: 8) {
-            Image(systemName: isDragSelecting ? "hand.draw" : "arrow.right")
+            Image(systemName: "arrow.right")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.primary600)
-            if isDragSelecting {
-                Text("Dra for å velge område")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.neutral700)
-            } else {
-                Text("Trykk en dato til for å velge område")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.neutral700)
-            }
+            Text("Trykk en dato til for å velge område")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.neutral700)
             Spacer()
             Button("Avbryt") {
                 rangeAnchor = nil
@@ -324,6 +332,44 @@ struct HostCalendarView: View {
         .padding(.vertical, 8)
         .background(Color.primary50)
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    @ViewBuilder
+    private var paintModeBanner: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "hand.draw.fill")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+            Text("Dra fingeren over datoene for å male valget")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.white)
+            Spacer()
+            Button("Ferdig") {
+                togglePaintMode()
+            }
+            .font(.system(size: 12, weight: .bold))
+            .foregroundStyle(.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(Color.white.opacity(0.22))
+            .clipShape(Capsule())
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.primary600)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func togglePaintMode() {
+        withAnimation(.easeInOut(duration: 0.2)) {
+            paintMode.toggle()
+        }
+        paintAnchorIso = nil
+        prePaintSelection = []
+        if paintMode {
+            rangeAnchor = nil
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
     }
 
     // MARK: - Month section
@@ -376,7 +422,7 @@ struct HostCalendarView: View {
         let source = sourceForDate(date, iso: iso)
 
         Button {
-            handleTap(iso: iso)
+            if !paintMode { handleTap(iso: iso) }
         } label: {
             VStack(spacing: 2) {
                 Text("\(Calendar.current.component(.day, from: date))")
@@ -441,9 +487,6 @@ struct HostCalendarView: View {
     private func handleTap(iso: String) {
         guard canSelectIso(iso) else { return }
 
-        // Hvis vi er i en drag-select, ignorer tap
-        if isDragSelecting { return }
-
         if let anchor = rangeAnchor {
             // Tap #2 → fyll område
             if anchor == iso {
@@ -486,45 +529,36 @@ struct HostCalendarView: View {
         return result
     }
 
-    // MARK: - Drag-select (long-press + drag)
+    // MARK: - Penselvalg (paint mode)
 
-    private var dragSelectGesture: some Gesture {
-        LongPressGesture(minimumDuration: 0.3)
-            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("calendarContent")))
+    /// Drag-gesture som kun er aktiv i paint-modus. Scroll er låst
+    /// (`.scrollDisabled`), så drag-en får eksklusiv kontroll over touch-
+    /// events og fyrer umiddelbart — ingen hold-delay, ingen scroll-konflikt.
+    private var paintGesture: some Gesture {
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("calendarContent"))
             .onChanged { value in
-                switch value {
-                case .first:
-                    break
-                case .second(true, let drag):
-                    guard let drag else { return }
-                    if dragAnchorIso == nil {
-                        // Long-press utløst → finn celle under startpunkt
-                        if let startCell = findCell(at: drag.startLocation), canSelectIso(startCell) {
-                            dragAnchorIso = startCell
-                            preDragSelection = selectedDates
-                            rangeAnchor = nil  // avbryt evt tap-range
-                            isDragSelecting = true
-                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
-                            selectedDates.insert(startCell)
-                        }
-                        return
-                    }
-                    // Update: finn celle under finger
-                    guard let anchor = dragAnchorIso else { return }
-                    let currentIso = findCell(at: drag.location) ?? anchor
-                    let range = isoRange(from: anchor, to: currentIso).filter { canSelectIso($0) }
-                    selectedDates = preDragSelection.union(range)
-                default:
-                    break
+                guard let currentIso = findCell(at: value.location),
+                      canSelectIso(currentIso) else { return }
+
+                if paintAnchorIso == nil {
+                    // Første touch — start området
+                    paintAnchorIso = currentIso
+                    prePaintSelection = selectedDates
+                    selectedDates.insert(currentIso)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    return
                 }
+
+                guard let anchor = paintAnchorIso else { return }
+                let range = isoRange(from: anchor, to: currentIso).filter { canSelectIso($0) }
+                selectedDates = prePaintSelection.union(range)
             }
             .onEnded { _ in
-                if isDragSelecting {
+                if paintAnchorIso != nil {
                     UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 }
-                dragAnchorIso = nil
-                preDragSelection = []
-                isDragSelecting = false
+                paintAnchorIso = nil
+                prePaintSelection = []
             }
     }
 
