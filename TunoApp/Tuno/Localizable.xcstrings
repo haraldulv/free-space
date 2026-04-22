@@ -293,6 +293,9 @@
         }
       }
     },
+    "%@%%" : {
+
+    },
     "%@p" : {
       "localizations" : {
         "de" : {
@@ -1288,6 +1291,9 @@
         }
       }
     },
+    "Det er lett å komme i gang og tjene ekstra penger." : {
+
+    },
     "Dette vises til gjester som trykker på profilen din. Hold det kort og vennlig." : {
 
     },
@@ -1398,6 +1404,9 @@
           }
         }
       }
+    },
+    "Du har blanke ark (enn så lenge). Vi gir deg beskjed når det kommer oppdateringer." : {
+
     },
     "Du har ingen annonser ennå" : {
       "extractionState" : "manual",
@@ -2861,6 +2870,9 @@
     "Ingen aktive regler. Alle netter bruker annonsens standardpris (%@ kr)." : {
 
     },
+    "Ingen annonser ennå" : {
+
+    },
     "Ingen bestillinger" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3034,6 +3046,9 @@
         }
       }
     },
+    "Ingen varslinger ennå" : {
+
+    },
     "Innsjekk" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3070,6 +3085,9 @@
           }
         }
       }
+    },
+    "Inntekt" : {
+
     },
     "Inntekt per annonse" : {
       "extractionState" : "manual",
@@ -4623,6 +4641,9 @@
         }
       }
     },
+    "Opprett en annonse for å administrere priser og blokkere datoer." : {
+
+    },
     "Opprett konto" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5675,6 +5696,16 @@
         }
       }
     },
+    "Sett pris for %@ %@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Sett pris for %1$@ %2$@"
+          }
+        }
+      }
+    },
     "Sett pris for en periode (f.eks. sommeruker). Overstyrer helg og standard." : {
 
     },
@@ -5979,6 +6010,9 @@
           }
         }
       }
+    },
+    "Standardpris er %@ kr. La stå tomt for å beholde standardpris." : {
+
     },
     "Standardpris per natt" : {
       "extractionState" : "manual",
@@ -6635,6 +6669,9 @@
           }
         }
       }
+    },
+    "Velg annonse" : {
+
     },
     "Velg bilder" : {
       "extractionState" : "manual",

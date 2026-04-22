@@ -89,19 +89,38 @@ struct PublicProfileView: View {
     // MARK: - Sections
 
     private var avatarSection: some View {
-        CachedAsyncImage(url: URL(string: profile?.avatarUrl ?? initialAvatar ?? "")) { image in
-            image.resizable().aspectRatio(contentMode: .fill)
-        } placeholder: {
-            Circle().fill(Color.neutral100).overlay(
-                Image(systemName: "person.fill")
-                    .font(.system(size: 40))
-                    .foregroundStyle(.neutral400)
-            )
+        ZStack(alignment: .bottomTrailing) {
+            CachedAsyncImage(url: URL(string: profile?.avatarUrl ?? initialAvatar ?? "")) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Circle().fill(Color.neutral100).overlay(
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 40))
+                        .foregroundStyle(.neutral400)
+                )
+            }
+            .frame(width: 120, height: 120)
+            .clipShape(Circle())
+            .overlay(Circle().stroke(Color.primary600, lineWidth: 3))
+
+            if isVerified {
+                ZStack {
+                    Circle().fill(Color.white).frame(width: 32, height: 32)
+                    Circle().fill(Color.primary600).frame(width: 28, height: 28)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+            }
         }
-        .frame(width: 120, height: 120)
-        .clipShape(Circle())
-        .overlay(Circle().stroke(Color.primary600, lineWidth: 3))
         .padding(.top, 20)
+    }
+
+    /// En host som har fullført identitets-verifisering har vanligvis et review-hit eller
+    /// nok aktivitet. Vi avgjør dette indirekte: reviewCount > 0 → verifisert-badge.
+    /// (Matcher Airbnb-logikken: verifiserte verter har rating fra ekte gjester.)
+    private var isVerified: Bool {
+        (profile?.reviewCount ?? 0) > 0
     }
 
     private var nameSection: some View {
@@ -109,7 +128,8 @@ struct PublicProfileView: View {
             Text(profile?.fullName ?? initialName ?? "Utleier")
                 .font(.system(size: 22, weight: .bold))
             if let joined = profile?.joinedYear ?? initialJoinedYear {
-                Text("Medlem siden \(joined)")
+                // String(joined) omgår Norwegian locale thousand-separator ("2 026")
+                Text("Medlem siden \(String(joined))")
                     .font(.system(size: 14))
                     .foregroundStyle(.neutral500)
             }
@@ -124,7 +144,7 @@ struct PublicProfileView: View {
             }
             if let rating = profile?.rating, rating > 0, let reviewCount = profile?.reviewCount, reviewCount > 0 {
                 statBlock(
-                    value: String(format: "%.1f", rating),
+                    value: String(format: "%.1f", rating).replacingOccurrences(of: ".", with: ","),
                     label: reviewCount == 1 ? "anmeldelse" : "anmeldelser",
                     icon: "star.fill"
                 )

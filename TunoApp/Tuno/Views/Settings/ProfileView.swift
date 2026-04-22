@@ -10,6 +10,7 @@ struct ProfileView: View {
     @State private var unreadNotifications: Int = 0
     @State private var tripCount: Int = 0
     @State private var reviewCount: Int = 0
+    @State private var rating: Double? = nil
     @State private var monthlyNet: Int = 0
     @State private var monthlyBookings: Int = 0
     @State private var navigateToHostRequests = false
@@ -66,7 +67,7 @@ struct ProfileView: View {
                     location: nil,
                     trips: tripCount,
                     reviews: reviewCount,
-                    joinedYear: authManager.profile?.joinedYear,
+                    rating: rating,
                     isVerified: authManager.isHost && (authManager.profile?.stripeOnboardingComplete ?? false)
                 )
                 .onTapGesture { showSelfProfile = true }
@@ -83,6 +84,7 @@ struct ProfileView: View {
                             bookingCount: monthlyBookings,
                             trend: nil
                         )
+                        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal, 16)
@@ -116,20 +118,21 @@ struct ProfileView: View {
                     navigateToNotifications = true
                 } label: {
                     ZStack(alignment: .topTrailing) {
+                        Circle()
+                            .fill(Color.neutral100)
+                            .frame(width: 40, height: 40)
                         Image(systemName: "bell")
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(.neutral900)
-                            .frame(width: 36, height: 36)
-                            .background(Color.neutral100)
-                            .clipShape(Circle())
                         if unreadNotifications > 0 {
                             Circle()
                                 .fill(Color.red)
-                                .frame(width: 9, height: 9)
-                                .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
-                                .offset(x: 2, y: -2)
+                                .frame(width: 10, height: 10)
+                                .overlay(Circle().stroke(Color.white, lineWidth: 2))
+                                .padding(4)
                         }
                     }
+                    .frame(width: 40, height: 40)
                 }
             }
         }
@@ -205,7 +208,8 @@ struct ProfileView: View {
         }
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
     }
 
     private var accountSection: some View {
@@ -224,7 +228,8 @@ struct ProfileView: View {
         }
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
     }
 
     private var becomeHostCard: some View {
@@ -255,6 +260,7 @@ struct ProfileView: View {
             .padding(16)
             .background(Color.primary50)
             .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
         }
         .buttonStyle(.plain)
     }
@@ -407,13 +413,25 @@ struct ProfileView: View {
     private func loadReviewCount() async {
         guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
         do {
-            let count = try await supabase
-                .from("reviews")
-                .select("id", head: true, count: .exact)
-                .eq("reviewee_id", value: userId)
+            struct RatingRow: Decodable {
+                let rating: Double?
+                let reviewCount: Int?
+                enum CodingKeys: String, CodingKey {
+                    case rating
+                    case reviewCount = "review_count"
+                }
+            }
+            let rows: [RatingRow] = try await supabase
+                .from("profiles")
+                .select("rating, review_count")
+                .eq("id", value: userId)
+                .limit(1)
                 .execute()
-                .count ?? 0
-            reviewCount = count
+                .value
+            if let row = rows.first {
+                reviewCount = row.reviewCount ?? 0
+                rating = row.rating
+            }
         } catch {
             print("loadReviewCount error: \(error)")
         }
