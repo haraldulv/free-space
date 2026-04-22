@@ -63,8 +63,17 @@ class ChatService: ObservableObject {
                 .order("created_at", ascending: false)
                 .execute()
                 .value
+            // Hent alle bookings for de samme listing/guest-parene så vi kan vise
+            // status + datoer på conversation-raden.
+            async let bookingsTask: [BookingLite] = supabase
+                .from("bookings")
+                .select("id, listing_id, user_id, status, check_in, check_out, created_at")
+                .in("listing_id", values: listingIds)
+                .order("created_at", ascending: false)
+                .execute()
+                .value
 
-            let (profiles, listings, messages) = try await (profilesTask, listingsTask, messagesTask)
+            let (profiles, listings, messages, bookings) = try await (profilesTask, listingsTask, messagesTask, bookingsTask)
 
             let profileMap = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
             let listingMap = Dictionary(uniqueKeysWithValues: listings.map { ($0.id, $0) })
@@ -81,10 +90,22 @@ class ChatService: ObservableObject {
                 }
             }
 
+            // Match seneste booking per (listing_id, guest_id) — sortert desc på created_at
+            var latestBookingByPair: [String: BookingLite] = [:]
+            for booking in bookings {
+                let key = "\(booking.listingId)|\(booking.userId)"
+                if latestBookingByPair[key] == nil {
+                    latestBookingByPair[key] = booking
+                }
+            }
+
             let previews: [ConversationPreview] = convos.map { convo in
                 let otherUserId = convo.guestId == userId ? convo.hostId : convo.guestId
                 let profile = profileMap[otherUserId]
                 let listing = listingMap[convo.listingId]
+                let selfRole = convo.hostId == userId ? "host" : "guest"
+                let bookingKey = "\(convo.listingId)|\(convo.guestId)"
+                let booking = latestBookingByPair[bookingKey]
                 return ConversationPreview(
                     id: convo.id,
                     listingId: convo.listingId,
@@ -97,6 +118,10 @@ class ChatService: ObservableObject {
                     unreadCount: unreadByConvo[convo.id] ?? 0,
                     listingTitle: listing?.title ?? "",
                     listingImage: listing?.images?.first,
+                    selfRole: selfRole,
+                    bookingStatus: booking?.status,
+                    bookingDates: booking.flatMap { formatDateRange($0.checkIn, $0.checkOut) },
+                    listingCity: listing?.city
                 )
             }
 
@@ -273,6 +298,14 @@ struct ConversationPreview: Identifiable {
     let unreadCount: Int
     let listingTitle: String
     let listingImage: String?
+    /// Brukerens egen rolle i denne samtalen — "host" hvis utleier, "guest" hvis leietaker.
+    let selfRole: String
+    /// Status på sist bekreftede/ventende booking ("confirmed"/"requested"/"cancelled"/nil).
+    let bookingStatus: String?
+    /// Formattert dato-range fra siste booking ("25.-28. feb.") eller nil.
+    let bookingDates: String?
+    /// By fra listing for secondary-tekst i raden.
+    let listingCity: String?
 }
 
 struct ChatMessage: Identifiable {
@@ -281,4 +314,49 @@ struct ChatMessage: Identifiable {
     let content: String
     let createdAt: String
     let read: Bool
+}
+
+struct BookingLite: Decodable {
+    let id: String
+    let listingId: String
+    let userId: String
+    let status: String
+    let checkIn: String
+    let checkOut: String
+
+    enum CodingKeys: String, CodingKey {
+        case id, status
+        case listingId = "listing_id"
+        case userId = "user_id"
+        case checkIn = "check_in"
+        case checkOut = "check_out"
+    }
+}
+
+/// Formatterer en dato-range til kompakt norsk tekst, f.eks. "25.-28. feb." eller
+/// "25. feb.-3. mar." hvis det krysser måneder.
+private func formatDateRange(_ startStr: String, _ endStr: String) -> String? {
+    let parser = DateFormatter()
+    parser.dateFormat = "yyyy-MM-dd"
+    parser.locale = Locale(identifier: "en_US_POSIX")
+    parser.timeZone = TimeZone(identifier: "Europe/Oslo")
+    guard let start = parser.date(from: startStr), let end = parser.date(from: endStr) else { return nil }
+
+    let dayOut = DateFormatter()
+    dayOut.dateFormat = "d."
+    dayOut.locale = Locale(identifier: "nb_NO")
+    dayOut.timeZone = TimeZone(identifier: "Europe/Oslo")
+
+    let monthOut = DateFormatter()
+    monthOut.dateFormat = "d. MMM."
+    monthOut.locale = Locale(identifier: "nb_NO")
+    monthOut.timeZone = TimeZone(identifier: "Europe/Oslo")
+
+    let cal = Calendar(identifier: .gregorian)
+    let sameMonth = cal.isDate(start, equalTo: end, toGranularity: .month)
+    if sameMonth {
+        return "\(dayOut.string(from: start))-\(monthOut.string(from: end))"
+    } else {
+        return "\(monthOut.string(from: start))-\(monthOut.string(from: end))"
+    }
 }
