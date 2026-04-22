@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Root-view for host-kalender. Henter alle hostens annonser og lar brukeren
 /// velge en — eller går rett til HostCalendarView hvis det bare finnes én.
@@ -94,13 +95,28 @@ struct CalendarRootView: View {
     }
 }
 
-/// Kalender for én annonse — multi-select, bulk-actions (blokker, sett pris,
-/// fjern overstyring). Viser inneværende måned pluss 11 fremover som en vertikal
-/// liste, Airbnb-stil.
+// MARK: - PreferenceKey for cell-frames (brukt til drag-select)
+
+private struct CellFrameEntry: Equatable {
+    let iso: String
+    let rect: CGRect
+}
+
+private struct CellFramesPreference: PreferenceKey {
+    static var defaultValue: [CellFrameEntry] { [] }
+    static func reduce(value: inout [CellFrameEntry], nextValue: () -> [CellFrameEntry]) {
+        value.append(contentsOf: nextValue())
+    }
+}
+
+/// Kalender for én annonse — multi-select via tap-anker-pattern (tap start,
+/// tap slutt = område) OG long-press + drag (penselvalg). Bulk-actions
+/// (blokker, sett pris, fjern overstyring) med plass-velger.
 struct HostCalendarView: View {
     let listing: Listing
 
     @State private var selectedDates: Set<String> = []
+    @State private var rangeAnchor: String?
     @State private var blockedDates: Set<String> = []
     @State private var rules: [PricingService.Rule] = []
     @State private var overrides: [String: Int] = [:]
@@ -111,8 +127,29 @@ struct HostCalendarView: View {
     @State private var showPriceSheet = false
     @State private var showPricingRulesEditor = false
 
+    // Plass-velger
+    @State private var spotMarkers: [SpotMarker] = []
+    @State private var selectedSpotIds: Set<String> = []
+    @State private var showSpotPicker = false
+
+    // Drag-select-state
+    @State private var cellFrames: [String: CGRect] = [:]
+    @State private var dragAnchorIso: String?
+    @State private var preDragSelection: Set<String> = []
+    @State private var isDragSelecting = false
+
     private let monthsAhead = 12
     private var basePrice: Int { listing.price ?? 0 }
+
+    private var hasMultipleSpots: Bool { spotMarkers.count > 1 }
+
+    private var spotSelectionLabel: String {
+        if !hasMultipleSpots { return "" }
+        if selectedSpotIds.count == spotMarkers.count {
+            return "Alle \(spotMarkers.count) plasser"
+        }
+        return "\(selectedSpotIds.count) av \(spotMarkers.count)"
+    }
 
     private let isoFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -133,17 +170,40 @@ struct HostCalendarView: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             ScrollView {
-                if isLoading {
-                    ProgressView().padding(.top, 40)
-                }
-                LazyVStack(spacing: 28, pinnedViews: [.sectionHeaders]) {
-                    ForEach(visibleMonthList, id: \.self) { monthStart in
-                        monthSection(monthStart)
+                VStack(spacing: 0) {
+                    if hasMultipleSpots {
+                        spotPickerButton
+                            .padding(.horizontal, 16)
+                            .padding(.top, 12)
+                            .padding(.bottom, 4)
                     }
+
+                    if rangeAnchor != nil || isDragSelecting {
+                        rangeHint
+                            .padding(.horizontal, 16)
+                            .padding(.top, 6)
+                    }
+
+                    if isLoading {
+                        ProgressView().padding(.top, 40)
+                    }
+
+                    LazyVStack(spacing: 28, pinnedViews: []) {
+                        ForEach(visibleMonthList, id: \.self) { monthStart in
+                            monthSection(monthStart)
+                        }
+                    }
+                    .padding(.vertical, 16)
+                    .padding(.bottom, selectedDates.isEmpty ? 16 : 140)
                 }
-                .padding(.vertical, 16)
-                .padding(.bottom, selectedDates.isEmpty ? 16 : 140)
+                .coordinateSpace(name: "calendarContent")
             }
+            .onPreferenceChange(CellFramesPreference.self) { frames in
+                var map: [String: CGRect] = [:]
+                for f in frames { map[f.iso] = f.rect }
+                cellFrames = map
+            }
+            .simultaneousGesture(dragSelectGesture)
 
             if !selectedDates.isEmpty {
                 selectionBar
@@ -192,7 +252,78 @@ struct HostCalendarView: View {
             )
             .presentationDetents([.fraction(0.35)])
         }
+        .sheet(isPresented: $showSpotPicker) {
+            SpotPickerSheet(
+                spots: spotMarkers,
+                selectedSpotIds: $selectedSpotIds
+            )
+            .presentationDetents([.medium, .large])
+        }
         .task(id: listing.id) { await loadAll() }
+    }
+
+    // MARK: - Spot-velger
+
+    @ViewBuilder
+    private var spotPickerButton: some View {
+        Button {
+            showSpotPicker = true
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "mappin.and.ellipse")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary600)
+                Text("Plasser: ")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral600)
+                + Text(spotSelectionLabel)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.neutral900)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.neutral400)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.primary50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.primary600.opacity(0.25), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Range-hint bar
+
+    @ViewBuilder
+    private var rangeHint: some View {
+        HStack(spacing: 8) {
+            Image(systemName: isDragSelecting ? "hand.draw" : "arrow.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.primary600)
+            if isDragSelecting {
+                Text("Dra for å velge område")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.neutral700)
+            } else {
+                Text("Trykk en dato til for å velge område")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.neutral700)
+            }
+            Spacer()
+            Button("Avbryt") {
+                rangeAnchor = nil
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(.primary600)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.primary50)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Month section
@@ -208,7 +339,6 @@ struct HostCalendarView: View {
             }
             .padding(.horizontal, 20)
 
-            // Ukedags-etiketter
             HStack(spacing: 0) {
                 ForEach(["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"], id: \.self) { day in
                     Text(day)
@@ -219,7 +349,6 @@ struct HostCalendarView: View {
             }
             .padding(.horizontal, 12)
 
-            // Grid
             let days = daysInMonthGrid(monthStart)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2), count: 7), spacing: 2) {
                 ForEach(Array(days.enumerated()), id: \.offset) { _, date in
@@ -241,17 +370,13 @@ struct HostCalendarView: View {
         let isBooked = bookedDates.contains(iso)
         let isBlocked = blockedDates.contains(iso)
         let isSelected = selectedDates.contains(iso)
+        let isAnchor = rangeAnchor == iso
         let override = overrides[iso]
         let price = priceForDate(date)
         let source = sourceForDate(date, iso: iso)
 
         Button {
-            guard !isPast, !isBooked else { return }
-            if selectedDates.contains(iso) {
-                selectedDates.remove(iso)
-            } else {
-                selectedDates.insert(iso)
-            }
+            handleTap(iso: iso)
         } label: {
             VStack(spacing: 2) {
                 Text("\(Calendar.current.component(.day, from: date))")
@@ -283,12 +408,134 @@ struct HostCalendarView: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(isSelected ? Color.primary600 : Color.clear, lineWidth: 2)
+                    .stroke(isAnchor ? Color.primary600 : (isSelected ? Color.primary600.opacity(0.6) : Color.clear),
+                            lineWidth: isAnchor ? 2.5 : 2)
+            )
+            .background(
+                GeometryReader { geo in
+                    Color.clear.preference(
+                        key: CellFramesPreference.self,
+                        value: canSelect(isPast: isPast, isBooked: isBooked)
+                            ? [CellFrameEntry(iso: iso, rect: geo.frame(in: .named("calendarContent")))]
+                            : []
+                    )
+                }
             )
         }
         .buttonStyle(.plain)
         .disabled(isPast || isBooked)
     }
+
+    private func canSelect(isPast: Bool, isBooked: Bool) -> Bool {
+        !isPast && !isBooked
+    }
+
+    private func canSelectIso(_ iso: String) -> Bool {
+        guard let date = isoFormatter.date(from: iso) else { return false }
+        let isPast = Calendar.current.compare(date, to: Calendar.current.startOfDay(for: Date()), toGranularity: .day) == .orderedAscending
+        return canSelect(isPast: isPast, isBooked: bookedDates.contains(iso))
+    }
+
+    // MARK: - Tap-handling (anker-pattern)
+
+    private func handleTap(iso: String) {
+        guard canSelectIso(iso) else { return }
+
+        // Hvis vi er i en drag-select, ignorer tap
+        if isDragSelecting { return }
+
+        if let anchor = rangeAnchor {
+            // Tap #2 → fyll område
+            if anchor == iso {
+                // Samme dato tappet igjen → fjern valg + anker
+                selectedDates.remove(iso)
+                rangeAnchor = nil
+            } else {
+                // Område fra anker til ny dato
+                let range = isoRange(from: anchor, to: iso)
+                for d in range where canSelectIso(d) {
+                    selectedDates.insert(d)
+                }
+                rangeAnchor = nil
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+        } else {
+            // Tap #1 → toggle + sett anker hvis nå valgt
+            if selectedDates.contains(iso) {
+                selectedDates.remove(iso)
+            } else {
+                selectedDates.insert(iso)
+                rangeAnchor = iso
+            }
+        }
+    }
+
+    private func isoRange(from a: String, to b: String) -> [String] {
+        guard let dateA = isoFormatter.date(from: a),
+              let dateB = isoFormatter.date(from: b) else { return [] }
+        let (start, end) = dateA < dateB ? (dateA, dateB) : (dateB, dateA)
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+        var cursor = start
+        var result: [String] = []
+        while cursor <= end {
+            result.append(isoFormatter.string(from: cursor))
+            guard let next = cal.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return result
+    }
+
+    // MARK: - Drag-select (long-press + drag)
+
+    private var dragSelectGesture: some Gesture {
+        LongPressGesture(minimumDuration: 0.3)
+            .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("calendarContent")))
+            .onChanged { value in
+                switch value {
+                case .first:
+                    break
+                case .second(true, let drag):
+                    guard let drag else { return }
+                    if dragAnchorIso == nil {
+                        // Long-press utløst → finn celle under startpunkt
+                        if let startCell = findCell(at: drag.startLocation), canSelectIso(startCell) {
+                            dragAnchorIso = startCell
+                            preDragSelection = selectedDates
+                            rangeAnchor = nil  // avbryt evt tap-range
+                            isDragSelecting = true
+                            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                            selectedDates.insert(startCell)
+                        }
+                        return
+                    }
+                    // Update: finn celle under finger
+                    guard let anchor = dragAnchorIso else { return }
+                    let currentIso = findCell(at: drag.location) ?? anchor
+                    let range = isoRange(from: anchor, to: currentIso).filter { canSelectIso($0) }
+                    selectedDates = preDragSelection.union(range)
+                default:
+                    break
+                }
+            }
+            .onEnded { _ in
+                if isDragSelecting {
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                }
+                dragAnchorIso = nil
+                preDragSelection = []
+                isDragSelecting = false
+            }
+    }
+
+    private func findCell(at point: CGPoint) -> String? {
+        for (iso, rect) in cellFrames {
+            if rect.contains(point) { return iso }
+        }
+        return nil
+    }
+
+    // MARK: - Cell styling
 
     private func textColor(isPast: Bool, isBooked: Bool, isBlocked: Bool, isSelected: Bool) -> Color {
         if isPast { return .neutral300 }
@@ -319,7 +566,6 @@ struct HostCalendarView: View {
     private func priceForDate(_ date: Date) -> Int {
         let iso = isoFormatter.string(from: date)
         if let o = overrides[iso] { return o }
-        // Sjekk sesong
         if let season = rules.first(where: { r in
             guard r.kind == "season",
                   let start = r.start_date, let end = r.end_date else { return false }
@@ -327,7 +573,6 @@ struct HostCalendarView: View {
         }) {
             return season.price
         }
-        // Helg
         if let weekend = rules.first(where: { r in
             r.kind == "weekend" && ((r.day_mask ?? 0) & (1 << weekdayBit(date))) != 0
         }) {
@@ -360,11 +605,21 @@ struct HostCalendarView: View {
     private var selectionBar: some View {
         VStack(spacing: 10) {
             HStack {
-                Text("\(selectedDates.count) \(selectedDates.count == 1 ? "dag valgt" : "dager valgt")")
-                    .font(.system(size: 14, weight: .semibold))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(selectedDates.count) \(selectedDates.count == 1 ? "dag valgt" : "dager valgt")")
+                        .font(.system(size: 14, weight: .semibold))
+                    if hasMultipleSpots {
+                        Text(spotSelectionLabel)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.neutral500)
+                    }
+                }
                 Spacer()
                 Button("Tøm") {
-                    withAnimation { selectedDates.removeAll() }
+                    withAnimation {
+                        selectedDates.removeAll()
+                        rangeAnchor = nil
+                    }
                 }
                 .font(.system(size: 13))
                 .foregroundStyle(.neutral600)
@@ -373,14 +628,14 @@ struct HostCalendarView: View {
             HStack(spacing: 8) {
                 actionButton(
                     icon: "xmark.square.fill",
-                    label: allSelectedBlocked ? "Fjern blokkering" : "Blokker"
+                    label: allSelectedBlocked ? "Fjern blokk." : "Blokker"
                 ) {
                     Task { await applyBlockToggle() }
                 }
                 actionButton(icon: "tag.fill", label: "Sett pris") {
                     showPriceSheet = true
                 }
-                actionButton(icon: "arrow.uturn.backward", label: "Fjern overstyring") {
+                actionButton(icon: "arrow.uturn.backward", label: "Fjern overst.") {
                     Task { await applyClearOverrides() }
                 }
             }
@@ -439,7 +694,6 @@ struct HostCalendarView: View {
         cal.firstWeekday = 2
         let range = cal.range(of: .day, in: .month, for: monthStart) ?? 1..<32
         let firstWeekdayOfMonth = cal.component(.weekday, from: monthStart)
-        // Konverter til mandag-basert offset (mandag=0, søn=6)
         let leading = (firstWeekdayOfMonth + 5) % 7
 
         var result: [Date?] = Array(repeating: nil, count: leading)
@@ -448,7 +702,6 @@ struct HostCalendarView: View {
                 result.append(d)
             }
         }
-        // Pad ut til multipler av 7
         while result.count % 7 != 0 {
             result.append(nil)
         }
@@ -461,8 +714,35 @@ struct HostCalendarView: View {
         rules = await PricingService.fetchRules(listingId: listing.id)
         let fetchedOverrides = await PricingService.fetchOverrides(listingId: listing.id)
         overrides = Dictionary(uniqueKeysWithValues: fetchedOverrides.map { ($0.date, $0.price) })
+
+        // Last spot_markers fra DB (fresh) — listing.spotMarkers kan være utdatert
+        let markers = await fetchSpotMarkers()
+        spotMarkers = markers
+        if selectedSpotIds.isEmpty {
+            selectedSpotIds = Set(markers.compactMap { $0.id })
+        }
+
         await loadBookings()
         isLoading = false
+    }
+
+    private func fetchSpotMarkers() async -> [SpotMarker] {
+        do {
+            struct Row: Decodable { let spotMarkers: [SpotMarker]?
+                enum CodingKeys: String, CodingKey { case spotMarkers = "spot_markers" }
+            }
+            let rows: [Row] = try await supabase
+                .from("listings")
+                .select("spot_markers")
+                .eq("id", value: listing.id)
+                .limit(1)
+                .execute()
+                .value
+            return rows.first?.spotMarkers ?? []
+        } catch {
+            print("fetchSpotMarkers error: \(error)")
+            return []
+        }
     }
 
     private func refreshPricing() async {
@@ -508,23 +788,60 @@ struct HostCalendarView: View {
         saving = true
         defer { saving = false }
         let shouldBlock = !allSelectedBlocked
-        var next = blockedDates
-        for iso in selectedDates {
-            if shouldBlock { next.insert(iso) } else { next.remove(iso) }
-        }
-        do {
-            struct Payload: Encodable { let blocked_dates: [String] }
-            try await supabase
-                .from("listings")
-                .update(Payload(blocked_dates: Array(next).sorted()))
-                .eq("id", value: listing.id)
-                .execute()
-            blockedDates = next
-            flashToast(shouldBlock ? "Blokkert" : "Fjernet blokkering")
-            selectedDates.removeAll()
-        } catch {
-            flashToast("Kunne ikke lagre")
-            print("block toggle error: \(error)")
+
+        let allSpots = spotMarkers.count
+        let selectingAll = !hasMultipleSpots || selectedSpotIds.count == allSpots
+
+        if selectingAll {
+            // Listing-level blokk — eksisterende flyt
+            var next = blockedDates
+            for iso in selectedDates {
+                if shouldBlock { next.insert(iso) } else { next.remove(iso) }
+            }
+            do {
+                struct Payload: Encodable { let blocked_dates: [String] }
+                try await supabase
+                    .from("listings")
+                    .update(Payload(blocked_dates: Array(next).sorted()))
+                    .eq("id", value: listing.id)
+                    .execute()
+                blockedDates = next
+                flashToast(shouldBlock ? "Blokkert \(selectedDates.count) dager" : "Fjernet blokkering")
+                selectedDates.removeAll()
+                rangeAnchor = nil
+            } catch {
+                flashToast("Kunne ikke lagre")
+                print("block toggle error: \(error)")
+            }
+        } else {
+            // Per-spot blokk — oppdater hver valgte plass via spot_markers jsonb
+            var updatedMarkers = spotMarkers
+            for i in 0..<updatedMarkers.count {
+                guard let sid = updatedMarkers[i].id, selectedSpotIds.contains(sid) else { continue }
+                var existing = Set(updatedMarkers[i].blockedDates ?? [])
+                for iso in selectedDates {
+                    if shouldBlock { existing.insert(iso) } else { existing.remove(iso) }
+                }
+                updatedMarkers[i].blockedDates = existing.isEmpty ? nil : Array(existing).sorted()
+            }
+            do {
+                struct Payload: Encodable { let spot_markers: [SpotMarker] }
+                try await supabase
+                    .from("listings")
+                    .update(Payload(spot_markers: updatedMarkers))
+                    .eq("id", value: listing.id)
+                    .execute()
+                spotMarkers = updatedMarkers
+                let count = selectedSpotIds.count
+                flashToast(shouldBlock
+                    ? "Blokkert for \(count) \(count == 1 ? "plass" : "plasser")"
+                    : "Fjernet blokkering for \(count) \(count == 1 ? "plass" : "plasser")")
+                selectedDates.removeAll()
+                rangeAnchor = nil
+            } catch {
+                flashToast("Kunne ikke lagre")
+                print("per-spot block toggle error: \(error)")
+            }
         }
     }
 
@@ -538,6 +855,7 @@ struct HostCalendarView: View {
             for d in dates { overrides[d] = price }
             flashToast("Pris satt til \(price) kr")
             selectedDates.removeAll()
+            rangeAnchor = nil
             showPriceSheet = false
         } catch {
             flashToast("Kunne ikke lagre")
@@ -555,6 +873,7 @@ struct HostCalendarView: View {
             for d in dates { overrides.removeValue(forKey: d) }
             flashToast("Overstyring fjernet")
             selectedDates.removeAll()
+            rangeAnchor = nil
         } catch {
             flashToast("Kunne ikke lagre")
             print("clear overrides error: \(error)")
@@ -565,6 +884,88 @@ struct HostCalendarView: View {
         withAnimation { toast = text }
         DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
             withAnimation { toast = nil }
+        }
+    }
+}
+
+// MARK: - Plass-velger-sheet
+
+private struct SpotPickerSheet: View {
+    let spots: [SpotMarker]
+    @Binding var selectedSpotIds: Set<String>
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Button {
+                        selectedSpotIds = Set(spots.compactMap { $0.id })
+                    } label: {
+                        HStack {
+                            Text("Velg alle")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.primary600)
+                            Spacer()
+                            Text("\(selectedSpotIds.count)/\(spots.count)")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.neutral500)
+                        }
+                    }
+                } footer: {
+                    Text("Velg hvilke plasser blokkering gjelder for. Prisoverstyringer gjelder hele annonsen.")
+                        .font(.system(size: 12))
+                }
+
+                Section("Plasser") {
+                    ForEach(Array(spots.enumerated()), id: \.offset) { index, spot in
+                        let sid = spot.id ?? "\(index)"
+                        Button {
+                            if selectedSpotIds.contains(sid) {
+                                if selectedSpotIds.count > 1 {
+                                    selectedSpotIds.remove(sid)
+                                }
+                            } else {
+                                selectedSpotIds.insert(sid)
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                ZStack {
+                                    Circle()
+                                        .fill(selectedSpotIds.contains(sid) ? Color.primary600 : Color.neutral100)
+                                        .frame(width: 26, height: 26)
+                                    if selectedSpotIds.contains(sid) {
+                                        Image(systemName: "checkmark")
+                                            .font(.system(size: 12, weight: .bold))
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(spot.label ?? "Plass \(index + 1)")
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(.neutral900)
+                                    if let price = spot.price {
+                                        Text("\(price) kr/natt")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(.neutral500)
+                                    }
+                                }
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .navigationTitle("Velg plasser")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Ferdig") { dismiss() }
+                        .fontWeight(.semibold)
+                }
+            }
         }
     }
 }
@@ -632,4 +1033,3 @@ private struct PriceSheet: View {
         }
     }
 }
-
