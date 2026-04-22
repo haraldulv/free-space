@@ -25,31 +25,31 @@ struct ProfileSummaryCard: View {
     var body: some View {
         HStack(alignment: .center, spacing: 20) {
             VStack(spacing: 10) {
-                ZStack(alignment: .bottomTrailing) {
-                    Group {
-                        if let avatarUrl, let url = URL(string: avatarUrl) {
-                            CachedAsyncImage(url: url) { image in
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Circle().fill(Color.primary100).overlay(
-                                    Text(String(firstName.prefix(1)).uppercased())
-                                        .font(.system(size: 28, weight: .semibold))
-                                        .foregroundStyle(.primary600)
-                                )
-                            }
-                        } else {
+                Group {
+                    if let avatarUrl, let url = URL(string: avatarUrl) {
+                        CachedAsyncImage(url: url) { image in
+                            image.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
                             Circle().fill(Color.primary100).overlay(
                                 Text(String(firstName.prefix(1)).uppercased())
                                     .font(.system(size: 28, weight: .semibold))
                                     .foregroundStyle(.primary600)
                             )
                         }
+                    } else {
+                        Circle().fill(Color.primary100).overlay(
+                            Text(String(firstName.prefix(1)).uppercased())
+                                .font(.system(size: 28, weight: .semibold))
+                                .foregroundStyle(.primary600)
+                        )
                     }
-                    .frame(width: 96, height: 96)
-                    .clipShape(Circle())
-
+                }
+                .frame(width: 96, height: 96)
+                .clipShape(Circle())
+                .overlay(alignment: .bottomTrailing) {
                     if isVerified {
                         verifiedBadge
+                            .offset(x: 4, y: 4)
                     }
                 }
 

@@ -59,15 +59,39 @@ struct MessagesListView: View {
                 )
             } else {
                 VStack(spacing: 0) {
-                    topBar
-
-                    if !searchActive {
+                    if searchActive {
+                        searchBar
+                            .padding(.horizontal, 16)
+                            .padding(.top, 8)
+                    } else {
                         filterTabs
                             .padding(.top, 8)
                             .padding(.bottom, 4)
                     }
 
                     content
+                }
+            }
+        }
+        .navigationTitle("Meldinger")
+        .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if authManager.isAuthenticated && !searchActive {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        withAnimation { searchActive = true }
+                    } label: {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundStyle(.neutral900)
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .foregroundStyle(.neutral900)
+                    }
                 }
             }
         }
@@ -81,7 +105,6 @@ struct MessagesListView: View {
                 listingImage: convo?.listingImage
             )
         }
-        .navigationBarHidden(true)
         .fullScreenCover(isPresented: $showLogin) {
             LoginView()
         }
@@ -100,64 +123,31 @@ struct MessagesListView: View {
         }
     }
 
-    // MARK: - Top bar
+    // MARK: - Search bar (when active)
 
-    @ViewBuilder
-    private var topBar: some View {
-        if searchActive {
-            HStack(spacing: 10) {
-                HStack(spacing: 8) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.neutral500)
-                    TextField("Søk i alle meldinger", text: $searchText)
-                        .autocorrectionDisabled()
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-                .background(Color.neutral100)
-                .clipShape(Capsule())
+    private var searchBar: some View {
+        HStack(spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral500)
+                TextField("Søk i alle meldinger", text: $searchText)
+                    .autocorrectionDisabled()
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.neutral100)
+            .clipShape(Capsule())
 
-                Button("Avbryt") {
-                    withAnimation {
-                        searchActive = false
-                        searchText = ""
-                    }
-                    hideKeyboard()
+            Button("Avbryt") {
+                withAnimation {
+                    searchActive = false
+                    searchText = ""
                 }
-                .font(.system(size: 15))
-                .foregroundStyle(.neutral900)
+                hideKeyboard()
             }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-        } else {
-            HStack {
-                Text("Meldinger")
-                    .font(.system(size: 28, weight: .bold))
-                Spacer()
-                Button {
-                    withAnimation { searchActive = true }
-                } label: {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                        .frame(width: 36, height: 36)
-                        .background(Color.neutral100)
-                        .clipShape(Circle())
-                }
-                Button {
-                    showSettings = true
-                } label: {
-                    Image(systemName: "gearshape")
-                        .font(.system(size: 17))
-                        .foregroundStyle(.neutral900)
-                        .frame(width: 36, height: 36)
-                        .background(Color.neutral100)
-                        .clipShape(Circle())
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 8)
+            .font(.system(size: 15))
+            .foregroundStyle(.neutral900)
         }
     }
 

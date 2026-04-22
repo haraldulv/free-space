@@ -34,7 +34,7 @@ struct HostInntektCard: View {
 
             if !recentMonths.isEmpty {
                 miniChart
-                    .frame(height: 36)
+                    .frame(height: 44)
                     .frame(maxWidth: .infinity)
             } else {
                 Spacer()
@@ -50,8 +50,8 @@ struct HostInntektCard: View {
             }
             .fixedSize()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 18)
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
@@ -63,7 +63,7 @@ struct HostInntektCard: View {
                 BarMark(
                     x: .value("Måned", month.shortLabel),
                     y: .value("kr", month.earnings),
-                    width: .fixed(10)
+                    width: .fixed(14)
                 )
                 .foregroundStyle(
                     month.id == currentMonthKey
@@ -73,6 +73,7 @@ struct HostInntektCard: View {
                 .cornerRadius(3)
             }
         }
+        .chartXScale(range: .plotDimension(padding: 2))
         .chartYAxis(.hidden)
         .chartXAxis {
             AxisMarks { _ in
@@ -81,6 +82,7 @@ struct HostInntektCard: View {
                     .foregroundStyle(.neutral500)
             }
         }
+        .frame(maxWidth: 110)
     }
 
     private var currentMonthKey: String {

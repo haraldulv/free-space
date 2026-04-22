@@ -293,9 +293,6 @@
         }
       }
     },
-    "%@%%" : {
-
-    },
     "%@p" : {
       "localizations" : {
         "de" : {
@@ -3709,6 +3706,9 @@
       }
     },
     "Lagre helg-pris" : {
+
+    },
+    "Lagrer …" : {
 
     },
     "Lagret" : {
