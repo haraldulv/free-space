@@ -133,6 +133,9 @@ struct HomeView: View {
         }
         .background(Color.neutral50)
         .navigationBarTitleDisplayMode(.inline)
+        .navigationDestination(for: Listing.self) { listing in
+            ListingDetailView(listingId: listing.id)
+        }
         .fullScreenCover(isPresented: $showSearch) {
             SearchView()
         }
@@ -176,9 +179,9 @@ struct ListingSection: View {
                 .padding(.horizontal, 20)
             }
         }
-        .navigationDestination(for: Listing.self) { listing in
-            ListingDetailView(listingId: listing.id)
-        }
+        // navigationDestination flyttet opp til HomeView-nivå for å unngå
+        // SwiftUI-feilen "declared earlier on the stack" når flere
+        // ListingSections er på samme skjerm.
     }
 
     private func toggleFavorite(_ listingId: String) {
