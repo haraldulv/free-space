@@ -40,10 +40,11 @@ struct ListingCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
-                // Arrow buttons
+                // Arrow buttons — matcher favoritt-designet (ultraThinMaterial + samme størrelse),
+                // subtil chevron-farge. Beholdes midtstilt vertikalt så brukeren kan bla begge
+                // veier; hjertet har samme design øverst for konsistens.
                 if images.count > 1 {
                     HStack {
-                        // Left arrow
                         if imageIndex > 0 {
                             Button {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -51,20 +52,18 @@ struct ListingCard: View {
                                 }
                             } label: {
                                 Image(systemName: "chevron.left")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(.neutral700)
-                                    .frame(width: 28, height: 28)
-                                    .background(.white.opacity(0.85))
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .padding(8)
+                                    .background(.ultraThinMaterial)
                                     .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
                             }
                         } else {
-                            Spacer().frame(width: 28)
+                            Spacer().frame(width: 32)
                         }
 
                         Spacer()
 
-                        // Right arrow
                         if imageIndex < images.count - 1 {
                             Button {
                                 withAnimation(.easeInOut(duration: 0.2)) {
@@ -72,18 +71,17 @@ struct ListingCard: View {
                                 }
                             } label: {
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 12, weight: .bold))
-                                    .foregroundStyle(.neutral700)
-                                    .frame(width: 28, height: 28)
-                                    .background(.white.opacity(0.85))
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(.white.opacity(0.9))
+                                    .padding(8)
+                                    .background(.ultraThinMaterial)
                                     .clipShape(Circle())
-                                    .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
                             }
                         } else {
-                            Spacer().frame(width: 28)
+                            Spacer().frame(width: 32)
                         }
                     }
-                    .padding(.horizontal, 8)
+                    .padding(.horizontal, 10)
                 }
 
                 // Page dots
@@ -101,7 +99,8 @@ struct ListingCard: View {
                     }
                 }
 
-                // Favorite button
+                // Favorite button — samme design som pil-knappene (ultraThinMaterial,
+                // padding 8 på ikonet, 10 fra kant) så de står vertikalt alignet.
                 if let onFavoriteToggle {
                     VStack {
                         HStack {
@@ -110,16 +109,16 @@ struct ListingCard: View {
                                 onFavoriteToggle(!isFavorited)
                             } label: {
                                 Image(systemName: isFavorited ? "heart.fill" : "heart")
-                                    .font(.system(size: 16, weight: .medium))
-                                    .foregroundStyle(isFavorited ? .red : .white)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(isFavorited ? .red : .white.opacity(0.9))
                                     .padding(8)
                                     .background(.ultraThinMaterial)
                                     .clipShape(Circle())
                             }
-                            .padding(10)
                         }
                         Spacer()
                     }
+                    .padding(10)
                 }
 
                 // Instant booking badge

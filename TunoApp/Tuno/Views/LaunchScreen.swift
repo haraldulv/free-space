@@ -48,38 +48,54 @@ struct LaunchScreen: View {
     }
 }
 
-/// Stilisert norsk flagg i ren SwiftUI. Blå kors på hvitt på rødt.
+/// Norsk flagg i ren SwiftUI, bygget etter offisielle proporsjoner (22:16).
+/// Rødt bakgrunn + hvit kors (6 enheter tykk) + blå kors (2 enheter tykk)
+/// sentrert inne i den hvite. Vertikal posisjon x=6-12 (6 enheter bred),
+/// horisontal y=5-11 (6 enheter høy) — lik asymmetri som virkelig flagg.
 private struct NorwayFlag: View {
+    // Offisielle farger (Pantone 200C / 281C)
+    private let red = Color(red: 0.729, green: 0.118, blue: 0.161)
+    private let blue = Color(red: 0.000, green: 0.161, blue: 0.412)
+
     var body: some View {
         GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
-            let stripeH = h * 0.22
-            let stripeV = w * 0.22
-            let vPos = w * 0.33
+            let u = min(geo.size.width / 22, geo.size.height / 16)  // enhet
+            let w = 22 * u
+            let h = 16 * u
 
             ZStack(alignment: .topLeading) {
-                Color(red: 0.73, green: 0.12, blue: 0.15) // rødt
-                // Hvit kors
+                red
+
+                // Hvit kors: vertikal stripe x=6-12 (6u bred), start x=6u
                 Rectangle()
                     .fill(Color.white)
-                    .frame(width: w, height: stripeH * 1.4)
-                    .offset(y: (h - stripeH * 1.4) / 2)
+                    .frame(width: 6 * u, height: h)
+                    .offset(x: 6 * u)
+
+                // Hvit kors: horisontal stripe y=5-11 (6u høy), start y=5u
                 Rectangle()
                     .fill(Color.white)
-                    .frame(width: stripeV * 1.4, height: h)
-                    .offset(x: vPos - (stripeV * 1.4 - stripeV) / 2)
-                // Blå kors
+                    .frame(width: w, height: 6 * u)
+                    .offset(y: 5 * u)
+
+                // Blå kors: vertikal x=8-10 (2u bred)
                 Rectangle()
-                    .fill(Color(red: 0.0, green: 0.19, blue: 0.50))
-                    .frame(width: w, height: stripeH)
-                    .offset(y: (h - stripeH) / 2)
+                    .fill(blue)
+                    .frame(width: 2 * u, height: h)
+                    .offset(x: 8 * u)
+
+                // Blå kors: horisontal y=7-9 (2u høy)
                 Rectangle()
-                    .fill(Color(red: 0.0, green: 0.19, blue: 0.50))
-                    .frame(width: stripeV, height: h)
-                    .offset(x: vPos)
+                    .fill(blue)
+                    .frame(width: w, height: 2 * u)
+                    .offset(y: 7 * u)
             }
-            .clipShape(RoundedRectangle(cornerRadius: 2))
+            .frame(width: w, height: h)
+            .clipShape(RoundedRectangle(cornerRadius: u * 0.8))
+            .overlay(
+                RoundedRectangle(cornerRadius: u * 0.8)
+                    .stroke(Color.black.opacity(0.08), lineWidth: 0.5)
+            )
         }
     }
 }

@@ -271,70 +271,59 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func ratingPillRow(listing: Listing) -> some View {
-        let count = listing.reviewCount ?? 0
-        let rating = listing.rating ?? 0
-        let isGuestFavorite = rating >= 4.8 && count >= 5
+        let spots = listing.spots ?? 1
+        let isInstant = listing.instantBooking == true
 
         HStack(spacing: 0) {
-            // Rating
-            VStack(spacing: 2) {
-                Text(count > 0 ? String(format: "%.2f", rating).replacingOccurrences(of: ".", with: ",") : "Ny")
+            // Kolonne 1: Antall plasser
+            VStack(spacing: 4) {
+                Text("\(spots)")
                     .font(.system(size: 17, weight: .bold))
                     .foregroundStyle(.neutral900)
-                if count > 0 {
-                    HStack(spacing: 2) {
-                        ForEach(0..<5) { _ in
-                            Image(systemName: "star.fill").font(.system(size: 8))
-                        }
-                    }
-                    .foregroundStyle(.neutral900)
-                } else {
-                    Image(systemName: "star")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.neutral900)
-                }
-            }
-            .frame(maxWidth: .infinity)
-
-            Divider().frame(height: 40)
-
-            // Gjeste-favoritt (om aktuelt) eller "Plasser"
-            VStack(spacing: 2) {
-                if isGuestFavorite {
-                    HStack(spacing: 4) {
-                        Image(systemName: "laurel.leading").font(.system(size: 18))
-                            .foregroundStyle(Color(hex: "#d4a84b"))
-                        Text("Gjeste\nfavoritt")
-                            .font(.system(size: 12, weight: .semibold))
-                            .multilineTextAlignment(.center)
-                            .lineLimit(2)
-                            .foregroundStyle(.neutral900)
-                        Image(systemName: "laurel.trailing").font(.system(size: 18))
-                            .foregroundStyle(Color(hex: "#d4a84b"))
-                    }
-                } else {
-                    let spots = listing.spots ?? 1
-                    Text("\(spots)")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(.neutral900)
-                    Text(spots == 1 ? "Plass" : "Plasser")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.neutral700)
-                }
-            }
-            .frame(maxWidth: .infinity)
-
-            Divider().frame(height: 40)
-
-            // Reviews
-            VStack(spacing: 2) {
-                Text("\(count)")
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(.neutral900)
-                Text(count == 1 ? "Anmeldelse" : "Anmeldelser")
+                Text(spots == 1 ? "Plass" : "Plasser")
                     .font(.system(size: 11))
                     .foregroundStyle(.neutral700)
-                    .underline()
+            }
+            .frame(maxWidth: .infinity)
+
+            Divider().frame(height: 40)
+
+            // Kolonne 2: Direktebestilling / Forespør
+            VStack(spacing: 4) {
+                Image(systemName: isInstant ? "bolt.fill" : "clock")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(isInstant ? Color.primary600 : .neutral900)
+                Text(isInstant ? "Direkte" : "Forespør")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.neutral700)
+            }
+            .frame(maxWidth: .infinity)
+
+            Divider().frame(height: 40)
+
+            // Kolonne 3: Kjøretøy-type (Lucide-ikon + label)
+            VStack(spacing: 4) {
+                if let vehicleType = listing.vehicleType {
+                    Image(vehicleType.lucideIcon)
+                        .renderingMode(.template)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 22, height: 22)
+                        .foregroundStyle(.neutral900)
+                    Text(vehicleType.displayName)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.neutral700)
+                } else {
+                    Image("lucide-caravan")
+                        .renderingMode(.template)
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 22, height: 22)
+                        .foregroundStyle(.neutral900)
+                    Text("Bobil")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.neutral700)
+                }
             }
             .frame(maxWidth: .infinity)
         }
