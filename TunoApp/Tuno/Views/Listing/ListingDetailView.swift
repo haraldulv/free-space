@@ -1,9 +1,8 @@
 import SwiftUI
 
 /// Airbnb-inspirert annonse-detaljside. Full-bleed image-gallery øverst,
-/// host-kort i samme stil som ProfileSummaryCard, konsekvente Profil-side-
-/// stil kort ellers. Bruker custom back/share/heart i stedet for native
-/// nav-bar for stabil visuell opplevelse uten zoom-flimmer.
+/// hvit pull-up-container med avrundede hjørner over hero, midtstilt tittel,
+/// kompakt host-rad på toppen + fullt "Møt verten"-kort lenger ned.
 struct ListingDetailView: View {
     let listingId: String
     @EnvironmentObject var authManager: AuthManager
@@ -17,6 +16,9 @@ struct ListingDetailView: View {
     @State private var showChat = false
     @State private var showHostProfile = false
     @State private var showAllAmenities = false
+    @State private var showFullscreenGallery = false
+    @State private var showFullscreenMap = false
+    @State private var isSatellite = false
     @StateObject private var chatService = ChatService()
     @Environment(\.dismiss) private var dismiss
 
@@ -67,17 +69,20 @@ struct ListingDetailView: View {
         ZStack(alignment: .bottom) {
             ScrollView {
                 VStack(spacing: 0) {
-                    // Hero-gallery
                     heroGallery(images: images)
 
-                    VStack(alignment: .leading, spacing: 20) {
+                    VStack(alignment: .leading, spacing: 18) {
                         titleBlock(listing: listing)
+
+                        Divider().padding(.horizontal, -16)
+
+                        compactHostRow(listing: listing)
+
+                        Divider().padding(.horizontal, -16)
 
                         if isGuestFavorite {
                             guestFavoriteBadge(listing: listing)
                         }
-
-                        hostSummaryCard(listing: listing)
 
                         if let desc = listing.description, !desc.isEmpty {
                             sectionCard {
@@ -101,14 +106,19 @@ struct ListingDetailView: View {
 
                         locationCard(listing: listing, hideExact: hideExact)
 
-                        hostCard(listing: listing)
+                        meetHostCard(listing: listing)
 
                         thingsToKnowCard(listing: listing)
                     }
                     .padding(.horizontal, 16)
-                    .padding(.top, 20)
+                    .padding(.top, 24)
                     .padding(.bottom, 120)
-                    .background(Color.neutral50)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        Color.neutral50
+                            .clipShape(.rect(topLeadingRadius: 24, topTrailingRadius: 24))
+                    )
+                    .offset(y: -20)
                 }
             }
             .ignoresSafeArea(edges: .top)
@@ -130,6 +140,23 @@ struct ListingDetailView: View {
         }
         .sheet(isPresented: $showAllAmenities) {
             AllAmenitiesSheet(amenities: listing.amenities ?? [])
+        }
+        .fullScreenCover(isPresented: $showFullscreenGallery) {
+            FullscreenGalleryView(
+                images: listing.images ?? [],
+                startIndex: imageIndex
+            )
+        }
+        .fullScreenCover(isPresented: $showFullscreenMap) {
+            if let lat = listing.lat, let lng = listing.lng {
+                FullscreenMapView(
+                    lat: lat,
+                    lng: lng,
+                    spotMarkers: listing.spotMarkers ?? [],
+                    hideExactLocation: listing.hideExactLocation ?? false,
+                    isSatellite: $isSatellite
+                )
+            }
         }
     }
 
@@ -157,6 +184,9 @@ struct ListingDetailView: View {
                         }
                         .clipped()
                         .tag(index)
+                        .onTapGesture {
+                            showFullscreenGallery = true
+                        }
                     }
                 }
             }
@@ -167,16 +197,16 @@ struct ListingDetailView: View {
             // Back + share + heart — floating over image
             VStack {
                 HStack {
-                    roundIconButton(systemName: "chevron.left") {
+                    glassIconButton(systemName: "chevron.left") {
                         dismiss()
                     }
                     Spacer()
                     HStack(spacing: 10) {
-                        roundIconButton(systemName: "square.and.arrow.up") {
+                        glassIconButton(systemName: "square.and.arrow.up") {
                             // TODO share
                         }
                         if authManager.isAuthenticated {
-                            roundIconButton(
+                            glassIconButton(
                                 systemName: favoritesService.favoriteIds.contains(listingId) ? "heart.fill" : "heart",
                                 foreground: favoritesService.favoriteIds.contains(listingId) ? .red : .neutral900
                             ) {
@@ -191,62 +221,112 @@ struct ListingDetailView: View {
                 Spacer()
             }
 
-            // Image counter
+            // Image counter — "1 / 23" nederst høyre (Airbnb-stil)
             if !images.isEmpty {
                 Text("\(imageIndex + 1) / \(images.count)")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, 11)
                     .padding(.vertical, 5)
-                    .background(Color.black.opacity(0.5))
-                    .clipShape(Capsule())
-                    .padding(14)
+                    .background(Color.black.opacity(0.55))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .padding(16)
             }
         }
     }
 
-    // MARK: - Title block
+    // MARK: - Title block (midtstilt, Airbnb-stil)
 
     @ViewBuilder
     private func titleBlock(listing: Listing) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(spacing: 10) {
             Text(listing.title)
                 .font(.system(size: 26, weight: .bold))
                 .foregroundStyle(.neutral900)
+                .multilineTextAlignment(.center)
                 .lineLimit(3)
-
-            HStack(spacing: 6) {
-                if let rating = listing.rating, (listing.reviewCount ?? 0) > 0 {
-                    HStack(spacing: 3) {
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 13))
-                        Text(String(format: "%.2f", rating).replacingOccurrences(of: ".", with: ","))
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-                    .foregroundStyle(.neutral900)
-
-                    Text("·")
-                        .foregroundStyle(.neutral400)
-
-                    Text("\(listing.reviewCount ?? 0) anmeldelser")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.neutral700)
-                        .underline()
-                } else {
-                    HStack(spacing: 3) {
-                        Image(systemName: "star")
-                            .font(.system(size: 13))
-                        Text("Ny")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-                    .foregroundStyle(.neutral900)
-                }
-            }
 
             Text(subtitleText(for: listing))
                 .font(.system(size: 14))
                 .foregroundStyle(.neutral600)
+                .multilineTextAlignment(.center)
+
+            ratingPillRow(listing: listing)
+                .padding(.top, 6)
         }
+        .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder
+    private func ratingPillRow(listing: Listing) -> some View {
+        let count = listing.reviewCount ?? 0
+        let rating = listing.rating ?? 0
+        let isGuestFavorite = rating >= 4.8 && count >= 5
+
+        HStack(spacing: 0) {
+            // Rating
+            VStack(spacing: 2) {
+                Text(count > 0 ? String(format: "%.2f", rating).replacingOccurrences(of: ".", with: ",") : "Ny")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                if count > 0 {
+                    HStack(spacing: 2) {
+                        ForEach(0..<5) { _ in
+                            Image(systemName: "star.fill").font(.system(size: 8))
+                        }
+                    }
+                    .foregroundStyle(.neutral900)
+                } else {
+                    Image(systemName: "star")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral900)
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            Divider().frame(height: 40)
+
+            // Gjeste-favoritt (om aktuelt) eller "Plasser"
+            VStack(spacing: 2) {
+                if isGuestFavorite {
+                    HStack(spacing: 4) {
+                        Image(systemName: "laurel.leading").font(.system(size: 18))
+                            .foregroundStyle(Color(hex: "#d4a84b"))
+                        Text("Gjeste\nfavoritt")
+                            .font(.system(size: 12, weight: .semibold))
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .foregroundStyle(.neutral900)
+                        Image(systemName: "laurel.trailing").font(.system(size: 18))
+                            .foregroundStyle(Color(hex: "#d4a84b"))
+                    }
+                } else {
+                    let spots = listing.spots ?? 1
+                    Text("\(spots)")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(.neutral900)
+                    Text(spots == 1 ? "Plass" : "Plasser")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral700)
+                }
+            }
+            .frame(maxWidth: .infinity)
+
+            Divider().frame(height: 40)
+
+            // Reviews
+            VStack(spacing: 2) {
+                Text("\(count)")
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                Text(count == 1 ? "Anmeldelse" : "Anmeldelser")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral700)
+                    .underline()
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.vertical, 8)
     }
 
     private func subtitleText(for listing: Listing) -> String {
@@ -257,12 +337,86 @@ struct ListingDetailView: View {
         if let city = listing.city, !city.isEmpty {
             parts.append(city)
         }
-        let spotCount = listing.spots ?? 1
-        parts.append("\(spotCount) \(spotCount == 1 ? "plass" : "plasser")")
         if let maxLen = listing.maxVehicleLength, maxLen > 0 {
             parts.append("Maks \(Int(maxLen))m")
         }
         return parts.joined(separator: " · ")
+    }
+
+    // MARK: - Kompakt host-rad (rett under tittel, Airbnb-stil)
+
+    @ViewBuilder
+    private func compactHostRow(listing: Listing) -> some View {
+        Button {
+            showHostProfile = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack(alignment: .bottomTrailing) {
+                    Group {
+                        if let urlStr = listing.hostAvatar, let url = URL(string: urlStr) {
+                            CachedAsyncImage(url: url) { image in
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Circle().fill(Color.primary100).overlay(
+                                    Text(String(firstName(of: listing.hostName ?? "?").prefix(1)).uppercased())
+                                        .font(.system(size: 18, weight: .semibold))
+                                        .foregroundStyle(.primary600)
+                                )
+                            }
+                        } else {
+                            Circle().fill(Color.primary100).overlay(
+                                Text(String(firstName(of: listing.hostName ?? "?").prefix(1)).uppercased())
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(.primary600)
+                            )
+                        }
+                    }
+                    .frame(width: 48, height: 48)
+                    .clipShape(Circle())
+
+                    smallVerifiedBadge
+                        .offset(x: 2, y: 2)
+                }
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(firstName(of: listing.hostName ?? "Utleier")) er vertskap")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text(hostSubtitle(listing: listing))
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral600)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallVerifiedBadge: some View {
+        ZStack {
+            Image(systemName: "seal.fill")
+                .font(.system(size: 18))
+                .foregroundStyle(.white)
+            Image(systemName: "seal.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(Color(hex: "#1d9bf0"))
+            Image(systemName: "checkmark")
+                .font(.system(size: 7, weight: .heavy))
+                .foregroundStyle(.white)
+        }
+    }
+
+    private func hostSubtitle(listing: Listing) -> String {
+        let years = listing.hostJoinedYear.map {
+            max(Calendar.current.component(.year, from: Date()) - $0, 0)
+        } ?? 0
+        if years > 0 {
+            return "Tuno-vert · \(years) år som vertskap"
+        }
+        return "Tuno-vert"
     }
 
     // MARK: - Gjeste-favoritt badge
@@ -293,103 +447,6 @@ struct ListingDetailView: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 6)
         }
-    }
-
-    // MARK: - Host summary card — SAMME STIL SOM ProfileSummaryCard
-
-    @ViewBuilder
-    private func hostSummaryCard(listing: Listing) -> some View {
-        let years = listing.hostJoinedYear.map {
-            max(Calendar.current.component(.year, from: Date()) - $0, 0)
-        } ?? 0
-
-        Button {
-            showHostProfile = true
-        } label: {
-            HStack(alignment: .center, spacing: 20) {
-                VStack(spacing: 10) {
-                    Group {
-                        if let urlStr = listing.hostAvatar, let url = URL(string: urlStr) {
-                            CachedAsyncImage(url: url) { image in
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } placeholder: {
-                                Circle().fill(Color.primary100).overlay(
-                                    Text(String((listing.hostName ?? "?").prefix(1)).uppercased())
-                                        .font(.system(size: 28, weight: .semibold))
-                                        .foregroundStyle(.primary600)
-                                )
-                            }
-                        } else {
-                            Circle().fill(Color.primary100).overlay(
-                                Text(String((listing.hostName ?? "?").prefix(1)).uppercased())
-                                    .font(.system(size: 28, weight: .semibold))
-                                    .foregroundStyle(.primary600)
-                            )
-                        }
-                    }
-                    .frame(width: 96, height: 96)
-                    .clipShape(Circle())
-
-                    VStack(spacing: 2) {
-                        Text(firstName(of: listing.hostName ?? "Utleier"))
-                            .font(.system(size: 22, weight: .bold))
-                            .foregroundStyle(.neutral900)
-                            .lineLimit(1)
-                        Text("Tuno-vert")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.neutral500)
-                            .lineLimit(1)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-
-                VStack(spacing: 0) {
-                    hostStatRow(value: "\(listing.hostListingsCount ?? 1)", label: (listing.hostListingsCount ?? 1) == 1 ? "Annonse" : "Annonser")
-                    Divider().padding(.vertical, 2)
-                    hostStatRow(
-                        value: (listing.reviewCount ?? 0) > 0 ? String(format: "%.1f", listing.rating ?? 0).replacingOccurrences(of: ".", with: ",") : "0",
-                        label: "Vurdering",
-                        icon: "star.fill"
-                    )
-                    Divider().padding(.vertical, 2)
-                    hostStatRow(value: "\(years)", label: years == 1 ? "År" : "År")
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .padding(20)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .overlay(
-                RoundedRectangle(cornerRadius: 20).stroke(Color.neutral200.opacity(0.6), lineWidth: 0.5)
-            )
-            .shadow(color: .black.opacity(0.06), radius: 10, y: 3)
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func hostStatRow(value: String, label: String, icon: String? = nil) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 3) {
-                if let icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.neutral900)
-                }
-                Text(value)
-                    .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.neutral900)
-            }
-            Text(label)
-                .font(.system(size: 13))
-                .foregroundStyle(.neutral600)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 6)
-    }
-
-    private func firstName(of full: String) -> String {
-        full.split(separator: " ").first.map(String.init) ?? full
     }
 
     // MARK: - Amenities card
@@ -487,7 +544,7 @@ struct ListingDetailView: View {
         }
     }
 
-    // MARK: - Location card
+    // MARK: - Location card (default standard, toggle satellitt, fullscreen-knapp)
 
     @ViewBuilder
     private func locationCard(listing: Listing, hideExact: Bool) -> some View {
@@ -504,14 +561,29 @@ struct ListingDetailView: View {
                             .foregroundStyle(.neutral600)
                     }
 
-                    ListingMapView(
-                        lat: lat,
-                        lng: lng,
-                        spotMarkers: listing.spotMarkers ?? [],
-                        hideExactLocation: hideExact
-                    )
-                    .frame(height: 240)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    ZStack(alignment: .topTrailing) {
+                        ListingMapView(
+                            lat: lat,
+                            lng: lng,
+                            spotMarkers: listing.spotMarkers ?? [],
+                            hideExactLocation: hideExact,
+                            isSatellite: isSatellite
+                        )
+                        .frame(height: 240)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                        VStack(spacing: 8) {
+                            mapActionButton(
+                                systemName: isSatellite ? "map.fill" : "globe.europe.africa.fill",
+                                action: { isSatellite.toggle() }
+                            )
+                            mapActionButton(
+                                systemName: "arrow.up.left.and.arrow.down.right",
+                                action: { showFullscreenMap = true }
+                            )
+                        }
+                        .padding(10)
+                    }
 
                     if hideExact {
                         Text("Eksakt adresse deles etter bekreftet booking.")
@@ -523,35 +595,97 @@ struct ListingDetailView: View {
         }
     }
 
-    // MARK: - Extended host card ("Møt verten") + kontakt
+    @ViewBuilder
+    private func mapActionButton(systemName: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.neutral900)
+                .frame(width: 34, height: 34)
+                .background(Color.white)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.18), radius: 4, y: 1)
+        }
+    }
+
+    // MARK: - "Møt verten"-kort (full ProfileSummaryCard-stil, Airbnb Image #3)
 
     @ViewBuilder
-    private func hostCard(listing: Listing) -> some View {
+    private func meetHostCard(listing: Listing) -> some View {
+        let count = listing.reviewCount ?? 0
+        let rating = listing.rating ?? 0
+        let years = listing.hostJoinedYear.map {
+            max(Calendar.current.component(.year, from: Date()) - $0, 0)
+        } ?? 0
+
         sectionCard {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Møt verten")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.neutral900)
 
-                let count = listing.reviewCount ?? 0
-                let rating = listing.rating ?? 0
-                let years = listing.hostJoinedYear.map {
-                    max(Calendar.current.component(.year, from: Date()) - $0, 0)
-                } ?? 0
+                Button {
+                    showHostProfile = true
+                } label: {
+                    HStack(alignment: .center, spacing: 20) {
+                        VStack(spacing: 10) {
+                            ZStack(alignment: .bottomTrailing) {
+                                Group {
+                                    if let urlStr = listing.hostAvatar, let url = URL(string: urlStr) {
+                                        CachedAsyncImage(url: url) { image in
+                                            image.resizable().aspectRatio(contentMode: .fill)
+                                        } placeholder: {
+                                            Circle().fill(Color.primary100).overlay(
+                                                Text(String(firstName(of: listing.hostName ?? "?").prefix(1)).uppercased())
+                                                    .font(.system(size: 28, weight: .semibold))
+                                                    .foregroundStyle(.primary600)
+                                            )
+                                        }
+                                    } else {
+                                        Circle().fill(Color.primary100).overlay(
+                                            Text(String(firstName(of: listing.hostName ?? "?").prefix(1)).uppercased())
+                                                .font(.system(size: 28, weight: .semibold))
+                                                .foregroundStyle(.primary600)
+                                        )
+                                    }
+                                }
+                                .frame(width: 96, height: 96)
+                                .clipShape(Circle())
 
-                if count > 0 {
-                    Text("\(count) \(count == 1 ? "anmeldelse" : "anmeldelser") · \(String(format: "%.2f", rating).replacingOccurrences(of: ".", with: ","))★ · \(years) år som vertskap")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral600)
-                } else if years > 0 {
-                    Text("\(years) år som vertskap på Tuno")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral600)
-                } else {
-                    Text("Ny vert på Tuno")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral600)
+                                largeVerifiedBadge.offset(x: 4, y: 4)
+                            }
+
+                            VStack(spacing: 2) {
+                                Text(firstName(of: listing.hostName ?? "Utleier"))
+                                    .font(.system(size: 22, weight: .bold))
+                                    .foregroundStyle(.neutral900)
+                                    .lineLimit(1)
+                                Text("Tuno-vert")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(.neutral500)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        VStack(spacing: 0) {
+                            hostStatRow(value: "\(count)", label: count == 1 ? "Anmeldelse" : "Anmeldelser")
+                            Divider().padding(.vertical, 2)
+                            hostStatRow(
+                                value: count > 0 ? String(format: "%.1f", rating).replacingOccurrences(of: ".", with: ",") : "0",
+                                label: "Vurdering",
+                                icon: "star.fill"
+                            )
+                            Divider().padding(.vertical, 2)
+                            hostStatRow(value: "\(years)", label: years == 1 ? "År" : "År")
+                        }
+                        .frame(maxWidth: .infinity)
+                    }
+                    .padding(16)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
+                .buttonStyle(.plain)
 
                 if authManager.isAuthenticated,
                    let hostId = listing.hostId,
@@ -587,6 +721,45 @@ struct ListingDetailView: View {
                 }
             }
         }
+    }
+
+    private var largeVerifiedBadge: some View {
+        ZStack {
+            Image(systemName: "seal.fill")
+                .font(.system(size: 26))
+                .foregroundStyle(.white)
+            Image(systemName: "seal.fill")
+                .font(.system(size: 22))
+                .foregroundStyle(Color(hex: "#1d9bf0"))
+            Image(systemName: "checkmark")
+                .font(.system(size: 10, weight: .heavy))
+                .foregroundStyle(.white)
+        }
+    }
+
+    @ViewBuilder
+    private func hostStatRow(value: String, label: String, icon: String? = nil) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 3) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.neutral900)
+                }
+                Text(value)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.neutral900)
+            }
+            Text(label)
+                .font(.system(size: 13))
+                .foregroundStyle(.neutral600)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
+    }
+
+    private func firstName(of full: String) -> String {
+        full.split(separator: " ").first.map(String.init) ?? full
     }
 
     // MARK: - Things to know
@@ -769,14 +942,20 @@ struct ListingDetailView: View {
         }
     }
 
+    /// Glassmorphism-knapp for hero (Airbnb-stil: ultraThinMaterial + subtil hvit tint + shadow)
     @ViewBuilder
-    private func roundIconButton(systemName: String, foreground: Color = .neutral900, action: @escaping () -> Void) -> some View {
+    private func glassIconButton(systemName: String, foreground: Color = .neutral900, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(foreground)
                 .frame(width: 36, height: 36)
-                .background(.white)
+                .background(
+                    ZStack {
+                        Circle().fill(.ultraThinMaterial)
+                        Circle().fill(Color.white.opacity(0.28))
+                    }
+                )
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.18), radius: 4, y: 1)
         }
@@ -837,6 +1016,124 @@ private struct AllAmenitiesSheet: View {
                     Button("Lukk") { dismiss() }
                 }
             }
+        }
+    }
+}
+
+// MARK: - Fullscreen gallery (tapp hero → full-screen swipe)
+
+private struct FullscreenGalleryView: View {
+    let images: [String]
+    let startIndex: Int
+    @State private var index: Int
+    @Environment(\.dismiss) private var dismiss
+
+    init(images: [String], startIndex: Int) {
+        self.images = images
+        self.startIndex = startIndex
+        self._index = State(initialValue: startIndex)
+    }
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            Color.black.ignoresSafeArea()
+
+            TabView(selection: $index) {
+                ForEach(Array(images.enumerated()), id: \.offset) { i, url in
+                    CachedAsyncImage(url: URL(string: url)) { image in
+                        image.resizable().aspectRatio(contentMode: .fit)
+                    } placeholder: {
+                        ProgressView().tint(.white)
+                    }
+                    .tag(i)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .never))
+
+            VStack {
+                HStack {
+                    Button {
+                        dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 36, height: 36)
+                            .background(
+                                Circle().fill(.ultraThinMaterial)
+                                    .overlay(Circle().fill(Color.white.opacity(0.15)))
+                            )
+                            .clipShape(Circle())
+                    }
+                    Spacer()
+                    Text("\(index + 1) / \(images.count)")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(
+                            Capsule().fill(.ultraThinMaterial)
+                                .overlay(Capsule().fill(Color.black.opacity(0.3)))
+                        )
+                        .clipShape(Capsule())
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 60)
+                Spacer()
+            }
+        }
+        .statusBarHidden(true)
+    }
+}
+
+// MARK: - Fullscreen map
+
+private struct FullscreenMapView: View {
+    let lat: Double
+    let lng: Double
+    let spotMarkers: [SpotMarker]
+    let hideExactLocation: Bool
+    @Binding var isSatellite: Bool
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            ListingMapView(
+                lat: lat,
+                lng: lng,
+                spotMarkers: spotMarkers,
+                hideExactLocation: hideExactLocation,
+                isSatellite: isSatellite
+            )
+            .ignoresSafeArea()
+
+            VStack(spacing: 10) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .frame(width: 40, height: 40)
+                        .background(Color.white)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.2), radius: 5, y: 2)
+                }
+
+                Button {
+                    isSatellite.toggle()
+                } label: {
+                    Image(systemName: isSatellite ? "map.fill" : "globe.europe.africa.fill")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .frame(width: 40, height: 40)
+                        .background(Color.white)
+                        .clipShape(Circle())
+                        .shadow(color: .black.opacity(0.2), radius: 5, y: 2)
+                }
+            }
+            .padding(.top, 60)
+            .padding(.trailing, 16)
         }
     }
 }

@@ -20,6 +20,7 @@ struct ListingMapView: UIViewRepresentable {
     let lng: Double
     var spotMarkers: [SpotMarker] = []
     var hideExactLocation: Bool = false
+    var isSatellite: Bool = false
 
     func makeUIView(context: Context) -> GMSMapView {
         let camera = GMSCameraPosition(
@@ -30,7 +31,7 @@ struct ListingMapView: UIViewRepresentable {
         let options = GMSMapViewOptions()
         options.camera = camera
         let mapView = GMSMapView(options: options)
-        mapView.mapType = .hybrid
+        mapView.mapType = isSatellite ? .hybrid : .normal
         mapView.settings.zoomGestures = true
         mapView.settings.scrollGestures = true
         mapView.settings.myLocationButton = false
@@ -38,8 +39,8 @@ struct ListingMapView: UIViewRepresentable {
 
         if hideExactLocation {
             let circle = GMSCircle(position: CLLocationCoordinate2D(latitude: lat, longitude: lng), radius: 500)
-            circle.fillColor = UIColor(red: 0.102, green: 0.310, blue: 0.839, alpha: 0.1)
-            circle.strokeColor = UIColor(red: 0.102, green: 0.310, blue: 0.839, alpha: 0.3)
+            circle.fillColor = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 0.15)
+            circle.strokeColor = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 0.5)
             circle.strokeWidth = 2
             circle.map = mapView
         } else if !spotMarkers.isEmpty {
@@ -58,12 +59,14 @@ struct ListingMapView: UIViewRepresentable {
         return mapView
     }
 
-    func updateUIView(_ mapView: GMSMapView, context: Context) {}
+    func updateUIView(_ mapView: GMSMapView, context: Context) {
+        mapView.mapType = isSatellite ? .hybrid : .normal
+    }
 
     private func createNumberedPin(number: Int) -> UIView {
         let size: CGFloat = 30
         let view = UIView(frame: CGRect(x: 0, y: 0, width: size, height: size))
-        view.backgroundColor = UIColor(red: 0.102, green: 0.310, blue: 0.839, alpha: 1)
+        view.backgroundColor = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1)
         view.layer.cornerRadius = size / 2
         view.layer.borderWidth = 2
         view.layer.borderColor = UIColor.white.cgColor

@@ -108,13 +108,10 @@ final class ListingService: ObservableObject {
         // Viser kun ekte bruker-annonser. Seeds (uten host_id) filtreres ut.
         let all = await fetchRealListings(vehicleType: vehicleType, limit: 40)
 
-        // "Populære" = alle med rating > 0 sortert etter rating+review_count
-        popularListings = all.filter { ($0.reviewCount ?? 0) > 0 }
-            .sorted { lhs, rhs in
-                let lhsScore = (lhs.rating ?? 0) * Double(lhs.reviewCount ?? 0)
-                let rhsScore = (rhs.rating ?? 0) * Double(rhs.reviewCount ?? 0)
-                return lhsScore > rhsScore
-            }
+        // "Populære" = score-sortert: rating × reviews + tag-bonus + instant-bonus.
+        // Ingen hard reviewCount > 0 filter, ellers blir seksjonen ofte tom mens
+        // vi bygger opp kritisk masse. Begrens til 12 for å unngå overlapp med "Nye".
+        popularListings = Array(all.sorted { Self.popularityScore($0) > Self.popularityScore($1) }.prefix(12))
         // "Nye" = alle nyeste, som er standard rekkefølge
         featuredListings = all
         // "Tilgjengelig i dag" = direktebestilling + ikke blokkert i dag
@@ -237,6 +234,23 @@ final class ListingService: ObservableObject {
             print("Failed to fetch listing \(id): \(error)")
             return nil
         }
+    }
+
+    /// Score for "Populære nå"-sortering. Kombinerer rating, reviews,
+    /// kuraterte tags og instant booking. Annonser med reelle signaler
+    /// havner topp, nye annonser faller til bunn men vises fortsatt.
+    static func popularityScore(_ l: Listing) -> Double {
+        var score = 0.0
+        let reviews = Double(l.reviewCount ?? 0)
+        score += (l.rating ?? 0) * reviews * 10
+        score += reviews * 5
+        let tags = l.tags ?? []
+        if tags.contains("popular") { score += 20 }
+        if tags.contains("featured") { score += 10 }
+        if tags.contains("available_today") { score += 4 }
+        if l.instantBooking == true { score += 3 }
+        score += Double(min(l.images?.count ?? 0, 5))
+        return score
     }
 }
 
