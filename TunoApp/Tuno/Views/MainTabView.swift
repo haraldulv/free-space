@@ -16,24 +16,12 @@ struct MainTabView: View {
     // render — oppdateres til faktisk verdi umiddelbart.
     @State private var tabBarInnerHeight: CGFloat = 48
 
-    // Bunn-safe-area (home-indicator) leses direkte fra UIKit. GeometryReader
-    // inni safe-area-bounds rapporterer 0, så UIKit-bridge er nødvendig for
-    // korrekt verdi (typisk 34 på iPhone 14/15/16, 0 på iPhone SE).
-    private var bottomSafeArea: CGFloat {
-        guard let scene = UIApplication.shared.connectedScenes
-                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
-                  ?? UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first
-        else { return 0 }
-        return window.safeAreaInsets.bottom
-    }
-
     var body: some View {
-        // Content får bunn-padding = faktisk tab-bar-inner-høyde + safe-area-bottom.
-        // Begge verdier er dynamisk målt så ingen magic-numbers — content slutter
-        // EKSAKT ved tab-bar-topp uansett enhet, font-størrelse eller avatar.
-        let tabBarTotalHeight = tabBarInnerHeight + bottomSafeArea
-
+        // Content-padding = kun inner HStack-høyde. ZStack respekterer
+        // safe-area automatisk (ZStack-bottom = safe-area-bottom), så HStack
+        // sitter 34pt (home-indicator) over skjerm-bunn uten at vi legger
+        // det til selv. Tidligere forsøk la safe-area til OPPÅ tabBarInnerHeight
+        // og dobbelttellte → 34pt hvitt gap over tab-bar.
         ZStack(alignment: .bottom) {
             Group {
                 switch selectedTab {
@@ -62,7 +50,7 @@ struct MainTabView: View {
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.bottom, tabBarTotalHeight)
+            .padding(.bottom, tabBarInnerHeight)
 
             CustomTabBar(
                 selectedTab: $selectedTab,
