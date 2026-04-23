@@ -11,57 +11,69 @@ struct MainTabView: View {
     @State private var messagesNavPath = NavigationPath()
     @State private var pendingHostRequests: Int = 0
 
-    // Inner HStack-høyde i CustomTabBar: padding.top 8 + VStack(icon 22 + spacing 3
-    // + text 10) + padding.bottom 2 = 45pt. Fast tall siden tab-bar-layouten er fast.
-    private let tabBarInnerHeight: CGFloat = 46
+    // Tab-barens inner HStack-høyde mottas dynamisk fra CustomTabBar via
+    // TabBarHeightPreferenceKey. Default 48pt er bare en safety-net for første
+    // render — oppdateres til faktisk verdi umiddelbart.
+    @State private var tabBarInnerHeight: CGFloat = 48
+
+    // Bunn-safe-area (home-indicator) leses direkte fra UIKit. GeometryReader
+    // inni safe-area-bounds rapporterer 0, så UIKit-bridge er nødvendig for
+    // korrekt verdi (typisk 34 på iPhone 14/15/16, 0 på iPhone SE).
+    private var bottomSafeArea: CGFloat {
+        guard let scene = UIApplication.shared.connectedScenes
+                .first(where: { $0.activationState == .foregroundActive }) as? UIWindowScene
+                  ?? UIApplication.shared.connectedScenes.first as? UIWindowScene,
+              let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first
+        else { return 0 }
+        return window.safeAreaInsets.bottom
+    }
 
     var body: some View {
-        // Bruk GeometryReader for å måle safe-area-bottom dynamisk.
-        // Total tab-bar-høyde = inner (46pt) + safe-area-bottom (varierer per enhet:
-        // 0 på iPhone SE, 34 på iPhone 14/15/16). Content får eksakt den paddingen
-        // så ingen gap og ingen overlap — uavhengig av enhet. Tab-baren selv har
-        // ignoresSafeArea(.bottom) så bakgrunnen strekker bak home-indicator.
-        GeometryReader { proxy in
-            let tabBarTotalHeight = tabBarInnerHeight + proxy.safeAreaInsets.bottom
+        // Content får bunn-padding = faktisk tab-bar-inner-høyde + safe-area-bottom.
+        // Begge verdier er dynamisk målt så ingen magic-numbers — content slutter
+        // EKSAKT ved tab-bar-topp uansett enhet, font-størrelse eller avatar.
+        let tabBarTotalHeight = tabBarInnerHeight + bottomSafeArea
 
-            ZStack(alignment: .bottom) {
-                Group {
-                    switch selectedTab {
-                    case 0:
-                        NavigationStack(path: $homeNavPath) {
-                            HomeView()
-                        }
-                    case 1:
-                        NavigationStack {
-                            FavoritesView()
-                        }
-                    case 2:
-                        NavigationStack {
-                            BookingsView()
-                        }
-                    case 3:
-                        NavigationStack(path: $messagesNavPath) {
-                            MessagesListView()
-                        }
-                    case 4:
-                        NavigationStack {
-                            ProfileView()
-                        }
-                    default:
-                        EmptyView()
+        ZStack(alignment: .bottom) {
+            Group {
+                switch selectedTab {
+                case 0:
+                    NavigationStack(path: $homeNavPath) {
+                        HomeView()
                     }
+                case 1:
+                    NavigationStack {
+                        FavoritesView()
+                    }
+                case 2:
+                    NavigationStack {
+                        BookingsView()
+                    }
+                case 3:
+                    NavigationStack(path: $messagesNavPath) {
+                        MessagesListView()
+                    }
+                case 4:
+                    NavigationStack {
+                        ProfileView()
+                    }
+                default:
+                    EmptyView()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .padding(.bottom, tabBarTotalHeight)
-
-                CustomTabBar(
-                    selectedTab: $selectedTab,
-                    unreadMessages: chatService.unreadCount,
-                    pendingHostRequests: pendingHostRequests,
-                    profileAvatarURL: authManager.profile?.avatarUrl.flatMap(URL.init(string:)),
-                    profileInitial: profileInitial,
-                )
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.bottom, tabBarTotalHeight)
+
+            CustomTabBar(
+                selectedTab: $selectedTab,
+                unreadMessages: chatService.unreadCount,
+                pendingHostRequests: pendingHostRequests,
+                profileAvatarURL: authManager.profile?.avatarUrl.flatMap(URL.init(string:)),
+                profileInitial: profileInitial,
+            )
+        }
+        .onPreferenceChange(TabBarHeightPreferenceKey.self) { newHeight in
+            tabBarInnerHeight = newHeight
         }
         .environmentObject(chatService)
         .environmentObject(profileStats)

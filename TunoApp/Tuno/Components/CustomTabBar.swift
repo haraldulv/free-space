@@ -1,5 +1,15 @@
 import SwiftUI
 
+/// PreferenceKey brukes av MainTabView for å motta den faktiske høyden til
+/// CustomTabBar sin inner HStack. Eliminerer magic-number-padding og holder
+/// seg korrekt selv om profil-avatar eller tekst endres.
+struct TabBarHeightPreferenceKey: PreferenceKey {
+    static let defaultValue: CGFloat = 48
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
+    }
+}
+
 struct CustomTabBar: View {
     @Binding var selectedTab: Int
     var unreadMessages: Int = 0
@@ -31,9 +41,19 @@ struct CustomTabBar: View {
         }
         .padding(.top, 8)
         .padding(.bottom, 2)
+        // Rapporter faktisk HStack-høyde til MainTabView via PreferenceKey.
+        // Profil-tabben har 28×28 avatar som gjør HStack høyere enn man
+        // skulle tro, og magic-numbers har vist seg upålitelige. Lar SwiftUI
+        // måle og MainTabView beregne riktig padding dynamisk.
+        .background(
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: TabBarHeightPreferenceKey.self,
+                    value: geo.size.height
+                )
+            }
+        )
         // Solid hvit bakgrunn som strekker seg bak home-indicator (ignoresSafeArea).
-        // MainTabView beregner riktig bottom-padding via GeometryReader — denne
-        // baren sitter naturlig nederst og dekker safe-area-bottom.
         .background(
             Color.white.ignoresSafeArea(edges: .bottom)
         )
