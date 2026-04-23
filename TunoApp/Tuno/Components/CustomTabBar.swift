@@ -35,6 +35,12 @@ struct CustomTabBar: View {
             Rectangle()
                 .fill(.ultraThinMaterial)
                 .ignoresSafeArea(edges: .bottom)
+                // Strekk materialet 3pt OPPOVER bak HStack-innholdet. Content
+                // i MainTabView bruker padding(.bottom, 80), som ikke matcher
+                // tab-barens reelle høyde helt eksakt på alle enhete → 1-2pt
+                // tom hvit stripe synlig mellom content og tab-bar. Denne
+                // forskyvningen dekker gapet uten å endre tab-bar-layout.
+                .padding(.top, -3)
         )
         .overlay(alignment: .top) {
             Divider().opacity(0.3)
