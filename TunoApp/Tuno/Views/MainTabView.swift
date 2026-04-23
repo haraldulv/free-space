@@ -12,38 +12,43 @@ struct MainTabView: View {
     @State private var pendingHostRequests: Int = 0
 
     var body: some View {
-        // Tab-baren injiseres som safe-area-inset i stedet for å ligge som
-        // overlay i ZStack. Det gir eksakt layout (ingen 56pt magic-padding
-        // som ikke matchet faktisk tab-bar-høyde → tynn hvit stripe mellom
-        // booking-bar og tab-bar), og views som bruker ignoresSafeArea(.bottom)
-        // strekker seg korrekt bak tab-baren.
-        Group {
-            switch selectedTab {
-            case 0:
-                NavigationStack(path: $homeNavPath) {
-                    HomeView()
+        ZStack(alignment: .bottom) {
+            // Content area
+            Group {
+                switch selectedTab {
+                case 0:
+                    NavigationStack(path: $homeNavPath) {
+                        HomeView()
+                    }
+                case 1:
+                    NavigationStack {
+                        FavoritesView()
+                    }
+                case 2:
+                    NavigationStack {
+                        BookingsView()
+                    }
+                case 3:
+                    NavigationStack(path: $messagesNavPath) {
+                        MessagesListView()
+                    }
+                case 4:
+                    NavigationStack {
+                        ProfileView()
+                    }
+                default:
+                    EmptyView()
                 }
-            case 1:
-                NavigationStack {
-                    FavoritesView()
-                }
-            case 2:
-                NavigationStack {
-                    BookingsView()
-                }
-            case 3:
-                NavigationStack(path: $messagesNavPath) {
-                    MessagesListView()
-                }
-            case 4:
-                NavigationStack {
-                    ProfileView()
-                }
-            default:
-                EmptyView()
             }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            // 56 var kun tab-barens INDRE høyde. Faktisk full høyde inkluderer
+            // iPhone X+ home-indicator (~34pt) → ca 80pt totalt. Booking-baren
+            // på listing-siden ligger nederst i content, så uten ekstra padding
+            // her blir den delvis overlappet av tab-baren. 80 matcher tab-barens
+            // faktiske bounding box (inner 46pt + safe-area 34pt).
+            .padding(.bottom, 80)
+
+            // Custom tab bar
             CustomTabBar(
                 selectedTab: $selectedTab,
                 unreadMessages: chatService.unreadCount,

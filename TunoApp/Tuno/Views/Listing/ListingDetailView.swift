@@ -895,14 +895,18 @@ struct ListingDetailView: View {
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity)
         .background(
-            ZStack {
-                Rectangle().fill(.ultraThinMaterial)
-                Rectangle().fill(Color.white.opacity(0.35))
-            }
-            .shadow(color: .black.opacity(0.06), radius: 10, y: -2)
+            // Apple `.bar` Material — offisiell stil for bunn-toolbarer,
+            // matcher systemet. ignoresSafeArea(.bottom) strekker bakgrunnen
+            // gjennom home-indicator; dette gir ingen tom stripe mellom
+            // booking-bar og tab-bar fordi begge materialer er `.bar`-varianter
+            // og smelter visuelt sammen.
+            Rectangle()
+                .fill(.bar)
+                .ignoresSafeArea(edges: .bottom)
+                .shadow(color: .black.opacity(0.08), radius: 10, y: -3)
         )
         .overlay(alignment: .top) {
-            Rectangle().fill(Color.neutral200.opacity(0.6)).frame(height: 0.5)
+            Rectangle().fill(Color.neutral200.opacity(0.7)).frame(height: 0.5)
         }
     }
 
