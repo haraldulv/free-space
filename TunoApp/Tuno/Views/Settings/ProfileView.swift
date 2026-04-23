@@ -639,7 +639,13 @@ struct MyListingsView: View {
             } else {
                 List {
                     ForEach(listings) { listing in
-                        NavigationLink(value: listing) {
+                        NavigationLink {
+                            EditListingView(listing: listing, onSaved: { updated in
+                                if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
+                                    listings[idx] = updated
+                                }
+                            })
+                        } label: {
                             HStack(spacing: 12) {
                                 AsyncImage(url: URL(string: listing.images?.first ?? "")) { phase in
                                     switch phase {
@@ -731,13 +737,6 @@ struct MyListingsView: View {
         }
         .sheet(item: $qrTarget) { listing in
             QRCodeModal(listing: listing)
-        }
-        .navigationDestination(for: Listing.self) { listing in
-            EditListingView(listing: listing, onSaved: { updated in
-                if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
-                    listings[idx] = updated
-                }
-            })
         }
         .navigationDestination(item: $statsTarget) { listing in
             HostListingStatsView(listing: listing)

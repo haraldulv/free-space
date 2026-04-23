@@ -1277,15 +1277,21 @@ struct EditListingView: View {
     }
 
     private func tagImageToSpot(url: String, spotIndex: Int?) {
-        for i in spotMarkers.indices {
-            spotMarkers[i].images?.removeAll { $0 == url }
+        // Bygg opp ny array og reassign hele greia — optional-chaining-modifikasjon
+        // på nested felt i @State-array trigger ikke alltid riktig re-encoding ved
+        // lagring. Eksplisitt reassignment er sikker.
+        var updated = spotMarkers
+        for i in updated.indices {
+            var imgs = updated[i].images ?? []
+            imgs.removeAll { $0 == url }
+            updated[i].images = imgs.isEmpty ? nil : imgs
         }
-        if let idx = spotIndex, spotMarkers.indices.contains(idx) {
-            if spotMarkers[idx].images == nil {
-                spotMarkers[idx].images = []
-            }
-            spotMarkers[idx].images?.append(url)
+        if let idx = spotIndex, updated.indices.contains(idx) {
+            var imgs = updated[idx].images ?? []
+            imgs.append(url)
+            updated[idx].images = imgs
         }
+        spotMarkers = updated
     }
 
     @ViewBuilder

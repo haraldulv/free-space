@@ -1401,17 +1401,18 @@ struct ImageUploadStepView: View {
     }
 
     private func tagImage(url: String, toSpotIndex: Int?) {
-        // Fjern fra alle plasser først
-        for i in form.spotMarkers.indices {
-            form.spotMarkers[i].images?.removeAll { $0 == url }
+        var updated = form.spotMarkers
+        for i in updated.indices {
+            var imgs = updated[i].images ?? []
+            imgs.removeAll { $0 == url }
+            updated[i].images = imgs.isEmpty ? nil : imgs
         }
-        // Legg til ny plass (hvis valgt)
-        if let idx = toSpotIndex, form.spotMarkers.indices.contains(idx) {
-            if form.spotMarkers[idx].images == nil {
-                form.spotMarkers[idx].images = []
-            }
-            form.spotMarkers[idx].images?.append(url)
+        if let idx = toSpotIndex, updated.indices.contains(idx) {
+            var imgs = updated[idx].images ?? []
+            imgs.append(url)
+            updated[idx].images = imgs
         }
+        form.spotMarkers = updated
     }
 
     @ViewBuilder

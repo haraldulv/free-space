@@ -111,9 +111,7 @@ struct ListingDetailView: View {
                             amenitiesCard(amenities: amenities)
                         }
 
-                        spotsCardsSection(listing: listing)
-
-                        extrasSection(listing: listing)
+                        combinedSpotsSection(listing: listing)
 
                         locationCard(listing: listing, hideExact: hideExact)
 
@@ -515,57 +513,13 @@ struct ListingDetailView: View {
         }
     }
 
-    // MARK: - Extras
+    // MARK: - Kombinert "Plasser"-seksjon (inkluderer felles tillegg + per-plass-info)
 
     @ViewBuilder
-    private func extrasSection(listing: Listing) -> some View {
-        let listingExtras = listing.extras ?? []
-        let spotsWithExtras = (listing.spotMarkers ?? []).enumerated().filter { !($0.element.extras ?? []).isEmpty }
-        if !listingExtras.isEmpty || !spotsWithExtras.isEmpty {
-            sectionCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Tilgjengelige tillegg")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.neutral900)
-
-                    if !listingExtras.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            if !spotsWithExtras.isEmpty {
-                                Text("Felles tillegg")
-                                    .font(.system(size: 13, weight: .medium))
-                                    .foregroundStyle(.neutral500)
-                            }
-                            extrasChips(listingExtras)
-                        }
-                    }
-
-                    if !spotsWithExtras.isEmpty {
-                        VStack(alignment: .leading, spacing: 10) {
-                            Text("Per plass")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.neutral500)
-                            ForEach(spotsWithExtras, id: \.offset) { idx, spot in
-                                VStack(alignment: .leading, spacing: 8) {
-                                    Text(spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false ? spot.label! : "Plass \(idx + 1)")
-                                        .font(.system(size: 14, weight: .semibold))
-                                        .foregroundStyle(.neutral900)
-                                    extrasChips(spot.extras ?? [])
-                                }
-                                .padding(12)
-                                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.neutral200, lineWidth: 1))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: - Plasser-seksjon
-
-    @ViewBuilder
-    private func spotsCardsSection(listing: Listing) -> some View {
+    private func combinedSpotsSection(listing: Listing) -> some View {
         let spots = listing.spotMarkers ?? []
+        let listingExtras = listing.extras ?? []
+
         if spots.count > 1 {
             sectionCard {
                 VStack(alignment: .leading, spacing: 14) {
@@ -573,9 +527,29 @@ struct ListingDetailView: View {
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.neutral900)
 
+                    // Felles tillegg (gjelder alle plasser)
+                    if !listingExtras.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Felles tillegg")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(.neutral500)
+                            extrasChips(listingExtras)
+                        }
+                    }
+
                     ForEach(Array(spots.enumerated()), id: \.offset) { index, spot in
                         spotCard(spot: spot, index: index, listing: listing)
                     }
+                }
+            }
+        } else if !listingExtras.isEmpty {
+            // 1 plass (eller ingen spesifikk layout): bare "Tilgjengelige tillegg"
+            sectionCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Tilgjengelige tillegg")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.neutral900)
+                    extrasChips(listingExtras)
                 }
             }
         }
@@ -658,13 +632,21 @@ struct ListingDetailView: View {
                     NavigationLink {
                         BookingView(listing: listing, preSelectedSpotId: spot.id)
                     } label: {
-                        Text("Reserver denne plassen")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 11)
-                            .background(Color.primary600)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        HStack(spacing: 6) {
+                            Text("Reserver denne plassen")
+                                .font(.system(size: 13, weight: .semibold))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(Color.primary600)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 9)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 9))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 9)
+                                .stroke(Color.primary600.opacity(0.5), lineWidth: 1)
+                        )
                     }
                     .padding(.top, 4)
                 }
