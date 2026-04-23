@@ -72,7 +72,7 @@ struct ListingDetailView: View {
         let hideExact = listing.hideExactLocation ?? false
         let isGuestFavorite = (listing.rating ?? 0) >= 4.8 && (listing.reviewCount ?? 0) >= 5
 
-        ZStack(alignment: .bottom) {
+        VStack(spacing: 0) {
             ScrollView {
                 VStack(spacing: 0) {
                     heroGallery(images: images)
@@ -118,7 +118,7 @@ struct ListingDetailView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 24)
-                    .padding(.bottom, 120)
+                    .padding(.bottom, 24)
                     .frame(maxWidth: .infinity)
                     .background(
                         Color.neutral50
@@ -895,14 +895,13 @@ struct ListingDetailView: View {
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity)
         .background(
-            // Apple `.bar` Material — offisiell stil for bunn-toolbarer,
-            // matcher systemet. ignoresSafeArea(.bottom) strekker bakgrunnen
-            // gjennom home-indicator; dette gir ingen tom stripe mellom
-            // booking-bar og tab-bar fordi begge materialer er `.bar`-varianter
-            // og smelter visuelt sammen.
+            // Apple `.bar` Material. Tidligere hadde denne `ignoresSafeArea(.bottom)`
+            // som utvidet HStack-framen inn i safe-area-bottom, slik at bar-content
+            // ble sentrert i en ekspandert frame og havnet bak tab-baren. Fjernet
+            // nå — tab-baren dekker home-indicator-området selv via safeAreaInset
+            // i MainTabView, så booking-bar trenger ikke strekke dit.
             Rectangle()
                 .fill(.bar)
-                .ignoresSafeArea(edges: .bottom)
                 .shadow(color: .black.opacity(0.08), radius: 10, y: -3)
         )
         .overlay(alignment: .top) {
