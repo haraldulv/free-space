@@ -233,16 +233,17 @@ struct ListingDetailView: View {
                 Spacer()
             }
 
-            // Image counter — "1 / 23" nederst høyre (Airbnb-stil)
+            // Image counter — liten, subtil pill inne på bildet (Airbnb-stil)
             if !images.isEmpty {
                 Text("\(imageIndex + 1) / \(images.count)")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 11)
-                    .padding(.vertical, 5)
-                    .background(Color.black.opacity(0.55))
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
-                    .padding(16)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Color.black.opacity(0.45))
+                    .clipShape(RoundedRectangle(cornerRadius: 5))
+                    .padding(.trailing, 14)
+                    .padding(.bottom, 32)
             }
         }
     }
@@ -821,7 +822,7 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func bookingBar(listing: Listing) -> some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 4) {
                     Text("\(listing.displayPriceText) kr")
@@ -891,15 +892,18 @@ struct ListingDetailView: View {
             }
         }
         .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .padding(.bottom, 8)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
         .background(
-            Color.white
-                .ignoresSafeArea(edges: .bottom)
-                .shadow(color: .black.opacity(0.08), radius: 12, y: -2)
+            ZStack {
+                Rectangle().fill(.ultraThinMaterial)
+                Rectangle().fill(Color.white.opacity(0.35))
+            }
+            .ignoresSafeArea(edges: .bottom)
+            .shadow(color: .black.opacity(0.06), radius: 10, y: -2)
         )
         .overlay(alignment: .top) {
-            Rectangle().fill(Color.neutral200).frame(height: 0.5)
+            Rectangle().fill(Color.neutral200.opacity(0.6)).frame(height: 0.5)
         }
     }
 
