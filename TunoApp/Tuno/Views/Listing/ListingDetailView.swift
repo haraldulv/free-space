@@ -72,64 +72,63 @@ struct ListingDetailView: View {
         let hideExact = listing.hideExactLocation ?? false
         let isGuestFavorite = (listing.rating ?? 0) >= 4.8 && (listing.reviewCount ?? 0) >= 5
 
-        ZStack(alignment: .bottom) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    heroGallery(images: images)
+        ScrollView {
+            VStack(spacing: 0) {
+                heroGallery(images: images)
 
-                    VStack(alignment: .leading, spacing: 18) {
-                        titleBlock(listing: listing)
+                VStack(alignment: .leading, spacing: 18) {
+                    titleBlock(listing: listing)
 
-                        Divider().padding(.horizontal, -16)
+                    Divider().padding(.horizontal, -16)
 
-                        compactHostRow(listing: listing)
+                    compactHostRow(listing: listing)
 
-                        Divider().padding(.horizontal, -16)
+                    Divider().padding(.horizontal, -16)
 
-                        if isGuestFavorite {
-                            guestFavoriteBadge(listing: listing)
-                        }
+                    if isGuestFavorite {
+                        guestFavoriteBadge(listing: listing)
+                    }
 
-                        if let desc = listing.description, !desc.isEmpty {
-                            sectionCard {
-                                VStack(alignment: .leading, spacing: 10) {
-                                    Text("Om denne plassen")
-                                        .font(.system(size: 18, weight: .bold))
-                                        .foregroundStyle(.neutral900)
-                                    Text(desc)
-                                        .font(.system(size: 15))
-                                        .foregroundStyle(.neutral700)
-                                        .lineSpacing(4)
-                                }
+                    if let desc = listing.description, !desc.isEmpty {
+                        sectionCard {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Om denne plassen")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(.neutral900)
+                                Text(desc)
+                                    .font(.system(size: 15))
+                                    .foregroundStyle(.neutral700)
+                                    .lineSpacing(4)
                             }
                         }
-
-                        if !amenities.isEmpty {
-                            amenitiesCard(amenities: amenities)
-                        }
-
-                        extrasSection(listing: listing)
-
-                        locationCard(listing: listing, hideExact: hideExact)
-
-                        meetHostCard(listing: listing)
-
-                        thingsToKnowCard(listing: listing)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 24)
-                    .padding(.bottom, 120)
-                    .frame(maxWidth: .infinity)
-                    .background(
-                        Color.neutral50
-                            .clipShape(.rect(topLeadingRadius: 24, topTrailingRadius: 24))
-                    )
-                    .offset(y: -20)
-                }
-            }
-            .ignoresSafeArea(edges: .top)
-            .scrollIndicators(.hidden)
 
+                    if !amenities.isEmpty {
+                        amenitiesCard(amenities: amenities)
+                    }
+
+                    extrasSection(listing: listing)
+
+                    locationCard(listing: listing, hideExact: hideExact)
+
+                    meetHostCard(listing: listing)
+
+                    thingsToKnowCard(listing: listing)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 24)
+                .padding(.bottom, 24)
+                .frame(maxWidth: .infinity)
+                .background(
+                    Color.neutral50
+                        .clipShape(.rect(topLeadingRadius: 24, topTrailingRadius: 24))
+                )
+                .offset(y: -20)
+            }
+        }
+        .ignoresSafeArea(edges: .top)
+        .scrollIndicators(.hidden)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             bookingBar(listing: listing)
         }
         .background(Color.neutral50)
@@ -899,7 +898,6 @@ struct ListingDetailView: View {
                 Rectangle().fill(.ultraThinMaterial)
                 Rectangle().fill(Color.white.opacity(0.35))
             }
-            .ignoresSafeArea(edges: .bottom)
             .shadow(color: .black.opacity(0.06), radius: 10, y: -2)
         )
         .overlay(alignment: .top) {

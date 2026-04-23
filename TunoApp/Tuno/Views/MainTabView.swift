@@ -12,38 +12,38 @@ struct MainTabView: View {
     @State private var pendingHostRequests: Int = 0
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Content area
-            Group {
-                switch selectedTab {
-                case 0:
-                    NavigationStack(path: $homeNavPath) {
-                        HomeView()
-                    }
-                case 1:
-                    NavigationStack {
-                        FavoritesView()
-                    }
-                case 2:
-                    NavigationStack {
-                        BookingsView()
-                    }
-                case 3:
-                    NavigationStack(path: $messagesNavPath) {
-                        MessagesListView()
-                    }
-                case 4:
-                    NavigationStack {
-                        ProfileView()
-                    }
-                default:
-                    EmptyView()
+        // Tab-baren injiseres som safe-area-inset i stedet for å ligge som
+        // overlay i ZStack. Det gir eksakt layout (ingen 56pt magic-padding
+        // som ikke matchet faktisk tab-bar-høyde → tynn hvit stripe mellom
+        // booking-bar og tab-bar), og views som bruker ignoresSafeArea(.bottom)
+        // strekker seg korrekt bak tab-baren.
+        Group {
+            switch selectedTab {
+            case 0:
+                NavigationStack(path: $homeNavPath) {
+                    HomeView()
                 }
+            case 1:
+                NavigationStack {
+                    FavoritesView()
+                }
+            case 2:
+                NavigationStack {
+                    BookingsView()
+                }
+            case 3:
+                NavigationStack(path: $messagesNavPath) {
+                    MessagesListView()
+                }
+            case 4:
+                NavigationStack {
+                    ProfileView()
+                }
+            default:
+                EmptyView()
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.bottom, 56)
-
-            // Custom tab bar
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
             CustomTabBar(
                 selectedTab: $selectedTab,
                 unreadMessages: chatService.unreadCount,
