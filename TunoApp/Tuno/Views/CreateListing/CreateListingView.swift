@@ -1318,16 +1318,22 @@ struct ImageUploadStepView: View {
 
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                         ForEach(Array(form.imageURLs.enumerated()), id: \.offset) { index, url in
-                            imageCell(index: index, url: url)
-                                .onDrag {
-                                    draggedURL = url
-                                    return NSItemProvider(object: url as NSString)
+                            VStack(spacing: 4) {
+                                imageCell(index: index, url: url)
+                                    .onDrag {
+                                        draggedURL = url
+                                        return NSItemProvider(object: url as NSString)
+                                    }
+                                    .onDrop(of: [.text], delegate: ImageDropDelegate(
+                                        item: url,
+                                        items: $form.imageURLs,
+                                        draggedItem: $draggedURL
+                                    ))
+
+                                if !form.spotMarkers.isEmpty {
+                                    spotTagMenu(url: url)
                                 }
-                                .onDrop(of: [.text], delegate: ImageDropDelegate(
-                                    item: url,
-                                    items: $form.imageURLs,
-                                    draggedItem: $draggedURL
-                                ))
+                            }
                         }
 
                         ForEach(form.uploadingPhotos) { photo in
@@ -1355,6 +1361,59 @@ struct ImageUploadStepView: View {
         }
     }
 
+    /// Dropdown som lar utleier tagge bildet til en spesifikk plass. Hvis tagget,
+    /// vises bildet i Plasser-kortet på annonsesiden. Utagget bilde vises kun
+    /// i hero-galleriet.
+    @ViewBuilder
+    private func spotTagMenu(url: String) -> some View {
+        let currentIdx = form.spotMarkers.firstIndex { ($0.images ?? []).contains(url) }
+        Menu {
+            Button("Ingen plass") { tagImage(url: url, toSpotIndex: nil) }
+            ForEach(form.spotMarkers.indices, id: \.self) { i in
+                let label = form.spotMarkers[i].label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+                    ? form.spotMarkers[i].label!
+                    : "Plass \(i + 1)"
+                Button(label) { tagImage(url: url, toSpotIndex: i) }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "mappin")
+                    .font(.system(size: 9))
+                if let idx = currentIdx {
+                    let label = form.spotMarkers[idx].label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+                        ? form.spotMarkers[idx].label!
+                        : "Plass \(idx + 1)"
+                    Text(label).lineLimit(1)
+                } else {
+                    Text("Ingen plass")
+                }
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8))
+            }
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(currentIdx != nil ? .primary600 : .neutral600)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity)
+            .background(currentIdx != nil ? Color.primary50 : Color.neutral100)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+    }
+
+    private func tagImage(url: String, toSpotIndex: Int?) {
+        // Fjern fra alle plasser først
+        for i in form.spotMarkers.indices {
+            form.spotMarkers[i].images?.removeAll { $0 == url }
+        }
+        // Legg til ny plass (hvis valgt)
+        if let idx = toSpotIndex, form.spotMarkers.indices.contains(idx) {
+            if form.spotMarkers[idx].images == nil {
+                form.spotMarkers[idx].images = []
+            }
+            form.spotMarkers[idx].images?.append(url)
+        }
+    }
+
     @ViewBuilder
     private func imageCell(index: Int, url: String) -> some View {
         let isCover = index == 0
@@ -1378,7 +1437,11 @@ struct ImageUploadStepView: View {
 
             // Remove button — top right
             Button {
-                form.imageURLs.remove(at: index)
+                let removed = form.imageURLs.remove(at: index)
+                // Fjern evt. tagging av bildet fra alle plasser
+                for i in form.spotMarkers.indices {
+                    form.spotMarkers[i].images?.removeAll { $0 == removed }
+                }
             } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 22))

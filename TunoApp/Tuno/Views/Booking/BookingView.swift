@@ -93,6 +93,10 @@ class ApplePayHandler: NSObject, PKPaymentAuthorizationControllerDelegate {
 
 struct BookingView: View {
     let listing: Listing
+    /// Optional: forvalg plass (brukes når man klikker på et Plasser-kort fra
+    /// annonsesiden — da pre-velges den plassen i selectedSpotIds).
+    var preSelectedSpotId: String? = nil
+
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var bookingService = BookingService()
     @Environment(\.dismiss) var dismiss
@@ -349,6 +353,10 @@ struct BookingView: View {
             calendarSheet
         }
         .task {
+            // Forvalg plass hvis brukeren klikket seg inn fra et Plasser-kort.
+            if let preId = preSelectedSpotId, selectedSpotIds.isEmpty {
+                selectedSpotIds.insert(preId)
+            }
             async let avail: () = checkAvailability()
             async let booked = bookingService.fetchBookedDates(listingId: listing.id)
             _ = await avail

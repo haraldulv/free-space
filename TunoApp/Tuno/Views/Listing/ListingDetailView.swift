@@ -21,6 +21,9 @@ struct ListingDetailView: View {
     @State private var isSatellite = false
     @State private var hostStats: HostStats?
     @State private var showShareSheet = false
+    @State private var spotFullscreenImages: [String]?
+    @State private var spotFullscreenStartIndex: Int = 0
+    @State private var bookingSpotId: String?
     @StateObject private var chatService = ChatService()
     @Environment(\.dismiss) private var dismiss
 
@@ -108,6 +111,8 @@ struct ListingDetailView: View {
                             amenitiesCard(amenities: amenities)
                         }
 
+                        spotsCardsSection(listing: listing)
+
                         extrasSection(listing: listing)
 
                         locationCard(listing: listing, hideExact: hideExact)
@@ -163,6 +168,12 @@ struct ListingDetailView: View {
                     isSatellite: $isSatellite
                 )
             }
+        }
+        .fullScreenCover(item: Binding<SpotGalleryPayload?>(
+            get: { spotFullscreenImages.map { SpotGalleryPayload(images: $0, startIndex: spotFullscreenStartIndex) } },
+            set: { if $0 == nil { spotFullscreenImages = nil } }
+        )) { payload in
+            FullscreenGalleryView(images: payload.images, startIndex: payload.startIndex)
         }
         .sheet(isPresented: $showShareSheet) {
             let url = URL(string: "https://tuno.no/listings/\(listing.id)")!
@@ -548,6 +559,123 @@ struct ListingDetailView: View {
                 }
             }
         }
+    }
+
+    // MARK: - Plasser-seksjon
+
+    @ViewBuilder
+    private func spotsCardsSection(listing: Listing) -> some View {
+        let spots = listing.spotMarkers ?? []
+        if spots.count > 1 {
+            sectionCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Plasser")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.neutral900)
+
+                    ForEach(Array(spots.enumerated()), id: \.offset) { index, spot in
+                        spotCard(spot: spot, index: index, listing: listing)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func spotCard(spot: SpotMarker, index: Int, listing: Listing) -> some View {
+        let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+            ? spot.label!
+            : "Plass \(index + 1)"
+        let images = spot.images ?? []
+        let price = spot.price ?? listing.price ?? 0
+        let extras = spot.extras ?? []
+        let isOwnListing = listing.hostId?.lowercased() == authManager.currentUser?.id.uuidString.lowercased()
+
+        VStack(alignment: .leading, spacing: 0) {
+            if !images.isEmpty {
+                TabView {
+                    ForEach(Array(images.enumerated()), id: \.offset) { imgIdx, url in
+                        CachedAsyncImage(url: URL(string: url)) { img in
+                            img.resizable().aspectRatio(contentMode: .fill)
+                        } placeholder: {
+                            Rectangle().fill(Color.neutral100)
+                        }
+                        .frame(height: 180)
+                        .frame(maxWidth: .infinity)
+                        .clipped()
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            spotFullscreenImages = images
+                            spotFullscreenStartIndex = imgIdx
+                        }
+                        .tag(imgIdx)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: images.count > 1 ? .automatic : .never))
+                .frame(height: 180)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .padding(.bottom, 12)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text(label)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.neutral900)
+                    Spacer()
+                    HStack(spacing: 3) {
+                        Text("\(price) kr")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.neutral900)
+                        Text("/ natt")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral600)
+                    }
+                }
+
+                if !extras.isEmpty {
+                    FlowLayout(spacing: 6) {
+                        ForEach(extras, id: \.id) { extra in
+                            HStack(spacing: 3) {
+                                Image(systemName: ExtraType(rawValue: extra.id)?.icon ?? "sparkles")
+                                    .font(.system(size: 10))
+                                Text(extra.name)
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundStyle(.neutral700)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.white)
+                            .clipShape(Capsule())
+                            .overlay(
+                                Capsule().stroke(Color.neutral200, lineWidth: 0.5)
+                            )
+                        }
+                    }
+                }
+
+                if !isOwnListing && authManager.isAuthenticated {
+                    NavigationLink {
+                        BookingView(listing: listing, preSelectedSpotId: spot.id)
+                    } label: {
+                        Text("Reserver denne plassen")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 11)
+                            .background(Color.primary600)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .padding(.top, 4)
+                }
+            }
+        }
+        .padding(12)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 0.5)
+        )
     }
 
     // MARK: - Location card (default standard, toggle satellitt, fullscreen-knapp)
@@ -1027,6 +1155,14 @@ private struct AllAmenitiesSheet: View {
             }
         }
     }
+}
+
+// MARK: - Spot gallery payload (for fullScreenCover item:)
+
+private struct SpotGalleryPayload: Identifiable {
+    let id = UUID()
+    let images: [String]
+    let startIndex: Int
 }
 
 // MARK: - Share sheet (UIActivityViewController bridge)

@@ -832,16 +832,21 @@ struct EditListingView: View {
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                     ForEach(Array(imageURLs.enumerated()), id: \.offset) { index, url in
-                        editImageCell(index: index, url: url)
-                            .onDrag {
-                                draggedImageURL = url
-                                return NSItemProvider(object: url as NSString)
+                        VStack(spacing: 4) {
+                            editImageCell(index: index, url: url)
+                                .onDrag {
+                                    draggedImageURL = url
+                                    return NSItemProvider(object: url as NSString)
+                                }
+                                .onDrop(of: [.text], delegate: ImageDropDelegate(
+                                    item: url,
+                                    items: $imageURLs,
+                                    draggedItem: $draggedImageURL
+                                ))
+                            if !spotMarkers.isEmpty {
+                                editSpotTagMenu(url: url)
                             }
-                            .onDrop(of: [.text], delegate: ImageDropDelegate(
-                                item: url,
-                                items: $imageURLs,
-                                draggedItem: $draggedImageURL
-                            ))
+                        }
                     }
 
                     ForEach(uploadingPhotos) { photo in
@@ -1238,6 +1243,52 @@ struct EditListingView: View {
     }
 
     @ViewBuilder
+    private func editSpotTagMenu(url: String) -> some View {
+        let currentIdx = spotMarkers.firstIndex { ($0.images ?? []).contains(url) }
+        Menu {
+            Button("Ingen plass") { tagImageToSpot(url: url, spotIndex: nil) }
+            ForEach(spotMarkers.indices, id: \.self) { i in
+                let label = spotMarkers[i].label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+                    ? spotMarkers[i].label!
+                    : "Plass \(i + 1)"
+                Button(label) { tagImageToSpot(url: url, spotIndex: i) }
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: "mappin").font(.system(size: 9))
+                if let idx = currentIdx {
+                    let label = spotMarkers[idx].label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+                        ? spotMarkers[idx].label!
+                        : "Plass \(idx + 1)"
+                    Text(label).lineLimit(1)
+                } else {
+                    Text("Ingen plass")
+                }
+                Image(systemName: "chevron.down").font(.system(size: 8))
+            }
+            .font(.system(size: 10, weight: .medium))
+            .foregroundStyle(currentIdx != nil ? .primary600 : .neutral600)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity)
+            .background(currentIdx != nil ? Color.primary50 : Color.neutral100)
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+        }
+    }
+
+    private func tagImageToSpot(url: String, spotIndex: Int?) {
+        for i in spotMarkers.indices {
+            spotMarkers[i].images?.removeAll { $0 == url }
+        }
+        if let idx = spotIndex, spotMarkers.indices.contains(idx) {
+            if spotMarkers[idx].images == nil {
+                spotMarkers[idx].images = []
+            }
+            spotMarkers[idx].images?.append(url)
+        }
+    }
+
+    @ViewBuilder
     private func editImageCell(index: Int, url: String) -> some View {
         let isCover = index == 0
         let isDragging = draggedImageURL == url
@@ -1258,7 +1309,13 @@ struct EditListingView: View {
             )
             .opacity(isDragging ? 0.4 : 1)
 
-            Button { imageURLs.remove(at: index) } label: {
+            Button {
+                let removed = imageURLs.remove(at: index)
+                // Fjern evt. tagging fra alle plasser
+                for i in spotMarkers.indices {
+                    spotMarkers[i].images?.removeAll { $0 == removed }
+                }
+            } label: {
                 Image(systemName: "xmark.circle.fill")
                     .font(.system(size: 22))
                     .foregroundStyle(.white)

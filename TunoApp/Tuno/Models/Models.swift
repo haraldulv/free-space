@@ -102,6 +102,9 @@ struct SpotMarker: Codable, Hashable {
     var extras: [ListingExtra]?
     var blockedDates: [String]?
     var checkinMessage: String?
+    /// Bilder tagget til denne spesifikke plassen. URL-ene er delmengde av
+    /// listing.images — ingen separat opplasting. Utleier tagger i wizard/edit.
+    var images: [String]?
 }
 
 struct SelectedExtraEntry: Codable, Hashable {
