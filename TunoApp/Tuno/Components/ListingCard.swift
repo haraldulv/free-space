@@ -40,9 +40,9 @@ struct ListingCard: View {
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
 
-                // Arrow buttons — matcher favoritt-designet (ultraThinMaterial + samme størrelse),
-                // subtil chevron-farge. Beholdes midtstilt vertikalt så brukeren kan bla begge
-                // veier; hjertet har samme design øverst for konsistens.
+                // Bla-piler — rene chevroner uten sirkel-bakgrunn. Subtil skygge for
+                // lesbarhet mot lyse bilder. Hjertet beholder glass-knapp; pilene er
+                // enklere fordi bildet selv bærer swipe-affordansen (+ prikkene under).
                 if images.count > 1 {
                     HStack {
                         if imageIndex > 0 {
@@ -52,11 +52,11 @@ struct ListingCard: View {
                                 }
                             } label: {
                                 Image(systemName: "chevron.left")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(.white.opacity(0.9))
-                                    .padding(8)
-                                    .background(.ultraThinMaterial)
-                                    .clipShape(Circle())
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+                                    .frame(width: 32, height: 32)
+                                    .contentShape(Rectangle())
                             }
                         } else {
                             Spacer().frame(width: 32)
@@ -71,17 +71,17 @@ struct ListingCard: View {
                                 }
                             } label: {
                                 Image(systemName: "chevron.right")
-                                    .font(.system(size: 13, weight: .semibold))
-                                    .foregroundStyle(.white.opacity(0.9))
-                                    .padding(8)
-                                    .background(.ultraThinMaterial)
-                                    .clipShape(Circle())
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+                                    .frame(width: 32, height: 32)
+                                    .contentShape(Rectangle())
                             }
                         } else {
                             Spacer().frame(width: 32)
                         }
                     }
-                    .padding(.horizontal, 10)
+                    .padding(.horizontal, 6)
                 }
 
                 // Page dots
