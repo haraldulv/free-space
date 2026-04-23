@@ -31,7 +31,11 @@ struct CustomTabBar: View {
         }
         .padding(.top, 8)
         .padding(.bottom, 2)
-        .background(.ultraThinMaterial)
+        // Solid hvit bakgrunn, ikke material. Med safeAreaInset strekker content
+        // seg bak tab-baren, og et gjennomsiktig material ville vist content
+        // gjennom. Solid hvit = opak → content under er skjult og baren ser ut
+        // som den alltid har gjort.
+        .background(Color.white)
         .overlay(alignment: .top) {
             Divider().opacity(0.3)
         }
