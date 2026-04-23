@@ -1,5 +1,12 @@
 import Foundation
 
+struct HostStats: Equatable {
+    var rating: Double = 0
+    var reviewCount: Int = 0
+    var listingsCount: Int = 0
+    var joinedYear: Int = 0
+}
+
 @MainActor
 final class ListingService: ObservableObject {
     @Published var popularListings: [Listing] = []
@@ -234,6 +241,52 @@ final class ListingService: ObservableObject {
             print("Failed to fetch listing \(id): \(error)")
             return nil
         }
+    }
+
+    /// Aggregert host-stats for bruk i "Møt verten"-kort på annonsesiden.
+    /// Henter rating + review_count fra profiles (som har aggregert-triggere)
+    /// og antall aktive annonser via COUNT. Brukes i stedet for de upålitelige
+    /// `host_*`-kolonnene i listings-tabellen.
+    func fetchHostStats(hostId: String) async -> HostStats {
+        var stats = HostStats()
+        do {
+            struct ProfileRow: Codable {
+                let rating: Double?
+                let reviewCount: Int?
+                let joinedYear: Int?
+                enum CodingKeys: String, CodingKey {
+                    case rating
+                    case reviewCount = "review_count"
+                    case joinedYear = "joined_year"
+                }
+            }
+            let rows: [ProfileRow] = try await supabase
+                .from("profiles")
+                .select("rating, review_count, joined_year")
+                .eq("id", value: hostId)
+                .limit(1)
+                .execute()
+                .value
+            if let p = rows.first {
+                stats.rating = p.rating ?? 0
+                stats.reviewCount = p.reviewCount ?? 0
+                stats.joinedYear = p.joinedYear ?? 0
+            }
+        } catch {
+            print("fetchHostStats profile error: \(error)")
+        }
+        do {
+            let response = try await supabase
+                .from("listings")
+                .select("id", head: true, count: .exact)
+                .eq("host_id", value: hostId)
+                .or("is_active.eq.true,is_active.is.null")
+                .execute()
+            stats.listingsCount = response.count ?? 0
+        } catch {
+            print("fetchHostStats listings-count error: \(error)")
+        }
+        return stats
     }
 
     /// Score for "Populære nå"-sortering. Kombinerer rating, reviews,

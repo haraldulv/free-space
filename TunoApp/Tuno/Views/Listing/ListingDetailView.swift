@@ -19,6 +19,8 @@ struct ListingDetailView: View {
     @State private var showFullscreenGallery = false
     @State private var showFullscreenMap = false
     @State private var isSatellite = false
+    @State private var hostStats: HostStats?
+    @State private var showShareSheet = false
     @StateObject private var chatService = ChatService()
     @Environment(\.dismiss) private var dismiss
 
@@ -52,8 +54,12 @@ struct ListingDetailView: View {
         }
         .task {
             let service = ListingService()
-            listing = await service.fetchListing(id: listingId)
+            let fetched = await service.fetchListing(id: listingId)
+            listing = fetched
             isLoading = false
+            if let hostId = fetched?.hostId {
+                hostStats = await service.fetchHostStats(hostId: hostId)
+            }
         }
     }
 
@@ -158,6 +164,12 @@ struct ListingDetailView: View {
                 )
             }
         }
+        .sheet(isPresented: $showShareSheet) {
+            let url = URL(string: "https://tuno.no/listings/\(listing.id)")!
+            let text = "\(listing.title) — \(listing.displayPriceText) kr/natt på Tuno"
+            ShareSheet(items: [text, url])
+                .presentationDetents([.medium, .large])
+        }
     }
 
     // MARK: - Hero gallery
@@ -203,7 +215,7 @@ struct ListingDetailView: View {
                     Spacer()
                     HStack(spacing: 10) {
                         glassIconButton(systemName: "square.and.arrow.up") {
-                            // TODO share
+                            showShareSheet = true
                         }
                         if authManager.isAuthenticated {
                             glassIconButton(
@@ -410,9 +422,13 @@ struct ListingDetailView: View {
     }
 
     private func hostSubtitle(listing: Listing) -> String {
-        let years = listing.hostJoinedYear.map {
-            max(Calendar.current.component(.year, from: Date()) - $0, 0)
-        } ?? 0
+        let reviews = hostStats?.reviewCount ?? 0
+        if reviews > 0, let rating = hostStats?.rating, rating > 0 {
+            let ratingStr = String(format: "%.1f", rating).replacingOccurrences(of: ".", with: ",")
+            return "Tuno-vert · \(ratingStr) ★ · \(reviews) \(reviews == 1 ? "anmeldelse" : "anmeldelser")"
+        }
+        let joined = hostStats?.joinedYear ?? listing.hostJoinedYear ?? 0
+        let years = joined > 0 ? max(Calendar.current.component(.year, from: Date()) - joined, 0) : 0
         if years > 0 {
             return "Tuno-vert · \(years) år som vertskap"
         }
@@ -612,11 +628,9 @@ struct ListingDetailView: View {
 
     @ViewBuilder
     private func meetHostCard(listing: Listing) -> some View {
-        let count = listing.reviewCount ?? 0
-        let rating = listing.rating ?? 0
-        let years = listing.hostJoinedYear.map {
-            max(Calendar.current.component(.year, from: Date()) - $0, 0)
-        } ?? 0
+        let count = hostStats?.reviewCount ?? 0
+        let rating = hostStats?.rating ?? 0
+        let listingsCount = hostStats?.listingsCount ?? listing.hostListingsCount ?? 1
 
         sectionCard {
             VStack(alignment: .leading, spacing: 16) {
@@ -677,7 +691,7 @@ struct ListingDetailView: View {
                                 icon: "star.fill"
                             )
                             Divider().padding(.vertical, 2)
-                            hostStatRow(value: "\(years)", label: years == 1 ? "År" : "År")
+                            hostStatRow(value: "\(listingsCount)", label: listingsCount == 1 ? "Annonse" : "Annonser")
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -1018,6 +1032,18 @@ private struct AllAmenitiesSheet: View {
             }
         }
     }
+}
+
+// MARK: - Share sheet (UIActivityViewController bridge)
+
+struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
 // MARK: - Fullscreen gallery (tapp hero → full-screen swipe)
