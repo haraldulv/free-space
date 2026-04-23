@@ -13,26 +13,20 @@ struct HomeView: View {
             VStack(spacing: 24) {
                 // Search bar + vehicle picker
                 VStack(spacing: 16) {
-                    // Search bar — Airbnb-style pille med svak skygge
+                    // Search bar — Airbnb-style pille med sentrert innhold
                     Button {
                         showSearch = true
                     } label: {
-                        HStack(spacing: 12) {
+                        HStack(spacing: 10) {
                             Image(systemName: "magnifyingglass")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(.neutral900)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("Hvor skal du?")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(.neutral900)
-                                Text("Plasser · Når som helst · Hvem som helst")
-                                    .font(.system(size: 12))
-                                    .foregroundStyle(.neutral500)
-                            }
-                            Spacer()
+                            Text("Start søket")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.neutral900)
                         }
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 12)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
                         .background(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 36))
                         .overlay(
