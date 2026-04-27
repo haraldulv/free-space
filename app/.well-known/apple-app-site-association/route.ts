@@ -7,7 +7,7 @@ export async function GET() {
       details: [
         {
           appID: "3VD2DMBJ6M.no.tuno.app",
-          paths: ["/listings/*"],
+          paths: ["/listings/*", "/auth/verified", "/auth/verified*"],
         },
       ],
     },
