@@ -89,11 +89,14 @@ final class AuthManager: ObservableObject {
                 email: email,
                 password: password,
                 data: ["full_name": .string(fullName)],
-                // Universal Link til /auth/verified — iOS åpner appen
-                // direkte hvis installert, ellers viser web-siden en
-                // "Verifisert!"-skjerm. Custom scheme (`no.tuno.app://`)
-                // funket ikke når mailen ble åpnet på desktop ("død ende").
-                redirectTo: URL(string: "https://tuno.no/auth/verified")
+                // Universal Link til /auth/verified. Bruker www-domenet
+                // direkte fordi apex (tuno.no) 307-redirecter til www, og
+                // Apple AASA-spec sier "no redirects" — Universal Links
+                // trigges ikke pålitelig hvis lenken må følge en redirect.
+                // Custom scheme (`no.tuno.app://`) funket ikke når mailen
+                // ble åpnet på desktop ("død ende"); web-siden tilbyr
+                // "Åpne i appen"-knapp som fallback for Chrome-brukere.
+                redirectTo: URL(string: "https://www.tuno.no/auth/verified")
             )
 
             // Supabase returnerer ikke en eksplisitt feil hvis e-posten
