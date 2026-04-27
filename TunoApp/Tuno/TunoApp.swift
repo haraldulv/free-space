@@ -113,9 +113,15 @@ struct TunoApp: App {
     /// hash-fragmentet logger brukeren inn, og åpner verifiserings-sheetet
     /// hvis dette var en e-post-bekreftelse.
     private func handleAuthURL(_ url: URL) {
+        // Universal Link (https://tuno.no/auth/verified) har path = "/auth/verified".
+        // Custom scheme (no.tuno.app://auth/verified) har host = "auth" og
+        // path = "/verified". Sjekker begge formater + token-typene Supabase
+        // sender i hash for å være sikker på å fange e-post-bekreftelse.
+        let urlString = url.absoluteString
         let isVerificationLink = url.path.hasPrefix("/auth/verified")
-            || url.absoluteString.contains("type=signup")
-            || url.absoluteString.contains("type=email")
+            || urlString.contains("auth/verified")
+            || urlString.contains("type=signup")
+            || urlString.contains("type=email")
         Task {
             try? await supabase.auth.session(from: url)
             if isVerificationLink {
