@@ -712,6 +712,9 @@
         }
       }
     },
+    "Apple" : {
+
+    },
     "Apple Pay-betaling feilet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1743,6 +1746,9 @@
         }
       }
     },
+    "eller med e-post" : {
+
+    },
     "Endringene dine blir ikke lagret." : {
       "localizations" : {
         "de" : {
@@ -2621,6 +2627,9 @@
           }
         }
       }
+    },
+    "Google" : {
+
     },
     "Google-innlogging feilet" : {
       "extractionState" : "manual",
@@ -4097,6 +4106,9 @@
           }
         }
       }
+    },
+    "Logg inn for å bestille plasser eller leie ut din egen" : {
+
     },
     "Logg inn for å se bestillingene dine" : {
       "extractionState" : "manual",
@@ -7064,6 +7076,9 @@
         }
       }
     },
+    "Velkommen til Tuno" : {
+
+    },
     "Velkommen til Tuno!" : {
 
     },
@@ -7140,6 +7155,9 @@
           }
         }
       }
+    },
+    "Vi har sendt en bekreftelseslenke til %@. Klikk på lenken for å aktivere kontoen din." : {
+
     },
     "Vi har sendt en lenke for å tilbakestille passordet ditt til %@." : {
       "extractionState" : "manual",

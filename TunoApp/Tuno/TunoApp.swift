@@ -19,6 +19,74 @@ final class DeepLinkManager: ObservableObject {
         case failed(String)
     }
     @Published var verifyStatus: VerifyStatus = .verifying
+
+    /// Siste URL appen mottok via deep link / Universal Link. Brukes til
+    /// debug-overlay så vi ser at handleAuthURL faktisk kjøres.
+    @Published var lastReceivedURL: String = ""
+
+    /// Felles inngang for auth-callback-URL-er fra både SwiftUI hooks
+    /// (warm launch) og AppDelegate.application(_:continue:) (cold launch).
+    func handleAuthURL(_ url: URL) {
+        let urlString = url.absoluteString
+        print("🔗 handleAuthURL: \(urlString)")
+        lastReceivedURL = urlString
+
+        let isVerificationLink = url.path.hasPrefix("/auth/verified")
+            || urlString.contains("auth/verified")
+            || urlString.contains("token_hash=")
+            || urlString.contains("type=signup")
+            || urlString.contains("type=email")
+
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let tokenHash = components?.queryItems?.first(where: { $0.name == "token_hash" })?.value
+        let typeString = components?.queryItems?.first(where: { $0.name == "type" })?.value ?? "signup"
+
+        if isVerificationLink {
+            verifyStatus = .verifying
+            showEmailVerified = true
+            print("📝 isVerificationLink=true, showEmailVerified=true, tokenHash=\(tokenHash ?? "nil")")
+        }
+
+        Task {
+            if let tokenHash, !tokenHash.isEmpty {
+                do {
+                    if tokenHash.hasPrefix("pkce_") {
+                        print("🔐 PKCE exchange starter...")
+                        _ = try await supabase.auth.exchangeCodeForSession(authCode: tokenHash)
+                        print("✅ PKCE exchange OK")
+                    } else {
+                        let otpType: EmailOTPType = {
+                            switch typeString {
+                            case "recovery": return .recovery
+                            case "magiclink": return .magiclink
+                            case "email_change", "emailChange": return .emailChange
+                            case "invite": return .invite
+                            default: return .signup
+                            }
+                        }()
+                        print("🔐 verifyOTP starter...")
+                        _ = try await supabase.auth.verifyOTP(tokenHash: tokenHash, type: otpType)
+                        print("✅ verifyOTP OK")
+                    }
+                    await MainActor.run { self.verifyStatus = .success }
+                } catch {
+                    print("❌ Auth verify feilet: \(error)")
+                    await MainActor.run {
+                        self.verifyStatus = .failed(error.localizedDescription)
+                    }
+                }
+            } else {
+                do {
+                    try await supabase.auth.session(from: url)
+                    await MainActor.run { self.verifyStatus = .success }
+                } catch {
+                    await MainActor.run {
+                        self.verifyStatus = .failed(error.localizedDescription)
+                    }
+                }
+            }
+        }
+    }
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -30,6 +98,32 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         print("❌ Push registration failed: \(error)")
+    }
+
+    /// COLD START Universal Link: SwiftUI sin .onContinueUserActivity er
+    /// upålitelig når appen launcher fra dypt-lenke. AppDelegate-handleren
+    /// fanger den OG videre til DeepLinkManager.
+    func application(
+        _ application: UIApplication,
+        continue userActivity: NSUserActivity,
+        restorationHandler: @escaping ([any UIUserActivityRestoring]?) -> Void
+    ) -> Bool {
+        guard userActivity.activityType == NSUserActivityTypeBrowsingWeb,
+              let url = userActivity.webpageURL else {
+            return false
+        }
+        print("❄️ Cold-start Universal Link via AppDelegate: \(url.absoluteString)")
+        Task { @MainActor in
+            if url.path.hasPrefix("/auth/") || url.absoluteString.contains("token_hash=") {
+                DeepLinkManager.shared.handleAuthURL(url)
+            } else {
+                let parts = url.pathComponents
+                if let i = parts.firstIndex(of: "listings"), i + 1 < parts.count {
+                    DeepLinkManager.shared.pendingListingId = parts[i + 1]
+                }
+            }
+        }
+        return true
     }
 }
 
@@ -47,12 +141,10 @@ struct TunoApp: App {
         configureImageCache()
     }
 
-    /// Stor disk-cache for listing-bilder og avatarer. URLSession bruker denne via
-    /// `URLCache.shared`, og `CachedAsyncImage` leser fra den før nettkall.
     private func configureImageCache() {
         URLCache.shared = URLCache(
-            memoryCapacity: 50 * 1024 * 1024,   // 50 MB RAM
-            diskCapacity: 500 * 1024 * 1024,    // 500 MB disk
+            memoryCapacity: 50 * 1024 * 1024,
+            diskCapacity: 500 * 1024 * 1024,
             directory: nil,
         )
     }
@@ -92,20 +184,18 @@ struct TunoApp: App {
                 }
             }
             .onOpenURL { url in
+                print("🔵 onOpenURL: \(url.absoluteString)")
                 if url.scheme == "no.tuno.app" {
-                    handleAuthURL(url)
-                } else {
-                    if let listingId = extractListingId(from: url) {
-                        deepLinkManager.pendingListingId = listingId
-                    }
+                    deepLinkManager.handleAuthURL(url)
+                } else if let listingId = extractListingId(from: url) {
+                    deepLinkManager.pendingListingId = listingId
                 }
             }
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                 guard let url = activity.webpageURL else { return }
-                // /auth/verified åpner verifiserings-sheet med auto-login
-                // fra hash-tokens. /listings/* har vanlig dyp lenke.
+                print("🌐 onContinueUserActivity: \(url.absoluteString)")
                 if url.path.hasPrefix("/auth/verified") {
-                    handleAuthURL(url)
+                    deepLinkManager.handleAuthURL(url)
                 } else if let listingId = extractListingId(from: url) {
                     deepLinkManager.pendingListingId = listingId
                 }
@@ -115,93 +205,44 @@ struct TunoApp: App {
                     .environmentObject(authManager)
                     .environmentObject(deepLinkManager)
             }
+            .overlay(alignment: .top) {
+                debugBar
+            }
+        }
+        .handlesExternalEvents(matching: ["*"])
+    }
+
+    /// Synlig debug-bar øverst på skjermen så vi kan se Universal Link-status
+    /// uten å åpne Xcode console. Skjules når lastReceivedURL er tom.
+    @ViewBuilder
+    private var debugBar: some View {
+        if !deepLinkManager.lastReceivedURL.isEmpty {
+            VStack(spacing: 2) {
+                Text("DEBUG · status: \(statusString)")
+                    .font(.system(size: 9, weight: .semibold))
+                Text(deepLinkManager.lastReceivedURL.prefix(80) + (deepLinkManager.lastReceivedURL.count > 80 ? "…" : ""))
+                    .font(.system(size: 8, design: .monospaced))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.black.opacity(0.85))
         }
     }
 
-    /// Felles inngang for alle auth-callback-URL-er. To moderne flyter
-    /// støttes:
-    ///
-    /// 1. **PKCE/token_hash-flyt** (e-post-bekreftelse via Universal Link):
-    ///    URL: `https://www.tuno.no/auth/verified?token_hash=X&type=signup`
-    ///    Vi kaller `verifyOTP(tokenHash:type:)` for å fullføre verifisering
-    ///    og logge brukeren inn. Lenken peker DIREKTE til vårt domene fra
-    ///    Supabase-mailen (etter at email-templaten er oppdatert), så iOS
-    ///    Universal Links åpner appen direkte uten browser-detour.
-    ///
-    /// 2. **Implicit-flyt** (legacy / Google OAuth via custom scheme):
-    ///    URL: `no.tuno.app://auth/verified#access_token=...&refresh_token=...`
-    ///    Vi kaller `session(from:)` som henter tokens fra hash-fragmentet.
-    private func handleAuthURL(_ url: URL) {
-        let urlString = url.absoluteString
-        let isVerificationLink = url.path.hasPrefix("/auth/verified")
-            || urlString.contains("auth/verified")
-            || urlString.contains("token_hash=")
-            || urlString.contains("type=signup")
-            || urlString.contains("type=email")
-
-        // Parse query for PKCE-style token_hash (kommer på Universal Link).
-        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
-        let tokenHash = components?.queryItems?.first(where: { $0.name == "token_hash" })?.value
-        let typeString = components?.queryItems?.first(where: { $0.name == "type" })?.value ?? "signup"
-
-        Task {
-            if isVerificationLink {
-                await MainActor.run {
-                    deepLinkManager.verifyStatus = .verifying
-                    deepLinkManager.showEmailVerified = true
-                }
-            }
-
-            if let tokenHash, !tokenHash.isEmpty {
-                do {
-                    if tokenHash.hasPrefix("pkce_") {
-                        // PKCE-flyt: tokenet er en auth-kode som må exchanges
-                        // mot en sesjon. Code_verifier (lagret under signUp)
-                        // hentes automatisk fra Supabase SDK sin lokale
-                        // storage. Krever at exchange skjer på samme device
-                        // som registrerte seg.
-                        _ = try await supabase.auth.exchangeCodeForSession(authCode: tokenHash)
-                    } else {
-                        // Legacy/implicit-flyt: token kan verifiseres
-                        // direkte uten code_verifier.
-                        let otpType: EmailOTPType = {
-                            switch typeString {
-                            case "recovery": return .recovery
-                            case "magiclink": return .magiclink
-                            case "email_change", "emailChange": return .emailChange
-                            case "invite": return .invite
-                            default: return .signup
-                            }
-                        }()
-                        _ = try await supabase.auth.verifyOTP(tokenHash: tokenHash, type: otpType)
-                    }
-                    await MainActor.run { deepLinkManager.verifyStatus = .success }
-                } catch {
-                    print("❌ Auth verify feilet: \(error)")
-                    await MainActor.run {
-                        deepLinkManager.verifyStatus = .failed(error.localizedDescription)
-                    }
-                }
-            } else {
-                // Implicit-flyt: tokens i hash-fragmentet
-                do {
-                    try await supabase.auth.session(from: url)
-                    await MainActor.run { deepLinkManager.verifyStatus = .success }
-                } catch {
-                    await MainActor.run {
-                        deepLinkManager.verifyStatus = .failed(error.localizedDescription)
-                    }
-                }
-            }
+    private var statusString: String {
+        switch deepLinkManager.verifyStatus {
+        case .verifying: return "verifying"
+        case .success: return "success"
+        case .failed(let m): return "failed: \(m.prefix(30))"
         }
     }
 
     private func extractListingId(from url: URL) -> String? {
-        // URL format: tuno.no/listings/{id}
         let components = url.pathComponents
         guard let listingsIndex = components.firstIndex(of: "listings"),
               listingsIndex + 1 < components.count else { return nil }
         return components[listingsIndex + 1]
     }
 }
-
