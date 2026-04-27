@@ -153,20 +153,31 @@ struct TunoApp: App {
             }
 
             if let tokenHash, !tokenHash.isEmpty {
-                let otpType: EmailOTPType = {
-                    switch typeString {
-                    case "recovery": return .recovery
-                    case "magiclink": return .magiclink
-                    case "email_change", "emailChange": return .emailChange
-                    case "invite": return .invite
-                    default: return .signup
-                    }
-                }()
                 do {
-                    _ = try await supabase.auth.verifyOTP(tokenHash: tokenHash, type: otpType)
+                    if tokenHash.hasPrefix("pkce_") {
+                        // PKCE-flyt: tokenet er en auth-kode som må exchanges
+                        // mot en sesjon. Code_verifier (lagret under signUp)
+                        // hentes automatisk fra Supabase SDK sin lokale
+                        // storage. Krever at exchange skjer på samme device
+                        // som registrerte seg.
+                        _ = try await supabase.auth.exchangeCodeForSession(authCode: tokenHash)
+                    } else {
+                        // Legacy/implicit-flyt: token kan verifiseres
+                        // direkte uten code_verifier.
+                        let otpType: EmailOTPType = {
+                            switch typeString {
+                            case "recovery": return .recovery
+                            case "magiclink": return .magiclink
+                            case "email_change", "emailChange": return .emailChange
+                            case "invite": return .invite
+                            default: return .signup
+                            }
+                        }()
+                        _ = try await supabase.auth.verifyOTP(tokenHash: tokenHash, type: otpType)
+                    }
                     await MainActor.run { deepLinkManager.verifyStatus = .success }
                 } catch {
-                    print("❌ verifyOTP feilet: \(error)")
+                    print("❌ Auth verify feilet: \(error)")
                     await MainActor.run {
                         deepLinkManager.verifyStatus = .failed(error.localizedDescription)
                     }
