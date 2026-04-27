@@ -259,10 +259,30 @@ export async function POST(request: NextRequest) {
   if (event.type === "account.updated") {
     const account = event.data.object;
     if (account.charges_enabled) {
+      // Sjekk om dette er overgangen false → true så vi kan trigge push
+      // én gang. Subsekvente account.updated-events (eksempel: nye
+      // requirements-felter) skal ikke spamme brukeren.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, stripe_onboarding_complete")
+        .eq("stripe_account_id", account.id)
+        .maybeSingle();
+
+      const wasIncomplete = profile && profile.stripe_onboarding_complete !== true;
+
       await supabase
         .from("profiles")
         .update({ stripe_onboarding_complete: true })
         .eq("stripe_account_id", account.id);
+
+      if (wasIncomplete && profile?.id) {
+        await sendPushToUser(
+          profile.id,
+          "Du er godkjent som utleier 🎉",
+          "Stripe har bekreftet kontoen din. Du kan nå opprette annonser og motta utbetalinger.",
+          { type: "stripe_onboarding_complete" },
+        );
+      }
     }
   }
 
