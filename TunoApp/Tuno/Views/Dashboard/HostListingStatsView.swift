@@ -37,7 +37,8 @@ struct HostListingStatsView: View {
         }) {
             PricingRulesEditorView(
                 listingId: listing.id,
-                basePrice: listing.price ?? 0
+                basePrice: listing.price ?? 0,
+                priceUnit: listing.priceUnit ?? .natt
             )
         }
     }
@@ -104,7 +105,7 @@ struct HostListingStatsView: View {
                 }
             }
             Spacer()
-            Text("\(rule.price) kr/natt")
+            Text("\(rule.price) kr/\((listing.priceUnit ?? .natt).displayName)")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.neutral900)
         }

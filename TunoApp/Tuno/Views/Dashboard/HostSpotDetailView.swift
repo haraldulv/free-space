@@ -46,7 +46,7 @@ struct HostSpotDetailView: View {
             Text(spot?.label ?? "Plass uten navn")
                 .font(.system(size: 22, weight: .bold))
             if let price = spot?.price {
-                Text("\(price) kr per natt")
+                Text("\(price) kr per \((spot?.priceUnit ?? listing.priceUnit ?? .natt).displayName)")
                     .font(.system(size: 13))
                     .foregroundStyle(.neutral500)
             } else {

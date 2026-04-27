@@ -5,6 +5,11 @@ import SwiftUI
 struct PricingRulesEditorView: View {
     let listingId: String
     let basePrice: Int
+    /// Pris-enhet for visning av "kr/natt" / "kr/døgn" / "kr/time".
+    /// Pricing-rules selv er natt-baserte i dag — denne styrer kun label-tekst.
+    var priceUnit: PriceUnit = .natt
+
+    private var unitLabel: String { priceUnit.displayName }
 
     @Environment(\.dismiss) var dismiss
     @State private var rules: [PricingService.Rule] = []
@@ -40,7 +45,7 @@ struct PricingRulesEditorView: View {
                 } else {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 20) {
-                            Text("Annonsens standardpris er \(basePrice) kr/natt. Legg til helg-pris eller sesong-regler som overstyrer.")
+                            Text("Annonsens standardpris er \(basePrice) kr/\(unitLabel). Legg til helg-pris eller sesong-regler som overstyrer.")
                                 .font(.system(size: 13))
                                 .foregroundStyle(.neutral600)
 
@@ -99,7 +104,7 @@ struct PricingRulesEditorView: View {
                         .keyboardType(.numberPad)
                         .frame(width: 140)
                         .onChange(of: weekendPriceText) { _, _ in weekendDirty = true }
-                    Text("kr/natt")
+                    Text("kr/\(unitLabel)")
                         .font(.system(size: 13))
                         .foregroundStyle(.neutral500)
                     Spacer()
@@ -173,7 +178,7 @@ struct PricingRulesEditorView: View {
                         .textFieldStyle(.roundedBorder)
                         .keyboardType(.numberPad)
                         .frame(width: 100)
-                    Text("kr/natt").font(.system(size: 13)).foregroundStyle(.neutral500)
+                    Text("kr/\(unitLabel)").font(.system(size: 13)).foregroundStyle(.neutral500)
                     Spacer()
                     Button {
                         Task { await addSeason() }
@@ -218,7 +223,7 @@ struct PricingRulesEditorView: View {
                         .font(.system(size: 13))
                         .foregroundStyle(.neutral900)
                 }
-                Text("\(rule.price) kr/natt")
+                Text("\(rule.price) kr/\(unitLabel)")
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.neutral600)
             }

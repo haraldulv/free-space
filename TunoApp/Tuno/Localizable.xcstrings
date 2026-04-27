@@ -53,6 +53,9 @@
         }
       }
     },
+    "/ natt" : {
+
+    },
     "%@" : {
       "localizations" : {
         "de" : {
@@ -161,6 +164,7 @@
       }
     },
     "%@ dato%@ blokkert" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -175,6 +179,9 @@
           }
         }
       }
+    },
+    "%@ er vertskap" : {
+
     },
     "%@ kr" : {
       "localizations" : {
@@ -196,7 +203,18 @@
         }
       }
     },
+    "%@ kr per %@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ kr per %2$@"
+          }
+        }
+      }
+    },
     "%@ kr per natt" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -221,9 +239,6 @@
           }
         }
       }
-    },
-    "%@ kr/natt" : {
-
     },
     "%@ kr%@" : {
       "localizations" : {
@@ -293,6 +308,32 @@
         }
       }
     },
+    "%@/%@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@/%2$@"
+          }
+        }
+      }
+    },
+    "%@/10" : {
+
+    },
+    "%@/50" : {
+
+    },
+    "%@%@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@%2$@"
+          }
+        }
+      }
+    },
     "%@p" : {
       "localizations" : {
         "de" : {
@@ -302,6 +343,9 @@
           }
         }
       }
+    },
+    "%@t" : {
+
     },
     "%lld plasser" : {
       "extractionState" : "manual",
@@ -449,6 +493,9 @@
       }
     },
     "× %@ plasser" : {
+
+    },
+    "1" : {
 
     },
     "1 time før" : {
@@ -637,8 +684,15 @@
     "Annonsen er publisert! 🎉" : {
 
     },
-    "Annonsens standardpris er %@ kr/natt. Legg til helg-pris eller sesong-regler som overstyrer." : {
-
+    "Annonsens standardpris er %@ kr/%@. Legg til helg-pris eller sesong-regler som overstyrer." : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Annonsens standardpris er %1$@ kr/%2$@. Legg til helg-pris eller sesong-regler som overstyrer."
+          }
+        }
+      }
     },
     "Antall plasser" : {
       "extractionState" : "manual",
@@ -690,6 +744,9 @@
           }
         }
       }
+    },
+    "av %@" : {
+
     },
     "Avbryt" : {
       "extractionState" : "manual",
@@ -864,6 +921,9 @@
         }
       }
     },
+    "Beregning" : {
+
+    },
     "Beskrivelse" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -880,6 +940,9 @@
           }
         }
       }
+    },
+    "Beskrivelse (valgfri)" : {
+
     },
     "Bestill" : {
       "extractionState" : "manual",
@@ -1009,6 +1072,9 @@
           }
         }
       }
+    },
+    "Blant topp 1 % av utleiestedene basert på vurderinger og anmeldelser." : {
+
     },
     "Bli utleier" : {
       "extractionState" : "manual",
@@ -1254,7 +1320,7 @@
         }
       }
     },
-    "Del aldri betalings- eller kontaktinfo utenfor appen — da er du ikke beskyttet." : {
+    "Del aldri betalings- eller kontaktinfo utenfor appen. Da er du ikke beskyttet." : {
 
     },
     "Denne handlingen kan ikke angres." : {
@@ -1292,6 +1358,12 @@
       }
     },
     "Det er lett å komme i gang og tjene ekstra penger." : {
+
+    },
+    "Det tar noen minutter. Vi guider deg steg for steg, og du kan endre alt senere." : {
+
+    },
+    "Dette stedet byr på" : {
 
     },
     "Dette vises til gjester som trykker på profilen din. Hold det kort og vennlig." : {
@@ -1372,6 +1444,9 @@
       }
     },
     "Dra og slipp for å endre rekkefølge. Bildet lengst til venstre er forsidebildet." : {
+
+    },
+    "Dra og slipp for å endre rekkefølge. Første bilde er forsidebildet." : {
 
     },
     "Du får utbetalt din andel etter oppholdet (minus Tunos servicegebyr)." : {
@@ -1578,6 +1653,9 @@
         }
       }
     },
+    "Egendefinerte tillegg" : {
+
+    },
     "Eksakt adresse deles etter bekreftet booking." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1709,6 +1787,9 @@
           }
         }
       }
+    },
+    "Etter publisering vises annonsen din i søk umiddelbart. Du kan deaktivere den når som helst fra \"Mine annonser\"." : {
+
     },
     "Etternavn" : {
       "extractionState" : "manual",
@@ -2050,9 +2131,6 @@
         }
       }
     },
-    "Flott!" : {
-
-    },
     "Fødselsdato" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2303,6 +2381,9 @@
         }
       }
     },
+    "Fra %@, velg utsjekk" : {
+
+    },
     "Fredag, lørdag og søndag får egen pris. Presedens: sesong > helg > standard." : {
 
     },
@@ -2408,6 +2489,9 @@
         }
       }
     },
+    "Gjeste-favoritt" : {
+
+    },
     "Gjesten betaler" : {
 
     },
@@ -2428,7 +2512,7 @@
         }
       }
     },
-    "Gjester kan nå se og booke plassen din." : {
+    "Gjester kan nå finne og bestille hos deg." : {
 
     },
     "Gjester kan reservere uten å vente på bekreftelse fra deg." : {
@@ -2464,6 +2548,9 @@
           }
         }
       }
+    },
+    "Gjester ser et omtrentlig område. Eksakt adresse deles etter booking." : {
+
     },
     "Gjester ser omtrentlig område. Eksakt adresse deles etter booking." : {
       "extractionState" : "manual",
@@ -2664,6 +2751,12 @@
     "Hurtigsvar vises i meldingsfeltet når du trykker +. Tap for å redigere, sveip for å slette." : {
 
     },
+    "Hurtigvalg" : {
+
+    },
+    "Hva gjør plassen din spesiell? Utsikt, omgivelser, fasiliteter, tips til gjester …" : {
+
+    },
     "Hva slags plass leier du ut?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2682,6 +2775,7 @@
       }
     },
     "Hvilke fasiliteter tilbyr du?" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2707,6 +2801,9 @@
           }
         }
       }
+    },
+    "Hvor du kommer" : {
+
     },
     "Hvor er plassen?" : {
       "extractionState" : "manual",
@@ -2832,6 +2929,9 @@
           }
         }
       }
+    },
+    "Ikke vis denne meldingen igjen" : {
+
     },
     "Individuell melding per plass" : {
       "extractionState" : "manual",
@@ -2994,6 +3094,9 @@
           }
         }
       }
+    },
+    "Ingen plass" : {
+
     },
     "Ingen plasser å vise" : {
       "extractionState" : "manual",
@@ -3170,7 +3273,11 @@
         }
       }
     },
+    "JPG eller PNG · maks 10 bilder" : {
+
+    },
     "JPG, PNG — maks 10 bilder" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3302,6 +3409,12 @@
         }
       }
     },
+    "Kjøretøytyper" : {
+
+    },
+    "Klar til å bli utleier" : {
+
+    },
     "Klar til å ta imot bookinger!" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3392,6 +3505,9 @@
           }
         }
       }
+    },
+    "Kontakt verten" : {
+
     },
     "Kontoeier" : {
       "extractionState" : "manual",
@@ -3505,7 +3621,11 @@
         }
       }
     },
+    "kr/%@" : {
+
+    },
     "kr/natt" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3515,7 +3635,10 @@
         }
       }
     },
-    "Kun synlig for deg — nyttig hvis du har flere annonser." : {
+    "kr%@" : {
+
+    },
+    "Kun synlig for deg. Nyttig hvis du har flere annonser." : {
 
     },
     "Kunne ikke lagre: %@" : {
@@ -3653,6 +3776,9 @@
           }
         }
       }
+    },
+    "La oss lage din første annonse" : {
+
     },
     "La stå tomt for å bruke annonsens standardpris." : {
       "extractionState" : "manual",
@@ -3815,6 +3941,12 @@
           }
         }
       }
+    },
+    "Legg til eget tillegg" : {
+
+    },
+    "Legg til flere bilder" : {
+
     },
     "Legg til minst 1 bilde" : {
       "extractionState" : "manual",
@@ -4043,6 +4175,9 @@
         }
       }
     },
+    "m" : {
+
+    },
     "Maks %@m" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4059,6 +4194,9 @@
           }
         }
       }
+    },
+    "Maks kjøretøy-lengde" : {
+
     },
     "Maks lengde (m)" : {
       "extractionState" : "manual",
@@ -4128,6 +4266,9 @@
         }
       }
     },
+    "Marker plassene på kartet" : {
+
+    },
     "Marker plasser" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4146,6 +4287,7 @@
       }
     },
     "Max %@m" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -4176,9 +4318,6 @@
 
     },
     "Melding" : {
-
-    },
-    "Melding til gjest (valgfri)" : {
 
     },
     "Meldinger" : {
@@ -4283,6 +4422,18 @@
         }
       }
     },
+    "Modell" : {
+
+    },
+    "Møt verten" : {
+
+    },
+    "Når ankommer du?" : {
+
+    },
+    "Når er plassene dine ledige?" : {
+
+    },
     "natt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4384,6 +4535,9 @@
           }
         }
       }
+    },
+    "Navn på tillegget" : {
+
     },
     "Neste" : {
       "extractionState" : "manual",
@@ -4715,6 +4869,9 @@
         }
       }
     },
+    "Parkering bookes per døgn foreløpig" : {
+
+    },
     "Passord" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4731,6 +4888,9 @@
           }
         }
       }
+    },
+    "Per døgn" : {
+
     },
     "per natt" : {
       "extractionState" : "manual",
@@ -4956,6 +5116,9 @@
         }
       }
     },
+    "Plasser" : {
+
+    },
     "Plasser (%@)" : {
       "localizations" : {
         "de" : {
@@ -4984,6 +5147,9 @@
       }
     },
     "Plasser plassene dine" : {
+
+    },
+    "Plasser: " : {
 
     },
     "Plassering" : {
@@ -5156,6 +5322,9 @@
         }
       }
     },
+    "Pris per %@" : {
+
+    },
     "Pris per natt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5189,6 +5358,9 @@
           }
         }
       }
+    },
+    "Pris-modell" : {
+
     },
     "Prisenhet" : {
       "extractionState" : "manual",
@@ -5443,6 +5615,12 @@
         }
       }
     },
+    "Reserver" : {
+
+    },
+    "Reserver denne plassen" : {
+
+    },
     "Rullestoltilgjengelig" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5592,6 +5770,9 @@
         }
       }
     },
+    "Send utsjekk-melding hvor lenge før?" : {
+
+    },
     "Sender..." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5624,9 +5805,6 @@
           }
         }
       }
-    },
-    "Sendes sammen med velkomstmeldingen hvis tillegget blir booket." : {
-
     },
     "Sengetøy" : {
       "extractionState" : "manual",
@@ -5680,6 +5858,9 @@
       }
     },
     "Sesong-pris" : {
+
+    },
+    "Sett en pris du synes er rettferdig. Du kan endre den senere." : {
 
     },
     "Sett pris" : {
@@ -6014,6 +6195,16 @@
         }
       }
     },
+    "Standard %@ kr%@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Standard %1$@ kr%2$@"
+          }
+        }
+      }
+    },
     "Standardpris er %@ kr. La stå tomt for å beholde standardpris." : {
 
     },
@@ -6033,6 +6224,15 @@
           }
         }
       }
+    },
+    "Start søket" : {
+
+    },
+    "Start-dato satt" : {
+
+    },
+    "Største kjøretøy som passer på plassen, i meter. Påkrevd for bobil og campingbil." : {
+
     },
     "Stripe krever dette for identitetsverifisering." : {
       "extractionState" : "manual",
@@ -6136,6 +6336,9 @@
         }
       }
     },
+    "Tag bildene til riktig plass" : {
+
+    },
     "Tap for å plassere" : {
 
     },
@@ -6160,6 +6363,9 @@
       }
     },
     "Til" : {
+
+    },
+    "Til Mine annonser" : {
 
     },
     "Tilbake" : {
@@ -6281,7 +6487,19 @@
         }
       }
     },
+    "Time-spesifikk parkering kommer snart. Inntil videre regnes hvert valgte døgn som ett 24-timers opphold." : {
+
+    },
+    "Timer" : {
+
+    },
+    "Ting du bør vite" : {
+
+    },
     "Tips: bruk {listing}, {checkin} eller {checkout} for å sette inn navn og tider automatisk." : {
+
+    },
+    "Tips: nevn beliggenhet eller noe spesielt, f.eks. \"Sjønær plass i Lofoten\"." : {
 
     },
     "Tittel" : {
@@ -6450,6 +6668,12 @@
         }
       }
     },
+    "Trykk slutt-dato for å velge hele området" : {
+
+    },
+    "Tuno-vert" : {
+
+    },
     "Typisk svartid: %@" : {
 
     },
@@ -6592,6 +6816,9 @@
     "Utsjekkmelding" : {
 
     },
+    "Utviklet i Norge" : {
+
+    },
     "Uventet svar fra serveren" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6608,6 +6835,9 @@
           }
         }
       }
+    },
+    "Vanlige tillegg" : {
+
     },
     "Vanntilkobling" : {
       "extractionState" : "manual",
@@ -6673,6 +6903,9 @@
         }
       }
     },
+    "Velg alle" : {
+
+    },
     "Velg annonse" : {
 
     },
@@ -6693,6 +6926,9 @@
         }
       }
     },
+    "Velg dato" : {
+
+    },
     "Velg datoer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6709,6 +6945,12 @@
           }
         }
       }
+    },
+    "Velg én eller flere typer kjøretøy som passer her." : {
+
+    },
+    "Velg én eller flere typer som passer, og evt. hvor stort kjøretøy plassen tar imot." : {
+
     },
     "Velg en kategori" : {
       "extractionState" : "manual",
@@ -6743,6 +6985,18 @@
           }
         }
       }
+    },
+    "Velg hva som er inkludert eller tilgjengelig på denne plassen. Alt er valgfritt, du kan justere prisen og legge til egne tillegg." : {
+
+    },
+    "Velg hvilke plasser blokkering gjelder for. Prisoverstyringer gjelder hele annonsen." : {
+
+    },
+    "Velg om plassen leies ut per døgn (24t) eller per time." : {
+
+    },
+    "Velg plass" : {
+
     },
     "Velg plasser" : {
       "extractionState" : "manual",
@@ -6885,6 +7139,9 @@
           }
         }
       }
+    },
+    "Vis alle %@ fasiliteter" : {
+
     },
     "WiFi" : {
       "extractionState" : "manual",

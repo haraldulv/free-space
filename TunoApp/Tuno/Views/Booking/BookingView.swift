@@ -104,6 +104,12 @@ struct BookingView: View {
     @State private var checkIn: Date? = nil
     @State private var checkOut: Date? = nil
     @State private var showCalendar = false
+    /// For hourly-mode: brukeren velger én dato + start-/slutt-time.
+    /// Disse settes etter dato-velg og driver checkIn/checkOut (selve datoene
+    /// kombineres med timene før insert).
+    @State private var hourlyDate: Date? = nil
+    @State private var startHour: Int = 8
+    @State private var endHour: Int = 17
     @State private var licensePlate = ""
     @State private var isRentalCar = false
     @State private var availableSpots: Int?
@@ -137,18 +143,41 @@ struct BookingView: View {
         return max(1, Calendar.current.dateComponents([.day], from: ci, to: co).day ?? 1)
     }
 
+    private var hours: Int {
+        guard isHourly, let ci = checkIn, let co = checkOut else { return 0 }
+        return max(1, Calendar.current.dateComponents([.hour], from: ci, to: co).hour ?? 1)
+    }
+
+    /// Antall enheter for pris-beregning — timer for parkering per time, netter ellers.
+    private var unitsCount: Int { isHourly ? hours : nights }
+
+    /// Hvilken pris-modell denne bookingen følger. Per-time krever at ALLE valgte plasser
+    /// er .hour (eller listing-nivå er .hour). Mixed-mode er ikke støttet for booking;
+    /// fallback til natt/døgn.
+    private var effectiveBookingPriceUnit: PriceUnit {
+        if !selectedSpots.isEmpty {
+            let units = selectedSpots.compactMap { $0.priceUnit }
+            if !units.isEmpty, units.allSatisfy({ $0 == .hour }) { return .hour }
+        }
+        return listing.priceUnit ?? .natt
+    }
+
+    private var isHourly: Bool { effectiveBookingPriceUnit == .hour }
+
     private var hasDates: Bool { checkIn != nil && checkOut != nil }
 
     private var baseTotal: Int {
+        let units = unitsCount
         if hasSpotLevelPricing && !selectedSpots.isEmpty {
-            return selectedSpots.reduce(0) { $0 + ($1.price ?? listing.price ?? 0) * nights }
+            return selectedSpots.reduce(0) { $0 + ($1.price ?? listing.price ?? 0) * units }
         }
-        if !nightlyPriceBreakdown.isEmpty {
+        if !nightlyPriceBreakdown.isEmpty, !isHourly {
+            // nightlyPriceBreakdown brukes kun for camping/døgn (regler-basert per-natt-pris).
             let perNight = nightlyPriceBreakdown.reduce(0) { $0 + $1.price }
             let spotMultiplier = selectedSpots.count > 1 ? selectedSpots.count : 1
             return perNight * spotMultiplier
         }
-        return nights * (listing.price ?? 0)
+        return units * (listing.price ?? 0)
     }
 
     private func loadPriceBreakdown() {
@@ -171,10 +200,14 @@ struct BookingView: View {
         }
     }
 
+    /// `perNight` på extras betyr "per natt/døgn" — for hourly bookings betales
+    /// extras alltid som engangsbeløp (1 enhet), uansett antall timer.
+    private var extrasUnits: Int { isHourly ? 1 : nights }
+
     private var listingExtrasTotal: Int {
         (listing.extras ?? []).reduce(0) { sum, extra in
             let qty = listingExtrasQty[extra.id] ?? 0
-            return sum + extra.price * (extra.perNight ? nights : 1) * qty
+            return sum + extra.price * (extra.perNight ? extrasUnits : 1) * qty
         }
     }
 
@@ -182,7 +215,7 @@ struct BookingView: View {
         selectedSpots.reduce(0) { sum, spot in
             guard let sid = spot.id, let map = spotExtrasQty[sid] else { return sum }
             let perSpot = (spot.extras ?? []).reduce(0) { acc, extra in
-                acc + extra.price * (extra.perNight ? nights : 1) * (map[extra.id] ?? 0)
+                acc + extra.price * (extra.perNight ? extrasUnits : 1) * (map[extra.id] ?? 0)
             }
             return sum + perSpot
         }
@@ -203,13 +236,21 @@ struct BookingView: View {
     private var isFormValid: Bool {
         let vehicleOK = isRentalCar || !licensePlate.trimmingCharacters(in: .whitespaces).isEmpty
         let spotOK = !hasSpotLevelPricing || !selectedSpotIds.isEmpty
-        return hasDates && vehicleOK && spotOK
+        let datesOK = isHourly ? (hourlyDate != nil && endHour > startHour) : hasDates
+        return datesOK && vehicleOK && spotOK
     }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
                 listingSummary
+
+                // Døgn-banner vises kun for parkering som IKKE er per-time
+                // (per-time parkering har full booking-flow nå).
+                if listing.category == .parking && !isHourly {
+                    parkingPreviewBanner
+                }
+
                 Divider()
                 dateSection
                 Divider()
@@ -390,6 +431,30 @@ struct BookingView: View {
 
     // MARK: - Subviews
 
+    /// Vises kun for parking-listings inntil time-spesifikk booking lanseres (Fase 2).
+    /// Booking i dag bruker hele døgn — vi gjør dette eksplisitt for gjesten.
+    private var parkingPreviewBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "info.circle.fill")
+                .foregroundStyle(.primary600)
+                .font(.system(size: 16))
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Parkering bookes per døgn foreløpig")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text("Time-spesifikk parkering kommer snart. Inntil videre regnes hvert valgte døgn som ett 24-timers opphold.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral600)
+                    .lineSpacing(2)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.primary50)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary200, lineWidth: 1))
+    }
+
     private var listingSummary: some View {
         HStack(spacing: 14) {
             if let imageUrl = listing.images?.first, let url = URL(string: imageUrl) {
@@ -425,7 +490,12 @@ struct BookingView: View {
         }
     }
 
+    @ViewBuilder
     private var dateSection: some View {
+        if isHourly { hourlyDateSection } else { nightlyDateSection }
+    }
+
+    private var nightlyDateSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Datoer")
                 .font(.system(size: 18, weight: .semibold))
@@ -440,7 +510,7 @@ struct BookingView: View {
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(.neutral900)
                     } else if let ci = checkIn {
-                        Text("Fra \(formatShort(ci)) — velg utsjekk")
+                        Text("Fra \(formatShort(ci)), velg utsjekk")
                             .font(.system(size: 15, weight: .medium))
                             .foregroundStyle(.neutral700)
                     } else {
@@ -462,49 +532,170 @@ struct BookingView: View {
             .buttonStyle(.plain)
 
             if hasDates {
-                Text("\(nights) \(nights == 1 ? "natt" : "netter")")
+                let unitLabel = (effectiveBookingPriceUnit == .time) ? "døgn" : "natt"
+                Text("\(nights) \(nights == 1 ? unitLabel : unitLabel + (unitLabel == "døgn" ? "" : "er"))")
                     .font(.system(size: 14))
                     .foregroundStyle(.neutral500)
             }
         }
     }
 
+    private var hourlyDateSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Når ankommer du?")
+                .font(.system(size: 18, weight: .semibold))
+
+            // Dato-velger (én dag)
+            Button {
+                showCalendar = true
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "calendar")
+                        .foregroundStyle(.neutral500)
+                    if let date = hourlyDate {
+                        Text(formatShort(date))
+                            .font(.system(size: 15, weight: .medium))
+                            .foregroundStyle(.neutral900)
+                    } else {
+                        Text("Velg dato")
+                            .font(.system(size: 15))
+                            .foregroundStyle(.neutral500)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.neutral400)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 14)
+                .background(Color.neutral50)
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+
+            // Time-velgere (kun synlig når dato er valgt)
+            if hourlyDate != nil {
+                HStack(spacing: 12) {
+                    hourPicker(label: "Fra", selection: $startHour, range: 0..<24)
+                    Image(systemName: "arrow.right")
+                        .foregroundStyle(.neutral400)
+                        .font(.system(size: 13, weight: .semibold))
+                    hourPicker(label: "Til", selection: $endHour, range: (startHour + 1)...24)
+                }
+
+                if hours > 0 {
+                    Text("\(hours) \(hours == 1 ? "time" : "timer")")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.neutral500)
+                }
+            }
+        }
+        .onChange(of: hourlyDate) { _, _ in syncHourlyToCheckInOut() }
+        .onChange(of: startHour) { _, newValue in
+            if endHour <= newValue { endHour = min(24, newValue + 1) }
+            syncHourlyToCheckInOut()
+        }
+        .onChange(of: endHour) { _, _ in syncHourlyToCheckInOut() }
+    }
+
+    private func hourPicker(label: String, selection: Binding<Int>, range: any RangeExpression<Int>) -> some View {
+        let values: [Int] = {
+            if let r = range as? Range<Int> { return Array(r) }
+            if let r = range as? ClosedRange<Int> { return Array(r) }
+            return Array(0..<24)
+        }()
+        return VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.neutral500)
+            Menu {
+                ForEach(values, id: \.self) { hour in
+                    Button(String(format: "%02d:00", hour)) {
+                        selection.wrappedValue = hour
+                    }
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(String(format: "%02d:00", selection.wrappedValue))
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.neutral500)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.neutral50)
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.neutral200, lineWidth: 1))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+        }
+    }
+
+    /// Bygg checkIn/checkOut Date-objekter fra hourlyDate + start/endHour.
+    private func syncHourlyToCheckInOut() {
+        guard isHourly, let date = hourlyDate else { return }
+        let cal = Calendar.current
+        let day = cal.startOfDay(for: date)
+        checkIn = cal.date(byAdding: .hour, value: startHour, to: day)
+        checkOut = cal.date(byAdding: .hour, value: endHour, to: day)
+    }
+
     private var calendarSheet: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                BookingCalendarView(
-                    checkIn: $checkIn,
-                    checkOut: $checkOut,
-                    blockedDates: calendarBlockedDates,
-                    minDate: Calendar.current.startOfDay(for: Date())
-                )
-                .padding(.horizontal, 8)
-                .padding(.top, 8)
+                if isHourly {
+                    // Hourly: én dato. Bruker en lokal "anchor"-dato i checkIn-binding,
+                    // og setter hourlyDate når brukeren bekrefter.
+                    BookingCalendarView(
+                        checkIn: $checkIn,
+                        checkOut: .constant(nil),
+                        blockedDates: calendarBlockedDates,
+                        minDate: Calendar.current.startOfDay(for: Date())
+                    )
+                    .padding(.horizontal, 8)
+                    .padding(.top, 8)
+                } else {
+                    BookingCalendarView(
+                        checkIn: $checkIn,
+                        checkOut: $checkOut,
+                        blockedDates: calendarBlockedDates,
+                        minDate: Calendar.current.startOfDay(for: Date())
+                    )
+                    .padding(.horizontal, 8)
+                    .padding(.top, 8)
+                }
                 Spacer(minLength: 0)
                 Divider()
                 HStack {
                     Button("Nullstill") {
                         checkIn = nil
                         checkOut = nil
+                        hourlyDate = nil
                     }
-                    .disabled(checkIn == nil && checkOut == nil)
+                    .disabled(checkIn == nil && checkOut == nil && hourlyDate == nil)
                     .foregroundStyle(.neutral600)
                     Spacer()
                     Button {
+                        if isHourly, let ci = checkIn {
+                            hourlyDate = Calendar.current.startOfDay(for: ci)
+                            syncHourlyToCheckInOut()
+                        }
                         showCalendar = false
                     } label: {
-                        Text(hasDates ? "Bekreft datoer" : "Lukk")
+                        Text((isHourly ? checkIn != nil : hasDates) ? "Bekreft" : "Lukk")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(.white)
                             .padding(.horizontal, 18)
                             .padding(.vertical, 10)
-                            .background(hasDates ? Color.primary600 : Color.neutral400)
+                            .background((isHourly ? checkIn != nil : hasDates) ? Color.primary600 : Color.neutral400)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                 }
                 .padding(16)
             }
-            .navigationTitle("Velg datoer")
+            .navigationTitle(isHourly ? "Velg dato" : "Velg datoer")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -714,7 +905,7 @@ struct BookingView: View {
                         Text(spot.label ?? "Plass \(index + 1)")
                             .font(.system(size: 14, weight: .medium))
                             .foregroundStyle(isBlocked ? .neutral400 : .neutral900)
-                        Text(isBlocked ? "Ikke tilgjengelig for disse datoene" : "\(price) kr/natt")
+                        Text(isBlocked ? "Ikke tilgjengelig for disse datoene" : "\(price) kr/\((spot.priceUnit ?? listing.priceUnit ?? .natt).displayName)")
                             .font(.system(size: 12)).foregroundStyle(.neutral500)
                     }
                     Spacer()
@@ -866,13 +1057,22 @@ struct BookingView: View {
         guard bookingService.clientSecret == nil else { return }
         guard let ci = checkIn, let co = checkOut else { return }
 
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let isoFormatter = ISO8601DateFormatter()
+        isoFormatter.formatOptions = [.withInternetDateTime]
+
+        // For hourly: check_in/check_out skal være samme dato (selve timene ligger i checkInAt/checkOutAt).
+        // For daily: check_in/check_out er ulike datoer.
+        let dateForCheckIn = isHourly ? Calendar.current.startOfDay(for: ci) : ci
+        let dateForCheckOut = isHourly ? Calendar.current.startOfDay(for: ci) : co
 
         let request = CreateBookingRequest(
             listingId: listing.id,
-            checkIn: formatter.string(from: ci),
-            checkOut: formatter.string(from: co),
+            checkIn: dateFormatter.string(from: dateForCheckIn),
+            checkOut: dateFormatter.string(from: dateForCheckOut),
+            checkInAt: isHourly ? isoFormatter.string(from: ci) : nil,
+            checkOutAt: isHourly ? isoFormatter.string(from: co) : nil,
             licensePlate: isRentalCar ? nil : licensePlate.trimmingCharacters(in: .whitespaces).uppercased(),
             isRentalCar: isRentalCar,
             selectedSpotIds: selectedSpotIds.isEmpty ? nil : Array(selectedSpotIds),

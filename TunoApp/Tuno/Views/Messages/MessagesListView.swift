@@ -475,7 +475,7 @@ struct MessagesSettingsSheet: View {
                             .foregroundStyle(.primary600)
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Hold samtaler i Tuno").font(.system(size: 14, weight: .semibold))
-                            Text("Del aldri betalings- eller kontaktinfo utenfor appen — da er du ikke beskyttet.")
+                            Text("Del aldri betalings- eller kontaktinfo utenfor appen. Da er du ikke beskyttet.")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.neutral500)
                         }
@@ -540,9 +540,9 @@ struct QuickReply: Codable, Identifiable, Hashable {
 
     static let defaults: [QuickReply] = [
         QuickReply(id: "welcome", title: "Velkommen", body: "Hei! Takk for bookingen. Velkommen til plassen 👋"),
-        QuickReply(id: "checkin", title: "Innsjekk-info", body: "Innsjekk er fra kl. 15. Kjør inn som avtalt — gi beskjed når du er fremme!"),
+        QuickReply(id: "checkin", title: "Innsjekk-info", body: "Innsjekk er fra kl. 15. Kjør inn som avtalt, og gi beskjed når du er fremme!"),
         QuickReply(id: "checkout", title: "Utsjekk-påminnelse", body: "Hei! Bare en liten påminnelse om at utsjekk er kl. 11. Håper du har hatt det fint!"),
-        QuickReply(id: "thanks", title: "Takk for oppholdet", body: "Tusen takk for oppholdet — kom gjerne tilbake! 🚐"),
+        QuickReply(id: "thanks", title: "Takk for oppholdet", body: "Tusen takk for oppholdet, kom gjerne tilbake! 🚐"),
         QuickReply(id: "contact", title: "Kontaktinfo", body: "Hvis du trenger noe, bare ring eller send en melding her. Jeg svarer så fort jeg kan."),
         QuickReply(id: "confirm", title: "Bekreft", body: "Bekreftet! Ser frem til å ha deg her.")
     ]

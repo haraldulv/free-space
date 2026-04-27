@@ -25,14 +25,7 @@ final class ListingService: ObservableObject {
                 .contains("tags", value: [tag])
 
             if let vehicleType {
-                switch vehicleType {
-                case .car:
-                    request = request.in("vehicle_type", values: ["car", "campervan", "motorhome"])
-                case .campervan:
-                    request = request.in("vehicle_type", values: ["campervan", "motorhome"])
-                case .motorhome:
-                    request = request.in("vehicle_type", values: ["motorhome"])
-                }
+                request = request.in("vehicle_type", values: vehicleType.acceptingListingTypes.map { $0.rawValue })
             }
 
             let listings: [Listing] = try await request
@@ -58,14 +51,7 @@ final class ListingService: ObservableObject {
                 .not("host_id", operator: .is, value: "null")
 
             if let vehicleType {
-                switch vehicleType {
-                case .car:
-                    request = request.in("vehicle_type", values: ["car", "campervan", "motorhome"])
-                case .campervan:
-                    request = request.in("vehicle_type", values: ["campervan", "motorhome"])
-                case .motorhome:
-                    request = request.in("vehicle_type", values: ["motorhome"])
-                }
+                request = request.in("vehicle_type", values: vehicleType.acceptingListingTypes.map { $0.rawValue })
             }
 
             let listings: [Listing] = try await request
@@ -128,8 +114,12 @@ final class ListingService: ObservableObject {
             f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
             return f.string(from: Date())
         }()
-        availableTodayListings = all.filter {
-            ($0.instantBooking == true) && !($0.blockedDates?.contains(todayIso) ?? false)
+        // En listing teller som "tilgjengelig i dag" dersom dagens dato ikke er BLOKKERT SOM HELE DAGEN.
+        // Time-blokker (yyyy-MM-dd HH) på parkering teller ikke — gjest kan fortsatt booke andre timer.
+        availableTodayListings = all.filter { listing in
+            guard listing.instantBooking == true else { return false }
+            let blockedSet = Set(listing.blockedDates ?? [])
+            return !blockedSet.isFullDayBlocked(todayIso)
         }
 
         isLoading = false
@@ -158,15 +148,7 @@ final class ListingService: ObservableObject {
                 request = request.eq("category", value: category.rawValue)
             }
             if let vehicleType {
-                // Vehicle hierarchy: motorhome spots accept all, campervan accepts campervan+car
-                switch vehicleType {
-                case .car:
-                    request = request.in("vehicle_type", values: ["car", "campervan", "motorhome"])
-                case .campervan:
-                    request = request.in("vehicle_type", values: ["campervan", "motorhome"])
-                case .motorhome:
-                    request = request.in("vehicle_type", values: ["motorhome"])
-                }
+                request = request.in("vehicle_type", values: vehicleType.acceptingListingTypes.map { $0.rawValue })
             }
             // Only text-search if no coordinates (place search uses geo filter instead)
             if lat == nil, let query, !query.isEmpty {
@@ -194,14 +176,15 @@ final class ListingService: ObservableObject {
                 }
             }
 
-            // Filter by blocked dates if check-in/check-out provided
+            // Filter by blocked dates if check-in/check-out provided.
+            // For parkering: kun HELE-DAG-blokker ekskluderer — time-blokker beholdes
+            // siden gjest fortsatt kan booke andre timer. Eksakt time-validering skjer i booking-flow.
             if let checkIn, let checkOut {
                 listings = listings.filter { listing in
                     guard let blocked = listing.blockedDates, !blocked.isEmpty else { return true }
                     let blockedSet = Set(blocked)
-                    // Check if any date in the range is blocked
                     let dates = dateRange(from: checkIn, to: checkOut)
-                    return dates.allSatisfy { !blockedSet.contains($0) }
+                    return dates.allSatisfy { !blockedSet.isFullDayBlocked($0) }
                 }
             }
 

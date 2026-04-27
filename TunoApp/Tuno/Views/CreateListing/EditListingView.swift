@@ -50,12 +50,9 @@ struct EditListingView: View {
     @State private var uploadingPhotos: [UploadingPhoto] = []
     @State private var selectedExtras: [ListingExtra] = []
     @State private var isActive: Bool = true
-    @State private var customExtraName: String = ""
-    @State private var customExtraPrice: String = ""
-    @State private var customExtraPerNight: Bool = false
     @State private var draggedImageURL: String?
 
-    private let tabs = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Felles tillegg", "Tilgjengelighet"]
+    private let tabs = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Tilgjengelighet"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -105,14 +102,13 @@ struct EditListingView: View {
                     .background(Color.green)
             }
 
-            // Tab content
+            // Tab content (Felles tillegg fjernet midlertidig — kun per-plass-extras nå)
             TabView(selection: $selectedTab) {
                 detailsTab.tag(0)
                 locationTab.tag(1)
                 imagesTab.tag(2)
                 amenitiesTab.tag(3)
-                extrasTab.tag(4)
-                availabilityTab.tag(5)
+                availabilityTab.tag(4)
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -211,7 +207,7 @@ struct EditListingView: View {
                     }
                     TextField("F.eks. Garasjen hjemme", text: $internalName)
                         .textFieldStyle(.roundedBorder)
-                    Text("Kun synlig for deg — nyttig hvis du har flere annonser.")
+                    Text("Kun synlig for deg. Nyttig hvis du har flere annonser.")
                         .font(.system(size: 11))
                         .foregroundStyle(.neutral500)
                 }
@@ -220,7 +216,7 @@ struct EditListingView: View {
                         text: $description,
                         maxLength: 2000,
                         minHeight: 140,
-                        placeholder: "Beskriv plassen — hva kjennetegner den, hva er i nærheten, hva bør gjesten vite?"
+                        placeholder: "Beskriv plassen. Hva kjennetegner den, hva er i nærheten, hva bør gjesten vite?"
                     )
                 }
                 HStack(spacing: 16) {
@@ -600,6 +596,7 @@ struct EditListingView: View {
             }
 
             if perSpotPricing {
+                let effectiveUnit = (spotMarkers[index].priceUnit ?? priceUnit).displayName
                 HStack(spacing: 8) {
                     Text("Pris").font(.system(size: 13, weight: .medium))
                         .foregroundStyle(.neutral600).frame(width: 60, alignment: .leading)
@@ -610,8 +607,95 @@ struct EditListingView: View {
                     .textFieldStyle(.roundedBorder)
                     .keyboardType(.numberPad)
                     .frame(width: 100)
-                    Text("kr/natt").font(.system(size: 12)).foregroundStyle(.neutral500)
+                    Text("kr/\(effectiveUnit)").font(.system(size: 12)).foregroundStyle(.neutral500)
                     Spacer()
+                }
+
+                // Pris-modell for parkering — per time eller per døgn
+                if listing.category == .parking {
+                    HStack(spacing: 8) {
+                        Text("Modell").font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.neutral600).frame(width: 60, alignment: .leading)
+                        Picker("Pris-modell", selection: Binding(
+                            get: { spotMarkers[index].priceUnit ?? priceUnit },
+                            set: { spotMarkers[index].priceUnit = $0 }
+                        )) {
+                            Text("Per døgn").tag(PriceUnit.time)
+                            Text("Per time").tag(PriceUnit.hour)
+                        }
+                        .pickerStyle(.segmented)
+                        Spacer()
+                    }
+                }
+            }
+
+            // Beskrivelse (valgfri, per plass)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Beskrivelse (valgfri)").font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.neutral600)
+                TextEditor(text: Binding(
+                    get: { spotMarkers[index].description ?? "" },
+                    set: { spotMarkers[index].description = $0.isEmpty ? nil : $0 }
+                ))
+                .frame(minHeight: 60)
+                .padding(6)
+                .background(Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.neutral200, lineWidth: 1))
+            }
+
+            // Kjøretøytyper (multi-select)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Kjøretøytyper").font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.neutral600)
+                let availableTypes = VehicleType.available(for: listing.category ?? .camping)
+                let selectedTypes = spotMarkers[index].effectiveVehicleTypes
+                FlowLayout(spacing: 6) {
+                    ForEach(availableTypes, id: \.self) { type in
+                        let selected = selectedTypes.contains(type)
+                        Button {
+                            var current = spotMarkers[index].effectiveVehicleTypes
+                            if let i = current.firstIndex(of: type) {
+                                if current.count > 1 { current.remove(at: i) }
+                            } else {
+                                current.append(type)
+                            }
+                            spotMarkers[index].vehicleTypes = current
+                            spotMarkers[index].vehicleType = nil
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(type.lucideIcon)
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 12, height: 12)
+                                Text(type.displayName).font(.system(size: 12, weight: .medium))
+                            }
+                            .foregroundStyle(selected ? .white : .neutral700)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(selected ? Color.primary600 : Color.white)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(selected ? Color.primary600 : Color.neutral200, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            // Maks lengde — kun hvis store kjøretøy er valgt
+            let needsLength = spotMarkers[index].effectiveVehicleTypes.contains(where: { !$0.isCompact })
+            if needsLength {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Maks lengde (m)").font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.neutral600)
+                    TextField("F.eks. 8", value: Binding(
+                        get: { spotMarkers[index].vehicleMaxLength },
+                        set: { spotMarkers[index].vehicleMaxLength = $0.map { max(0, $0) } }
+                    ), format: .number)
+                    .textFieldStyle(.roundedBorder)
+                    .keyboardType(.numberPad)
+                    .frame(width: 120)
                 }
             }
 
@@ -912,181 +996,9 @@ struct EditListingView: View {
         }
     }
 
-    private var extrasTab: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Felles tillegg for hele plassen. Strøm, EV-lading og septik setter du per plass i Lokasjon-tabben.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.neutral500)
-
-                let available = ExtraType.available(for: listing.category ?? .camping, scope: .areaWide)
-
-                VStack(spacing: 10) {
-                    ForEach(available, id: \.rawValue) { extra in
-                        let isSelected = selectedExtras.contains(where: { $0.id == extra.rawValue })
-                        let selectedExtra = selectedExtras.first(where: { $0.id == extra.rawValue })
-
-                        VStack(spacing: 0) {
-                            Button {
-                                if let index = selectedExtras.firstIndex(where: { $0.id == extra.rawValue }) {
-                                    selectedExtras.remove(at: index)
-                                } else {
-                                    selectedExtras.append(ListingExtra(
-                                        id: extra.rawValue,
-                                        name: extra.name,
-                                        price: extra.defaultPrice,
-                                        perNight: extra.perNight
-                                    ))
-                                }
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: extra.icon)
-                                        .font(.system(size: 18))
-                                        .foregroundStyle(isSelected ? .primary600 : .neutral400)
-                                        .frame(width: 24)
-
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(extra.name)
-                                            .font(.system(size: 15, weight: isSelected ? .medium : .regular))
-                                            .foregroundStyle(isSelected ? .neutral900 : .neutral600)
-                                        Text(extra.perNight ? "per natt" : "engangspris")
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(.neutral400)
-                                    }
-
-                                    Spacer()
-
-                                    ZStack {
-                                        RoundedRectangle(cornerRadius: 4)
-                                            .stroke(isSelected ? Color.primary600 : Color.neutral300, lineWidth: 2)
-                                            .frame(width: 22, height: 22)
-                                        if isSelected {
-                                            RoundedRectangle(cornerRadius: 4)
-                                                .fill(Color.primary600)
-                                                .frame(width: 22, height: 22)
-                                            Image(systemName: "checkmark")
-                                                .font(.system(size: 12, weight: .bold))
-                                                .foregroundStyle(.white)
-                                        }
-                                    }
-                                }
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 12)
-                            }
-
-                            if isSelected, let currentExtra = selectedExtra {
-                                Divider().padding(.horizontal, 14)
-
-                                VStack(alignment: .leading, spacing: 10) {
-                                    HStack(spacing: 12) {
-                                        Text("Pris (kr)")
-                                            .font(.system(size: 14, weight: .medium))
-                                            .foregroundStyle(.neutral600)
-
-                                        TextField("Pris", value: Binding(
-                                            get: { currentExtra.price },
-                                            set: { newPrice in
-                                                if let idx = selectedExtras.firstIndex(where: { $0.id == extra.rawValue }) {
-                                                    selectedExtras[idx].price = max(0, newPrice)
-                                                }
-                                            }
-                                        ), format: .number)
-                                        .textFieldStyle(.roundedBorder)
-                                        .keyboardType(.numberPad)
-                                        .frame(width: 100)
-
-                                        Text(extra.perNight ? "kr/natt" : "kr")
-                                            .font(.system(size: 13))
-                                            .foregroundStyle(.neutral400)
-
-                                        Spacer()
-                                    }
-
-                                    VStack(alignment: .leading, spacing: 4) {
-                                        Text("Melding til gjest (valgfri)")
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundStyle(.neutral600)
-                                        TextField(
-                                            "F.eks. Elbil-laderen har type 2-kontakt",
-                                            text: Binding(
-                                                get: { currentExtra.message ?? "" },
-                                                set: { newMsg in
-                                                    if let idx = selectedExtras.firstIndex(where: { $0.id == extra.rawValue }) {
-                                                        selectedExtras[idx].message = newMsg.isEmpty ? nil : newMsg
-                                                    }
-                                                },
-                                            ),
-                                            axis: .vertical,
-                                        )
-                                        .textFieldStyle(.roundedBorder)
-                                        .lineLimit(2...4)
-                                    }
-                                }
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 10)
-                            }
-                        }
-                        .background(isSelected ? Color.primary50 : Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 2 : 1)
-                        )
-                    }
-                }
-
-                customExtrasSection
-            }
-            .padding()
-        }
-    }
-
-    private var customExtrasSection: some View {
-        let presetIds = Set(ExtraType.allCases.map { $0.rawValue })
-        let customExtras = selectedExtras.filter { !presetIds.contains($0.id) }
-
-        return VStack(alignment: .leading, spacing: 12) {
-            Text("Egendefinert tillegg")
-                .font(.system(size: 16, weight: .semibold))
-                .padding(.top, 8)
-
-            ForEach(customExtras) { extra in
-                editCustomListingExtraCard(extra: extra)
-            }
-
-            HStack(spacing: 8) {
-                TextField("Navn", text: $customExtraName)
-                    .textFieldStyle(.roundedBorder)
-                TextField("Pris", text: $customExtraPrice)
-                    .textFieldStyle(.roundedBorder)
-                    .keyboardType(.numberPad)
-                    .frame(width: 80)
-            }
-            HStack {
-                Toggle("Per natt", isOn: $customExtraPerNight).labelsHidden()
-                Text(customExtraPerNight ? "per natt" : "engangspris")
-                    .font(.system(size: 13)).foregroundStyle(.neutral500)
-                Spacer()
-                Button {
-                    let name = customExtraName.trimmingCharacters(in: .whitespaces)
-                    guard !name.isEmpty, let price = Int(customExtraPrice), price > 0 else { return }
-                    selectedExtras.append(ListingExtra(
-                        id: UUID().uuidString.lowercased(),
-                        name: name, price: price, perNight: customExtraPerNight
-                    ))
-                    customExtraName = ""
-                    customExtraPrice = ""
-                    customExtraPerNight = false
-                } label: {
-                    Text("Legg til")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14).padding(.vertical, 8)
-                        .background(Color.primary600).clipShape(Capsule())
-                }
-            }
-        }
-    }
+    // Felles tillegg-tab fjernet midlertidig (per plan 2026-04-25). selectedExtras
+    // beholdes i state og write-back i saveChanges slik at eksisterende data
+    // bevares for annonser som hadde "Felles tillegg" satt før.
 
     private var pricingTab: some View {
         ScrollView {
@@ -1125,8 +1037,14 @@ struct EditListingView: View {
     }
 
     private var availabilityTab: some View {
-        // Reuse the same calendar from create wizard
-        AvailabilityStepView(form: availabilityFormProxy)
+        // Gjenbruker CalendarStep fra wizarden — samme visuelle stil.
+        // EditAvailabilityWrapper holder en @StateObject form-proxy slik at endringer
+        // i blockedDates faktisk persisterer mellom tab-bytter.
+        EditAvailabilityWrapper(
+            blockedDates: $blockedDates,
+            category: listing.category,
+            priceUnit: priceUnit
+        )
     }
 
     // MARK: - Helpers
@@ -1173,12 +1091,6 @@ struct EditListingView: View {
         perSpotCheckinMessage = (listing.spotMarkers ?? []).contains { ($0.checkinMessage?.isEmpty == false) }
     }
 
-    // Proxy form model for AvailabilityStepView reuse
-    private var availabilityFormProxy: ListingFormModel {
-        let model = ListingFormModel()
-        model.blockedDates = blockedDates
-        return model
-    }
 
     private func saveChanges() {
         isSaving = true
@@ -1432,73 +1344,6 @@ struct EditListingView: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    @ViewBuilder
-    private func editCustomListingExtraCard(extra: ListingExtra) -> some View {
-        let idxOpt = selectedExtras.firstIndex(where: { $0.id == extra.id })
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: "sparkles").foregroundStyle(.primary600)
-                TextField("Navn", text: Binding(
-                    get: { extra.name },
-                    set: { newName in
-                        if let i = idxOpt { selectedExtras[i].name = newName }
-                    },
-                ))
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 14, weight: .medium))
-                Spacer()
-                Button {
-                    selectedExtras.removeAll { $0.id == extra.id }
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.red.opacity(0.7))
-                }
-            }
-            HStack(spacing: 10) {
-                TextField("Pris", value: Binding(
-                    get: { extra.price },
-                    set: { newPrice in
-                        if let i = idxOpt { selectedExtras[i].price = max(0, newPrice) }
-                    },
-                ), format: .number)
-                .textFieldStyle(.roundedBorder)
-                .keyboardType(.numberPad)
-                .frame(width: 100)
-                Toggle("Per natt", isOn: Binding(
-                    get: { extra.perNight },
-                    set: { newPN in
-                        if let i = idxOpt { selectedExtras[i].perNight = newPN }
-                    },
-                ))
-                .font(.system(size: 13))
-                .tint(.primary600)
-            }
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Melding til gjest (valgfri)")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.neutral600)
-                TextField(
-                    "F.eks. Badstuen er klar fra 16:00, nøkkel ligger i postkassen.",
-                    text: Binding(
-                        get: { extra.message ?? "" },
-                        set: { newMsg in
-                            if let i = idxOpt {
-                                selectedExtras[i].message = newMsg.isEmpty ? nil : newMsg
-                            }
-                        },
-                    ),
-                    axis: .vertical,
-                )
-                .textFieldStyle(.roundedBorder)
-                .lineLimit(2...4)
-            }
-        }
-        .padding(12)
-        .background(Color.primary50)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
     private func uploadPhotos(_ items: [PhotosPickerItem]) {
         guard !items.isEmpty else { return }
         selectedPhotos = []
@@ -1589,5 +1434,26 @@ private struct UpdateListingInput: Encodable {
         case spotMarkers = "spot_markers"
         case maxVehicleLength = "max_vehicle_length"
         case isActive = "is_active"
+    }
+}
+
+/// Wrapper rundt CalendarStep som binder en parent's `Set<String>` blockedDates til
+/// en intern @StateObject form-proxy. Sync skjer to-veis via .onChange.
+private struct EditAvailabilityWrapper: View {
+    @Binding var blockedDates: Set<String>
+    let category: ListingCategory?
+    let priceUnit: PriceUnit
+    @StateObject private var form = ListingFormModel()
+
+    var body: some View {
+        CalendarStep(form: form)
+            .onAppear {
+                form.blockedDates = blockedDates
+                form.category = category
+                form.priceUnit = priceUnit
+            }
+            .onChange(of: form.blockedDates) { _, newValue in
+                blockedDates = newValue
+            }
     }
 }

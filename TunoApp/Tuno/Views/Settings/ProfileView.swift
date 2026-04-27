@@ -10,6 +10,7 @@ struct ProfileView: View {
     @State private var navigateToHostRequests = false
     @State private var navigateToNotifications = false
     @State private var showSelfProfile = false
+    @State private var showBecomeHost = false
 
     var body: some View {
         if !authManager.isAuthenticated {
@@ -168,6 +169,13 @@ struct ProfileView: View {
                 pushRouter.clearBooking()
             }
         }
+        .fullScreenCover(isPresented: $showBecomeHost) {
+            // Bli utleier-flowen (Stripe-onboarding eller direkte til wizarden) skal også
+            // dekke tab-baren, ikke pushes inn i nav-stacken.
+            NavigationStack {
+                BecomeHostView()
+            }
+        }
     }
 
     // MARK: - Sections
@@ -225,8 +233,8 @@ struct ProfileView: View {
     }
 
     private var becomeHostCard: some View {
-        NavigationLink {
-            BecomeHostView()
+        Button {
+            showBecomeHost = true
         } label: {
             HStack(spacing: 14) {
                 ZStack {
@@ -730,10 +738,13 @@ struct MyListingsView: View {
                 }
             }
         }
-        .navigationDestination(isPresented: $showCreateListing) {
-            CreateListingView(onCreated: { newListing in
-                listings.insert(newListing, at: 0)
-            })
+        .fullScreenCover(isPresented: $showCreateListing) {
+            // Wizarden i sin egen NavigationStack — pakker for å bevare navigationTitle/toolbar.
+            NavigationStack {
+                CreateListingView(onCreated: { newListing in
+                    listings.insert(newListing, at: 0)
+                })
+            }
         }
         .sheet(item: $qrTarget) { listing in
             QRCodeModal(listing: listing)

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct MainTabView: View {
     @EnvironmentObject var authManager: AuthManager
@@ -10,59 +11,100 @@ struct MainTabView: View {
     @State private var homeNavPath = NavigationPath()
     @State private var messagesNavPath = NavigationPath()
     @State private var pendingHostRequests: Int = 0
+    /// Avatar lastet og beskåret til sirkel — brukes som Profil-tab-ikon.
+    /// Re-lastes når URL endres. Fall tilbake til outline-SF-symbol hvis ingen URL.
+    @State private var profileTabImage: UIImage? = nil
 
-    // Tab-barens inner HStack-høyde mottas dynamisk fra CustomTabBar via
-    // TabBarHeightPreferenceKey. Default 48pt er bare en safety-net for første
-    // render — oppdateres til faktisk verdi umiddelbart.
-    @State private var tabBarInnerHeight: CGFloat = 48
+    /// Helper: hent outline-versjon av et SF Symbol som konkret UIImage.
+    /// iOS kan ikke substituere .fill når vi sender ferdig UIImage til tabItem.
+    /// 18pt matcher TunoPinTab (24pt asset → ~18pt visuell vekt) for konsistent størrelse.
+    private static func outlineIcon(_ name: String) -> Image {
+        let cfg = UIImage.SymbolConfiguration(pointSize: 18, weight: .regular)
+        let img = UIImage(systemName: name, withConfiguration: cfg) ?? UIImage()
+        return Image(uiImage: img.withRenderingMode(.alwaysTemplate))
+    }
+
+    /// Last avatar fra URL → UIImage, beskår til sirkel, sett i profileTabImage.
+    /// Kjøres når URL endres eller ved første render.
+    private func loadProfileTabImage() async {
+        guard let urlString = authManager.profile?.avatarUrl,
+              let url = URL(string: urlString) else {
+            profileTabImage = nil
+            return
+        }
+        do {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            guard let uiImage = UIImage(data: data) else { return }
+            // Resize + clip til sirkel — gir ferdig "static" tab-ikon.
+            let size: CGFloat = 26
+            let renderer = UIGraphicsImageRenderer(size: CGSize(width: size, height: size))
+            let circleImage = renderer.image { ctx in
+                let rect = CGRect(x: 0, y: 0, width: size, height: size)
+                UIBezierPath(ovalIn: rect).addClip()
+                uiImage.draw(in: rect)
+            }
+            // Bruk .alwaysOriginal så iOS ikke tinter den med tab-bar farge.
+            profileTabImage = circleImage.withRenderingMode(.alwaysOriginal)
+        } catch {
+            profileTabImage = nil
+        }
+    }
 
     var body: some View {
-        // Content-padding = kun inner HStack-høyde. ZStack respekterer
-        // safe-area automatisk (ZStack-bottom = safe-area-bottom), så HStack
-        // sitter 34pt (home-indicator) over skjerm-bunn uten at vi legger
-        // det til selv. Tidligere forsøk la safe-area til OPPÅ tabBarInnerHeight
-        // og dobbelttellte → 34pt hvitt gap over tab-bar.
-        ZStack(alignment: .bottom) {
-            Group {
-                switch selectedTab {
-                case 0:
-                    NavigationStack(path: $homeNavPath) {
-                        HomeView()
-                    }
-                case 1:
-                    NavigationStack {
-                        FavoritesView()
-                    }
-                case 2:
-                    NavigationStack {
-                        BookingsView()
-                    }
-                case 3:
-                    NavigationStack(path: $messagesNavPath) {
-                        MessagesListView()
-                    }
-                case 4:
-                    NavigationStack {
-                        ProfileView()
-                    }
-                default:
-                    EmptyView()
+        // Standard SwiftUI TabView. iOS 17+ gir liquid glass / blur-bakgrunn
+        // automatisk, og safe-area håndteres uten manuell padding på child-views.
+        // Tidligere brukte vi en custom HStack med PreferenceKey-padding;
+        // ryddet bort fordi den hadde flere safe-area-bugs (build 55-58).
+        TabView(selection: $selectedTab) {
+            NavigationStack(path: $homeNavPath) {
+                HomeView()
+            }
+            .tabItem { Label { Text("Utforsk") } icon: { Self.outlineIcon("magnifyingglass") } }
+            .tag(0)
+
+            NavigationStack {
+                FavoritesView()
+            }
+            .tabItem { Label { Text("Favoritter") } icon: { Self.outlineIcon("heart") } }
+            .tag(1)
+
+            NavigationStack {
+                BookingsView()
+            }
+            .tabItem {
+                Label {
+                    Text("Bestillinger")
+                } icon: {
+                    Image("TunoPinTab")
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .padding(.bottom, tabBarInnerHeight)
+            .tag(2)
 
-            CustomTabBar(
-                selectedTab: $selectedTab,
-                unreadMessages: chatService.unreadCount,
-                pendingHostRequests: pendingHostRequests,
-                profileAvatarURL: authManager.profile?.avatarUrl.flatMap(URL.init(string:)),
-                profileInitial: profileInitial,
-            )
+            NavigationStack(path: $messagesNavPath) {
+                MessagesListView()
+            }
+            .tabItem { Label { Text("Meldinger") } icon: { Self.outlineIcon("bubble.left") } }
+            .badge(chatService.unreadCount)
+            .tag(3)
+
+            NavigationStack {
+                ProfileView()
+            }
+            .tabItem {
+                Label {
+                    Text("Profil")
+                } icon: {
+                    if let img = profileTabImage {
+                        Image(uiImage: img)
+                    } else {
+                        Self.outlineIcon("person.crop.circle")
+                    }
+                }
+            }
+            .badge(pendingHostRequests)
+            .tag(4)
         }
-        .onPreferenceChange(TabBarHeightPreferenceKey.self) { newHeight in
-            tabBarInnerHeight = newHeight
-        }
+        .tint(.primary600)
         .environmentObject(chatService)
         .environmentObject(profileStats)
         .ignoresSafeArea(.keyboard)
@@ -70,21 +112,24 @@ struct MainTabView: View {
             await loadUnreadCount()
             await loadPendingHostRequests()
             await refreshProfileStats()
+            await loadProfileTabImage()
         }
         .onChange(of: authManager.currentUser?.id) { _, _ in
-            Task { await refreshProfileStats() }
+            Task {
+                await refreshProfileStats()
+                await loadProfileTabImage()
+            }
+        }
+        .onChange(of: authManager.profile?.avatarUrl) { _, _ in
+            Task { await loadProfileTabImage() }
         }
         .onChange(of: selectedTab) { _, newTab in
-            // Refresh unread count when leaving messages tab
             if newTab != 3 {
                 Task { await loadUnreadCount() }
             }
-            // Refresh pending-count når vi forlater Profil-tab (etter at host svarte)
             if newTab != 4 {
                 Task { await loadPendingHostRequests() }
             }
-            // Refresh profil-stats i bakgrunnen når vi går INN på Profil-tab —
-            // cached verdier vises umiddelbart, nye verdier kommer inn uten flicker.
             if newTab == 4 {
                 Task { await refreshProfileStats() }
             }
@@ -102,8 +147,6 @@ struct MainTabView: View {
         }
         .onChange(of: pushRouter.pendingBookingId) { _, newValue in
             guard newValue != nil else { return }
-            // booking_request → Profile-tab (HostRequestsView pluker det opp).
-            // Andre typer → Bookings-tab (gjest-flyt).
             if pushRouter.pendingBookingType == "booking_request" {
                 selectedTab = 4
             } else {
@@ -123,17 +166,6 @@ struct MainTabView: View {
                 ListingDetailView(listingId: listingId)
             }
         }
-    }
-
-    private var profileInitial: String? {
-        let name = authManager.profile?.fullName?.trimmingCharacters(in: .whitespaces)
-        if let name, let first = name.first {
-            return String(first).uppercased()
-        }
-        if let email = authManager.currentUser?.email, let first = email.first {
-            return String(first).uppercased()
-        }
-        return nil
     }
 
     private func loadUnreadCount() async {
@@ -172,5 +204,4 @@ struct MainTabView: View {
 
 extension Notification.Name {
     static let switchToBookingsTab = Notification.Name("switchToBookingsTab")
-    // newPushNotification is defined in PushNotificationManager.swift
 }

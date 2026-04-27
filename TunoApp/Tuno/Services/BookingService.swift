@@ -6,8 +6,11 @@ import StripePaymentsUI
 
 struct CreateBookingRequest: Encodable {
     let listingId: String
-    let checkIn: String
-    let checkOut: String
+    let checkIn: String       // "yyyy-MM-dd" — alltid satt
+    let checkOut: String      // "yyyy-MM-dd" — alltid satt
+    /// ISO 8601 timestamp for hourly bookings (parkering per time). nil for daglige bookinger.
+    let checkInAt: String?
+    let checkOutAt: String?
     let licensePlate: String?
     let isRentalCar: Bool
     let selectedSpotIds: [String]?

@@ -95,16 +95,43 @@ extension Listing {
 
 struct SpotMarker: Codable, Hashable {
     var id: String?
-    let lat: Double
-    let lng: Double
+    var lat: Double
+    var lng: Double
     var label: String?
+    var description: String?
     var price: Int?
+    var vehicleMaxLength: Int?
+    /// Multi-select biltyper plassen passer for. Brukes som primær-kilde fra build 61+.
+    /// Hvis nil ved decode, derives fra eldre `vehicleType`-felt for backward-compat.
+    var vehicleTypes: [VehicleType]?
+    /// Eldre singel-felt — beholdes kun for backward-compat ved decode av seedede listings.
+    /// Skal ikke leses i ny kode; bruk `effectiveVehicleTypes`.
+    var vehicleType: VehicleType?
+    /// Per-plass pris-enhet (kun parkering — camping er alltid natt). Hvis nil → bruk listing.priceUnit.
+    var priceUnit: PriceUnit?
     var extras: [ListingExtra]?
     var blockedDates: [String]?
     var checkinMessage: String?
     /// Bilder tagget til denne spesifikke plassen. URL-ene er delmengde av
     /// listing.images — ingen separat opplasting. Utleier tagger i wizard/edit.
     var images: [String]?
+
+    enum CodingKeys: String, CodingKey {
+        case id, lat, lng, label, description, price, extras, images
+        case vehicleMaxLength = "vehicleMaxLength"
+        case vehicleType = "vehicleType"
+        case vehicleTypes = "vehicleTypes"
+        case priceUnit = "priceUnit"
+        case blockedDates = "blockedDates"
+        case checkinMessage = "checkinMessage"
+    }
+
+    /// Backward-compat: returner vehicleTypes hvis satt, ellers wrap singel vehicleType.
+    var effectiveVehicleTypes: [VehicleType] {
+        if let arr = vehicleTypes, !arr.isEmpty { return arr }
+        if let v = vehicleType { return [v] }
+        return []
+    }
 }
 
 struct SelectedExtraEntry: Codable, Hashable {
@@ -144,12 +171,16 @@ enum VehicleType: String, Codable, CaseIterable {
     case motorhome
     case campervan
     case car
+    case van
+    case motorcycle
 
     var displayName: String {
         switch self {
         case .car: return "Personbil"
         case .campervan: return "Campingbil"
         case .motorhome: return "Bobil"
+        case .van: return "Varebil"
+        case .motorcycle: return "Motorsykkel"
         }
     }
 
@@ -158,6 +189,8 @@ enum VehicleType: String, Codable, CaseIterable {
         case .car: return "car.fill"
         case .campervan: return "box.truck.fill"
         case .motorhome: return "box.truck.fill"
+        case .van: return "shippingbox.fill"
+        case .motorcycle: return "bicycle"
         }
     }
 
@@ -168,6 +201,39 @@ enum VehicleType: String, Codable, CaseIterable {
         case .car: return "lucide-car"
         case .campervan: return "lucide-caravan"
         case .motorhome: return "lucide-caravan"
+        case .van: return "lucide-truck"
+        case .motorcycle: return "lucide-bike"
+        }
+    }
+
+    /// Hvilke biltyper som er relevante per kategori.
+    /// Camping: kun campingkjøretøy (bobil, campingbil, personbil med telt).
+    /// Parkering: alle 5 — pendlere har vanligvis personbil/varebil/MC, men store kjøretøy også.
+    static func available(for category: ListingCategory) -> [VehicleType] {
+        switch category {
+        case .camping: return [.motorhome, .campervan, .car]
+        case .parking: return [.car, .van, .motorcycle, .campervan, .motorhome]
+        }
+    }
+
+    /// Disse trenger ikke maks-lengde-info — er små/standard.
+    var isCompact: Bool {
+        switch self {
+        case .car, .motorcycle, .van: return true
+        case .campervan, .motorhome: return false
+        }
+    }
+
+    /// Hvilke listing-vehicle_types som kan ta imot dette kjøretøyet.
+    /// Et bobil-listing tar imot alle (men ikke automatisk omvendt).
+    /// Brukes av søkefilter mot listing-nivå `vehicle_type`-kolonnen.
+    var acceptingListingTypes: [VehicleType] {
+        switch self {
+        case .motorcycle: return [.motorcycle, .car, .van, .campervan, .motorhome]
+        case .car:        return [.car, .van, .campervan, .motorhome]
+        case .van:        return [.van, .campervan, .motorhome]
+        case .campervan:  return [.campervan, .motorhome]
+        case .motorhome:  return [.motorhome]
         }
     }
 }
@@ -316,7 +382,7 @@ enum AmenityType: String, CaseIterable {
         case .lakeAccess: return "Sjø-/innsjøtilgang"
         case .mountainView: return "Fjellpanorama"
         case .petsAllowed: return "Dyrevennlig"
-        case .wasteDisposal: return "Septiktømming"
+        case .wasteDisposal: return "Avfall"
         case .handicapAccessible: return "Rullestoltilgjengelig"
         }
     }
@@ -349,13 +415,23 @@ enum AmenityType: String, CaseIterable {
 }
 
 enum PriceUnit: String, Codable {
-    case time
-    case natt
+    case time   // Parkering per døgn (24 timer) — semantisk "døgn", men key er historisk "time"
+    case natt   // Camping per natt
+    case hour   // Parkering per time
 
     var displayName: String {
         switch self {
-        case .time: return "dag"
+        case .time: return "døgn"
         case .natt: return "natt"
+        case .hour: return "time"
+        }
+    }
+
+    /// Default-enhet for en gitt kategori. Brukes når plass ikke har eksplisitt overstyring.
+    static func defaultUnit(for category: ListingCategory) -> PriceUnit {
+        switch category {
+        case .camping: return .natt
+        case .parking: return .time   // døgn
         }
     }
 }
@@ -395,6 +471,9 @@ struct Booking: Codable, Identifiable {
     let hostId: String
     let checkIn: String
     let checkOut: String
+    /// ISO 8601 timestamp for hourly bookings (parkering per time). nil for daglige bookinger.
+    let checkInAt: String?
+    let checkOutAt: String?
     let totalPrice: Int
     var status: BookingStatus
     let paymentStatus: PaymentStatus
@@ -430,6 +509,8 @@ struct Booking: Codable, Identifiable {
         case hostId = "host_id"
         case checkIn = "check_in"
         case checkOut = "check_out"
+        case checkInAt = "check_in_at"
+        case checkOutAt = "check_out_at"
         case totalPrice = "total_price"
         case paymentStatus = "payment_status"
         case transferStatus = "transfer_status"

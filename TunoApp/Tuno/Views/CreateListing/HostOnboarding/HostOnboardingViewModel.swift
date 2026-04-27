@@ -18,9 +18,11 @@ final class HostOnboardingViewModel: ObservableObject {
     @Published var fieldErrors: [String: String] = [:]
 
     // Step 2 — Personal info
+    // Fødselsdato spørres ikke lenger — vi utleder den fra personnummeret
+    // (DDMMYY + århundre fra individnummer) i `submitPersonal()` via
+    // `PersonnummerHelper.dateOfBirth`.
     @Published var firstName: String = ""
     @Published var lastName: String = ""
-    @Published var dob: Date = Calendar.current.date(byAdding: .year, value: -30, to: Date()) ?? Date()
     @Published var personnummer: String = ""
     @Published var phone: String = ""
 
@@ -30,13 +32,34 @@ final class HostOnboardingViewModel: ObservableObject {
     @Published var city: String = ""
 
     // Step 4 — Bank
-    @Published var iban: String = ""
+    // Vi spør om norsk kontonummer (BBAN, 11 siffer) og konverterer til
+    // IBAN lokalt med MOD-97 i `submitBank()` via `IBANGenerator`.
+    // `previewIBAN` brukes til å vise brukeren hva vi sender til Stripe.
+    @Published var bankAccount: String = ""
     @Published var accountHolderName: String = ""
+
+    var previewIBAN: String? {
+        guard let iban = IBANGenerator.ibanFromBBAN(bankAccount) else { return nil }
+        return IBANGenerator.formatForDisplay(iban)
+    }
 
     // Step 5 — Result
     @Published var requirements: [String] = []
     @Published var chargesEnabled: Bool = false
     @Published var payoutsEnabled: Bool = false
+
+    /// Pollerens livssyklus i StatusStep — styrer hvilken UI som rendres.
+    /// `idle` brukes mens vi venter på første respons; `polling` mens vi
+    /// kaller refresh hvert N sekund; `approved` når Stripe sier OK;
+    /// `timedOut` når vi har gitt opp og lover push-varsel i stedet.
+    enum PollingState {
+        case idle
+        case polling
+        case approved
+        case timedOut
+    }
+    @Published var pollingState: PollingState = .idle
+    private var pollingTask: Task<Void, Never>?
 
     private let service = HostOnboardingService()
 
@@ -83,22 +106,25 @@ final class HostOnboardingViewModel: ObservableObject {
             fieldErrors["last_name"] = "Etternavn er påkrevd"
         }
         let pnr = personnummer.trimmingCharacters(in: .whitespaces)
-        if pnr.count != 11 || !pnr.allSatisfy(\.isNumber) {
-            fieldErrors["id_number"] = "Personnummer må være 11 siffer"
+        // Personnummer-validering går gjennom `PersonnummerHelper`, som
+        // også gir oss fødselsdatoen. Dekker både MOD-11-feil og umulige
+        // datoer (f.eks. 31. februar) med samme melding.
+        let dob = PersonnummerHelper.dateOfBirth(from: pnr)
+        if dob == nil {
+            fieldErrors["id_number"] = "Ugyldig personnummer"
         }
         if phone.trimmingCharacters(in: .whitespaces).count < 8 {
             fieldErrors["phone"] = "Gyldig telefonnummer er påkrevd"
         }
-        guard fieldErrors.isEmpty else { return }
+        guard fieldErrors.isEmpty, let dob else { return }
 
-        let comps = Calendar.current.dateComponents([.day, .month, .year], from: dob)
         let individual = AccountUpdateIndividual(
             first_name: firstName,
             last_name: lastName,
             dob: AccountUpdateIndividualDOB(
-                day: comps.day ?? 1,
-                month: comps.month ?? 1,
-                year: comps.year ?? 2000,
+                day: dob.day,
+                month: dob.month,
+                year: dob.year,
             ),
             id_number: pnr,
             phone: phone,
@@ -145,19 +171,21 @@ final class HostOnboardingViewModel: ObservableObject {
 
     func submitBank() async {
         fieldErrors = [:]
-        let normalized = iban.replacingOccurrences(of: " ", with: "").uppercased()
-        let ibanMatches = normalized.range(of: "^NO\\d{13}$", options: .regularExpression) != nil
-        if !ibanMatches {
-            fieldErrors["iban"] = "Ugyldig norsk IBAN (NO + 13 siffer)"
+        // Brukeren skriver norsk kontonummer (11 siffer) — vi konverterer
+        // til IBAN lokalt med MOD-97. MOD-11 på selve kontonummeret fanger
+        // skrivefeil før vi når Stripe.
+        let iban = IBANGenerator.ibanFromBBAN(bankAccount)
+        if iban == nil {
+            fieldErrors["bank_account"] = "Ugyldig norsk kontonummer"
         }
         if accountHolderName.trimmingCharacters(in: .whitespaces).count < 2 {
             fieldErrors["account_holder_name"] = "Kontoeier må oppgis"
         }
-        guard fieldErrors.isEmpty else { return }
+        guard fieldErrors.isEmpty, let iban else { return }
 
         await run {
             let status = try await service.submitBank(
-                iban: normalized,
+                iban: iban,
                 accountHolderName: accountHolderName,
             )
             applyStatus(status)
@@ -170,6 +198,42 @@ final class HostOnboardingViewModel: ObservableObject {
             let status = try await service.ensureAccount()
             applyStatus(status)
         }
+    }
+
+    /// Polleren kjører fra StatusStep. Vi kaller refresh hvert 3. sekund i
+    /// inntil `maxSeconds` sekunder. Hvis Stripe bekrefter underveis, settes
+    /// `pollingState = .approved` og loopen avsluttes. Ellers `.timedOut`.
+    /// Push-varsel via webhook (account.updated) tar over når brukeren har
+    /// lukket sheetet.
+    func startPolling(maxSeconds: Int = 30, intervalSeconds: Int = 3) {
+        // Hvis allerede godkjent, hopp rett til approved.
+        if isOnboardingComplete {
+            pollingState = .approved
+            return
+        }
+        pollingTask?.cancel()
+        pollingState = .polling
+        pollingTask = Task { [weak self] in
+            guard let self else { return }
+            let deadline = Date().addingTimeInterval(TimeInterval(maxSeconds))
+            while Date() < deadline {
+                try? await Task.sleep(nanoseconds: UInt64(intervalSeconds) * 1_000_000_000)
+                if Task.isCancelled { return }
+                await self.refreshStatus()
+                if self.isOnboardingComplete {
+                    self.pollingState = .approved
+                    return
+                }
+            }
+            if !self.isOnboardingComplete {
+                self.pollingState = .timedOut
+            }
+        }
+    }
+
+    func stopPolling() {
+        pollingTask?.cancel()
+        pollingTask = nil
     }
 
     // MARK: - Helpers

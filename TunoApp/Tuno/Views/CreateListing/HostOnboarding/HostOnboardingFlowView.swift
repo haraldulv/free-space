@@ -1,8 +1,13 @@
 import SwiftUI
+import UIKit
 
+/// Stripe Custom-onboarding gjenbygget med wizard-stilen fra `CreateListingView`:
+/// `WizardScreen` for content, `WizardNavBar` i bunnen, store kort for
+/// kategori-aktige valg og samme sirkulære keyboard-knapp via `safeAreaInset`.
 struct HostOnboardingFlowView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var viewModel = HostOnboardingViewModel()
+    @State private var keyboardVisible = false
 
     let onComplete: () -> Void
 
@@ -11,31 +16,167 @@ struct HostOnboardingFlowView: View {
             ProgressHeader(step: viewModel.step)
                 .padding(.horizontal, 20)
                 .padding(.top, 8)
-                .padding(.bottom, 16)
+                .padding(.bottom, 12)
 
-            ScrollView {
-                Group {
-                    switch viewModel.step {
-                    case .welcome:
-                        WelcomeStep(viewModel: viewModel)
-                    case .personal:
-                        PersonalStep(viewModel: viewModel)
-                    case .address:
-                        AddressStep(viewModel: viewModel)
-                    case .bank:
-                        BankStep(viewModel: viewModel)
-                    case .status:
-                        StatusStep(viewModel: viewModel, onComplete: onComplete)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 40)
-            }
+            errorBanner
+
+            stepContent
         }
         .navigationTitle("Bli utleier")
         .navigationBarTitleDisplayMode(.inline)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        }
+        .safeAreaInset(edge: .bottom) {
+            if keyboardVisible {
+                keyboardDoneBar.transition(.move(edge: .bottom).combined(with: .opacity))
+            } else {
+                navBar.transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+            withAnimation(.easeOut(duration: 0.22)) { keyboardVisible = true }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            withAnimation(.easeOut(duration: 0.22)) { keyboardVisible = false }
+        }
         .task {
             viewModel.prefill(from: authManager.profile)
+        }
+    }
+
+    @ViewBuilder
+    private var stepContent: some View {
+        switch viewModel.step {
+        case .welcome:
+            HostOnboardingWelcomeStep()
+        case .personal:
+            PersonalStep(viewModel: viewModel)
+        case .address:
+            HostOnboardingAddressStep(viewModel: viewModel)
+        case .bank:
+            BankStep(viewModel: viewModel)
+        case .status:
+            StatusStep(viewModel: viewModel, onComplete: onComplete)
+        }
+    }
+
+    @ViewBuilder
+    private var errorBanner: some View {
+        if let error = viewModel.errorMessage {
+            HStack(spacing: 8) {
+                Image(systemName: "exclamationmark.circle.fill")
+                Text(error)
+                    .font(.system(size: 14, weight: .medium))
+                Spacer()
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+            .background(Color.red)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
+
+    /// Sirkulær "skjul tastatur"-knapp. Samme mønster som i `CreateListingView`
+    /// — `.toolbar(.keyboard)` rendrer ikke pålitelig på numberPad.
+    private var keyboardDoneBar: some View {
+        HStack {
+            Spacer()
+            Button {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            } label: {
+                Image(systemName: "keyboard.chevron.compact.down")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.primary600)
+                    .clipShape(Circle())
+                    .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+            }
+            .accessibilityLabel("Skjul tastatur")
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(
+            Color(UIColor.systemBackground)
+                .opacity(0.95)
+                .ignoresSafeArea()
+        )
+    }
+
+    private var navBar: some View {
+        WizardNavBar(
+            canGoBack: canGoBack,
+            nextLabel: nextLabel,
+            nextIcon: nextIcon,
+            nextEnabled: !viewModel.isSubmitting,
+            nextLoading: viewModel.isSubmitting,
+            onBack: handleBack,
+            onNext: handleNext
+        )
+    }
+
+    private var canGoBack: Bool {
+        switch viewModel.step {
+        case .welcome: return false
+        case .personal, .address, .bank: return true
+        case .status: return false   // Status-skjermen har egen "Lukk"/"Lag annonse"-knapp
+        }
+    }
+
+    private var nextLabel: String {
+        switch viewModel.step {
+        case .welcome: return "Jeg godtar og fortsetter"
+        case .personal: return "Neste"
+        case .address: return "Neste"
+        case .bank: return "Fullfør oppsett"
+        case .status:
+            switch viewModel.pollingState {
+            case .approved: return "Lag annonse"
+            case .timedOut: return "Lukk"
+            case .idle, .polling: return "Vent litt..."
+            }
+        }
+    }
+
+    private var nextIcon: String? {
+        switch viewModel.step {
+        case .status:
+            return viewModel.pollingState == .approved ? "arrow.right" : nil
+        default:
+            return "chevron.right"
+        }
+    }
+
+    private func handleBack() {
+        switch viewModel.step {
+        case .personal: viewModel.step = .welcome
+        case .address: viewModel.step = .personal
+        case .bank: viewModel.step = .address
+        default: break
+        }
+    }
+
+    private func handleNext() {
+        switch viewModel.step {
+        case .welcome: Task { await viewModel.acceptTOSAndContinue() }
+        case .personal: Task { await viewModel.submitPersonal() }
+        case .address: Task { await viewModel.submitAddress() }
+        case .bank: Task { await viewModel.submitBank() }
+        case .status:
+            switch viewModel.pollingState {
+            case .approved:
+                Task {
+                    await authManager.loadProfile()
+                    onComplete()
+                }
+            case .timedOut:
+                onComplete()  // Sheet lukkes, push-varsel tar over
+            case .idle, .polling:
+                break
+            }
         }
     }
 }
@@ -56,150 +197,74 @@ private struct ProgressHeader: View {
     }
 }
 
-// MARK: - Shared UI
+// MARK: - Step 1: Welcome
 
-private struct StepTitle: View {
+private struct HostOnboardingWelcomeStep: View {
+    var body: some View {
+        WizardScreen(
+            title: "Velkommen som utleier",
+            subtitle: "Vi trenger litt informasjon for å kunne betale ut leieinntektene dine. Alt skjer her i appen."
+        ) {
+            VStack(spacing: 14) {
+                BulletCard(
+                    iconName: "person.text.rectangle.fill",
+                    title: "Personlig info",
+                    subtitle: "Navn, personnummer og telefon"
+                )
+                BulletCard(
+                    iconName: "house.fill",
+                    title: "Adresse",
+                    subtitle: "Hjemmeadressen din"
+                )
+                BulletCard(
+                    iconName: "creditcard.fill",
+                    title: "Bankkonto",
+                    subtitle: "Norsk kontonummer for utbetalinger"
+                )
+
+                Text("Ved å fortsette godtar du [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer](https://tuno.no/retningslinjer). Tuno bruker Stripe som betalingsleverandør.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
+                    .tint(.primary600)
+                    .padding(.top, 8)
+            }
+        }
+    }
+}
+
+private struct BulletCard: View {
+    let iconName: String
     let title: String
     let subtitle: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(title)
-                .font(.system(size: 26, weight: .bold))
-            Text(subtitle)
-                .font(.system(size: 15))
-                .foregroundStyle(.neutral600)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, 24)
-    }
-}
-
-private struct LabeledField: View {
-    let label: String
-    let placeholder: String
-    @Binding var text: String
-    var keyboard: UIKeyboardType = .default
-    var error: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.neutral700)
-            TextField(placeholder, text: $text)
-                .keyboardType(keyboard)
-                .textInputAutocapitalization(.words)
-                .autocorrectionDisabled()
-                .padding(.horizontal, 14)
-                .padding(.vertical, 12)
-                .background(Color.neutral50)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10)
-                        .stroke(error != nil ? Color.red : Color.neutral200, lineWidth: 1),
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            if let error {
-                Text(error)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.red)
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.primary50)
+                    .frame(width: 52, height: 52)
+                Image(systemName: iconName)
+                    .font(.system(size: 22, weight: .medium))
+                    .foregroundStyle(.primary700)
             }
-        }
-    }
-}
-
-private struct PrimaryButton: View {
-    let title: String
-    let isLoading: Bool
-    let action: () -> Void
-    var isEnabled: Bool = true
-
-    var body: some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                if isLoading {
-                    ProgressView().tint(.white)
-                } else {
-                    Text(title)
-                        .font(.system(size: 16, weight: .semibold))
-                }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text(subtitle)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
             }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .background(isEnabled ? Color.primary600 : Color.neutral300)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        }
-        .disabled(!isEnabled || isLoading)
-    }
-}
-
-private struct ErrorBanner: View {
-    let message: String
-    var body: some View {
-        Text(message)
-            .font(.system(size: 13))
-            .foregroundStyle(.red)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(12)
-            .background(Color.red.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-}
-
-// MARK: - Step 1: Welcome + TOS
-
-private struct WelcomeStep: View {
-    @ObservedObject var viewModel: HostOnboardingViewModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            StepTitle(
-                title: "Velkommen som utleier",
-                subtitle: "Vi trenger litt informasjon for å kunne betale ut leieinntektene dine. Alt skjer her i appen.",
-            )
-
-            VStack(alignment: .leading, spacing: 12) {
-                BulletRow(icon: "person.text.rectangle", text: "Navn, fødselsdato og personnummer")
-                BulletRow(icon: "house", text: "Adresse")
-                BulletRow(icon: "creditcard", text: "Bankkonto for utbetalinger")
-            }
-            .padding(16)
-            .background(Color.primary50)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            Text("Ved å fortsette godtar du [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer for annonser](https://tuno.no/retningslinjer). Tuno bruker Stripe som betalingsleverandør.")
-                .font(.system(size: 13))
-                .foregroundStyle(.neutral600)
-                .tint(.primary600)
-
-            if let error = viewModel.errorMessage {
-                ErrorBanner(message: error)
-            }
-
-            PrimaryButton(
-                title: "Jeg godtar og fortsetter",
-                isLoading: viewModel.isSubmitting,
-            ) {
-                Task { await viewModel.acceptTOSAndContinue() }
-            }
-        }
-    }
-}
-
-private struct BulletRow: View {
-    let icon: String
-    let text: String
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundStyle(.primary600)
-                .frame(width: 24)
-            Text(text)
-                .font(.system(size: 15))
-                .foregroundStyle(.neutral800)
             Spacer()
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.neutral200, lineWidth: 1)
+        )
     }
 }
 
@@ -209,61 +274,39 @@ private struct PersonalStep: View {
     @ObservedObject var viewModel: HostOnboardingViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            StepTitle(
-                title: "Personlig informasjon",
-                subtitle: "Stripe krever dette for identitetsverifisering.",
-            )
-
-            LabeledField(
-                label: "Fornavn",
-                placeholder: "Kari",
-                text: $viewModel.firstName,
-                error: viewModel.fieldErrors["first_name"],
-            )
-            LabeledField(
-                label: "Etternavn",
-                placeholder: "Nordmann",
-                text: $viewModel.lastName,
-                error: viewModel.fieldErrors["last_name"],
-            )
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Fødselsdato")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.neutral700)
-                DatePicker(
-                    "",
-                    selection: $viewModel.dob,
-                    in: ...Date(),
-                    displayedComponents: .date,
+        WizardScreen(
+            title: "Hvem er du?",
+            subtitle: "Stripe trenger dette for identitetsverifisering. Fødselsdato utleder vi automatisk fra personnummeret."
+        ) {
+            VStack(spacing: 16) {
+                OnboardingTextField(
+                    label: "Fornavn",
+                    placeholder: "Kari",
+                    text: $viewModel.firstName,
+                    error: viewModel.fieldErrors["first_name"]
                 )
-                .datePickerStyle(.compact)
-                .labelsHidden()
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            LabeledField(
-                label: "Personnummer (11 siffer)",
-                placeholder: "01019912345",
-                text: $viewModel.personnummer,
-                keyboard: .numberPad,
-                error: viewModel.fieldErrors["id_number"],
-            )
-            LabeledField(
-                label: "Telefonnummer",
-                placeholder: "+47 123 45 678",
-                text: $viewModel.phone,
-                keyboard: .phonePad,
-                error: viewModel.fieldErrors["phone"],
-            )
-
-            if let error = viewModel.errorMessage {
-                ErrorBanner(message: error)
-            }
-
-            PrimaryButton(title: "Neste", isLoading: viewModel.isSubmitting) {
-                Task { await viewModel.submitPersonal() }
+                OnboardingTextField(
+                    label: "Etternavn",
+                    placeholder: "Nordmann",
+                    text: $viewModel.lastName,
+                    error: viewModel.fieldErrors["last_name"]
+                )
+                OnboardingTextField(
+                    label: "Personnummer",
+                    placeholder: "11 siffer",
+                    text: $viewModel.personnummer,
+                    keyboard: .numberPad,
+                    autocapitalization: .never,
+                    error: viewModel.fieldErrors["id_number"]
+                )
+                OnboardingTextField(
+                    label: "Telefonnummer",
+                    placeholder: "+47 123 45 678",
+                    text: $viewModel.phone,
+                    keyboard: .phonePad,
+                    autocapitalization: .never,
+                    error: viewModel.fieldErrors["phone"]
+                )
             }
         }
     }
@@ -271,49 +314,44 @@ private struct PersonalStep: View {
 
 // MARK: - Step 3: Address
 
-private struct AddressStep: View {
+private struct HostOnboardingAddressStep: View {
     @ObservedObject var viewModel: HostOnboardingViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            StepTitle(
-                title: "Adresse",
-                subtitle: "Hjemmeadressen din. Brukes kun til identitetsverifisering.",
-            )
+        WizardScreen(
+            title: "Hva er hjemmeadressen din?",
+            subtitle: "Brukes kun til identitetsverifisering, vises aldri offentlig."
+        ) {
+            VStack(spacing: 16) {
+                OnboardingTextField(
+                    label: "Gateadresse",
+                    placeholder: "Storgata 1",
+                    text: $viewModel.addressLine1,
+                    error: viewModel.fieldErrors["line1"]
+                )
+                OnboardingTextField(
+                    label: "Postnummer",
+                    placeholder: "0155",
+                    text: $viewModel.postalCode,
+                    keyboard: .numberPad,
+                    autocapitalization: .never,
+                    error: viewModel.fieldErrors["postal_code"]
+                )
+                OnboardingTextField(
+                    label: "Poststed",
+                    placeholder: "Oslo",
+                    text: $viewModel.city,
+                    error: viewModel.fieldErrors["city"]
+                )
 
-            LabeledField(
-                label: "Gateadresse",
-                placeholder: "Storgata 1",
-                text: $viewModel.addressLine1,
-                error: viewModel.fieldErrors["line1"],
-            )
-            LabeledField(
-                label: "Postnummer",
-                placeholder: "0155",
-                text: $viewModel.postalCode,
-                keyboard: .numberPad,
-                error: viewModel.fieldErrors["postal_code"],
-            )
-            LabeledField(
-                label: "Poststed",
-                placeholder: "Oslo",
-                text: $viewModel.city,
-                error: viewModel.fieldErrors["city"],
-            )
-
-            HStack(spacing: 6) {
-                Image(systemName: "flag")
-                Text("Norge")
-            }
-            .font(.system(size: 14))
-            .foregroundStyle(.neutral600)
-
-            if let error = viewModel.errorMessage {
-                ErrorBanner(message: error)
-            }
-
-            PrimaryButton(title: "Neste", isLoading: viewModel.isSubmitting) {
-                Task { await viewModel.submitAddress() }
+                HStack(spacing: 6) {
+                    Image(systemName: "flag.fill")
+                        .foregroundStyle(.primary600)
+                    Text("Norge")
+                        .foregroundStyle(.neutral600)
+                }
+                .font(.system(size: 14, weight: .medium))
+                .padding(.top, 4)
             }
         }
     }
@@ -325,42 +363,51 @@ private struct BankStep: View {
     @ObservedObject var viewModel: HostOnboardingViewModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            StepTitle(
-                title: "Bankkonto",
-                subtitle: "Kontoen Stripe skal bruke for å betale ut leieinntektene dine.",
-            )
+        WizardScreen(
+            title: "Hvor skal vi sende pengene?",
+            subtitle: "Skriv det norske kontonummeret slik du ser det i nettbanken din. Vi konverterer det automatisk til IBAN-format."
+        ) {
+            VStack(spacing: 16) {
+                OnboardingTextField(
+                    label: "Kontonummer",
+                    placeholder: "11 siffer",
+                    text: $viewModel.bankAccount,
+                    keyboard: .numberPad,
+                    autocapitalization: .never,
+                    error: viewModel.fieldErrors["bank_account"]
+                )
 
-            LabeledField(
-                label: "IBAN",
-                placeholder: "NO93 8601 1117 947",
-                text: $viewModel.iban,
-                keyboard: .asciiCapable,
-                error: viewModel.fieldErrors["iban"],
-            )
-            LabeledField(
-                label: "Kontoeier",
-                placeholder: "Navn på kontoen",
-                text: $viewModel.accountHolderName,
-                error: viewModel.fieldErrors["account_holder_name"],
-            )
+                if let preview = viewModel.previewIBAN {
+                    HStack(spacing: 8) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.primary600)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Vi sender")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral500)
+                            Text(preview)
+                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
+                                .foregroundStyle(.neutral900)
+                        }
+                        Spacer()
+                    }
+                    .padding(12)
+                    .background(Color.primary50)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
 
-            Text("Du finner IBAN i nettbanken din. Norske IBAN starter med NO og har 15 tegn.")
-                .font(.system(size: 12))
-                .foregroundStyle(.neutral500)
-
-            if let error = viewModel.errorMessage {
-                ErrorBanner(message: error)
-            }
-
-            PrimaryButton(title: "Fullfør oppsett", isLoading: viewModel.isSubmitting) {
-                Task { await viewModel.submitBank() }
+                OnboardingTextField(
+                    label: "Kontoeier",
+                    placeholder: "Navn på kontoen",
+                    text: $viewModel.accountHolderName,
+                    error: viewModel.fieldErrors["account_holder_name"]
+                )
             }
         }
     }
 }
 
-// MARK: - Step 5: Status / result
+// MARK: - Step 5: Status
 
 private struct StatusStep: View {
     @ObservedObject var viewModel: HostOnboardingViewModel
@@ -368,84 +415,137 @@ private struct StatusStep: View {
     let onComplete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
-            if viewModel.isOnboardingComplete {
-                successCard
-            } else {
-                pendingCard
-            }
-
-            if let error = viewModel.errorMessage {
-                ErrorBanner(message: error)
-            }
-
-            PrimaryButton(
-                title: viewModel.isOnboardingComplete ? "Fortsett til annonse" : "Oppdater status",
-                isLoading: viewModel.isSubmitting,
-            ) {
-                if viewModel.isOnboardingComplete {
-                    Task {
-                        await authManager.loadProfile()
-                        onComplete()
-                    }
-                } else {
-                    Task { await viewModel.refreshStatus() }
+        WizardScreen(title: "") {
+            VStack(spacing: 24) {
+                switch viewModel.pollingState {
+                case .idle, .polling:
+                    pollingCard
+                case .approved:
+                    successCard
+                case .timedOut:
+                    pendingCard
                 }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 20)
+        }
+        .task {
+            viewModel.startPolling()
+        }
+        .onDisappear {
+            viewModel.stopPolling()
+        }
+    }
+
+    private var pollingCard: some View {
+        VStack(spacing: 20) {
+            LottieOrFallback(name: "loading-pulse") {
+                ZStack {
+                    Circle()
+                        .fill(Color.primary50)
+                        .frame(width: 120, height: 120)
+                    ProgressView()
+                        .scaleEffect(1.6)
+                        .tint(.primary600)
+                }
+            }
+            .frame(width: 160, height: 160)
+
+            VStack(spacing: 8) {
+                Text("Vi sjekker med Stripe…")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                Text("Dette tar vanligvis noen sekunder.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.neutral600)
+                    .multilineTextAlignment(.center)
             }
         }
     }
 
     private var successCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(Color.primary50)
-                    .frame(width: 64, height: 64)
-                Image(systemName: "checkmark")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(.primary600)
+        VStack(spacing: 20) {
+            LottieOrFallback(name: "success-confetti") {
+                ZStack {
+                    Circle()
+                        .fill(Color.primary600)
+                        .frame(width: 120, height: 120)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 56, weight: .bold))
+                        .foregroundStyle(.white)
+                }
             }
-            Text("Klar til å ta imot bookinger!")
-                .font(.system(size: 22, weight: .bold))
-            Text("Kontoen din er satt opp og du kan opprette annonser nå. Utbetalinger skjer automatisk etter hvert opphold.")
-                .font(.system(size: 15))
-                .foregroundStyle(.neutral600)
+            .frame(width: 200, height: 200)
+
+            VStack(spacing: 8) {
+                Text("Du er godkjent! 🎉")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                Text("Klar til å lage din første annonse. Utbetalinger skjer automatisk etter hvert opphold.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.neutral600)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+                    .padding(.horizontal, 8)
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var pendingCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 20) {
             ZStack {
                 Circle()
                     .fill(Color.orange.opacity(0.12))
-                    .frame(width: 64, height: 64)
-                Image(systemName: "clock")
-                    .font(.system(size: 28, weight: .bold))
+                    .frame(width: 100, height: 100)
+                Image(systemName: "bell.badge.fill")
+                    .font(.system(size: 40, weight: .medium))
                     .foregroundStyle(.orange)
             }
-            Text("Oppsettet er nesten ferdig")
-                .font(.system(size: 22, weight: .bold))
-            Text("Stripe trenger litt mer informasjon før vi kan aktivere utbetalingene dine:")
-                .font(.system(size: 15))
-                .foregroundStyle(.neutral600)
-            ForEach(viewModel.requirements, id: \.self) { req in
-                HStack(alignment: .top, spacing: 8) {
-                    Text("•")
-                    Text(humanize(requirement: req))
-                        .font(.system(size: 14))
+
+            VStack(spacing: 8) {
+                Text("Stripe trenger litt mer tid")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                    .multilineTextAlignment(.center)
+                Text("Vi sender deg et varsel så snart kontoen din er godkjent. Det tar vanligvis under en time.")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.neutral600)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(2)
+                    .padding(.horizontal, 8)
+            }
+
+            if !viewModel.requirements.isEmpty {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Dette gjenstår")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.neutral500)
+                        .textCase(.uppercase)
+                    ForEach(viewModel.requirements, id: \.self) { req in
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "circle")
+                                .font(.system(size: 8))
+                                .foregroundStyle(.neutral400)
+                                .padding(.top, 6)
+                            Text(humanize(requirement: req))
+                                .font(.system(size: 14))
+                                .foregroundStyle(.neutral700)
+                        }
+                    }
                 }
-                .foregroundStyle(.neutral700)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(16)
+                .background(Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func humanize(requirement: String) -> String {
         switch requirement {
         case "individual.verification.document",
              "individual.verification.additional_document":
-            return "Legitimasjon (kommer senere — du kan opprette annonse nå)"
+            return "Legitimasjon (kommer senere, du kan opprette annonse nå)"
         case "individual.id_number":
             return "Personnummer"
         case "individual.dob.day", "individual.dob.month", "individual.dob.year":
@@ -459,5 +559,62 @@ private struct StatusStep: View {
         default:
             return requirement
         }
+    }
+}
+
+// MARK: - Shared input
+
+/// Stort tekst-felt for onboarding-flowen. Speiler wizard-stilen:
+/// generøs padding, fokus-glow med grønn ramme, label over og evt.
+/// rød feilmelding under.
+private struct OnboardingTextField: View {
+    let label: String
+    let placeholder: String
+    @Binding var text: String
+    var keyboard: UIKeyboardType = .default
+    var autocapitalization: TextInputAutocapitalization = .words
+    var error: String?
+    @FocusState private var isFocused: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral500)
+                .textCase(.uppercase)
+
+            TextField(placeholder, text: $text)
+                .focused($isFocused)
+                .keyboardType(keyboard)
+                .textInputAutocapitalization(autocapitalization)
+                .autocorrectionDisabled()
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.neutral900)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .background(Color.white)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(borderColor, lineWidth: isFocused || error != nil ? 2 : 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .animation(.easeInOut(duration: 0.18), value: isFocused)
+
+            if let error {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 11))
+                    Text(error)
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private var borderColor: Color {
+        if error != nil { return .red }
+        if isFocused { return .primary600 }
+        return .neutral200
     }
 }

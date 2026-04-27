@@ -267,7 +267,7 @@ struct HostCalendarView: View {
             Task { await refreshPricing() }
         }) {
             NavigationStack {
-                PricingRulesEditorView(listingId: listing.id, basePrice: basePrice)
+                PricingRulesEditorView(listingId: listing.id, basePrice: basePrice, priceUnit: listing.priceUnit ?? .natt)
             }
         }
         .sheet(isPresented: $showPriceSheet) {
@@ -283,6 +283,7 @@ struct HostCalendarView: View {
         .sheet(isPresented: $showSpotPicker) {
             SpotPickerSheet(
                 spots: spotMarkers,
+                listingPriceUnit: listing.priceUnit ?? .natt,
                 selectedSpotIds: $selectedSpotIds
             )
             .presentationDetents([.medium, .large])
@@ -988,6 +989,7 @@ struct HostCalendarView: View {
 
 private struct SpotPickerSheet: View {
     let spots: [SpotMarker]
+    let listingPriceUnit: PriceUnit
     @Binding var selectedSpotIds: Set<String>
     @Environment(\.dismiss) private var dismiss
 
@@ -1041,7 +1043,7 @@ private struct SpotPickerSheet: View {
                                         .font(.system(size: 15, weight: .medium))
                                         .foregroundStyle(.neutral900)
                                     if let price = spot.price {
-                                        Text("\(price) kr/natt")
+                                        Text("\(price) kr/\((spot.priceUnit ?? listingPriceUnit).displayName)")
                                             .font(.system(size: 12))
                                             .foregroundStyle(.neutral500)
                                     }

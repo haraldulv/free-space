@@ -175,7 +175,7 @@ struct ListingDetailView: View {
         }
         .sheet(isPresented: $showShareSheet) {
             let url = URL(string: "https://tuno.no/listings/\(listing.id)")!
-            let text = "\(listing.title) — \(listing.displayPriceText) kr/natt på Tuno"
+            let text = "\(listing.title) · \(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "natt") på Tuno"
             ShareSheet(items: [text, url])
                 .presentationDetents([.medium, .large])
         }
@@ -518,7 +518,8 @@ struct ListingDetailView: View {
     @ViewBuilder
     private func combinedSpotsSection(listing: Listing) -> some View {
         let spots = listing.spotMarkers ?? []
-        let listingExtras = listing.extras ?? []
+        // Felles tillegg (listing.extras / .areaWide) er midlertidig fjernet
+        // fra UI per plan 2026-04-25. Per-plass-extras vises fortsatt i spotCard.
 
         if spots.count > 1 {
             sectionCard {
@@ -527,29 +528,9 @@ struct ListingDetailView: View {
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.neutral900)
 
-                    // Felles tillegg (gjelder alle plasser)
-                    if !listingExtras.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Felles tillegg")
-                                .font(.system(size: 13, weight: .medium))
-                                .foregroundStyle(.neutral500)
-                            extrasChips(listingExtras)
-                        }
-                    }
-
                     ForEach(Array(spots.enumerated()), id: \.offset) { index, spot in
                         spotCard(spot: spot, index: index, listing: listing)
                     }
-                }
-            }
-        } else if !listingExtras.isEmpty {
-            // 1 plass (eller ingen spesifikk layout): bare "Tilgjengelige tillegg"
-            sectionCard {
-                VStack(alignment: .leading, spacing: 14) {
-                    Text("Tilgjengelige tillegg")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.neutral900)
-                    extrasChips(listingExtras)
                 }
             }
         }
@@ -888,7 +869,7 @@ struct ListingDetailView: View {
 
                 thingsRow(icon: "calendar",
                           title: "Kansellering",
-                          subtitle: "Gratis avbestilling innen 48 t — etterpå gjelder utleiers vilkår.")
+                          subtitle: "Gratis avbestilling innen 48 t. Etterpå gjelder utleiers vilkår.")
 
                 thingsRow(icon: "clock",
                           title: "Inn- og utsjekking",
