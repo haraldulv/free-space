@@ -18,6 +18,7 @@
 		1444FFC1C4196A4874B30662 /* StripePaymentsUI in Frameworks */ = {isa = PBXBuildFile; productRef = E4D15CE7DFF6030221CC42B9 /* StripePaymentsUI */; };
 		1A1B9BC09172D4EBECCDB2C3 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE71C1EE64D63048F5BD2F5 /* PushNotificationManager.swift */; };
 		1C32E4CA70F86F9BAF6C8EA2 /* DescriptionStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D08232C248CE64924B19723 /* DescriptionStep.swift */; };
+		23227ACC572BB0ECF18932ED /* ny-annonse.json in Resources */ = {isa = PBXBuildFile; fileRef = ED8BDCBFB9D65C5B686E088E /* ny-annonse.json */; };
 		239CA481C3CC9C22AD9D3096 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8372F9628ACCC2AB21993B03 /* SettingsView.swift */; };
 		23E22E74F79A0D6B738FFD7F /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF2C4D557CBB8DCF564CD2A /* ChatService.swift */; };
 		249014FE9C51150340A11E57 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F63CFB5AB083DA9258409 /* Assets.xcassets */; };
@@ -224,6 +225,7 @@
 		EB67EEF4A6A12892A1B1697E /* ListingFormModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingFormModel.swift; sourceTree = "<group>"; };
 		EB9D8E4A793C78DF69B126D5 /* CalendarStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarStep.swift; sourceTree = "<group>"; };
 		ED34354F8C7AAA6F81D0CB62 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
+		ED8BDCBFB9D65C5B686E088E /* ny-annonse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ny-annonse.json"; sourceTree = "<group>"; };
 		F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextEditorWithCounter.swift; sourceTree = "<group>"; };
 		F20335764277C2E44F7825D2 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		F3BF694A798055824C4651A4 /* MessagesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesStep.swift; sourceTree = "<group>"; };
@@ -309,6 +311,7 @@
 			isa = PBXGroup;
 			children = (
 				425E4953E02A6C131CFEB198 /* empty-spots.json */,
+				ED8BDCBFB9D65C5B686E088E /* ny-annonse.json */,
 				9BCA07B748FCC5E1497CD115 /* progress-pin.json */,
 				147F3163867D581B11ED7A6D /* success-confetti.json */,
 				0B723EAA2CB71B866808AE9D /* welcome-tent.json */,
@@ -611,6 +614,7 @@
 				249014FE9C51150340A11E57 /* Assets.xcassets in Resources */,
 				2C4D3EB18F8321977CD47D5C /* Localizable.xcstrings in Resources */,
 				87D3139C0104F4350A1AAC1B /* empty-spots.json in Resources */,
+				23227ACC572BB0ECF18932ED /* ny-annonse.json in Resources */,
 				666AD7D7FA51A19DC149E1EF /* progress-pin.json in Resources */,
 				E6CE29815C06CCD871A9AD5F /* success-confetti.json in Resources */,
 				A8470E43E8EF688AF0A4112C /* welcome-tent.json in Resources */,
@@ -764,7 +768,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 91;
+				CURRENT_PROJECT_VERSION = 92;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -864,7 +868,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 91;
+				CURRENT_PROJECT_VERSION = 92;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
