@@ -131,13 +131,32 @@ struct EmailVerifiedView: View {
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(.neutral900)
                     .multilineTextAlignment(.center)
-                Text(message.isEmpty ? "Lenken har utløpt eller er allerede brukt." : message)
+                Text(humanReadable(message))
                     .font(.system(size: 15))
                     .foregroundStyle(.neutral500)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 24)
+                    .lineSpacing(2)
             }
         }
+    }
+
+    /// Oversetter Supabase-tekniske feilmeldinger til norske bruker-vennlige
+    /// versjoner. "invalid flow state" oppstår når lokal code_verifier mangler
+    /// — typisk hvis brukeren har avinstallert/reinstallert appen mellom
+    /// registrering og verifisering.
+    private func humanReadable(_ message: String) -> String {
+        let lower = message.lowercased()
+        if lower.contains("flow state") || lower.contains("flow_state_not_found") {
+            return "Lenken er ikke lenger gyldig på denne enheten. Prøv å registrere deg på nytt — appen må huske registreringen lokalt for at lenken skal kunne bekreftes."
+        }
+        if lower.contains("expired") {
+            return "Lenken har utløpt. Registrer deg på nytt for å få en ny."
+        }
+        if message.isEmpty {
+            return "Lenken har utløpt eller er allerede brukt. Registrer deg på nytt for å få en ny."
+        }
+        return message
     }
 
     private func triggerSuccessAnimation() {
