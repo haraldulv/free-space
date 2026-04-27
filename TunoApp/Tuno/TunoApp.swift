@@ -20,16 +20,12 @@ final class DeepLinkManager: ObservableObject {
     }
     @Published var verifyStatus: VerifyStatus = .verifying
 
-    /// Siste URL appen mottok via deep link / Universal Link. Brukes til
-    /// debug-overlay så vi ser at handleAuthURL faktisk kjøres.
-    @Published var lastReceivedURL: String = ""
-
     /// Felles inngang for auth-callback-URL-er fra både SwiftUI hooks
     /// (warm launch) og AppDelegate.application(_:continue:) (cold launch).
+    /// Email-tokens (token_hash query) går gjennom verifyOTP; tokens i
+    /// hash-fragment (Google OAuth implicit-flow) går gjennom session(from:).
     func handleAuthURL(_ url: URL) {
         let urlString = url.absoluteString
-        print("🔗 handleAuthURL: \(urlString)")
-        lastReceivedURL = urlString
 
         let isVerificationLink = url.path.hasPrefix("/auth/verified")
             || urlString.contains("auth/verified")
@@ -44,7 +40,6 @@ final class DeepLinkManager: ObservableObject {
         if isVerificationLink {
             verifyStatus = .verifying
             showEmailVerified = true
-            print("📝 isVerificationLink=true, showEmailVerified=true, tokenHash=\(tokenHash ?? "nil")")
         }
 
         Task {
@@ -65,9 +60,7 @@ final class DeepLinkManager: ObservableObject {
                         default: return .signup
                         }
                     }()
-                    print("🔐 verifyOTP starter (type: \(typeString))...")
                     _ = try await supabase.auth.verifyOTP(tokenHash: tokenHash, type: otpType)
-                    print("✅ verifyOTP OK")
                     await MainActor.run { self.verifyStatus = .success }
                 } catch {
                     print("❌ Auth verify feilet: \(error)")
@@ -184,14 +177,10 @@ struct TunoApp: App {
                 }
             }
             .onOpenURL { url in
-                print("🔵 onOpenURL: \(url.absoluteString)")
-                deepLinkManager.lastReceivedURL = url.absoluteString
                 routeIncomingURL(url)
             }
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                 guard let url = activity.webpageURL else { return }
-                print("🌐 onContinueUserActivity: \(url.absoluteString)")
-                deepLinkManager.lastReceivedURL = url.absoluteString
                 routeIncomingURL(url)
             }
             .fullScreenCover(isPresented: $deepLinkManager.showEmailVerified) {
@@ -199,38 +188,8 @@ struct TunoApp: App {
                     .environmentObject(authManager)
                     .environmentObject(deepLinkManager)
             }
-            .overlay(alignment: .top) {
-                debugBar
-            }
         }
         .handlesExternalEvents(matching: ["*"])
-    }
-
-    /// Synlig debug-bar øverst på skjermen så vi kan se Universal Link-status
-    /// uten å åpne Xcode console. Skjules når lastReceivedURL er tom.
-    @ViewBuilder
-    private var debugBar: some View {
-        if !deepLinkManager.lastReceivedURL.isEmpty {
-            VStack(spacing: 2) {
-                Text("DEBUG · status: \(statusString)")
-                    .font(.system(size: 9, weight: .semibold))
-                Text(deepLinkManager.lastReceivedURL.prefix(80) + (deepLinkManager.lastReceivedURL.count > 80 ? "…" : ""))
-                    .font(.system(size: 8, design: .monospaced))
-            }
-            .foregroundStyle(.white)
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(Color.black.opacity(0.85))
-        }
-    }
-
-    private var statusString: String {
-        switch deepLinkManager.verifyStatus {
-        case .verifying: return "verifying"
-        case .success: return "success"
-        case .failed(let m): return "failed: \(m.prefix(30))"
-        }
     }
 
     private func extractListingId(from url: URL) -> String? {
