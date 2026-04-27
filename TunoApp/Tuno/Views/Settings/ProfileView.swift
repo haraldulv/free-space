@@ -7,6 +7,7 @@ struct ProfileView: View {
     @EnvironmentObject var profileStats: ProfileStatsStore
     @State private var showLogoutConfirm = false
     @State private var showLogin = false
+    @State private var showRegister = false
     @State private var navigateToHostRequests = false
     @State private var navigateToNotifications = false
     @State private var showSelfProfile = false
@@ -23,31 +24,65 @@ struct ProfileView: View {
     // MARK: - Logged-out
 
     private var loggedOutView: some View {
-        VStack(spacing: 20) {
+        VStack(spacing: 0) {
             Spacer()
-            Image(systemName: "person.crop.circle")
-                .font(.system(size: 60))
-                .foregroundStyle(.neutral300)
-            Text("Logg inn for å se profilen din")
-                .font(.system(size: 16, weight: .medium))
-                .foregroundStyle(.neutral500)
-            Button {
-                showLogin = true
-            } label: {
-                Text("Logg inn")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color.primary600)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            // Lekent ikon-hero — matcher Tuno-stil med store grønne sirkler
+            ZStack {
+                Circle()
+                    .fill(Color.primary50)
+                    .frame(width: 140, height: 140)
+                Image(systemName: "person.crop.circle.fill")
+                    .font(.system(size: 72))
+                    .foregroundStyle(.primary600)
             }
-            .padding(.horizontal, 40)
+            .padding(.bottom, 24)
+
+            VStack(spacing: 8) {
+                Text("Velkommen til Tuno")
+                    .font(.system(size: 26, weight: .bold))
+                    .foregroundStyle(.neutral900)
+
+                Text("Logg inn for å bestille plasser eller leie ut din egen")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.neutral500)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+            .padding(.bottom, 32)
+
+            VStack(spacing: 12) {
+                Button { showLogin = true } label: {
+                    Text("Logg inn")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.primary600)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+
+                Button { showRegister = true } label: {
+                    Text("Opprett konto")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.primary700)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 16)
+                        .background(Color.primary50)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+            }
+            .padding(.horizontal, 32)
+
+            Spacer()
             Spacer()
         }
         .navigationTitle("Profil")
         .fullScreenCover(isPresented: $showLogin) {
             LoginView()
+        }
+        .fullScreenCover(isPresented: $showRegister) {
+            RegisterView()
         }
     }
 
