@@ -1,5 +1,4 @@
 {
-  "ignoreCommand": "git fetch --unshallow 2>/dev/null; git cat-file -e \"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\" 2>/dev/null && git diff --quiet \"${VERCEL_GIT_PREVIOUS_SHA:-HEAD^}\" HEAD -- ':(exclude)TunoApp/' ':(exclude)appstore-assets/' ':(exclude)ios/' ':(exclude).claude/' ':(exclude)*.md'",
   "crons": [
     {
       "path": "/api/cron/process-payouts",
