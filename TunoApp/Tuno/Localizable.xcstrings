@@ -66,6 +66,16 @@
         }
       }
     },
+    "%@  %@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@  %2$@"
+          }
+        }
+      }
+    },
     "%@ – %@" : {
       "localizations" : {
         "de" : {
@@ -1518,6 +1528,9 @@
           }
         }
       }
+    },
+    "Du må fullføre oppsettet før du kan opprette annonser." : {
+
     },
     "Du må godta vilkårene for å opprette konto" : {
       "extractionState" : "manual",
@@ -7175,9 +7188,6 @@
           }
         }
       }
-    },
-    "Vi sender" : {
-
     },
     "Vi sender deg et varsel så snart kontoen din er godkjent. Det tar vanligvis under en time." : {
 

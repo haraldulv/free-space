@@ -118,9 +118,28 @@ struct HostOnboardingFlowView: View {
             nextIcon: nextIcon,
             nextEnabled: viewModel.canAdvance(for: viewModel.step) && !viewModel.isSubmitting,
             nextLoading: viewModel.isSubmitting,
+            skipLabel: skipLabel,
             onBack: handleBack,
-            onNext: handleNext
+            onNext: handleNext,
+            onSkip: handleSkip
         )
+    }
+
+    /// Sekundær "skip"-handling. Per nå kun aktiv på status.approved
+    /// så brukeren kan avslutte onboarding uten å gå rett inn i annonse-
+    /// wizarden ("Tar det senere").
+    private var skipLabel: String? {
+        if case .approved = viewModel.pollingState, viewModel.step == .status {
+            return "Tar det senere"
+        }
+        return nil
+    }
+
+    private var handleSkip: (() -> Void)? {
+        if case .approved = viewModel.pollingState, viewModel.step == .status {
+            return { dismiss() }
+        }
+        return nil
     }
 
     private var canGoBack: Bool {

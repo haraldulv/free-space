@@ -9,33 +9,33 @@ struct WelcomeStep: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Hero — Tuno-grønn pin som drops på et sirkel-shadow.
-            // Symboliserer "plassér din plass på kartet". Fungerer for både camping og parkering.
-            ZStack {
-                // Bakgrunnssirkel (gradient)
-                Circle()
-                    .fill(LinearGradient(
-                        colors: [.primary100, .primary50],
-                        startPoint: .top,
-                        endPoint: .bottom))
-                    .frame(width: 220, height: 220)
+            // Hero — Lottie-animasjon (welcome-tent.json) hvis tilgjengelig,
+            // ellers fall back til SwiftUI pin-drop som er garantert å render.
+            // Lottien gir samme leken vibe som success-confetti i Stripe-status.
+            LottieOrFallback(name: "welcome-tent") {
+                ZStack {
+                    Circle()
+                        .fill(LinearGradient(
+                            colors: [.primary100, .primary50],
+                            startPoint: .top,
+                            endPoint: .bottom))
+                        .frame(width: 220, height: 220)
 
-                // "Bakke"-shadow som vises når pin lander
-                Ellipse()
-                    .fill(Color.primary600.opacity(0.18))
-                    .frame(width: 70, height: 14)
-                    .offset(y: 60)
-                    .opacity(shadowOpacity)
-                    .scaleEffect(x: pinDropped ? 1.0 : 0.5, y: 1)
+                    Ellipse()
+                        .fill(Color.primary600.opacity(0.18))
+                        .frame(width: 70, height: 14)
+                        .offset(y: 60)
+                        .opacity(shadowOpacity)
+                        .scaleEffect(x: pinDropped ? 1.0 : 0.5, y: 1)
 
-                // Tuno-pin
-                Image(systemName: "mappin.and.ellipse")
-                    .font(.system(size: 80, weight: .semibold))
-                    .foregroundStyle(.primary600)
-                    .offset(y: pinDropped ? 0 : -120)
-                    .scaleEffect(pinDropped ? 1.0 : 0.85)
+                    Image(systemName: "mappin.and.ellipse")
+                        .font(.system(size: 80, weight: .semibold))
+                        .foregroundStyle(.primary600)
+                        .offset(y: pinDropped ? 0 : -120)
+                        .scaleEffect(pinDropped ? 1.0 : 0.85)
+                }
             }
-            .frame(width: 240, height: 240)
+            .frame(width: 260, height: 260)
             .padding(.bottom, 40)
             .onAppear {
                 withAnimation(.interpolatingSpring(stiffness: 180, damping: 14).delay(0.15)) {
