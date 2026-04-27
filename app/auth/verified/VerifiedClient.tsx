@@ -1,130 +1,99 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
+type Status = "loading" | "ok" | "error";
+
 /**
- * E-post-verifiseringslanding. Etter Supabase-redirect havner brukeren
- * her med tokens i hash-fragmentet. Vi setter web-session og forsøker
- * å åpne native-appen via custom scheme. ALLTID synlig "Åpne Tuno-appen"-
- * knapp som fallback for tilfeller der auto-redirect blokkeres (Chrome
- * iOS er strengere enn Safari på dette).
+ * E-post-verifiseringslanding (PKCE/token_hash-flyt).
+ *
+ * Lenken i Supabase-mailen peker DIREKTE til denne siden:
+ *   `https://www.tuno.no/auth/verified?token_hash=X&type=signup`
+ *
+ * Tre tilfeller:
+ * 1) iOS med Tuno installert + Universal Links aktive: iOS åpner appen
+ *    DIREKTE før denne siden lastes — siden rendres aldri.
+ * 2) iOS uten appen / fra Chrome: vi viser "Verifisert!"-side med
+ *    "Åpne Tuno-appen"-knapp som forsøker custom scheme.
+ * 3) Desktop / Android: vi viser "Verifisert!" + "Logg inn"-knapp.
+ *
+ * Vi kaller `verifyOtp` selv så bruker er logget inn på web umiddelbart.
  */
 export default function VerifiedClient() {
-  const [hash, setHash] = useState<string>("");
+  return (
+    <Suspense fallback={<LoadingShell />}>
+      <VerifiedInner />
+    </Suspense>
+  );
+}
+
+function VerifiedInner() {
+  const searchParams = useSearchParams();
+  const [status, setStatus] = useState<Status>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const [isError, setIsError] = useState<boolean>(false);
-  const [debugInfo, setDebugInfo] = useState<string>("");
+  const [tokenHash, setTokenHash] = useState<string>("");
+  const [otpType, setOtpType] = useState<string>("signup");
 
   useEffect(() => {
-    const currentHash = window.location.hash.slice(1);
-    setHash(currentHash);
-
-    if (!currentHash) {
-      setDebugInfo("(ingen hash i URL)");
-      return;
-    }
-
-    const params = new URLSearchParams(currentHash);
-    const accessToken = params.get("access_token");
-    const refreshToken = params.get("refresh_token");
-    const errorDescription = params.get("error_description");
+    const th = searchParams.get("token_hash");
+    const ty = searchParams.get("type") ?? "signup";
+    const errorDescription = searchParams.get("error_description");
 
     if (errorDescription) {
-      setErrorMessage(decodeURIComponent(errorDescription.replace(/\+/g, " ")));
-      setIsError(true);
+      setErrorMessage(decodeURIComponent(errorDescription));
+      setStatus("error");
       return;
     }
 
-    if (accessToken && refreshToken) {
-      setDebugInfo("verifisert · prøver å åpne app");
-      const supabase = createClient();
-      supabase.auth
-        .setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .catch(() => {
-          /* Stille feil — siden viser ok-state uansett */
-        });
-
-      // Auto-trigger custom scheme på iOS via window.location.
-      // Chrome iOS kan blokkere dette, derfor er knappen i UI også
-      // synlig som backup. Liten delay så brukeren rekker å se UI.
-      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-      if (isIOS) {
-        setTimeout(() => {
-          window.location.href = `no.tuno.app://auth/verified#${currentHash}`;
-        }, 400);
-      }
-    } else {
-      setDebugInfo("(mangler access_token i hash)");
+    if (!th) {
+      // Ingen token — antar bruker landet her direkte (uten lenke)
+      setStatus("ok");
+      return;
     }
-  }, []);
 
-  const appLink = hash
-    ? `no.tuno.app://auth/verified#${hash}`
-    : "no.tuno.app://auth/verified";
+    setTokenHash(th);
+    setOtpType(ty);
 
-  if (isError) {
+    const supabase = createClient();
+    supabase.auth
+      .verifyOtp({ token_hash: th, type: ty as "signup" | "recovery" | "magiclink" | "email_change" | "invite" | "email" })
+      .then(({ error }) => {
+        if (error) {
+          setErrorMessage(error.message);
+          setStatus("error");
+        } else {
+          setStatus("ok");
+        }
+      });
+  }, [searchParams]);
+
+  if (status === "loading") {
+    return <LoadingShell />;
+  }
+
+  if (status === "error") {
     return <ErrorView message={errorMessage} />;
   }
 
+  // Bygg app-link som forsøker å åpne native-appen via custom scheme.
+  // Inkluderer original token_hash så appen kan re-verifisere ved behov.
+  const appLink = tokenHash
+    ? `no.tuno.app://auth/verified?token_hash=${encodeURIComponent(tokenHash)}&type=${encodeURIComponent(otpType)}`
+    : "no.tuno.app://auth/verified";
+
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#ffffff",
-        padding: "0 24px",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-      }}
-    >
-      <div style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
-        <div
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: "50%",
-            backgroundColor: "#46c185",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 24px",
-            boxShadow: "0 4px 24px rgba(70, 193, 133, 0.3)",
-          }}
-        >
-          <svg
-            width="44"
-            height="44"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="#ffffff"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
+    <main style={pageStyle}>
+      <div style={cardStyle}>
+        <div style={iconCircle("#46c185")}>
+          <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="20 6 9 17 4 12" />
           </svg>
         </div>
-        <h1
-          style={{
-            fontSize: 28,
-            fontWeight: 700,
-            color: "#0a0a0a",
-            margin: "0 0 12px",
-          }}
-        >
-          E-posten er bekreftet
-        </h1>
-        <p
-          style={{
-            fontSize: 16,
-            color: "#525252",
-            margin: "0 0 28px",
-            lineHeight: 1.5,
-          }}
-        >
+        <h1 style={titleStyle}>E-posten er bekreftet</h1>
+        <p style={paragraphStyle}>
           Velkommen til Tuno! Klikk knappen under for å fortsette i appen.
         </p>
 
@@ -135,19 +104,29 @@ export default function VerifiedClient() {
         <Link href="/" style={buttonSecondary}>
           Fortsett på nettsiden
         </Link>
+      </div>
+    </main>
+  );
+}
 
-        {debugInfo && (
-          <p
-            style={{
-              fontSize: 11,
-              color: "#a3a3a3",
-              marginTop: 24,
-              fontFamily: "ui-monospace, SFMono-Regular, monospace",
-            }}
-          >
-            {debugInfo}
-          </p>
-        )}
+function LoadingShell() {
+  return (
+    <main style={pageStyle}>
+      <div style={cardStyle}>
+        <div
+          style={{
+            width: 48,
+            height: 48,
+            borderRadius: "50%",
+            border: "3px solid #e5e5e5",
+            borderTopColor: "#46c185",
+            margin: "0 auto 24px",
+            animation: "spin 0.9s linear infinite",
+          }}
+        />
+        <h1 style={titleStyle}>Bekrefter e-posten...</h1>
+        <p style={paragraphStyle}>Dette tar bare et øyeblikk.</p>
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     </main>
   );
@@ -155,50 +134,13 @@ export default function VerifiedClient() {
 
 function ErrorView({ message }: { message: string }) {
   return (
-    <main
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: "#ffffff",
-        padding: "0 24px",
-        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-      }}
-    >
-      <div style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
-        <div
-          style={{
-            width: 96,
-            height: 96,
-            borderRadius: "50%",
-            backgroundColor: "#fef2f2",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            margin: "0 auto 24px",
-          }}
-        >
-          <span style={{ fontSize: 48, color: "#dc2626" }}>!</span>
+    <main style={pageStyle}>
+      <div style={cardStyle}>
+        <div style={iconCircle("#fef2f2")}>
+          <span style={{ fontSize: 48, color: "#dc2626", fontWeight: 700 }}>!</span>
         </div>
-        <h1
-          style={{
-            fontSize: 28,
-            fontWeight: 700,
-            color: "#0a0a0a",
-            margin: "0 0 12px",
-          }}
-        >
-          Lenken har utløpt
-        </h1>
-        <p
-          style={{
-            fontSize: 16,
-            color: "#525252",
-            margin: "0 0 28px",
-            lineHeight: 1.5,
-          }}
-        >
+        <h1 style={titleStyle}>Lenken har utløpt</h1>
+        <p style={paragraphStyle}>
           {message || "Prøv å logge inn på nytt så sender vi en ny lenke."}
         </p>
         <Link href="/login" style={buttonPrimary}>
@@ -208,6 +150,38 @@ function ErrorView({ message }: { message: string }) {
     </main>
   );
 }
+
+// MARK: - Styles
+
+const pageStyle: React.CSSProperties = {
+  minHeight: "100vh",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  backgroundColor: "#ffffff",
+  padding: "0 24px",
+  fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+};
+
+const cardStyle: React.CSSProperties = {
+  maxWidth: 420,
+  width: "100%",
+  textAlign: "center",
+};
+
+const titleStyle: React.CSSProperties = {
+  fontSize: 28,
+  fontWeight: 700,
+  color: "#0a0a0a",
+  margin: "0 0 12px",
+};
+
+const paragraphStyle: React.CSSProperties = {
+  fontSize: 16,
+  color: "#525252",
+  margin: "0 0 28px",
+  lineHeight: 1.5,
+};
 
 const buttonPrimary: React.CSSProperties = {
   display: "block",
@@ -234,3 +208,17 @@ const buttonSecondary: React.CSSProperties = {
   borderRadius: 16,
   textDecoration: "none",
 };
+
+function iconCircle(bg: string): React.CSSProperties {
+  return {
+    width: 96,
+    height: 96,
+    borderRadius: "50%",
+    backgroundColor: bg,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    margin: "0 auto 24px",
+    boxShadow: bg === "#46c185" ? "0 4px 24px rgba(70, 193, 133, 0.3)" : "none",
+  };
+}

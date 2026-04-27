@@ -107,23 +107,53 @@ struct TunoApp: App {
         }
     }
 
-    /// Felles inngang for alle auth-callback-URL-er, både custom scheme
-    /// (`no.tuno.app://auth/...`) og Universal Links (`tuno.no/auth/verified`).
-    /// Sender URL-en gjennom `supabase.auth.session(from:)` så tokens i
-    /// hash-fragmentet logger brukeren inn, og åpner verifiserings-sheetet
-    /// hvis dette var en e-post-bekreftelse.
+    /// Felles inngang for alle auth-callback-URL-er. To moderne flyter
+    /// støttes:
+    ///
+    /// 1. **PKCE/token_hash-flyt** (e-post-bekreftelse via Universal Link):
+    ///    URL: `https://www.tuno.no/auth/verified?token_hash=X&type=signup`
+    ///    Vi kaller `verifyOTP(tokenHash:type:)` for å fullføre verifisering
+    ///    og logge brukeren inn. Lenken peker DIREKTE til vårt domene fra
+    ///    Supabase-mailen (etter at email-templaten er oppdatert), så iOS
+    ///    Universal Links åpner appen direkte uten browser-detour.
+    ///
+    /// 2. **Implicit-flyt** (legacy / Google OAuth via custom scheme):
+    ///    URL: `no.tuno.app://auth/verified#access_token=...&refresh_token=...`
+    ///    Vi kaller `session(from:)` som henter tokens fra hash-fragmentet.
     private func handleAuthURL(_ url: URL) {
-        // Universal Link (https://tuno.no/auth/verified) har path = "/auth/verified".
-        // Custom scheme (no.tuno.app://auth/verified) har host = "auth" og
-        // path = "/verified". Sjekker begge formater + token-typene Supabase
-        // sender i hash for å være sikker på å fange e-post-bekreftelse.
         let urlString = url.absoluteString
         let isVerificationLink = url.path.hasPrefix("/auth/verified")
             || urlString.contains("auth/verified")
+            || urlString.contains("token_hash=")
             || urlString.contains("type=signup")
             || urlString.contains("type=email")
+
+        // Parse query for PKCE-style token_hash (kommer på Universal Link).
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let tokenHash = components?.queryItems?.first(where: { $0.name == "token_hash" })?.value
+        let typeString = components?.queryItems?.first(where: { $0.name == "type" })?.value ?? "signup"
+
         Task {
-            try? await supabase.auth.session(from: url)
+            if let tokenHash, !tokenHash.isEmpty {
+                let otpType: EmailOTPType = {
+                    switch typeString {
+                    case "recovery": return .recovery
+                    case "magiclink": return .magiclink
+                    case "email_change", "emailChange": return .emailChange
+                    case "invite": return .invite
+                    default: return .signup
+                    }
+                }()
+                do {
+                    _ = try await supabase.auth.verifyOTP(tokenHash: tokenHash, type: otpType)
+                } catch {
+                    print("❌ verifyOTP feilet: \(error)")
+                }
+            } else {
+                // Implicit-flyt: tokens i hash-fragmentet
+                try? await supabase.auth.session(from: url)
+            }
+
             if isVerificationLink {
                 await MainActor.run {
                     deepLinkManager.showEmailVerified = true
