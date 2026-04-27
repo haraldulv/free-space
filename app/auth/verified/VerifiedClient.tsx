@@ -8,29 +8,26 @@ import { createClient } from "@/lib/supabase/client";
  * E-post-verifiseringslanding. Brukeren havner her etter å ha klikket
  * lenken i Supabase verifiserings-mailen. Tre tilfeller:
  *
- * 1) iOS-bruker med Tuno-appen installert + Universal Links aktive: iOS
- *    åpner appen før denne siden lastes — siden rendres aldri.
- * 2) iOS-bruker fra tredjeparts-browser (Chrome, Gmail-app osv) der
- *    Universal Links IKKE trigges automatisk: vi prøver custom scheme
- *    `no.tuno.app://auth/verified#hash` etter at siden har vist seg,
- *    og tilbyr knapp som fallback.
+ * 1) iOS-bruker fra Mail.app/Safari + Tuno installert + Universal Links
+ *    aktive: iOS åpner appen før denne siden lastes — siden rendres aldri.
+ * 2) iOS-bruker fra Chrome eller Gmail-app: Chrome blokkerer ofte
+ *    auto-redirect til custom scheme. Vi viser stor "Åpne Tuno-appen"-
+ *    knapp øverst som primær handling.
  * 3) Desktop / Android: ser "Verifisert!" + Logg inn-knapp.
  *
- * Tokens kommer som hash-fragment (#access_token=...). Vi setter en
- * web-sesjon så bruker er logget inn på tuno.no umiddelbart.
+ * Vi setter også Supabase-session fra hash-tokens så bruker er logget
+ * inn på tuno.no (web-fallback hvis appen ikke er installert).
  */
 export default function VerifiedClient() {
-  const [errorMessage, setErrorMessage] = useState<string>("");
   const [hash, setHash] = useState<string>("");
+  const [errorMessage, setErrorMessage] = useState<string>("");
   const [isError, setIsError] = useState<boolean>(false);
 
   useEffect(() => {
     const currentHash = window.location.hash.slice(1);
     setHash(currentHash);
 
-    if (!currentHash) {
-      return;
-    }
+    if (!currentHash) return;
 
     const params = new URLSearchParams(currentHash);
     const accessToken = params.get("access_token");
@@ -48,95 +45,18 @@ export default function VerifiedClient() {
       supabase.auth
         .setSession({ access_token: accessToken, refresh_token: refreshToken })
         .catch(() => {
-          // Stille feil — siden viser ok-state uansett, brukeren kan logge
-          // inn manuelt om sesjonsoppretting feiler.
+          /* Stille feil — siden viser ok-state uansett */
         });
-    }
-
-    // Forsøk å åpne native-appen via custom scheme. Universal Links åpner
-    // appen direkte fra Mail.app/Safari, men IKKE fra Chrome eller in-app
-    // browsere (Gmail-app osv). Custom scheme er fallback som fungerer
-    // overalt SÅ LENGE appen er installert.
-    const isIOS =
-      typeof navigator !== "undefined" &&
-      /iPad|iPhone|iPod/.test(navigator.userAgent);
-    if (isIOS && currentHash) {
-      // Liten forsinkelse så brukeren rekker å se "Verifisert!"-skjermen
-      // før appen åpnes.
-      const timer = setTimeout(() => {
-        window.location.href = `no.tuno.app://auth/verified#${currentHash}`;
-      }, 600);
-      return () => clearTimeout(timer);
     }
   }, []);
 
+  const isIOS =
+    typeof navigator !== "undefined" &&
+    /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const appLink = hash ? `no.tuno.app://auth/verified#${hash}` : null;
+
   if (isError) {
-    return (
-      <main
-        style={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          backgroundColor: "#ffffff",
-          padding: "0 24px",
-          fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-        }}
-      >
-        <div style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
-          <div
-            style={{
-              width: 96,
-              height: 96,
-              borderRadius: "50%",
-              backgroundColor: "#fef2f2",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              margin: "0 auto 24px",
-            }}
-          >
-            <span style={{ fontSize: 48, color: "#dc2626" }}>!</span>
-          </div>
-          <h1
-            style={{
-              fontSize: 28,
-              fontWeight: 700,
-              color: "#0a0a0a",
-              margin: "0 0 12px",
-            }}
-          >
-            Lenken har utløpt
-          </h1>
-          <p
-            style={{
-              fontSize: 16,
-              color: "#525252",
-              margin: "0 0 28px",
-              lineHeight: 1.5,
-            }}
-          >
-            {errorMessage || "Prøv å logge inn på nytt så sender vi en ny lenke."}
-          </p>
-          <Link
-            href="/login"
-            style={{
-              display: "block",
-              width: "100%",
-              padding: "16px 0",
-              backgroundColor: "#46c185",
-              color: "#ffffff",
-              fontWeight: 600,
-              fontSize: 16,
-              borderRadius: 16,
-              textDecoration: "none",
-            }}
-          >
-            Til innlogging
-          </Link>
-        </div>
-      </main>
-    );
+    return <ErrorView message={errorMessage} />;
   }
 
   return (
@@ -196,25 +116,13 @@ export default function VerifiedClient() {
             lineHeight: 1.5,
           }}
         >
-          Velkommen til Tuno! Du er klar til å finne din neste plass eller
-          leie ut din egen.
+          Velkommen til Tuno! Klikk knappen under for å fortsette i appen.
         </p>
 
-        {hash && (
+        {appLink && isIOS && (
           <a
-            href={`no.tuno.app://auth/verified#${hash}`}
-            style={{
-              display: "block",
-              width: "100%",
-              padding: "16px 0",
-              backgroundColor: "#46c185",
-              color: "#ffffff",
-              fontWeight: 600,
-              fontSize: 16,
-              borderRadius: 16,
-              textDecoration: "none",
-              marginBottom: 12,
-            }}
+            href={appLink}
+            style={buttonPrimary}
           >
             Åpne Tuno-appen
           </a>
@@ -222,21 +130,93 @@ export default function VerifiedClient() {
 
         <Link
           href="/"
-          style={{
-            display: "block",
-            width: "100%",
-            padding: "16px 0",
-            backgroundColor: hash ? "#f5f5f5" : "#46c185",
-            color: hash ? "#404040" : "#ffffff",
-            fontWeight: 600,
-            fontSize: 16,
-            borderRadius: 16,
-            textDecoration: "none",
-          }}
+          style={appLink && isIOS ? buttonSecondary : buttonPrimary}
         >
-          {hash ? "Fortsett på nettsiden" : "Kom i gang"}
+          {appLink && isIOS ? "Fortsett på nettsiden" : "Kom i gang"}
         </Link>
       </div>
     </main>
   );
 }
+
+function ErrorView({ message }: { message: string }) {
+  return (
+    <main
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        backgroundColor: "#ffffff",
+        padding: "0 24px",
+        fontFamily: "system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+      }}
+    >
+      <div style={{ maxWidth: 420, width: "100%", textAlign: "center" }}>
+        <div
+          style={{
+            width: 96,
+            height: 96,
+            borderRadius: "50%",
+            backgroundColor: "#fef2f2",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 24px",
+          }}
+        >
+          <span style={{ fontSize: 48, color: "#dc2626" }}>!</span>
+        </div>
+        <h1
+          style={{
+            fontSize: 28,
+            fontWeight: 700,
+            color: "#0a0a0a",
+            margin: "0 0 12px",
+          }}
+        >
+          Lenken har utløpt
+        </h1>
+        <p
+          style={{
+            fontSize: 16,
+            color: "#525252",
+            margin: "0 0 28px",
+            lineHeight: 1.5,
+          }}
+        >
+          {message || "Prøv å logge inn på nytt så sender vi en ny lenke."}
+        </p>
+        <Link href="/login" style={buttonPrimary}>
+          Til innlogging
+        </Link>
+      </div>
+    </main>
+  );
+}
+
+const buttonPrimary: React.CSSProperties = {
+  display: "block",
+  width: "100%",
+  padding: "18px 0",
+  backgroundColor: "#46c185",
+  color: "#ffffff",
+  fontWeight: 600,
+  fontSize: 17,
+  borderRadius: 16,
+  textDecoration: "none",
+  marginBottom: 12,
+  boxShadow: "0 2px 8px rgba(70, 193, 133, 0.25)",
+};
+
+const buttonSecondary: React.CSSProperties = {
+  display: "block",
+  width: "100%",
+  padding: "16px 0",
+  backgroundColor: "#f5f5f5",
+  color: "#404040",
+  fontWeight: 600,
+  fontSize: 16,
+  borderRadius: 16,
+  textDecoration: "none",
+};

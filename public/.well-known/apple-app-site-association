@@ -1,10 +1,13 @@
 {
   "applinks": {
-    "apps": [],
     "details": [
       {
-        "appID": "3VD2DMBJ6M.no.tuno.app",
-        "paths": ["/listings/*", "/auth/verified", "/auth/verified*"]
+        "appIDs": ["3VD2DMBJ6M.no.tuno.app"],
+        "components": [
+          { "/": "/listings/*", "comment": "Annonse-detaljside" },
+          { "/": "/auth/verified", "comment": "E-post-verifisering eksakt" },
+          { "/": "/auth/verified*", "comment": "E-post-verifisering med query/hash" }
+        ]
       }
     ]
   }
