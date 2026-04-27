@@ -9,6 +9,16 @@ final class DeepLinkManager: ObservableObject {
     /// Settes når brukeren klikker en e-post-verifiseringslenke. Trigger
     /// `EmailVerifiedView` som full-screen sheet i `TunoApp.body`.
     @Published var showEmailVerified = false
+
+    /// Status for siste verifiseringsforsøk. EmailVerifiedView viser
+    /// loading mens verifyOTP kjører, suksess når den lykkes, eller
+    /// feilmelding hvis den feiler. Brukeren skal ikke trykke noe.
+    enum VerifyStatus: Equatable {
+        case verifying
+        case success
+        case failed(String)
+    }
+    @Published var verifyStatus: VerifyStatus = .verifying
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -103,6 +113,7 @@ struct TunoApp: App {
             .fullScreenCover(isPresented: $deepLinkManager.showEmailVerified) {
                 EmailVerifiedView()
                     .environmentObject(authManager)
+                    .environmentObject(deepLinkManager)
             }
         }
     }
@@ -134,6 +145,13 @@ struct TunoApp: App {
         let typeString = components?.queryItems?.first(where: { $0.name == "type" })?.value ?? "signup"
 
         Task {
+            if isVerificationLink {
+                await MainActor.run {
+                    deepLinkManager.verifyStatus = .verifying
+                    deepLinkManager.showEmailVerified = true
+                }
+            }
+
             if let tokenHash, !tokenHash.isEmpty {
                 let otpType: EmailOTPType = {
                     switch typeString {
@@ -146,17 +164,22 @@ struct TunoApp: App {
                 }()
                 do {
                     _ = try await supabase.auth.verifyOTP(tokenHash: tokenHash, type: otpType)
+                    await MainActor.run { deepLinkManager.verifyStatus = .success }
                 } catch {
                     print("❌ verifyOTP feilet: \(error)")
+                    await MainActor.run {
+                        deepLinkManager.verifyStatus = .failed(error.localizedDescription)
+                    }
                 }
             } else {
                 // Implicit-flyt: tokens i hash-fragmentet
-                try? await supabase.auth.session(from: url)
-            }
-
-            if isVerificationLink {
-                await MainActor.run {
-                    deepLinkManager.showEmailVerified = true
+                do {
+                    try await supabase.auth.session(from: url)
+                    await MainActor.run { deepLinkManager.verifyStatus = .success }
+                } catch {
+                    await MainActor.run {
+                        deepLinkManager.verifyStatus = .failed(error.localizedDescription)
+                    }
                 }
             }
         }
