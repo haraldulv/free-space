@@ -1327,6 +1327,9 @@
         }
       }
     },
+    "DEBUG · status: %@" : {
+
+    },
     "Del aldri betalings- eller kontaktinfo utenfor appen. Da er du ikke beskyttet." : {
 
     },

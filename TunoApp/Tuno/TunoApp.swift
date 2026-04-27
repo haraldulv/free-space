@@ -185,20 +185,14 @@ struct TunoApp: App {
             }
             .onOpenURL { url in
                 print("🔵 onOpenURL: \(url.absoluteString)")
-                if url.scheme == "no.tuno.app" {
-                    deepLinkManager.handleAuthURL(url)
-                } else if let listingId = extractListingId(from: url) {
-                    deepLinkManager.pendingListingId = listingId
-                }
+                deepLinkManager.lastReceivedURL = url.absoluteString
+                routeIncomingURL(url)
             }
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
                 guard let url = activity.webpageURL else { return }
                 print("🌐 onContinueUserActivity: \(url.absoluteString)")
-                if url.path.hasPrefix("/auth/verified") {
-                    deepLinkManager.handleAuthURL(url)
-                } else if let listingId = extractListingId(from: url) {
-                    deepLinkManager.pendingListingId = listingId
-                }
+                deepLinkManager.lastReceivedURL = url.absoluteString
+                routeIncomingURL(url)
             }
             .fullScreenCover(isPresented: $deepLinkManager.showEmailVerified) {
                 EmailVerifiedView()
@@ -244,5 +238,22 @@ struct TunoApp: App {
         guard let listingsIndex = components.firstIndex(of: "listings"),
               listingsIndex + 1 < components.count else { return nil }
         return components[listingsIndex + 1]
+    }
+
+    /// Felles routing for alle innkommende URL-er, uavhengig av scheme.
+    /// onOpenURL trigget tidligere kun for custom scheme — men iOS sender
+    /// HTTPS Universal Links via onOpenURL også når appen er warm-launched
+    /// fra en deep link. Vi sjekker path først, ikke scheme.
+    private func routeIncomingURL(_ url: URL) {
+        let urlString = url.absoluteString
+        let isAuthLink = url.path.hasPrefix("/auth/")
+            || url.host == "auth"
+            || urlString.contains("token_hash=")
+            || urlString.contains("auth/verified")
+        if isAuthLink {
+            deepLinkManager.handleAuthURL(url)
+        } else if let listingId = extractListingId(from: url) {
+            deepLinkManager.pendingListingId = listingId
+        }
     }
 }
