@@ -24,7 +24,19 @@ final class HostOnboardingViewModel: ObservableObject {
     @Published var firstName: String = ""
     @Published var lastName: String = ""
     @Published var personnummer: String = ""
-    @Published var phone: String = ""
+    /// Telefon er splittet i landskode (dropdown) og nasjonalt nummer.
+    /// Vi sender `phoneCountryCode + phoneNumber` til Stripe via `fullPhone`.
+    @Published var phoneCountryCode: String = "+47"
+    @Published var phoneNumber: String = ""
+
+    var fullPhone: String { phoneCountryCode + phoneNumber }
+
+    /// Live-validert fødselsdato fra personnummer. Vises som hint under
+    /// feltet når brukeren har skrevet 11 gyldige siffer (MOD-11 OK + reell
+    /// dato). Brukes også som enabled-sjekk på Neste-knappen.
+    var personnummerDOB: PersonnummerHelper.DateOfBirth? {
+        PersonnummerHelper.dateOfBirth(from: personnummer)
+    }
 
     // Step 3 — Address
     @Published var addressLine1: String = ""
@@ -113,7 +125,7 @@ final class HostOnboardingViewModel: ObservableObject {
         if dob == nil {
             fieldErrors["id_number"] = "Ugyldig personnummer"
         }
-        if phone.trimmingCharacters(in: .whitespaces).count < 8 {
+        if phoneNumber.filter(\.isNumber).count < 8 {
             fieldErrors["phone"] = "Gyldig telefonnummer er påkrevd"
         }
         guard fieldErrors.isEmpty, let dob else { return }
@@ -127,7 +139,7 @@ final class HostOnboardingViewModel: ObservableObject {
                 year: dob.year,
             ),
             id_number: pnr,
-            phone: phone,
+            phone: fullPhone,
             email: nil,
             address: nil,
         )
@@ -263,5 +275,31 @@ final class HostOnboardingViewModel: ObservableObject {
 
     var isOnboardingComplete: Bool {
         chargesEnabled && payoutsEnabled && requirements.isEmpty
+    }
+
+    /// Sjekker om obligatoriske felter på gjeldende steg er fylt ut.
+    /// WizardNavBar bruker denne til å disable Neste-knappen så brukeren
+    /// ikke kan gå videre med ugyldige data.
+    func canAdvance(for step: HostOnboardingStep) -> Bool {
+        switch step {
+        case .welcome:
+            return true
+        case .personal:
+            let firstOK = !firstName.trimmingCharacters(in: .whitespaces).isEmpty
+            let lastOK = !lastName.trimmingCharacters(in: .whitespaces).isEmpty
+            let pnrOK = personnummerDOB != nil
+            let phoneOK = phoneNumber.filter(\.isNumber).count >= 8
+            return firstOK && lastOK && pnrOK && phoneOK
+        case .address:
+            let line1OK = !addressLine1.trimmingCharacters(in: .whitespaces).isEmpty
+            let postalOK = postalCode.filter(\.isNumber).count == 4
+            let cityOK = !city.trimmingCharacters(in: .whitespaces).isEmpty
+            return line1OK && postalOK && cityOK
+        case .bank:
+            return previewIBAN != nil
+                && accountHolderName.trimmingCharacters(in: .whitespaces).count >= 2
+        case .status:
+            return true
+        }
     }
 }

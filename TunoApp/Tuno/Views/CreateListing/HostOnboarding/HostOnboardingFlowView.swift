@@ -6,8 +6,14 @@ import UIKit
 /// kategori-aktige valg og samme sirkulære keyboard-knapp via `safeAreaInset`.
 struct HostOnboardingFlowView: View {
     @EnvironmentObject var authManager: AuthManager
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var viewModel = HostOnboardingViewModel()
     @State private var keyboardVisible = false
+    @State private var showCancelAlert = false
+    /// Felles focus-state på tvers av alle steg. Vi bruker en enum så vi
+    /// kan ScrollViewReader.scrollTo(focus) for å sentrere felter over
+    /// tastaturet, og bruke .submitLabel(.next) til å hoppe mellom dem.
+    @FocusState private var focusedField: OnboardingField?
 
     let onComplete: () -> Void
 
@@ -24,15 +30,41 @@ struct HostOnboardingFlowView: View {
         }
         .navigationTitle("Bli utleier")
         .navigationBarTitleDisplayMode(.inline)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                Button(action: { showCancelAlert = true }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral700)
+                }
+                .accessibilityLabel("Avbryt")
+            }
         }
+        .alert("Avbryt utleier-oppsett?", isPresented: $showCancelAlert, actions: {
+            Button("Forkast", role: .destructive) { dismiss() }
+            Button("Fortsett", role: .cancel) {}
+        }, message: {
+            Text("Du må fullføre oppsettet før du kan opprette annonser.")
+        })
         .safeAreaInset(edge: .bottom) {
-            if keyboardVisible {
-                keyboardDoneBar.transition(.move(edge: .bottom).combined(with: .opacity))
-            } else {
-                navBar.transition(.move(edge: .bottom).combined(with: .opacity))
+            navBar.transition(.move(edge: .bottom).combined(with: .opacity))
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Button(action: focusPrevious) {
+                    Image(systemName: "chevron.up")
+                }
+                .disabled(focusedField == nil || focusedField?.previous(in: viewModel.step) == nil)
+                Button(action: focusNext) {
+                    Image(systemName: "chevron.down")
+                }
+                .disabled(focusedField == nil || focusedField?.next(in: viewModel.step) == nil)
+                Spacer()
+                Button("Ferdig") {
+                    focusedField = nil
+                }
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.primary600)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
@@ -52,11 +84,11 @@ struct HostOnboardingFlowView: View {
         case .welcome:
             HostOnboardingWelcomeStep()
         case .personal:
-            PersonalStep(viewModel: viewModel)
+            PersonalStep(viewModel: viewModel, focusedField: $focusedField)
         case .address:
-            HostOnboardingAddressStep(viewModel: viewModel)
+            HostOnboardingAddressStep(viewModel: viewModel, focusedField: $focusedField)
         case .bank:
-            BankStep(viewModel: viewModel)
+            BankStep(viewModel: viewModel, focusedField: $focusedField)
         case .status:
             StatusStep(viewModel: viewModel, onComplete: onComplete)
         }
@@ -79,39 +111,12 @@ struct HostOnboardingFlowView: View {
         }
     }
 
-    /// Sirkulær "skjul tastatur"-knapp. Samme mønster som i `CreateListingView`
-    /// — `.toolbar(.keyboard)` rendrer ikke pålitelig på numberPad.
-    private var keyboardDoneBar: some View {
-        HStack {
-            Spacer()
-            Button {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            } label: {
-                Image(systemName: "keyboard.chevron.compact.down")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(Color.primary600)
-                    .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
-            }
-            .accessibilityLabel("Skjul tastatur")
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(
-            Color(UIColor.systemBackground)
-                .opacity(0.95)
-                .ignoresSafeArea()
-        )
-    }
-
     private var navBar: some View {
         WizardNavBar(
             canGoBack: canGoBack,
             nextLabel: nextLabel,
             nextIcon: nextIcon,
-            nextEnabled: !viewModel.isSubmitting,
+            nextEnabled: viewModel.canAdvance(for: viewModel.step) && !viewModel.isSubmitting,
             nextLoading: viewModel.isSubmitting,
             onBack: handleBack,
             onNext: handleNext
@@ -122,7 +127,7 @@ struct HostOnboardingFlowView: View {
         switch viewModel.step {
         case .welcome: return false
         case .personal, .address, .bank: return true
-        case .status: return false   // Status-skjermen har egen "Lukk"/"Lag annonse"-knapp
+        case .status: return false
         }
     }
 
@@ -151,6 +156,7 @@ struct HostOnboardingFlowView: View {
     }
 
     private func handleBack() {
+        focusedField = nil
         switch viewModel.step {
         case .personal: viewModel.step = .welcome
         case .address: viewModel.step = .personal
@@ -160,6 +166,7 @@ struct HostOnboardingFlowView: View {
     }
 
     private func handleNext() {
+        focusedField = nil
         switch viewModel.step {
         case .welcome: Task { await viewModel.acceptTOSAndContinue() }
         case .personal: Task { await viewModel.submitPersonal() }
@@ -173,10 +180,80 @@ struct HostOnboardingFlowView: View {
                     onComplete()
                 }
             case .timedOut:
-                onComplete()  // Sheet lukkes, push-varsel tar over
+                onComplete()
             case .idle, .polling:
                 break
             }
+        }
+    }
+
+    private func focusNext() {
+        guard let current = focusedField,
+              let next = current.next(in: viewModel.step) else { return }
+        focusedField = next
+    }
+
+    private func focusPrevious() {
+        guard let current = focusedField,
+              let prev = current.previous(in: viewModel.step) else { return }
+        focusedField = prev
+    }
+}
+
+// MARK: - Focus state
+
+/// Identifiserer hvilket felt som er fokusert på tvers av stegene. Brukes
+/// både til keyboard-navigasjon (chevron-knapper) og auto-scroll.
+enum OnboardingField: Hashable {
+    case firstName, lastName, personnummer, phoneNumber
+    case addressLine1, postalCode, city
+    case bankAccount, accountHolder
+
+    func next(in step: HostOnboardingStep) -> OnboardingField? {
+        switch step {
+        case .personal:
+            switch self {
+            case .firstName: return .lastName
+            case .lastName: return .personnummer
+            case .personnummer: return .phoneNumber
+            default: return nil
+            }
+        case .address:
+            switch self {
+            case .addressLine1: return .postalCode
+            case .postalCode: return .city
+            default: return nil
+            }
+        case .bank:
+            switch self {
+            case .bankAccount: return .accountHolder
+            default: return nil
+            }
+        default: return nil
+        }
+    }
+
+    func previous(in step: HostOnboardingStep) -> OnboardingField? {
+        switch step {
+        case .personal:
+            switch self {
+            case .lastName: return .firstName
+            case .personnummer: return .lastName
+            case .phoneNumber: return .personnummer
+            default: return nil
+            }
+        case .address:
+            switch self {
+            case .postalCode: return .addressLine1
+            case .city: return .postalCode
+            default: return nil
+            }
+        case .bank:
+            switch self {
+            case .accountHolder: return .bankAccount
+            default: return nil
+            }
+        default: return nil
         }
     }
 }
@@ -272,43 +349,90 @@ private struct BulletCard: View {
 
 private struct PersonalStep: View {
     @ObservedObject var viewModel: HostOnboardingViewModel
+    var focusedField: FocusState<OnboardingField?>.Binding
 
     var body: some View {
-        WizardScreen(
-            title: "Hvem er du?",
-            subtitle: "Stripe trenger dette for identitetsverifisering. Fødselsdato utleder vi automatisk fra personnummeret."
-        ) {
-            VStack(spacing: 16) {
-                OnboardingTextField(
-                    label: "Fornavn",
-                    placeholder: "Kari",
-                    text: $viewModel.firstName,
-                    error: viewModel.fieldErrors["first_name"]
-                )
-                OnboardingTextField(
-                    label: "Etternavn",
-                    placeholder: "Nordmann",
-                    text: $viewModel.lastName,
-                    error: viewModel.fieldErrors["last_name"]
-                )
-                OnboardingTextField(
-                    label: "Personnummer",
-                    placeholder: "11 siffer",
-                    text: $viewModel.personnummer,
-                    keyboard: .numberPad,
-                    autocapitalization: .never,
-                    error: viewModel.fieldErrors["id_number"]
-                )
-                OnboardingTextField(
-                    label: "Telefonnummer",
-                    placeholder: "+47 123 45 678",
-                    text: $viewModel.phone,
-                    keyboard: .phonePad,
-                    autocapitalization: .never,
-                    error: viewModel.fieldErrors["phone"]
-                )
+        ScrollViewReader { proxy in
+            WizardScreen(
+                title: "Hvem er du?",
+                subtitle: "Stripe trenger dette for identitetsverifisering. Fødselsdato utleder vi automatisk fra personnummeret."
+            ) {
+                VStack(spacing: 16) {
+                    OnboardingTextField(
+                        label: "Fornavn",
+                        placeholder: "Kari",
+                        text: $viewModel.firstName,
+                        error: viewModel.fieldErrors["first_name"],
+                        submitLabel: .next
+                    )
+                    .focused(focusedField, equals: .firstName)
+                    .id(OnboardingField.firstName)
+                    .onSubmit { focusedField.wrappedValue = .lastName }
+
+                    OnboardingTextField(
+                        label: "Etternavn",
+                        placeholder: "Nordmann",
+                        text: $viewModel.lastName,
+                        error: viewModel.fieldErrors["last_name"],
+                        submitLabel: .next
+                    )
+                    .focused(focusedField, equals: .lastName)
+                    .id(OnboardingField.lastName)
+                    .onSubmit { focusedField.wrappedValue = .personnummer }
+
+                    OnboardingTextField(
+                        label: "Personnummer",
+                        placeholder: "11 siffer",
+                        text: $viewModel.personnummer,
+                        keyboard: .numberPad,
+                        autocapitalization: .never,
+                        error: viewModel.fieldErrors["id_number"],
+                        helperText: personnummerHelper,
+                        helperIsSuccess: viewModel.personnummerDOB != nil,
+                        submitLabel: .next
+                    )
+                    .focused(focusedField, equals: .personnummer)
+                    .id(OnboardingField.personnummer)
+                    .onSubmit { focusedField.wrappedValue = .phoneNumber }
+                    .onChange(of: viewModel.personnummer) { _, newValue in
+                        let digits = newValue.filter(\.isNumber)
+                        if digits.count > 11 {
+                            viewModel.personnummer = String(digits.prefix(11))
+                        } else if digits != newValue {
+                            viewModel.personnummer = digits
+                        }
+                    }
+
+                    PhoneInputField(
+                        countryCode: $viewModel.phoneCountryCode,
+                        number: $viewModel.phoneNumber,
+                        error: viewModel.fieldErrors["phone"],
+                        focused: focusedField.projectedValue,
+                        focusValue: .phoneNumber
+                    )
+                    .id(OnboardingField.phoneNumber)
+                }
+                .padding(.bottom, 320) // Plass over keyboard for siste felt
+            }
+            .onChange(of: focusedField.wrappedValue) { _, new in
+                guard let new else { return }
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo(new, anchor: .center)
+                }
             }
         }
+    }
+
+    private var personnummerHelper: String? {
+        let digits = viewModel.personnummer.filter(\.isNumber)
+        if digits.isEmpty { return nil }
+        if let dob = viewModel.personnummerDOB {
+            return "Fødselsdato: \(String(format: "%02d.%02d.%d", dob.day, dob.month, dob.year))"
+        }
+        if digits.count < 11 {
+            return "\(digits.count)/11 siffer"
+        }
+        return nil
     }
 }
 
@@ -316,42 +440,74 @@ private struct PersonalStep: View {
 
 private struct HostOnboardingAddressStep: View {
     @ObservedObject var viewModel: HostOnboardingViewModel
+    var focusedField: FocusState<OnboardingField?>.Binding
 
     var body: some View {
-        WizardScreen(
-            title: "Hva er hjemmeadressen din?",
-            subtitle: "Brukes kun til identitetsverifisering, vises aldri offentlig."
-        ) {
-            VStack(spacing: 16) {
-                OnboardingTextField(
-                    label: "Gateadresse",
-                    placeholder: "Storgata 1",
-                    text: $viewModel.addressLine1,
-                    error: viewModel.fieldErrors["line1"]
-                )
-                OnboardingTextField(
-                    label: "Postnummer",
-                    placeholder: "0155",
-                    text: $viewModel.postalCode,
-                    keyboard: .numberPad,
-                    autocapitalization: .never,
-                    error: viewModel.fieldErrors["postal_code"]
-                )
-                OnboardingTextField(
-                    label: "Poststed",
-                    placeholder: "Oslo",
-                    text: $viewModel.city,
-                    error: viewModel.fieldErrors["city"]
-                )
+        ScrollViewReader { proxy in
+            WizardScreen(
+                title: "Hva er hjemmeadressen din?",
+                subtitle: "Brukes kun til identitetsverifisering, vises aldri offentlig."
+            ) {
+                VStack(spacing: 16) {
+                    OnboardingTextField(
+                        label: "Gateadresse",
+                        placeholder: "Storgata 1",
+                        text: $viewModel.addressLine1,
+                        error: viewModel.fieldErrors["line1"],
+                        submitLabel: .next
+                    )
+                    .focused(focusedField, equals: .addressLine1)
+                    .id(OnboardingField.addressLine1)
+                    .onSubmit { focusedField.wrappedValue = .postalCode }
 
-                HStack(spacing: 6) {
-                    Image(systemName: "flag.fill")
-                        .foregroundStyle(.primary600)
-                    Text("Norge")
-                        .foregroundStyle(.neutral600)
+                    OnboardingTextField(
+                        label: "Postnummer",
+                        placeholder: "0155",
+                        text: $viewModel.postalCode,
+                        keyboard: .numberPad,
+                        autocapitalization: .never,
+                        error: viewModel.fieldErrors["postal_code"],
+                        submitLabel: .next
+                    )
+                    .focused(focusedField, equals: .postalCode)
+                    .id(OnboardingField.postalCode)
+                    .onSubmit { focusedField.wrappedValue = .city }
+                    .onChange(of: viewModel.postalCode) { _, newValue in
+                        let digits = newValue.filter(\.isNumber)
+                        if digits.count > 4 {
+                            viewModel.postalCode = String(digits.prefix(4))
+                        } else if digits != newValue {
+                            viewModel.postalCode = digits
+                        }
+                    }
+
+                    OnboardingTextField(
+                        label: "Poststed",
+                        placeholder: "Oslo",
+                        text: $viewModel.city,
+                        error: viewModel.fieldErrors["city"],
+                        submitLabel: .done
+                    )
+                    .focused(focusedField, equals: .city)
+                    .id(OnboardingField.city)
+                    .onSubmit { focusedField.wrappedValue = nil }
+
+                    HStack(spacing: 6) {
+                        Image(systemName: "flag.fill")
+                            .foregroundStyle(.primary600)
+                        Text("Norge")
+                            .foregroundStyle(.neutral600)
+                    }
+                    .font(.system(size: 14, weight: .medium))
+                    .padding(.top, 4)
                 }
-                .font(.system(size: 14, weight: .medium))
-                .padding(.top, 4)
+                .padding(.bottom, 280)
+            }
+            .onChange(of: focusedField.wrappedValue) { _, new in
+                guard let new else { return }
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo(new, anchor: .center)
+                }
             }
         }
     }
@@ -361,49 +517,70 @@ private struct HostOnboardingAddressStep: View {
 
 private struct BankStep: View {
     @ObservedObject var viewModel: HostOnboardingViewModel
+    var focusedField: FocusState<OnboardingField?>.Binding
 
     var body: some View {
-        WizardScreen(
-            title: "Hvor skal vi sende pengene?",
-            subtitle: "Skriv det norske kontonummeret slik du ser det i nettbanken din. Vi konverterer det automatisk til IBAN-format."
-        ) {
-            VStack(spacing: 16) {
-                OnboardingTextField(
-                    label: "Kontonummer",
-                    placeholder: "11 siffer",
-                    text: $viewModel.bankAccount,
-                    keyboard: .numberPad,
-                    autocapitalization: .never,
-                    error: viewModel.fieldErrors["bank_account"]
-                )
-
-                if let preview = viewModel.previewIBAN {
-                    HStack(spacing: 8) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .foregroundStyle(.primary600)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Vi sender")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.neutral500)
-                            Text(preview)
-                                .font(.system(size: 14, weight: .semibold, design: .monospaced))
-                                .foregroundStyle(.neutral900)
+        ScrollViewReader { proxy in
+            WizardScreen(
+                title: "Hvor skal vi sende pengene?",
+                subtitle: "Skriv det norske kontonummeret slik du ser det i nettbanken din. Vi konverterer det automatisk til IBAN-format."
+            ) {
+                VStack(spacing: 16) {
+                    OnboardingTextField(
+                        label: "Kontonummer",
+                        placeholder: "11 siffer",
+                        text: $viewModel.bankAccount,
+                        keyboard: .numberPad,
+                        autocapitalization: .never,
+                        error: viewModel.fieldErrors["bank_account"],
+                        helperText: bankAccountHelper,
+                        helperIsSuccess: viewModel.previewIBAN != nil,
+                        submitLabel: .next
+                    )
+                    .focused(focusedField, equals: .bankAccount)
+                    .id(OnboardingField.bankAccount)
+                    .onSubmit { focusedField.wrappedValue = .accountHolder }
+                    .onChange(of: viewModel.bankAccount) { _, newValue in
+                        let digits = newValue.filter(\.isNumber)
+                        if digits.count > 11 {
+                            viewModel.bankAccount = String(digits.prefix(11))
+                        } else if digits != newValue {
+                            viewModel.bankAccount = digits
                         }
-                        Spacer()
                     }
-                    .padding(12)
-                    .background(Color.primary50)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
 
-                OnboardingTextField(
-                    label: "Kontoeier",
-                    placeholder: "Navn på kontoen",
-                    text: $viewModel.accountHolderName,
-                    error: viewModel.fieldErrors["account_holder_name"]
-                )
+                    OnboardingTextField(
+                        label: "Kontoeier",
+                        placeholder: "Navn på kontoen",
+                        text: $viewModel.accountHolderName,
+                        error: viewModel.fieldErrors["account_holder_name"],
+                        submitLabel: .done
+                    )
+                    .focused(focusedField, equals: .accountHolder)
+                    .id(OnboardingField.accountHolder)
+                    .onSubmit { focusedField.wrappedValue = nil }
+                }
+                .padding(.bottom, 280)
+            }
+            .onChange(of: focusedField.wrappedValue) { _, new in
+                guard let new else { return }
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo(new, anchor: .center)
+                }
             }
         }
+    }
+
+    private var bankAccountHelper: String? {
+        let digits = viewModel.bankAccount.filter(\.isNumber)
+        if digits.isEmpty { return nil }
+        if let preview = viewModel.previewIBAN {
+            return "Sendes som \(preview)"
+        }
+        if digits.count < 11 {
+            return "\(digits.count)/11 siffer"
+        }
+        return nil
     }
 }
 
@@ -562,11 +739,110 @@ private struct StatusStep: View {
     }
 }
 
+// MARK: - Phone input with country code
+
+private struct PhoneInputField: View {
+    @Binding var countryCode: String
+    @Binding var number: String
+    var error: String?
+    var focused: FocusState<OnboardingField?>.Binding
+    var focusValue: OnboardingField
+
+    private static let countries: [(name: String, code: String, flag: String)] = [
+        ("Norge", "+47", "🇳🇴"),
+        ("Sverige", "+46", "🇸🇪"),
+        ("Danmark", "+45", "🇩🇰"),
+        ("Finland", "+358", "🇫🇮"),
+        ("Island", "+354", "🇮🇸"),
+        ("Tyskland", "+49", "🇩🇪"),
+        ("Polen", "+48", "🇵🇱"),
+        ("Nederland", "+31", "🇳🇱"),
+        ("Storbritannia", "+44", "🇬🇧"),
+        ("Frankrike", "+33", "🇫🇷"),
+        ("Spania", "+34", "🇪🇸"),
+        ("Italia", "+39", "🇮🇹"),
+        ("USA", "+1", "🇺🇸"),
+    ]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Telefonnummer")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral500)
+                .textCase(.uppercase)
+
+            HStack(spacing: 8) {
+                Menu {
+                    ForEach(Self.countries, id: \.code) { c in
+                        Button {
+                            countryCode = c.code
+                        } label: {
+                            HStack {
+                                Text("\(c.flag)  \(c.name)")
+                                Spacer()
+                                Text(c.code).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text(flag(for: countryCode))
+                            .font(.system(size: 18))
+                        Text(countryCode)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.neutral900)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.neutral500)
+                    }
+                    .padding(.horizontal, 12)
+                    .frame(height: 52)
+                    .background(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.neutral200, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                }
+
+                TextField("123 45 678", text: $number)
+                    .focused(focused, equals: focusValue)
+                    .keyboardType(.phonePad)
+                    .textContentType(.telephoneNumber)
+                    .submitLabel(.done)
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(.neutral900)
+                    .padding(.horizontal, 16)
+                    .frame(height: 52)
+                    .background(Color.white)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(error != nil ? Color.red : (focused.wrappedValue == focusValue ? Color.primary600 : Color.neutral200), lineWidth: focused.wrappedValue == focusValue || error != nil ? 2 : 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+
+            if let error {
+                HStack(spacing: 4) {
+                    Image(systemName: "exclamationmark.circle.fill")
+                        .font(.system(size: 11))
+                    Text(error)
+                        .font(.system(size: 12, weight: .medium))
+                }
+                .foregroundStyle(.red)
+            }
+        }
+    }
+
+    private func flag(for code: String) -> String {
+        Self.countries.first(where: { $0.code == code })?.flag ?? "🌐"
+    }
+}
+
 // MARK: - Shared input
 
-/// Stort tekst-felt for onboarding-flowen. Speiler wizard-stilen:
-/// generøs padding, fokus-glow med grønn ramme, label over og evt.
-/// rød feilmelding under.
+/// Stort tekst-felt for onboarding-flowen. Live-validert helperText kan
+/// vises under feltet (grønn ved success, grå ellers).
 private struct OnboardingTextField: View {
     let label: String
     let placeholder: String
@@ -574,6 +850,9 @@ private struct OnboardingTextField: View {
     var keyboard: UIKeyboardType = .default
     var autocapitalization: TextInputAutocapitalization = .words
     var error: String?
+    var helperText: String? = nil
+    var helperIsSuccess: Bool = false
+    var submitLabel: SubmitLabel = .return
     @FocusState private var isFocused: Bool
 
     var body: some View {
@@ -588,6 +867,7 @@ private struct OnboardingTextField: View {
                 .keyboardType(keyboard)
                 .textInputAutocapitalization(autocapitalization)
                 .autocorrectionDisabled()
+                .submitLabel(submitLabel)
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(.neutral900)
                 .padding(.horizontal, 16)
@@ -608,6 +888,17 @@ private struct OnboardingTextField: View {
                         .font(.system(size: 12, weight: .medium))
                 }
                 .foregroundStyle(.red)
+            } else if let helperText {
+                HStack(spacing: 4) {
+                    if helperIsSuccess {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.primary600)
+                    }
+                    Text(helperText)
+                        .font(.system(size: 12))
+                        .foregroundStyle(helperIsSuccess ? .primary700 : .neutral500)
+                }
             }
         }
     }
