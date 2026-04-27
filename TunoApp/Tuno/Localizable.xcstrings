@@ -447,6 +447,7 @@
       }
     },
     "•" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1363,7 +1364,13 @@
     "Det tar noen minutter. Vi guider deg steg for steg, og du kan endre alt senere." : {
 
     },
+    "Dette gjenstår" : {
+
+    },
     "Dette stedet byr på" : {
+
+    },
+    "Dette tar vanligvis noen sekunder." : {
 
     },
     "Dette vises til gjester som trykker på profilen din. Hold det kort og vennlig." : {
@@ -1447,6 +1454,9 @@
 
     },
     "Dra og slipp for å endre rekkefølge. Første bilde er forsidebildet." : {
+
+    },
+    "Du er godkjent! 🎉" : {
 
     },
     "Du får utbetalt din andel etter oppholdet (minus Tunos servicegebyr)." : {
@@ -1618,6 +1628,9 @@
           }
         }
       }
+    },
+    "E-posten er bekreftet" : {
+
     },
     "Egendefinert navn" : {
       "extractionState" : "manual",
@@ -3415,6 +3428,9 @@
     "Klar til å bli utleier" : {
 
     },
+    "Klar til å lage din første annonse. Utbetalinger skjer automatisk etter hvert opphold." : {
+
+    },
     "Klar til å ta imot bookinger!" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3433,6 +3449,9 @@
       }
     },
     "Klikk for å endre. Maks 5 MB." : {
+
+    },
+    "Kom i gang" : {
 
     },
     "Kom i gang med Tuno" : {
@@ -6268,6 +6287,9 @@
         }
       }
     },
+    "Stripe trenger litt mer tid" : {
+
+    },
     "Strøm (tilkobling)" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6894,6 +6916,7 @@
       }
     },
     "Ved å fortsette godtar du [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer for annonser](https://tuno.no/retningslinjer). Tuno bruker Stripe som betalingsleverandør." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6902,6 +6925,9 @@
           }
         }
       }
+    },
+    "Ved å fortsette godtar du [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer](https://tuno.no/retningslinjer). Tuno bruker Stripe som betalingsleverandør." : {
+
     },
     "Velg alle" : {
 
@@ -7032,6 +7058,9 @@
         }
       }
     },
+    "Velkommen til Tuno! Du er klar til å finne din neste plass eller leie ut din egen." : {
+
+    },
     "Velkomstmelding for denne plassen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7122,6 +7151,15 @@
           }
         }
       }
+    },
+    "Vi sender" : {
+
+    },
+    "Vi sender deg et varsel så snart kontoen din er godkjent. Det tar vanligvis under en time." : {
+
+    },
+    "Vi sjekker med Stripe…" : {
+
     },
     "Vi trenger litt informasjon for å kunne betale ut leieinntektene dine. Alt skjer her i appen." : {
       "extractionState" : "manual",

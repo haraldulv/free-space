@@ -96,6 +96,17 @@ final class AuthManager: ObservableObject {
                 redirectTo: URL(string: "https://tuno.no/auth/verified")
             )
 
+            // Supabase returnerer ikke en eksplisitt feil hvis e-posten
+            // allerede er registrert (av sikkerhetsårsaker — for å unngå
+            // email enumeration). I stedet kommer en bruker tilbake med
+            // tom `identities`-array. Vi sjekker på det og forteller
+            // brukeren det rette i stedet for å la dem vente på en mail
+            // som aldri kommer.
+            if result.user.identities?.isEmpty ?? true {
+                self.error = "Det finnes allerede en konto med denne e-posten. Prøv å logge inn."
+                return false
+            }
+
             // Profile insert may fail if email verification is required (RLS)
             // — that's OK, profile will be created on first sign-in
             let nowIso = ISO8601DateFormatter().string(from: Date())
