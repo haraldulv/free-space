@@ -18,6 +18,7 @@
 		1444FFC1C4196A4874B30662 /* StripePaymentsUI in Frameworks */ = {isa = PBXBuildFile; productRef = E4D15CE7DFF6030221CC42B9 /* StripePaymentsUI */; };
 		1A1B9BC09172D4EBECCDB2C3 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE71C1EE64D63048F5BD2F5 /* PushNotificationManager.swift */; };
 		1C32E4CA70F86F9BAF6C8EA2 /* DescriptionStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D08232C248CE64924B19723 /* DescriptionStep.swift */; };
+		1D314A0646D1BBDD98D88023 /* Globe.json in Resources */ = {isa = PBXBuildFile; fileRef = CB03B6FF2B6DA8FCAC15788C /* Globe.json */; };
 		23227ACC572BB0ECF18932ED /* ny-annonse.json in Resources */ = {isa = PBXBuildFile; fileRef = ED8BDCBFB9D65C5B686E088E /* ny-annonse.json */; };
 		239CA481C3CC9C22AD9D3096 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8372F9628ACCC2AB21993B03 /* SettingsView.swift */; };
 		23E22E74F79A0D6B738FFD7F /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF2C4D557CBB8DCF564CD2A /* ChatService.swift */; };
@@ -205,6 +206,7 @@
 		BD05EFAAFF75CA5314B3B4EE /* SpotExtrasContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotExtrasContent.swift; sourceTree = "<group>"; };
 		BE401FA37FDD4B606814F30C /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
+		CB03B6FF2B6DA8FCAC15788C /* Globe.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Globe.json; sourceTree = "<group>"; };
 		CE00FBD7C2654A066869B1E1 /* AmenitiesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmenitiesStep.swift; sourceTree = "<group>"; };
 		CE37F2B39F267A7C3F849A4C /* WizardTooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WizardTooltip.swift; sourceTree = "<group>"; };
 		CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IBANGenerator.swift; sourceTree = "<group>"; };
@@ -311,6 +313,7 @@
 			isa = PBXGroup;
 			children = (
 				425E4953E02A6C131CFEB198 /* empty-spots.json */,
+				CB03B6FF2B6DA8FCAC15788C /* Globe.json */,
 				ED8BDCBFB9D65C5B686E088E /* ny-annonse.json */,
 				9BCA07B748FCC5E1497CD115 /* progress-pin.json */,
 				147F3163867D581B11ED7A6D /* success-confetti.json */,
@@ -612,6 +615,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				249014FE9C51150340A11E57 /* Assets.xcassets in Resources */,
+				1D314A0646D1BBDD98D88023 /* Globe.json in Resources */,
 				2C4D3EB18F8321977CD47D5C /* Localizable.xcstrings in Resources */,
 				87D3139C0104F4350A1AAC1B /* empty-spots.json in Resources */,
 				23227ACC572BB0ECF18932ED /* ny-annonse.json in Resources */,
@@ -768,7 +772,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 94;
+				CURRENT_PROJECT_VERSION = 95;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -868,7 +872,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 94;
+				CURRENT_PROJECT_VERSION = 95;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
