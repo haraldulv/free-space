@@ -26,8 +26,8 @@ struct SearchView: View {
     private let initialQuery: String
     private let initialCheckIn: Date?
     private let initialCheckOut: Date?
-    private let initialInstantOnly: Bool
-    private let initialVehicle: VehicleType
+    private let initialBookingPref: BookingPreference
+    private let initialVehicles: Set<VehicleType>
     private let initialCategory: ListingCategory?
     private let initialPlace: PlacePrediction?
     private let useMyLocationOnAppear: Bool
@@ -36,8 +36,8 @@ struct SearchView: View {
         initialQuery: String = "",
         initialCheckIn: Date? = nil,
         initialCheckOut: Date? = nil,
-        initialInstantOnly: Bool = false,
-        initialVehicle: VehicleType = .motorhome,
+        initialBookingPref: BookingPreference = .all,
+        initialVehicles: Set<VehicleType> = [.motorhome],
         initialCategory: ListingCategory? = nil,
         initialPlace: PlacePrediction? = nil,
         useMyLocationOnAppear: Bool = false
@@ -45,8 +45,8 @@ struct SearchView: View {
         self.initialQuery = initialQuery
         self.initialCheckIn = initialCheckIn
         self.initialCheckOut = initialCheckOut
-        self.initialInstantOnly = initialInstantOnly
-        self.initialVehicle = initialVehicle
+        self.initialBookingPref = initialBookingPref
+        self.initialVehicles = initialVehicles
         self.initialCategory = initialCategory
         self.initialPlace = initialPlace
         self.useMyLocationOnAppear = useMyLocationOnAppear
@@ -54,20 +54,20 @@ struct SearchView: View {
         _checkIn = State(initialValue: initialCheckIn)
         _checkOut = State(initialValue: initialCheckOut)
         var f = SearchFilters()
-        f.instantBookingOnly = initialInstantOnly
-        f.vehicleTypes = [initialVehicle]
+        f.bookingPreference = initialBookingPref
+        f.vehicleTypes = initialVehicles
         if let cat = initialCategory { f.category = cat }
         _filters = State(initialValue: f)
-        _vehicle = State(initialValue: initialVehicle)
-        _instantOnly = State(initialValue: initialInstantOnly)
+        _vehicles = State(initialValue: initialVehicles)
+        _bookingPref = State(initialValue: initialBookingPref)
     }
 
     // Søke-state
     @State private var query = ""
     @State private var checkIn: Date?
     @State private var checkOut: Date?
-    @State private var vehicle: VehicleType = .motorhome
-    @State private var instantOnly: Bool = false
+    @State private var vehicles: Set<VehicleType> = [.motorhome]
+    @State private var bookingPref: BookingPreference = .all
     @State private var filters = SearchFilters()
 
     // Kart-state
@@ -111,9 +111,6 @@ struct SearchView: View {
                 topBar
                     .zIndex(2)
 
-                mapTypeToggleLayer
-                    .zIndex(2)
-
                 if showSearchHere {
                     searchHereLayer
                         .zIndex(3)
@@ -127,14 +124,14 @@ struct SearchView: View {
             .navigationDestination(for: Listing.self) { listing in
                 ListingDetailView(listingId: listing.id)
             }
-            .sheet(isPresented: $showWhereSheet) {
+            .fullScreenCover(isPresented: $showWhereSheet) {
                 WhereSheet(
                     isPresented: $showWhereSheet,
                     query: $query,
                     checkIn: $checkIn,
                     checkOut: $checkOut,
-                    instantOnly: $instantOnly,
-                    vehicle: $vehicle,
+                    bookingPref: $bookingPref,
+                    vehicles: $vehicles,
                     placesService: placesService,
                     locationManager: locationManager,
                     onSelectPlace: handleSelectPlace,
@@ -142,12 +139,11 @@ struct SearchView: View {
                     onSearch: {
                         showWhereSheet = false
                         // Synk filtre med valgte verdier i Hvor-modalen
-                        filters.instantBookingOnly = instantOnly
-                        filters.vehicleTypes = [vehicle]
+                        filters.bookingPreference = bookingPref
+                        filters.vehicleTypes = vehicles
                         performSearch()
                     }
                 )
-                .presentationDetents([.large])
             }
             .sheet(isPresented: $showFiltersSheet) {
                 FiltersSheet(
@@ -223,7 +219,7 @@ struct SearchView: View {
 
     private var topBar: some View {
         VStack(spacing: 0) {
-            HStack(spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
                 Button(action: { dismiss() }) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 14, weight: .semibold))
@@ -245,9 +241,17 @@ struct SearchView: View {
                     }
                 )
 
-                FilterCircleButton(activeCount: filters.activeCount) {
-                    hideKeyboard()
-                    showFiltersSheet = true
+                VStack(spacing: 10) {
+                    FilterCircleButton(activeCount: filters.activeCount) {
+                        hideKeyboard()
+                        showFiltersSheet = true
+                    }
+                    MapTypeToggleButton(isSatellite: isSatellite) {
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            isSatellite.toggle()
+                        }
+                    }
+                    .frame(width: 48, height: 48)
                 }
             }
             .padding(.horizontal, 12)
@@ -290,27 +294,18 @@ struct SearchView: View {
                     ),
                     onTap: { listing in
                         navigationPath.append(listing)
-                    }
+                    },
+                    onClose: {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                            selectedListingIndex = nil
+                        }
+                    },
+                    isFavorited: { id in favoritesService.favoriteIds.contains(id) },
+                    onFavoriteToggle: toggleFavorite
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .padding(.bottom, 12)
             }
-        }
-    }
-
-    private var mapTypeToggleLayer: some View {
-        VStack {
-            Spacer().frame(height: 70)
-            HStack {
-                Spacer()
-                MapTypeToggleButton(isSatellite: isSatellite) {
-                    withAnimation(.easeInOut(duration: 0.18)) {
-                        isSatellite.toggle()
-                    }
-                }
-                .padding(.trailing, 12)
-            }
-            Spacer()
         }
     }
 
@@ -328,7 +323,11 @@ struct SearchView: View {
             }
             let price = listing.price ?? 0
             if price < filters.priceMin || (filters.priceMax < 5000 && price > filters.priceMax) { return false }
-            if filters.instantBookingOnly && listing.instantBooking != true { return false }
+            switch filters.bookingPreference {
+            case .all: break
+            case .directOnly: if listing.instantBooking != true { return false }
+            case .requestOnly: if listing.instantBooking == true { return false }
+            }
             if !filters.amenities.isEmpty {
                 let listingAmenities = Set((listing.amenities ?? []).compactMap(AmenityType.init(rawValue:)))
                 if !filters.amenities.isSubset(of: listingAmenities) { return false }
@@ -351,7 +350,13 @@ struct SearchView: View {
         } else {
             parts.append("Når som helst")
         }
-        parts.append(vehicle.displayName)
+        if vehicles.isEmpty {
+            parts.append("Alle kjøretøy")
+        } else if vehicles.count == 1, let v = vehicles.first {
+            parts.append(v.displayName)
+        } else {
+            parts.append("\(vehicles.count) kjøretøy")
+        }
         return parts.joined(separator: " · ")
     }
 
@@ -402,6 +407,8 @@ struct SearchView: View {
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
         let amenitiesArg = filters.amenities.isEmpty ? nil : filters.amenities
+        // Server-søket tar én kjøretøytype i dag — bruk første valgte. Multi-select
+        // håndteres så klient-side i `filteredListings`.
         let vehicleArg = filters.vehicleTypes.first ?? .motorhome
         await listingService.search(
             query: query.isEmpty ? nil : query,
@@ -412,7 +419,7 @@ struct SearchView: View {
             checkIn: checkIn.map { df.string(from: $0) },
             checkOut: checkOut.map { df.string(from: $0) },
             amenities: amenitiesArg,
-            instantOnly: filters.instantBookingOnly
+            instantOnly: filters.bookingPreference == .directOnly
         )
     }
 

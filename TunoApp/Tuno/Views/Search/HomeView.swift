@@ -13,8 +13,8 @@ struct HomeView: View {
     @State private var pendingQuery: String = ""
     @State private var pendingCheckIn: Date?
     @State private var pendingCheckOut: Date?
-    @State private var pendingInstantOnly: Bool = false
-    @State private var pendingVehicle: VehicleType = .motorhome
+    @State private var pendingBookingPref: BookingPreference = .all
+    @State private var pendingVehicles: Set<VehicleType> = [.motorhome]
     @State private var pendingPlace: PlacePrediction?
     @State private var pendingUseMyLocation: Bool = false
     @StateObject private var placesService = PlacesService()
@@ -146,14 +146,14 @@ struct HomeView: View {
         .navigationDestination(for: Listing.self) { listing in
             ListingDetailView(listingId: listing.id)
         }
-        .sheet(isPresented: $showWhereSheet) {
+        .fullScreenCover(isPresented: $showWhereSheet) {
             WhereSheet(
                 isPresented: $showWhereSheet,
                 query: $pendingQuery,
                 checkIn: $pendingCheckIn,
                 checkOut: $pendingCheckOut,
-                instantOnly: $pendingInstantOnly,
-                vehicle: $pendingVehicle,
+                bookingPref: $pendingBookingPref,
+                vehicles: $pendingVehicles,
                 placesService: placesService,
                 locationManager: locationManager,
                 onSelectPlace: { prediction in
@@ -172,15 +172,14 @@ struct HomeView: View {
                     }
                 }
             )
-            .presentationDetents([.large])
         }
         .fullScreenCover(isPresented: $showSearch) {
             SearchView(
                 initialQuery: pendingQuery,
                 initialCheckIn: pendingCheckIn,
                 initialCheckOut: pendingCheckOut,
-                initialInstantOnly: pendingInstantOnly,
-                initialVehicle: pendingVehicle,
+                initialBookingPref: pendingBookingPref,
+                initialVehicles: pendingVehicles,
                 initialCategory: selectedCategory,
                 initialPlace: pendingPlace,
                 useMyLocationOnAppear: pendingUseMyLocation

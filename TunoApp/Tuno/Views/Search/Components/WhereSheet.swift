@@ -1,55 +1,60 @@
 import SwiftUI
 import CoreLocation
 
-/// Airbnb-stil "Hvor?"-modal som åpnes ved tap på SearchPill.
-/// Stacked cards: Hvor, Når, Direktebooking, Kjøretøystype.
-/// Kun ett kort er expanded om gangen — de andre vises som compact rows
-/// med label + valgt verdi, og ekspanderer når man trykker på dem.
+/// Airbnb-stil full-screen "Hvor?"-modal som åpnes ved tap på SearchPill.
+/// Alle inputs er synlige uten å scrolle på normale skjermer:
+/// - Søkefelt + 3 stedsforslag (i nærheten + Oslo + Bergen + Lofoten)
+/// - Inn/Ut datovelger med ekte range-picker (tap chip → bytter aktiv dato)
+/// - Direktebooking 3-state segment: Alle / Direkte / Forespørsel
+/// - Multi-select kjøretøystyper som chips
+/// - Bunnbar med "Fjern alle" + "Søk"
 struct WhereSheet: View {
     @Binding var isPresented: Bool
     @Binding var query: String
     @Binding var checkIn: Date?
     @Binding var checkOut: Date?
-    @Binding var instantOnly: Bool
-    @Binding var vehicle: VehicleType
+    @Binding var bookingPref: BookingPreference
+    @Binding var vehicles: Set<VehicleType>
     @ObservedObject var placesService: PlacesService
     @ObservedObject var locationManager: LocationManager
     let onSelectPlace: (PlacePrediction) -> Void
     let onUseMyLocation: () -> Void
     let onSearch: () -> Void
 
-    enum Step: Hashable { case wherePlace, when, instant, vehicle }
-
-    @State private var activeStep: Step = .wherePlace
     @State private var typing: String = ""
+    @State private var showDatePicker = false
+    @State private var datePickerEditingCheckIn = true
 
+    /// 3 destinasjoner med varierte ikon-bakgrunnsfarger så Hvor-listen
+    /// ikke blir for grønn.
     private static let suggestedDestinations: [SuggestedDestination] = [
-        .init(name: "Oslo", subtitle: "Hovedstaden — bynære plasser", icon: "building.2.fill"),
-        .init(name: "Bergen", subtitle: "Vestlandet — fjord og fjell", icon: "mountain.2.fill"),
-        .init(name: "Trondheim", subtitle: "Midt-Norge — hytteliv", icon: "tree.fill"),
-        .init(name: "Stavanger", subtitle: "Preikestolen og Lysefjorden", icon: "drop.fill"),
-        .init(name: "Tromsø", subtitle: "Nord-Norge — nordlys", icon: "sparkles"),
-        .init(name: "Lofoten", subtitle: "Strand og fiske", icon: "fish.fill"),
+        .init(name: "Oslo", subtitle: "Hovedstaden", icon: "building.2.fill",
+              tint: Color(red: 0.91, green: 0.31, blue: 0.31), bg: Color(red: 1.0, green: 0.92, blue: 0.92)),
+        .init(name: "Bergen", subtitle: "Vestlandet — fjord og fjell", icon: "mountain.2.fill",
+              tint: Color(red: 0.23, green: 0.51, blue: 0.96), bg: Color(red: 0.91, green: 0.94, blue: 1.0)),
+        .init(name: "Lofoten", subtitle: "Strand og fiske", icon: "fish.fill",
+              tint: Color(red: 1.0, green: 0.66, blue: 0.18), bg: Color(red: 1.0, green: 0.96, blue: 0.86)),
     ]
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 12) {
-                    whereCard
-                    whenCard
-                    instantCard
-                    vehicleCard
+            VStack(spacing: 0) {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        searchField
+                        nearbyAndSuggestedSection
+                        whenSection
+                        bookingPrefSection
+                        vehicleSection
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 24)
                 }
-                .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 140)
-                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: activeStep)
-            }
-            .background(Color.neutral100)
-            .safeAreaInset(edge: .bottom) {
+
                 bottomBar
             }
+            .background(Color.white.ignoresSafeArea())
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -60,9 +65,13 @@ struct WhereSheet: View {
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.neutral900)
                             .frame(width: 32, height: 32)
-                            .background(Circle().fill(Color.white))
-                            .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+                            .background(Circle().fill(Color.neutral50))
                     }
+                }
+                ToolbarItem(placement: .principal) {
+                    Text("Hvor?")
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(.neutral900)
                 }
             }
             .onAppear { typing = query }
@@ -73,240 +82,19 @@ struct WhereSheet: View {
                     placesService.autocomplete(query: newValue)
                 }
             }
-        }
-    }
-
-    // MARK: - Cards
-
-    private var whereCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if activeStep == .wherePlace {
-                expandedHeader(title: "Hvor?")
-                searchField
-                    .padding(.horizontal, 20)
-                    .padding(.top, 4)
-
-                if !placesService.predictions.isEmpty {
-                    autocompleteList
-                        .padding(.horizontal, 12)
-                        .padding(.top, 8)
-                } else {
-                    nearbyShortcut
-                        .padding(.horizontal, 12)
-                        .padding(.top, 12)
-
-                    suggestedSection
-                        .padding(.horizontal, 12)
-                        .padding(.top, 8)
-                }
-            } else {
-                compactRow(
-                    label: "Hvor",
-                    value: query.isEmpty ? "Hvor som helst" : query,
-                    onTap: { activeStep = .wherePlace }
+            .sheet(isPresented: $showDatePicker) {
+                DateRangePicker(
+                    checkIn: $checkIn,
+                    checkOut: $checkOut,
+                    initialEditingCheckIn: datePickerEditingCheckIn,
+                    onDone: { showDatePicker = false }
                 )
+                .presentationDetents([.large])
             }
         }
-        .padding(.bottom, activeStep == .wherePlace ? 20 : 0)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
     }
 
-    private var whenCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if activeStep == .when {
-                expandedHeader(title: "Når")
-                DatePicker(
-                    "Innsjekk",
-                    selection: Binding(
-                        get: { checkIn ?? Date() },
-                        set: { newValue in
-                            checkIn = newValue
-                            if let out = checkOut, out <= newValue {
-                                checkOut = Calendar.current.date(byAdding: .day, value: 1, to: newValue)
-                            } else if checkOut == nil {
-                                checkOut = Calendar.current.date(byAdding: .day, value: 1, to: newValue)
-                            }
-                        }
-                    ),
-                    in: Date()...,
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.graphical)
-                .labelsHidden()
-                .environment(\.locale, Locale(identifier: "nb_NO"))
-                .environment(\.calendar, {
-                    var cal = Calendar(identifier: .gregorian)
-                    cal.firstWeekday = 2
-                    return cal
-                }())
-                .padding(.horizontal, 12)
-
-                HStack(spacing: 8) {
-                    dateLabelChip(text: "Inn", date: checkIn)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.neutral400)
-                    dateLabelChip(text: "Ut", date: checkOut)
-                    Spacer()
-                    Button("Nullstill") {
-                        checkIn = nil
-                        checkOut = nil
-                    }
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.neutral500)
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 4)
-                .padding(.bottom, 14)
-            } else {
-                compactRow(label: "Når", value: dateLabel, onTap: { activeStep = .when })
-            }
-        }
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
-    }
-
-    private var instantCard: some View {
-        Group {
-            if activeStep == .instant {
-                VStack(alignment: .leading, spacing: 0) {
-                    expandedHeader(title: "Direktebooking")
-                    Button {
-                        instantOnly.toggle()
-                    } label: {
-                        HStack(spacing: 14) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(instantOnly ? Color.primary50 : Color.neutral50)
-                                    .frame(width: 48, height: 48)
-                                Image(systemName: "bolt.fill")
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(instantOnly ? Color.primary600 : .neutral500)
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text("Kun direktebooking")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(.neutral900)
-                                Text("Plasser du kan booke umiddelbart")
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(.neutral500)
-                            }
-                            Spacer()
-                            ZStack {
-                                Capsule()
-                                    .fill(instantOnly ? Color.primary600 : Color.neutral200)
-                                    .frame(width: 44, height: 26)
-                                Circle()
-                                    .fill(Color.white)
-                                    .frame(width: 22, height: 22)
-                                    .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-                                    .offset(x: instantOnly ? 9 : -9)
-                            }
-                            .animation(.easeInOut(duration: 0.2), value: instantOnly)
-                        }
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 12)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.bottom, 8)
-                }
-            } else {
-                compactRow(
-                    label: "Direktebooking",
-                    value: instantOnly ? "På" : "Av",
-                    onTap: { activeStep = .instant }
-                )
-            }
-        }
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
-    }
-
-    private var vehicleCard: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if activeStep == .vehicle {
-                expandedHeader(title: "Kjøretøystype")
-                VStack(spacing: 8) {
-                    ForEach(VehicleType.allCases, id: \.self) { type in
-                        Button {
-                            vehicle = type
-                        } label: {
-                            HStack(spacing: 14) {
-                                Image(type.lucideIcon)
-                                    .renderingMode(.template)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                                    .frame(width: 28, height: 28)
-                                    .foregroundStyle(vehicle == type ? Color.primary600 : .neutral500)
-                                Text(type.displayName)
-                                    .font(.system(size: 15, weight: vehicle == type ? .semibold : .medium))
-                                    .foregroundStyle(.neutral900)
-                                Spacer()
-                                if vehicle == type {
-                                    Image(systemName: "checkmark.circle.fill")
-                                        .font(.system(size: 18))
-                                        .foregroundStyle(.primary600)
-                                }
-                            }
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 12)
-                            .background(vehicle == type ? Color.primary50 : Color.neutral50)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 16)
-            } else {
-                compactRow(
-                    label: "Kjøretøystype",
-                    value: vehicle.displayName,
-                    onTap: { activeStep = .vehicle }
-                )
-            }
-        }
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
-    }
-
-    // MARK: - Sub-views
-
-    private func expandedHeader(title: String) -> some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(.neutral900)
-            Spacer()
-        }
-        .padding(.horizontal, 20)
-        .padding(.top, 18)
-        .padding(.bottom, 14)
-    }
-
-    private func compactRow(label: String, value: String, onTap: @escaping () -> Void) -> some View {
-        Button(action: onTap) {
-            HStack {
-                Text(label)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.neutral500)
-                Spacer()
-                Text(value)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                    .lineLimit(1)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
+    // MARK: - Search field & destinations
 
     private var searchField: some View {
         HStack(spacing: 10) {
@@ -328,11 +116,26 @@ struct WhereSheet: View {
                 }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
         .background(Color.neutral50)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+    }
+
+    @ViewBuilder
+    private var nearbyAndSuggestedSection: some View {
+        if !placesService.predictions.isEmpty {
+            autocompleteList
+        } else {
+            VStack(spacing: 0) {
+                nearbyShortcut
+                ForEach(Self.suggestedDestinations) { dest in
+                    Divider().padding(.leading, 60)
+                    suggestedRow(dest)
+                }
+            }
+        }
     }
 
     private var autocompleteList: some View {
@@ -343,15 +146,14 @@ struct WhereSheet: View {
                     typing = prediction.mainText
                     placesService.clear()
                     onSelectPlace(prediction)
-                    advanceFromWhere()
                 } label: {
                     HStack(spacing: 14) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(Color.primary50)
-                                .frame(width: 44, height: 44)
+                                .frame(width: 40, height: 40)
                             Image(systemName: "mappin.circle.fill")
-                                .font(.system(size: 20))
+                                .font(.system(size: 18))
                                 .foregroundStyle(.primary600)
                         }
                         VStack(alignment: .leading, spacing: 2) {
@@ -366,12 +168,11 @@ struct WhereSheet: View {
                         }
                         Spacer()
                     }
-                    .padding(.horizontal, 8)
                     .padding(.vertical, 8)
                 }
                 .buttonStyle(.plain)
                 if prediction.id != placesService.predictions.last?.id {
-                    Divider().padding(.leading, 66)
+                    Divider().padding(.leading, 58)
                 }
             }
         }
@@ -382,93 +183,109 @@ struct WhereSheet: View {
             onUseMyLocation()
             query = "I nærheten"
             typing = "I nærheten"
-            advanceFromWhere()
+            isPresented = false
         } label: {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
                         .fill(Color.primary50)
-                        .frame(width: 44, height: 44)
+                        .frame(width: 40, height: 40)
                     Image(systemName: "location.fill")
-                        .font(.system(size: 18))
+                        .font(.system(size: 16))
                         .foregroundStyle(.primary600)
                 }
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: 1) {
                     Text("I nærheten")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.neutral900)
                     Text("Finn ut hva som finnes der du er")
-                        .font(.system(size: 13))
+                        .font(.system(size: 12))
                         .foregroundStyle(.neutral500)
                 }
                 Spacer()
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 8)
+            .padding(.vertical, 6)
         }
         .buttonStyle(.plain)
     }
 
-    private var suggestedSection: some View {
+    private func suggestedRow(_ dest: SuggestedDestination) -> some View {
+        Button {
+            query = dest.name
+            typing = dest.name
+            placesService.autocomplete(query: dest.name)
+            Task {
+                try? await Task.sleep(nanoseconds: 350_000_000)
+                if let first = placesService.predictions.first {
+                    onSelectPlace(first)
+                    isPresented = false
+                }
+            }
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 10)
+                        .fill(dest.bg)
+                        .frame(width: 40, height: 40)
+                    Image(systemName: dest.icon)
+                        .font(.system(size: 16))
+                        .foregroundStyle(dest.tint)
+                }
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(dest.name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text(dest.subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+            }
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - When section
+
+    private var whenSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Foreslåtte reisemål")
-                .font(.system(size: 12, weight: .semibold))
+            Text("Når")
+                .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.neutral500)
                 .textCase(.uppercase)
-                .padding(.horizontal, 8)
-                .padding(.top, 4)
 
-            VStack(spacing: 0) {
-                ForEach(Self.suggestedDestinations) { dest in
-                    Button {
-                        query = dest.name
-                        typing = dest.name
-                        placesService.autocomplete(query: dest.name)
-                        Task {
-                            try? await Task.sleep(nanoseconds: 350_000_000)
-                            if let first = placesService.predictions.first {
-                                onSelectPlace(first)
-                                advanceFromWhere()
-                            }
-                        }
-                    } label: {
-                        HStack(spacing: 14) {
-                            ZStack {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color.primary50)
-                                    .frame(width: 44, height: 44)
-                                Image(systemName: dest.icon)
-                                    .font(.system(size: 18))
-                                    .foregroundStyle(.primary600)
-                            }
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(dest.name)
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundStyle(.neutral900)
-                                Text(dest.subtitle)
-                                    .font(.system(size: 13))
-                                    .foregroundStyle(.neutral500)
-                            }
-                            Spacer()
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 10)
-                    }
-                    .buttonStyle(.plain)
+            HStack(spacing: 8) {
+                dateChip(label: "Innsjekk", date: checkIn) {
+                    datePickerEditingCheckIn = true
+                    showDatePicker = true
+                }
+                dateChip(label: "Utsjekk", date: checkOut) {
+                    datePickerEditingCheckIn = false
+                    showDatePicker = true
                 }
             }
         }
     }
 
-    private func dateLabelChip(text: String, date: Date?) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            Text(text)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.neutral500)
-            Text(date.map(formatDate) ?? "Velg")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.neutral900)
+    private func dateChip(label: String, date: Date?, onTap: @escaping () -> Void) -> some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                Text(date.map(formatDate) ?? "Velg dato")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(date == nil ? .neutral400 : .neutral900)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
         }
+        .buttonStyle(.plain)
     }
 
     private func formatDate(_ date: Date) -> String {
@@ -478,10 +295,104 @@ struct WhereSheet: View {
         return df.string(from: date)
     }
 
-    private var dateLabel: String {
-        guard let i = checkIn, let o = checkOut else { return "Når som helst" }
-        return "\(formatDate(i))–\(formatDate(o))"
+    // MARK: - Booking preference
+
+    private var bookingPrefSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Bestillingstype")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.neutral500)
+                .textCase(.uppercase)
+
+            HStack(spacing: 0) {
+                bookingPrefSegment(.all, label: "Alle")
+                bookingPrefSegment(.directOnly, label: "Direkte", icon: "bolt.fill")
+                bookingPrefSegment(.requestOnly, label: "Forespørsel", icon: "envelope.fill")
+            }
+            .padding(3)
+            .background(Color.neutral100)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
     }
+
+    private func bookingPrefSegment(_ value: BookingPreference, label: String, icon: String? = nil) -> some View {
+        let isSelected = bookingPref == value
+        return Button {
+            withAnimation(.easeInOut(duration: 0.18)) { bookingPref = value }
+        } label: {
+            HStack(spacing: 5) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .bold))
+                }
+                Text(label)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(isSelected ? .neutral900 : .neutral500)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .background(isSelected ? Color.white : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .shadow(color: isSelected ? .black.opacity(0.06) : .clear, radius: 2, y: 1)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Vehicle multi-select
+
+    private var vehicleSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Kjøretøystype (velg flere)")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.neutral500)
+                .textCase(.uppercase)
+
+            // 3 chips per rad, deretter 2 til = 5 totalt på 2 rader
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(VehicleType.allCases, id: \.self) { type in
+                    vehicleChip(type)
+                }
+            }
+        }
+    }
+
+    private func vehicleChip(_ type: VehicleType) -> some View {
+        let isSelected = vehicles.contains(type)
+        return Button {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                if isSelected {
+                    if vehicles.count > 1 { vehicles.remove(type) }
+                } else {
+                    vehicles.insert(type)
+                }
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Image(type.lucideIcon)
+                    .renderingMode(.template)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 24, height: 24)
+                    .foregroundStyle(isSelected ? Color.primary600 : .neutral500)
+                Text(type.displayName)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(isSelected ? .neutral900 : .neutral500)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(isSelected ? Color.primary50 : Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Bottom bar
 
     private var bottomBar: some View {
         VStack(spacing: 0) {
@@ -492,8 +403,8 @@ struct WhereSheet: View {
                     query = ""
                     checkIn = nil
                     checkOut = nil
-                    instantOnly = false
-                    vehicle = .motorhome
+                    bookingPref = .all
+                    vehicles = [.motorhome]
                     placesService.clear()
                 }
                 .font(.system(size: 14, weight: .semibold))
@@ -512,7 +423,7 @@ struct WhereSheet: View {
                             .font(.system(size: 16, weight: .semibold))
                     }
                     .foregroundStyle(.white)
-                    .padding(.horizontal, 28)
+                    .padding(.horizontal, 32)
                     .padding(.vertical, 14)
                     .background(Color.primary600)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -523,13 +434,6 @@ struct WhereSheet: View {
         }
         .background(Color.white)
     }
-
-    /// Etter brukeren har valgt et sted, kollaps Hvor og hopp til Når.
-    private func advanceFromWhere() {
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-            activeStep = .when
-        }
-    }
 }
 
 private struct SuggestedDestination: Identifiable {
@@ -537,4 +441,130 @@ private struct SuggestedDestination: Identifiable {
     let name: String
     let subtitle: String
     let icon: String
+    let tint: Color
+    let bg: Color
+}
+
+/// Ekte range-picker for Inn/Ut. To tabs øverst som veksler hvilken
+/// dato man redigerer. Validerer at Ut > Inn automatisk.
+struct DateRangePicker: View {
+    @Binding var checkIn: Date?
+    @Binding var checkOut: Date?
+    let initialEditingCheckIn: Bool
+    let onDone: () -> Void
+
+    @State private var editingCheckIn: Bool = true
+    @State private var tempIn: Date = Date()
+    @State private var tempOut: Date = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button("Nullstill") {
+                    checkIn = nil
+                    checkOut = nil
+                    onDone()
+                }
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.neutral500)
+
+                Spacer()
+
+                Text("Velg datoer")
+                    .font(.system(size: 17, weight: .semibold))
+
+                Spacer()
+
+                Button("Bruk") {
+                    checkIn = tempIn
+                    checkOut = tempOut
+                    onDone()
+                }
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.primary600)
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 12)
+
+            HStack(spacing: 8) {
+                rangeTab(label: "Innsjekk", date: tempIn, isActive: editingCheckIn) {
+                    editingCheckIn = true
+                }
+                rangeTab(label: "Utsjekk", date: tempOut, isActive: !editingCheckIn) {
+                    editingCheckIn = false
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.bottom, 8)
+
+            Divider()
+
+            DatePicker(
+                "",
+                selection: editingCheckIn ? $tempIn : $tempOut,
+                in: editingCheckIn ? Date()... : Calendar.current.date(byAdding: .day, value: 1, to: tempIn)!...,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.graphical)
+            .labelsHidden()
+            .padding(.horizontal, 12)
+            .environment(\.locale, Locale(identifier: "nb_NO"))
+            .environment(\.calendar, {
+                var cal = Calendar(identifier: .gregorian)
+                cal.firstWeekday = 2
+                return cal
+            }())
+            .onChange(of: tempIn) { _, newValue in
+                // Når Inn endres: hold Ut > Inn. Bytt automatisk til Ut-tab
+                // sånn at brukeren kan velge Ut umiddelbart etter.
+                if tempOut <= newValue {
+                    tempOut = Calendar.current.date(byAdding: .day, value: 1, to: newValue)!
+                }
+                if editingCheckIn {
+                    withAnimation(.easeInOut(duration: 0.18)) { editingCheckIn = false }
+                }
+            }
+
+            Spacer()
+        }
+        .onAppear {
+            editingCheckIn = initialEditingCheckIn
+            if let i = checkIn { tempIn = i }
+            if let o = checkOut { tempOut = o }
+            if tempOut <= tempIn {
+                tempOut = Calendar.current.date(byAdding: .day, value: 1, to: tempIn)!
+            }
+        }
+    }
+
+    private func rangeTab(label: String, date: Date, isActive: Bool, onTap: @escaping () -> Void) -> some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(isActive ? .primary600 : .neutral500)
+                Text(formatDate(date))
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(isActive ? .neutral900 : .neutral500)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isActive ? Color.primary50 : Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isActive ? Color.primary600 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let df = DateFormatter()
+        df.dateFormat = "d. MMMM"
+        df.locale = Locale(identifier: "nb_NO")
+        return df.string(from: date)
+    }
 }

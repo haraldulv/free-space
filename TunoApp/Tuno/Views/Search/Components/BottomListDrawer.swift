@@ -150,6 +150,7 @@ struct BottomListDrawer: View {
 
 /// Liten sirkulær toggle-knapp for å bytte mellom standard og satellitt-kart.
 /// Plasseres typisk øverst-til-høyre på kartet, under filter-knappen.
+/// Samme størrelse (48pt) som FilterCircleButton så de stacker pent vertikalt.
 struct MapTypeToggleButton: View {
     let isSatellite: Bool
     let onTap: () -> Void
@@ -159,7 +160,7 @@ struct MapTypeToggleButton: View {
             Image(systemName: isSatellite ? "map.fill" : "globe.europe.africa.fill")
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.neutral900)
-                .frame(width: 40, height: 40)
+                .frame(width: 48, height: 48)
                 .background(Color.white)
                 .clipShape(Circle())
                 .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))

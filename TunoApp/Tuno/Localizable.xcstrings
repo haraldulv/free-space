@@ -278,6 +278,7 @@
       }
     },
     "%@ plasser funnet" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2550,9 +2551,6 @@
     "Gjesten betaler" : {
 
     },
-    "Gjester" : {
-
-    },
     "Gjester kan booke umiddelbart uten å vente på godkjenning" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2835,9 +2833,6 @@
         }
       }
     },
-    "Hvem kommer?" : {
-
-    },
     "Hvilke fasiliteter tilbyr du?" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2902,9 +2897,6 @@
           }
         }
       }
-    },
-    "Hvor?" : {
-
     },
     "Hvordan var oppholdet?" : {
       "extractionState" : "manual",
@@ -3712,6 +3704,9 @@
       }
     },
     "kr%@" : {
+
+    },
+    "Kun direktebooking" : {
 
     },
     "Kun synlig for deg. Nyttig hvis du har flere annonser." : {
@@ -5228,6 +5223,9 @@
         }
       }
     },
+    "Plasser du kan booke umiddelbart" : {
+
+    },
     "Plasser plassene dine" : {
 
     },
@@ -5500,9 +5498,6 @@
           }
         }
       }
-    },
-    "Prøv et annet sted eller fjern filtre" : {
-
     },
     "Publiser annonse" : {
       "extractionState" : "manual",
@@ -7257,9 +7252,6 @@
 
     },
     "Vis alle %@ fasiliteter" : {
-
-    },
-    "Voksne og barn" : {
 
     },
     "WiFi" : {

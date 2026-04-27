@@ -227,19 +227,21 @@ struct SearchMapView: UIViewRepresentable {
             container.layer.shadowOffset = CGSize(width: 0, height: 3)
             container.layer.shadowRadius = 6
         } else if isVisited {
-            container.backgroundColor = UIColor(red: 0.93, green: 0.93, blue: 0.93, alpha: 1)  // neutral200-ish
+            // Mørkere grå så det er tydelig at brukeren har sett denne før
+            container.backgroundColor = UIColor(red: 0.45, green: 0.45, blue: 0.45, alpha: 1)
             container.layer.borderWidth = 0
-            container.layer.shadowOpacity = 0
+            container.layer.shadowColor = UIColor.black.cgColor
+            container.layer.shadowOpacity = 0.12
+            container.layer.shadowOffset = CGSize(width: 0, height: 2)
+            container.layer.shadowRadius = 3
         } else {
             container.backgroundColor = .white
             container.layer.shadowColor = UIColor.black.cgColor
             container.layer.shadowOpacity = 0.18
             container.layer.shadowOffset = CGSize(width: 0, height: 2)
             container.layer.shadowRadius = 4
-            if isInstant {
-                container.layer.borderWidth = 1.5
-                container.layer.borderColor = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1).cgColor
-            }
+            // Ingen grønn ramme på instant booking — det blir for forstyrrende.
+            // Statusen vises via en liten grønn prikk foran prisen i stedet.
         }
         container.layer.cornerRadius = 16
 
@@ -247,22 +249,23 @@ struct SearchMapView: UIViewRepresentable {
         let text = NSMutableAttributedString()
         let textColor: UIColor = {
             if isSelected { return .white }
-            if isVisited { return UIColor(red: 0.45, green: 0.45, blue: 0.45, alpha: 1) }
+            if isVisited { return .white }
             return UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
         }()
-        let secondaryColor = textColor.withAlphaComponent(0.55)
+        let secondaryColor = textColor.withAlphaComponent(0.65)
 
         if isInstant {
-            // Lyn-symbol med Tuno-grønn (eller hvit hvis selected)
-            let boltColor: UIColor = isSelected
+            // Liten grønn prikk foran prisen for direktebooking — universal
+            // status-indikator, ikke forvekslet med EV-charging eller andre symboler.
+            let dotColor: UIColor = isSelected || isVisited
                 ? .white
                 : UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1)
-            let boltAttachment = NSTextAttachment()
-            let boltConfig = UIImage.SymbolConfiguration(pointSize: 11, weight: .bold)
-            boltAttachment.image = UIImage(systemName: "bolt.fill", withConfiguration: boltConfig)?
-                .withTintColor(boltColor, renderingMode: .alwaysOriginal)
-            text.append(NSAttributedString(attachment: boltAttachment))
-            text.append(NSAttributedString(string: " "))
+            let dotConfig = UIImage.SymbolConfiguration(pointSize: 8, weight: .bold)
+            let dotAttachment = NSTextAttachment()
+            dotAttachment.image = UIImage(systemName: "circle.fill", withConfiguration: dotConfig)?
+                .withTintColor(dotColor, renderingMode: .alwaysOriginal)
+            text.append(NSAttributedString(attachment: dotAttachment))
+            text.append(NSAttributedString(string: "  "))
         }
 
         text.append(NSAttributedString(

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct WelcomeStep: View {
     @ObservedObject var form: ListingFormModel
+    @EnvironmentObject var authManager: AuthManager
 
     var body: some View {
         VStack(spacing: 0) {
@@ -20,7 +21,7 @@ struct WelcomeStep: View {
             .padding(.bottom, 24)
 
             VStack(spacing: 16) {
-                Text("La oss lage din første annonse")
+                Text(authManager.hasListings ? "La oss lage en ny annonse" : "La oss lage din første annonse")
                     .font(.system(size: 30, weight: .bold))
                     .multilineTextAlignment(.center)
                     .foregroundStyle(.neutral900)

@@ -1,12 +1,20 @@
 import SwiftUI
 
+/// Hvilke booking-typer brukeren vil se. Tre-tilstand så bruker kan
+/// eksplisitt velge "kun direkte", "kun forespørsel" eller begge deler.
+enum BookingPreference: String, Equatable, CaseIterable {
+    case all          // Alle annonser
+    case directOnly   // Kun direktebooking
+    case requestOnly  // Kun forespørsel
+}
+
 /// Modeltype for alle filter-valg som brukes i FiltersSheet og av søk.
 struct SearchFilters: Equatable {
     var category: ListingCategory? = nil  // nil = "Hvilken som helst"
     var vehicleTypes: Set<VehicleType> = []
     var priceMin: Int = 0
     var priceMax: Int = 5000
-    var instantBookingOnly: Bool = false
+    var bookingPreference: BookingPreference = .all
     var noHostCheckIn: Bool = false
     var freeCancellation: Bool = false
     var petsAllowed: Bool = false
@@ -18,7 +26,7 @@ struct SearchFilters: Equatable {
         if category != nil { n += 1 }
         if !vehicleTypes.isEmpty { n += 1 }
         if priceMin > 0 || priceMax < 5000 { n += 1 }
-        if instantBookingOnly { n += 1 }
+        if bookingPreference != .all { n += 1 }
         if noHostCheckIn { n += 1 }
         if freeCancellation { n += 1 }
         if petsAllowed { n += 1 }
@@ -86,9 +94,9 @@ struct FiltersSheet: View {
                 recommendedCard(
                     icon: "bolt.fill",
                     label: "Direktebooking",
-                    isSelected: draft.instantBookingOnly
+                    isSelected: draft.bookingPreference == .directOnly
                 ) {
-                    draft.instantBookingOnly.toggle()
+                    draft.bookingPreference = draft.bookingPreference == .directOnly ? .all : .directOnly
                 }
                 recommendedCard(
                     icon: "key.fill",
@@ -179,8 +187,11 @@ struct FiltersSheet: View {
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.neutral900)
             FlowLayout(spacing: 8) {
-                chip(label: "Direktebooking", icon: "bolt.fill", isSelected: draft.instantBookingOnly) {
-                    draft.instantBookingOnly.toggle()
+                chip(label: "Direktebooking", icon: "bolt.fill", isSelected: draft.bookingPreference == .directOnly) {
+                    draft.bookingPreference = draft.bookingPreference == .directOnly ? .all : .directOnly
+                }
+                chip(label: "Forespørsel", icon: "envelope.fill", isSelected: draft.bookingPreference == .requestOnly) {
+                    draft.bookingPreference = draft.bookingPreference == .requestOnly ? .all : .requestOnly
                 }
                 chip(label: "Innsjekking uten vert", icon: "key.fill", isSelected: draft.noHostCheckIn) {
                     draft.noHostCheckIn.toggle()
