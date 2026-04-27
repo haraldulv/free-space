@@ -267,6 +267,7 @@
       }
     },
     "%@ plasser" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -287,6 +288,7 @@
       }
     },
     "%@–%@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -602,6 +604,9 @@
       }
     },
     "Alle varsler vil slettes permanent." : {
+
+    },
+    "Anbefalt for deg" : {
 
     },
     "Angre" : {
@@ -1028,6 +1033,9 @@
           }
         }
       }
+    },
+    "Bestillingsalternativer" : {
+
     },
     "Betal %@ kr" : {
       "localizations" : {
@@ -2101,6 +2109,9 @@
         }
       }
     },
+    "Filter" : {
+
+    },
     "Finn din plass" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2117,6 +2128,9 @@
           }
         }
       }
+    },
+    "Finn ut hva som finnes der du er" : {
+
     },
     "Fiskeutstyr" : {
       "extractionState" : "manual",
@@ -2185,6 +2199,9 @@
           }
         }
       }
+    },
+    "Foreslåtte reisemål" : {
+
     },
     "Forespørsel" : {
       "localizations" : {
@@ -2533,6 +2550,9 @@
     "Gjesten betaler" : {
 
     },
+    "Gjester" : {
+
+    },
     "Gjester kan booke umiddelbart uten å vente på godkjenning" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2815,6 +2835,9 @@
         }
       }
     },
+    "Hvem kommer?" : {
+
+    },
     "Hvilke fasiliteter tilbyr du?" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -2880,6 +2903,9 @@
         }
       }
     },
+    "Hvor?" : {
+
+    },
     "Hvordan var oppholdet?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2916,6 +2942,9 @@
           }
         }
       }
+    },
+    "I nærheten" : {
+
     },
     "IBAN" : {
       "extractionState" : "manual",
@@ -3449,6 +3478,9 @@
           }
         }
       }
+    },
+    "Kjøretøytype" : {
+
     },
     "Kjøretøytyper" : {
 
@@ -5469,6 +5501,9 @@
         }
       }
     },
+    "Prøv et annet sted eller fjern filtre" : {
+
+    },
     "Publiser annonse" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6727,6 +6762,12 @@
     "Tuno-vert" : {
 
     },
+    "Turpris i NOK" : {
+
+    },
+    "Type sted" : {
+
+    },
     "Typisk svartid: %@" : {
 
     },
@@ -7212,7 +7253,13 @@
         }
       }
     },
+    "Vis %@ annonser" : {
+
+    },
     "Vis alle %@ fasiliteter" : {
+
+    },
+    "Voksne og barn" : {
 
     },
     "WiFi" : {

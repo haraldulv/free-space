@@ -42,7 +42,7 @@ final class ListingService: ObservableObject {
     /// Henter ekte bruker-annonser (har host_id satt) — brukes på forsiden
     /// i stedet for (eller som supplement til) tag-baserte lister. Nye
     /// opprettede annonser vises selv uten 'popular'/'featured'-tags.
-    func fetchRealListings(vehicleType: VehicleType? = nil, limit: Int = 20) async -> [Listing] {
+    func fetchRealListings(category: ListingCategory? = nil, vehicleType: VehicleType? = nil, limit: Int = 20) async -> [Listing] {
         do {
             var request = supabase
                 .from("listings")
@@ -50,6 +50,9 @@ final class ListingService: ObservableObject {
                 .or("is_active.eq.true,is_active.is.null")
                 .not("host_id", operator: .is, value: "null")
 
+            if let category {
+                request = request.eq("category", value: category.rawValue)
+            }
             if let vehicleType {
                 request = request.in("vehicle_type", values: vehicleType.acceptingListingTypes.map { $0.rawValue })
             }
@@ -95,11 +98,11 @@ final class ListingService: ObservableObject {
         }
     }
 
-    func fetchHomeListings(vehicleType: VehicleType? = nil) async {
+    func fetchHomeListings(category: ListingCategory? = nil, vehicleType: VehicleType? = nil) async {
         isLoading = true
 
         // Viser kun ekte bruker-annonser. Seeds (uten host_id) filtreres ut.
-        let all = await fetchRealListings(vehicleType: vehicleType, limit: 40)
+        let all = await fetchRealListings(category: category, vehicleType: vehicleType, limit: 40)
 
         // "Populære" = score-sortert: rating × reviews + tag-bonus + instant-bonus.
         // Ingen hard reviewCount > 0 filter, ellers blir seksjonen ofte tom mens

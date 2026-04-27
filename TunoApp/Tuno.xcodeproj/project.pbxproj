@@ -22,6 +22,7 @@
 		23E22E74F79A0D6B738FFD7F /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF2C4D557CBB8DCF564CD2A /* ChatService.swift */; };
 		249014FE9C51150340A11E57 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F63CFB5AB083DA9258409 /* Assets.xcassets */; };
 		24BB98CE44FC4E8D636EA618 /* MapBottomCardCarousel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D542E42BA6CD2042CD0922EB /* MapBottomCardCarousel.swift */; };
+		2A5ACD0FEC4B1F31E23B6AE5 /* BottomListDrawer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1EAC854F4475506A9E845BA2 /* BottomListDrawer.swift */; };
 		2AFF1FFBCA6063DF79A8E1CA /* BookingCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28410FDE483AB035E8C93322 /* BookingCalendarView.swift */; };
 		2C4D3EB18F8321977CD47D5C /* Localizable.xcstrings in Resources */ = {isa = PBXBuildFile; fileRef = BE401FA37FDD4B606814F30C /* Localizable.xcstrings */; };
 		2E38CBEC06F52A83F883289B /* MessagesStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3BF694A798055824C4651A4 /* MessagesStep.swift */; };
@@ -132,6 +133,7 @@
 		147F3163867D581B11ED7A6D /* success-confetti.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "success-confetti.json"; sourceTree = "<group>"; };
 		1A031A3724EC9DE0FAFF7A4A /* BookingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingView.swift; sourceTree = "<group>"; };
 		1C62328BAF7DE7328480EAF9 /* LottieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieView.swift; sourceTree = "<group>"; };
+		1EAC854F4475506A9E845BA2 /* BottomListDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomListDrawer.swift; sourceTree = "<group>"; };
 		20BABEC0564518876FF3BB11 /* AuthPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthPromptView.swift; sourceTree = "<group>"; };
 		26E78282D80E5F27037C4EC4 /* HostSpotDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostSpotDetailView.swift; sourceTree = "<group>"; };
 		28410FDE483AB035E8C93322 /* BookingCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingCalendarView.swift; sourceTree = "<group>"; };
@@ -391,6 +393,7 @@
 		736E477FEE6ECAA9AA3616CA /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				1EAC854F4475506A9E845BA2 /* BottomListDrawer.swift */,
 				30327AE07ADF79432C8F3B35 /* FiltersSheet.swift */,
 				D542E42BA6CD2042CD0922EB /* MapBottomCardCarousel.swift */,
 				DA06602EF8129BE55A4E5CEC /* PriceHistogram.swift */,
@@ -632,6 +635,7 @@
 				F7F6F0104883482373D27D01 /* BookingService.swift in Sources */,
 				8B3FFD2821A8DBF0C4752B71 /* BookingView.swift in Sources */,
 				79F6757D7436EF3EEF1EEAC2 /* BookingsView.swift in Sources */,
+				2A5ACD0FEC4B1F31E23B6AE5 /* BottomListDrawer.swift in Sources */,
 				CBF09B2CA4A4927619137D59 /* CachedAsyncImage.swift in Sources */,
 				D24A25653E6E0006953AF2B8 /* CalendarStep.swift in Sources */,
 				AA7B4CA530ABE701BE17F593 /* CategoryStep.swift in Sources */,
@@ -760,7 +764,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 90;
+				CURRENT_PROJECT_VERSION = 91;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -860,7 +864,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 90;
+				CURRENT_PROJECT_VERSION = 91;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

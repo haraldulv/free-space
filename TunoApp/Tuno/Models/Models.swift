@@ -165,6 +165,22 @@ enum ListingCategory: String, Codable, CaseIterable {
         case .camping: return "Campingplass"
         }
     }
+
+    /// Kortere label brukt i tabs/cards (forsidens picker, "Hvor"-modal).
+    var tabLabel: String {
+        switch self {
+        case .parking: return "Parkering"
+        case .camping: return "Camping"
+        }
+    }
+
+    /// Asset-navn for Lucide-ikoner. Camping = telt, Parkering = bil.
+    var lucideIcon: String {
+        switch self {
+        case .camping: return "lucide-tent"
+        case .parking: return "lucide-car"
+        }
+    }
 }
 
 enum VehicleType: String, Codable, CaseIterable {

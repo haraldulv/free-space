@@ -5,17 +5,31 @@ struct HomeView: View {
     @EnvironmentObject var favoritesService: FavoritesService
     @StateObject private var listingService = ListingService()
     @State private var searchText = ""
+    @State private var showWhereSheet = false
     @State private var showSearch = false
-    @State private var selectedVehicle: VehicleType = .motorhome
+    @State private var selectedCategory: ListingCategory = .camping
+
+    // State som videreføres fra Hvor-modal til SearchView
+    @State private var pendingQuery: String = ""
+    @State private var pendingCheckIn: Date?
+    @State private var pendingCheckOut: Date?
+    @State private var pendingInstantOnly: Bool = false
+    @State private var pendingVehicle: VehicleType = .motorhome
+    @State private var pendingPlace: PlacePrediction?
+    @State private var pendingUseMyLocation: Bool = false
+    @StateObject private var placesService = PlacesService()
+    @StateObject private var locationManager = LocationManager()
 
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
                 // Search bar + vehicle picker
                 VStack(spacing: 16) {
-                    // Search bar — Airbnb-style pille med sentrert innhold
+                    // Search bar — Airbnb-style pille med sentrert innhold.
+                    // Åpner WhereSheet (full-screen) først; brukeren går videre
+                    // til SearchView/kart kun ved å trykke Søk i modalen.
                     Button {
-                        showSearch = true
+                        showWhereSheet = true
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "magnifyingglass")
@@ -36,27 +50,27 @@ struct HomeView: View {
                         .shadow(color: .black.opacity(0.08), radius: 10, y: 3)
                     }
 
-                    // Kategori-picker med Tuno-grønn på aktiv state
+                    // Kategori-picker: Camping (telt-ikon) / Parkering (bil-ikon)
                     HStack(spacing: 0) {
-                        ForEach([VehicleType.motorhome, .car], id: \.self) { type in
+                        ForEach([ListingCategory.camping, .parking], id: \.self) { category in
                             Button {
                                 withAnimation(.easeInOut(duration: 0.22)) {
-                                    selectedVehicle = type
+                                    selectedCategory = category
                                 }
-                                Task { await listingService.fetchHomeListings(vehicleType: type) }
+                                Task { await listingService.fetchHomeListings(category: category) }
                             } label: {
                                 VStack(spacing: 7) {
-                                    Image(type.lucideIcon)
+                                    Image(category.lucideIcon)
                                         .renderingMode(.template)
                                         .resizable()
                                         .aspectRatio(contentMode: .fit)
-                                        .foregroundStyle(selectedVehicle == type ? Color.primary600 : .neutral400)
+                                        .foregroundStyle(selectedCategory == category ? Color.primary600 : .neutral400)
                                         .frame(width: 30, height: 30)
-                                        .scaleEffect(selectedVehicle == type ? 1.0 : 0.88)
-                                        .animation(.spring(response: 0.35, dampingFraction: 0.65), value: selectedVehicle)
-                                    Text(type.displayName)
-                                        .font(.system(size: 12, weight: selectedVehicle == type ? .semibold : .medium))
-                                        .foregroundStyle(selectedVehicle == type ? Color.primary600 : .neutral400)
+                                        .scaleEffect(selectedCategory == category ? 1.0 : 0.88)
+                                        .animation(.spring(response: 0.35, dampingFraction: 0.65), value: selectedCategory)
+                                    Text(category.tabLabel)
+                                        .font(.system(size: 12, weight: selectedCategory == category ? .semibold : .medium))
+                                        .foregroundStyle(selectedCategory == category ? Color.primary600 : .neutral400)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 6)
@@ -69,10 +83,10 @@ struct HomeView: View {
                                 .fill(Color.primary600)
                                 .frame(width: geo.size.width / 2 - 40, height: 2)
                                 .offset(
-                                    x: selectedVehicle == .motorhome ? 20 : geo.size.width / 2 + 20,
+                                    x: selectedCategory == .camping ? 20 : geo.size.width / 2 + 20,
                                     y: 0
                                 )
-                                .animation(.easeInOut(duration: 0.22), value: selectedVehicle)
+                                .animation(.easeInOut(duration: 0.22), value: selectedCategory)
                         }
                         .frame(height: 2)
                     }
@@ -132,11 +146,48 @@ struct HomeView: View {
         .navigationDestination(for: Listing.self) { listing in
             ListingDetailView(listingId: listing.id)
         }
+        .sheet(isPresented: $showWhereSheet) {
+            WhereSheet(
+                isPresented: $showWhereSheet,
+                query: $pendingQuery,
+                checkIn: $pendingCheckIn,
+                checkOut: $pendingCheckOut,
+                instantOnly: $pendingInstantOnly,
+                vehicle: $pendingVehicle,
+                placesService: placesService,
+                locationManager: locationManager,
+                onSelectPlace: { prediction in
+                    pendingPlace = prediction
+                    pendingUseMyLocation = false
+                },
+                onUseMyLocation: {
+                    pendingPlace = nil
+                    pendingUseMyLocation = true
+                },
+                onSearch: {
+                    showWhereSheet = false
+                    // Liten pause så sheet rekker å lukke før kart presenteres
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                        showSearch = true
+                    }
+                }
+            )
+            .presentationDetents([.large])
+        }
         .fullScreenCover(isPresented: $showSearch) {
-            SearchView()
+            SearchView(
+                initialQuery: pendingQuery,
+                initialCheckIn: pendingCheckIn,
+                initialCheckOut: pendingCheckOut,
+                initialInstantOnly: pendingInstantOnly,
+                initialVehicle: pendingVehicle,
+                initialCategory: selectedCategory,
+                initialPlace: pendingPlace,
+                useMyLocationOnAppear: pendingUseMyLocation
+            )
         }
         .task {
-            await listingService.fetchHomeListings(vehicleType: selectedVehicle)
+            await listingService.fetchHomeListings(category: selectedCategory)
         }
     }
 }
