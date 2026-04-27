@@ -11,10 +11,12 @@ struct WelcomeStep: View {
             // (Lottie fra Creattie, fargejustert til Tuno-paletten).
             LottieOrFallback(name: "ny-annonse") {
                 Image(systemName: "doc.badge.plus")
-                    .font(.system(size: 76, weight: .semibold))
+                    .font(.system(size: 96, weight: .semibold))
                     .foregroundStyle(.primary600)
             }
-            .frame(width: 280, height: 280)
+            .aspectRatio(1, contentMode: .fit)
+            .frame(maxWidth: 380)
+            .padding(.horizontal, 16)
             .padding(.bottom, 24)
 
             VStack(spacing: 16) {
