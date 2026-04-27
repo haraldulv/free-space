@@ -6,6 +6,9 @@ import UIKit
 final class DeepLinkManager: ObservableObject {
     static let shared = DeepLinkManager()
     @Published var pendingListingId: String?
+    /// Settes når brukeren klikker en e-post-verifiseringslenke. Trigger
+    /// `EmailVerifiedView` som full-screen sheet i `TunoApp.body`.
+    @Published var showEmailVerified = false
 }
 
 class AppDelegate: NSObject, UIApplicationDelegate {
@@ -80,9 +83,7 @@ struct TunoApp: App {
             }
             .onOpenURL { url in
                 if url.scheme == "no.tuno.app" {
-                    Task {
-                        try? await supabase.auth.session(from: url)
-                    }
+                    handleAuthURL(url)
                 } else {
                     if let listingId = extractListingId(from: url) {
                         deepLinkManager.pendingListingId = listingId
@@ -90,9 +91,36 @@ struct TunoApp: App {
                 }
             }
             .onContinueUserActivity(NSUserActivityTypeBrowsingWeb) { activity in
-                if let url = activity.webpageURL,
-                   let listingId = extractListingId(from: url) {
+                guard let url = activity.webpageURL else { return }
+                // /auth/verified åpner verifiserings-sheet med auto-login
+                // fra hash-tokens. /listings/* har vanlig dyp lenke.
+                if url.path.hasPrefix("/auth/verified") {
+                    handleAuthURL(url)
+                } else if let listingId = extractListingId(from: url) {
                     deepLinkManager.pendingListingId = listingId
+                }
+            }
+            .fullScreenCover(isPresented: $deepLinkManager.showEmailVerified) {
+                EmailVerifiedView()
+                    .environmentObject(authManager)
+            }
+        }
+    }
+
+    /// Felles inngang for alle auth-callback-URL-er, både custom scheme
+    /// (`no.tuno.app://auth/...`) og Universal Links (`tuno.no/auth/verified`).
+    /// Sender URL-en gjennom `supabase.auth.session(from:)` så tokens i
+    /// hash-fragmentet logger brukeren inn, og åpner verifiserings-sheetet
+    /// hvis dette var en e-post-bekreftelse.
+    private func handleAuthURL(_ url: URL) {
+        let isVerificationLink = url.path.hasPrefix("/auth/verified")
+            || url.absoluteString.contains("type=signup")
+            || url.absoluteString.contains("type=email")
+        Task {
+            try? await supabase.auth.session(from: url)
+            if isVerificationLink {
+                await MainActor.run {
+                    deepLinkManager.showEmailVerified = true
                 }
             }
         }

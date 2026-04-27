@@ -47,6 +47,7 @@
 		694752864F4B0F93CA8B6433 /* InputField.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4706792C26101B180693BACF /* InputField.swift */; };
 		69B9A4A36285CD891EF163A1 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCA79AFEA0E6F8136582CC1 /* FlowLayout.swift */; };
 		6B7117AA9434A53E825A39A0 /* FavoritesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF4ECC50EF60CAE563B7D668 /* FavoritesService.swift */; };
+		6B9D27F1FAB9F57992BA3988 /* EmailVerifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BB2C75ED50A9F54DA87638 /* EmailVerifiedView.swift */; };
 		6CB4EB3DA766CB6BC5FC1B67 /* SpotDetailCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1213A1E7AC0AB0C6683A1A43 /* SpotDetailCard.swift */; };
 		707BCE8A8EA006E7F8604A34 /* AmenitiesStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE00FBD7C2654A066869B1E1 /* AmenitiesStep.swift */; };
 		720B1D6584518DD3B2B802EE /* ImageDropDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4DD0720CB861E932C5AECA /* ImageDropDelegate.swift */; };
@@ -194,6 +195,7 @@
 		CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IBANGenerator.swift; sourceTree = "<group>"; };
 		CF1513FE906EE61E579B662D /* BookingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingService.swift; sourceTree = "<group>"; };
 		D04AE83B5E261BA41D246388 /* MarkSpotsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkSpotsStep.swift; sourceTree = "<group>"; };
+		D3BB2C75ED50A9F54DA87638 /* EmailVerifiedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailVerifiedView.swift; sourceTree = "<group>"; };
 		D49112D9A0860BD7EB235BDE /* CachedAsyncImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedAsyncImage.swift; sourceTree = "<group>"; };
 		DAD96E8DCCD58804E7D8E5F9 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		DB14096D1AEF4406960194CB /* BookingConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingConfirmationView.swift; sourceTree = "<group>"; };
@@ -310,6 +312,7 @@
 		5594C1BF423A5D70CCD1EED6 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
+				D3BB2C75ED50A9F54DA87638 /* EmailVerifiedView.swift */,
 				0F76B3BFE9867FFEFA9DFEAB /* ForgotPasswordView.swift */,
 				F20335764277C2E44F7825D2 /* LoginView.swift */,
 				ED34354F8C7AAA6F81D0CB62 /* RegisterView.swift */,
@@ -610,6 +613,7 @@
 				1C32E4CA70F86F9BAF6C8EA2 /* DescriptionStep.swift in Sources */,
 				90D70482683053BEFF821336 /* EarningsView.swift in Sources */,
 				E42A18E39C3758AF4E6127C8 /* EditListingView.swift in Sources */,
+				6B9D27F1FAB9F57992BA3988 /* EmailVerifiedView.swift in Sources */,
 				6B7117AA9434A53E825A39A0 /* FavoritesService.swift in Sources */,
 				CF469E1FC5E6FD6315FD4442 /* FavoritesView.swift in Sources */,
 				69B9A4A36285CD891EF163A1 /* FlowLayout.swift in Sources */,
@@ -720,7 +724,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 72;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -820,7 +824,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 71;
+				CURRENT_PROJECT_VERSION = 72;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
