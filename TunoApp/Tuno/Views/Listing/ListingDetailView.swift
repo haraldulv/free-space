@@ -56,6 +56,8 @@ struct ListingDetailView: View {
             }
         }
         .task {
+            // Mark som besøkt så bobler i kartsøket viser visited-state.
+            VisitedListingsStore.shared.markVisited(listingId)
             let service = ListingService()
             let fetched = await service.fetchListing(id: listingId)
             listing = fetched

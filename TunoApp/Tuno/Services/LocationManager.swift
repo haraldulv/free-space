@@ -15,7 +15,12 @@ final class LocationManager: NSObject, ObservableObject, CLLocationManagerDelega
         authorizationStatus = manager.authorizationStatus
     }
 
+    /// Spør kun hvis status er `.notDetermined`. iOS viser ikke promt
+    /// flere ganger uansett, men eksplisitt sjekk holder logging rent
+    /// og forhindrer SDK-overhead. Denne kalles trygt fra .task som
+    /// kjører ved hver re-entry til SearchView.
     func requestPermission() {
+        guard manager.authorizationStatus == .notDetermined else { return }
         manager.requestWhenInUseAuthorization()
     }
 

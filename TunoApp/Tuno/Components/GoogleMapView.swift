@@ -94,6 +94,11 @@ struct SearchMapView: UIViewRepresentable {
     var centerLat: Double?
     var centerLng: Double?
     var centerZoom: Float?
+    var selectedListingId: String? = nil
+    /// Snapshot av besøkte listing-IDs. Sendes inn fra parent som
+    /// `VisitedListingsStore.shared.ids` så updateUIView kan re-bygge
+    /// bobler når en annonse endrer visited-status.
+    var visitedIds: Set<String> = []
     var onSelect: ((String?) -> Void)? = nil
     var onRegionChanged: ((_ lat: Double, _ lng: Double, _ radiusKm: Double) -> Void)? = nil
 
@@ -166,10 +171,13 @@ struct SearchMapView: UIViewRepresentable {
         context.coordinator.lastCenterLat = centerLat
         context.coordinator.lastCenterLng = centerLng
 
-        // Diff markers — kun rebygg om listings faktisk endret seg, ellers
-        // får vi flikker hver gang utenforstående state oppdaterer (f.eks.
-        // tap på pin → mapSelectedListing → re-render).
-        let newIdsKey = listings.compactMap { $0.lat != nil && $0.lng != nil ? $0.id : nil }.sorted().joined(separator: ",")
+        // Diff markers — re-bygg hvis listings, visited-IDs eller valgt
+        // marker har endret seg. Inkludert i diff-key så vi får riktige
+        // bobler (visited-grå, selected-grønn) uten konstant flikker.
+        let listingsKey = listings.compactMap { $0.lat != nil && $0.lng != nil ? $0.id : nil }.sorted().joined(separator: ",")
+        let visitedKey = visitedIds.sorted().joined(separator: ",")
+        let selectedKey = selectedListingId ?? ""
+        let newIdsKey = "\(listingsKey)|\(visitedKey)|\(selectedKey)"
         if newIdsKey != context.coordinator.lastListingIdsKey {
             mapView.clear()
             context.coordinator.markerToId.removeAll()
@@ -190,28 +198,71 @@ struct SearchMapView: UIViewRepresentable {
         for listing in validListings {
             let marker = GMSMarker()
             marker.position = CLLocationCoordinate2D(latitude: listing.lat!, longitude: listing.lng!)
-            marker.iconView = createPriceBubble(listing: listing)
+            marker.iconView = Self.createPriceBubble(
+                listing: listing,
+                isVisited: visitedIds.contains(listing.id),
+                isSelected: selectedListingId == listing.id
+            )
             marker.groundAnchor = CGPoint(x: 0.5, y: 0.5)
             marker.map = mapView
             coordinator.markerToId[marker] = listing.id
         }
     }
 
-    private func createPriceBubble(listing: Listing) -> UIView {
+    /// Bygger en pris-boble med 4 styling-states:
+    /// - **Visited** (lys grå, gråtekst, ingen ramme): gjengangere
+    /// - **Selected** (Tuno-grønn fyll, hvit tekst, stor): aktiv
+    /// - **Direktebooking** (hvit + ⚡ + grønn ramme): tydelig signal
+    /// - **Default** (hvit + svart tekst + shadow): nøytral
+    static func createPriceBubble(listing: Listing, isVisited: Bool, isSelected: Bool) -> UIView {
         let container = UIView()
-        container.backgroundColor = .white
+        let isInstant = listing.instantBooking == true
+
+        // Background + border per state
+        if isSelected {
+            container.backgroundColor = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1)  // primary600
+            container.layer.borderWidth = 0
+            container.layer.shadowColor = UIColor.black.cgColor
+            container.layer.shadowOpacity = 0.25
+            container.layer.shadowOffset = CGSize(width: 0, height: 3)
+            container.layer.shadowRadius = 6
+        } else if isVisited {
+            container.backgroundColor = UIColor(red: 0.93, green: 0.93, blue: 0.93, alpha: 1)  // neutral200-ish
+            container.layer.borderWidth = 0
+            container.layer.shadowOpacity = 0
+        } else {
+            container.backgroundColor = .white
+            container.layer.shadowColor = UIColor.black.cgColor
+            container.layer.shadowOpacity = 0.18
+            container.layer.shadowOffset = CGSize(width: 0, height: 2)
+            container.layer.shadowRadius = 4
+            if isInstant {
+                container.layer.borderWidth = 1.5
+                container.layer.borderColor = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1).cgColor
+            }
+        }
         container.layer.cornerRadius = 16
-        container.layer.shadowColor = UIColor.black.cgColor
-        container.layer.shadowOpacity = 0.18
-        container.layer.shadowOffset = CGSize(width: 0, height: 2)
-        container.layer.shadowRadius = 4
 
         let label = UILabel()
         let text = NSMutableAttributedString()
-        let textColor = UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
+        let textColor: UIColor = {
+            if isSelected { return .white }
+            if isVisited { return UIColor(red: 0.45, green: 0.45, blue: 0.45, alpha: 1) }
+            return UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
+        }()
+        let secondaryColor = textColor.withAlphaComponent(0.55)
 
-        if listing.instantBooking == true {
-            text.append(NSAttributedString(string: "\u{26A1}", attributes: [.font: UIFont.systemFont(ofSize: 11)]))
+        if isInstant {
+            // Lyn-symbol med Tuno-grønn (eller hvit hvis selected)
+            let boltColor: UIColor = isSelected
+                ? .white
+                : UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1)
+            let boltAttachment = NSTextAttachment()
+            let boltConfig = UIImage.SymbolConfiguration(pointSize: 11, weight: .bold)
+            boltAttachment.image = UIImage(systemName: "bolt.fill", withConfiguration: boltConfig)?
+                .withTintColor(boltColor, renderingMode: .alwaysOriginal)
+            text.append(NSAttributedString(attachment: boltAttachment))
+            text.append(NSAttributedString(string: " "))
         }
 
         text.append(NSAttributedString(
@@ -223,15 +274,16 @@ struct SearchMapView: UIViewRepresentable {
         if spots > 1 {
             text.append(NSAttributedString(
                 string: " \(spots)p",
-                attributes: [.font: UIFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: textColor.withAlphaComponent(0.5)]
+                attributes: [.font: UIFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: secondaryColor]
             ))
         }
 
         label.attributedText = text
         label.sizeToFit()
 
-        let padding: CGFloat = 12
-        container.frame = CGRect(x: 0, y: 0, width: label.frame.width + padding * 2, height: 32)
+        let padding: CGFloat = isSelected ? 14 : 12
+        let height: CGFloat = isSelected ? 36 : 32
+        container.frame = CGRect(x: 0, y: 0, width: label.frame.width + padding * 2, height: height)
         label.center = CGPoint(x: container.frame.width / 2, y: container.frame.height / 2)
         container.addSubview(label)
 
