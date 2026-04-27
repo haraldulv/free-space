@@ -5,29 +5,26 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 /**
- * E-post-verifiseringslanding. Brukeren havner her etter å ha klikket
- * lenken i Supabase verifiserings-mailen. Tre tilfeller:
- *
- * 1) iOS-bruker fra Mail.app/Safari + Tuno installert + Universal Links
- *    aktive: iOS åpner appen før denne siden lastes — siden rendres aldri.
- * 2) iOS-bruker fra Chrome eller Gmail-app: Chrome blokkerer ofte
- *    auto-redirect til custom scheme. Vi viser stor "Åpne Tuno-appen"-
- *    knapp øverst som primær handling.
- * 3) Desktop / Android: ser "Verifisert!" + Logg inn-knapp.
- *
- * Vi setter også Supabase-session fra hash-tokens så bruker er logget
- * inn på tuno.no (web-fallback hvis appen ikke er installert).
+ * E-post-verifiseringslanding. Etter Supabase-redirect havner brukeren
+ * her med tokens i hash-fragmentet. Vi setter web-session og forsøker
+ * å åpne native-appen via custom scheme. ALLTID synlig "Åpne Tuno-appen"-
+ * knapp som fallback for tilfeller der auto-redirect blokkeres (Chrome
+ * iOS er strengere enn Safari på dette).
  */
 export default function VerifiedClient() {
   const [hash, setHash] = useState<string>("");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [isError, setIsError] = useState<boolean>(false);
+  const [debugInfo, setDebugInfo] = useState<string>("");
 
   useEffect(() => {
     const currentHash = window.location.hash.slice(1);
     setHash(currentHash);
 
-    if (!currentHash) return;
+    if (!currentHash) {
+      setDebugInfo("(ingen hash i URL)");
+      return;
+    }
 
     const params = new URLSearchParams(currentHash);
     const accessToken = params.get("access_token");
@@ -41,19 +38,31 @@ export default function VerifiedClient() {
     }
 
     if (accessToken && refreshToken) {
+      setDebugInfo("verifisert · prøver å åpne app");
       const supabase = createClient();
       supabase.auth
         .setSession({ access_token: accessToken, refresh_token: refreshToken })
         .catch(() => {
           /* Stille feil — siden viser ok-state uansett */
         });
+
+      // Auto-trigger custom scheme på iOS via window.location.
+      // Chrome iOS kan blokkere dette, derfor er knappen i UI også
+      // synlig som backup. Liten delay så brukeren rekker å se UI.
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      if (isIOS) {
+        setTimeout(() => {
+          window.location.href = `no.tuno.app://auth/verified#${currentHash}`;
+        }, 400);
+      }
+    } else {
+      setDebugInfo("(mangler access_token i hash)");
     }
   }, []);
 
-  const isIOS =
-    typeof navigator !== "undefined" &&
-    /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const appLink = hash ? `no.tuno.app://auth/verified#${hash}` : null;
+  const appLink = hash
+    ? `no.tuno.app://auth/verified#${hash}`
+    : "no.tuno.app://auth/verified";
 
   if (isError) {
     return <ErrorView message={errorMessage} />;
@@ -119,21 +128,26 @@ export default function VerifiedClient() {
           Velkommen til Tuno! Klikk knappen under for å fortsette i appen.
         </p>
 
-        {appLink && isIOS && (
-          <a
-            href={appLink}
-            style={buttonPrimary}
-          >
-            Åpne Tuno-appen
-          </a>
-        )}
+        <a href={appLink} style={buttonPrimary}>
+          Åpne Tuno-appen
+        </a>
 
-        <Link
-          href="/"
-          style={appLink && isIOS ? buttonSecondary : buttonPrimary}
-        >
-          {appLink && isIOS ? "Fortsett på nettsiden" : "Kom i gang"}
+        <Link href="/" style={buttonSecondary}>
+          Fortsett på nettsiden
         </Link>
+
+        {debugInfo && (
+          <p
+            style={{
+              fontSize: 11,
+              color: "#a3a3a3",
+              marginTop: 24,
+              fontFamily: "ui-monospace, SFMono-Regular, monospace",
+            }}
+          >
+            {debugInfo}
+          </p>
+        )}
       </div>
     </main>
   );
