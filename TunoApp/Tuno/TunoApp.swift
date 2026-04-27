@@ -50,24 +50,24 @@ final class DeepLinkManager: ObservableObject {
         Task {
             if let tokenHash, !tokenHash.isEmpty {
                 do {
-                    if tokenHash.hasPrefix("pkce_") {
-                        print("🔐 PKCE exchange starter...")
-                        _ = try await supabase.auth.exchangeCodeForSession(authCode: tokenHash)
-                        print("✅ PKCE exchange OK")
-                    } else {
-                        let otpType: EmailOTPType = {
-                            switch typeString {
-                            case "recovery": return .recovery
-                            case "magiclink": return .magiclink
-                            case "email_change", "emailChange": return .emailChange
-                            case "invite": return .invite
-                            default: return .signup
-                            }
-                        }()
-                        print("🔐 verifyOTP starter...")
-                        _ = try await supabase.auth.verifyOTP(tokenHash: tokenHash, type: otpType)
-                        print("✅ verifyOTP OK")
-                    }
+                    // Email-templater med {{ .TokenHash }} sender alltid til
+                    // /verify-endepunktet via verifyOTP — uavhengig av om
+                    // token-strengen starter med "pkce_" eller ikke. Server-
+                    // siden håndterer prefiksen internt. exchangeCodeForSession
+                    // er for PKCE-OAuth-flyt (Google/Apple) der koden kommer
+                    // fra ?code= query, ikke email-template.
+                    let otpType: EmailOTPType = {
+                        switch typeString {
+                        case "recovery": return .recovery
+                        case "magiclink": return .magiclink
+                        case "email_change", "emailChange": return .emailChange
+                        case "invite": return .invite
+                        default: return .signup
+                        }
+                    }()
+                    print("🔐 verifyOTP starter (type: \(typeString))...")
+                    _ = try await supabase.auth.verifyOTP(tokenHash: tokenHash, type: otpType)
+                    print("✅ verifyOTP OK")
                     await MainActor.run { self.verifyStatus = .success }
                 } catch {
                     print("❌ Auth verify feilet: \(error)")
