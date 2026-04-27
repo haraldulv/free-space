@@ -1,0 +1,11 @@
+{
+  "applinks": {
+    "apps": [],
+    "details": [
+      {
+        "appID": "3VD2DMBJ6M.no.tuno.app",
+        "paths": ["/listings/*", "/auth/verified", "/auth/verified*"]
+      }
+    ]
+  }
+}
