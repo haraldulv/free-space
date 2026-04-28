@@ -551,7 +551,7 @@ struct BandPrefill: Identifiable {
 
 // MARK: - Add bånd-sheet
 
-private struct AddHourlyBandSheet: View {
+struct AddHourlyBandSheet: View {
     let basePrice: Int
     let prefill: BandPrefill?
     let onSave: (_ dayMask: Int, _ startHour: Int, _ endHour: Int, _ price: Int) -> Void

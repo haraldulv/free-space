@@ -16,7 +16,7 @@ struct HomeView: View {
     @State private var pendingStartHour: Int?
     @State private var pendingEndHour: Int?
     @State private var pendingBookingPref: BookingPreference = .all
-    @State private var pendingVehicles: Set<VehicleType> = [.motorhome]
+    @State private var pendingVehicles: Set<VehicleType> = [.motorhome, .campervan]
     @State private var pendingPlace: PlacePrediction?
     @State private var pendingUseMyLocation: Bool = false
     @StateObject private var placesService = PlacesService()
@@ -58,6 +58,8 @@ struct HomeView: View {
                             Button {
                                 withAnimation(.easeInOut(duration: 0.22)) {
                                     selectedCategory = category
+                                    // Reset default kjøretøy for senere søk via pillen.
+                                    pendingVehicles = (category == .camping) ? [.motorhome, .campervan] : [.car]
                                 }
                                 Task { await listingService.fetchHomeListings(category: category) }
                             } label: {

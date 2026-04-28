@@ -260,10 +260,20 @@ struct CreateListingView: View {
                     .value
 
                 await authManager.loadProfile()
-                form.isSubmitting = false
                 if let listing = inserted.first {
+                    // Persist time-bånd-regler (parkering per time) etter at listing-id finnes.
+                    for band in form.pricingBands {
+                        try? await PricingService.addHourlyBandRule(
+                            listingId: listing.id,
+                            dayMask: band.dayMask,
+                            startHour: band.startHour,
+                            endHour: band.endHour,
+                            price: band.price,
+                        )
+                    }
                     newListing = listing
                 }
+                form.isSubmitting = false
                 withAnimation { showSuccess = true }
             } catch {
                 form.error = "Kunne ikke opprette annonse: \(error.localizedDescription)"

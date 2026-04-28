@@ -61,6 +61,9 @@ final class ListingFormModel: ObservableObject {
 
     // MARK: - Step 9: Kalender
     @Published var blockedDates: Set<String> = []
+    /// Time-bånd for parkering per time. Lagres som listing_pricing_rules
+    /// (kind='hourly') etter at annonsen er publisert.
+    @Published var pricingBands: [WizardPricingBand] = []
 
     // MARK: - Listing-level (settes ved review)
     @Published var instantBooking = true

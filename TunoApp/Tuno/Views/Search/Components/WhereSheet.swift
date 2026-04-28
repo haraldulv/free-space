@@ -76,11 +76,6 @@ struct WhereSheet: View {
                             .background(Circle().fill(Color.neutral50))
                     }
                 }
-                ToolbarItem(placement: .principal) {
-                    Text("Hvor?")
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(.neutral900)
-                }
             }
             .onAppear { typing = query }
             .onChange(of: typing) { _, newValue in
@@ -106,36 +101,37 @@ struct WhereSheet: View {
 
     private var categorySection: some View {
         HStack(spacing: 0) {
-            categorySegment(.camping, label: "Camping", icon: "tent.fill", subtitle: "Per natt")
-            categorySegment(.parking, label: "Parkering", icon: "car.fill", subtitle: "Per time")
+            categorySegment(.camping, label: "Camping", icon: "tent.fill")
+            categorySegment(.parking, label: "Parkering", icon: "car.fill")
         }
         .padding(3)
         .background(Color.neutral100)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
-    private func categorySegment(_ value: ListingCategory, label: String, icon: String, subtitle: String) -> some View {
+    private func categorySegment(_ value: ListingCategory, label: String, icon: String) -> some View {
         let isSelected = category == value
         return Button {
             withAnimation(.easeInOut(duration: 0.2)) {
+                let previous = category
                 category = value
+                // Bytte kategori → resett kjøretøy-defaults til kategoriens forventede.
+                // Camping = bobil + campingbil, Parkering = personbil.
+                if previous != value {
+                    vehicles = (value == .camping) ? [.motorhome, .campervan] : [.car]
+                }
             }
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: icon)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(isSelected ? .primary600 : .neutral500)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(label)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(isSelected ? .neutral900 : .neutral500)
-                    Text(subtitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(isSelected ? .primary600 : .neutral400)
-                }
+                Text(label)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(isSelected ? .neutral900 : .neutral500)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
             .background(isSelected ? Color.white : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 11))
             .shadow(color: isSelected ? .black.opacity(0.06) : .clear, radius: 2, y: 1)
@@ -526,7 +522,7 @@ struct WhereSheet: View {
                     startHour = nil
                     endHour = nil
                     bookingPref = .all
-                    vehicles = [.motorhome]
+                    vehicles = (category == .camping) ? [.motorhome, .campervan] : [.car]
                     placesService.clear()
                 }
                 .font(.system(size: 14, weight: .semibold))

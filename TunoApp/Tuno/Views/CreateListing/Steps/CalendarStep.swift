@@ -14,8 +14,20 @@ struct CalendarStep: View {
     @State private var anchorPulse = false
     /// Dato som er valgt for time-redigering (kun parkering).
     @State private var selectedDateForHours: String?
+    @State private var showAddBandSheet = false
+    @State private var bandSheetPrefill: BandPrefill?
 
     private var isParking: Bool { form.category == .parking }
+    /// True når listing-nivå priceUnit eller noen plass har .hour — viser
+    /// time-bånd-pris-seksjonen i toppen av kalender.
+    private var hasHourlyPricing: Bool {
+        if form.priceUnit == .hour { return true }
+        return form.spotMarkers.contains(where: { $0.priceUnit == .hour })
+    }
+    private var basePriceHint: Int {
+        // Bruk første spot's pris om satt, ellers 50 (placeholder for prefill).
+        form.spotMarkers.first?.price ?? 50
+    }
 
     private let monthsAhead = 12
 
@@ -57,6 +69,9 @@ struct CalendarStep: View {
 
             ScrollView {
                 LazyVStack(spacing: 22) {
+                    if isParking && hasHourlyPricing {
+                        hourlyBandsSection
+                    }
                     ForEach(visibleMonthList, id: \.self) { monthStart in
                         monthSection(monthStart)
                     }
@@ -82,6 +97,138 @@ struct CalendarStep: View {
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
         }
+        .sheet(isPresented: $showAddBandSheet) {
+            AddHourlyBandSheet(
+                basePrice: basePriceHint,
+                prefill: bandSheetPrefill,
+            ) { dayMask, startHour, endHour, price in
+                form.pricingBands.append(
+                    WizardPricingBand(dayMask: dayMask, startHour: startHour, endHour: endHour, price: price)
+                )
+            }
+        }
+    }
+
+    // MARK: - Hourly bands-seksjon (parkering per time)
+
+    private var hourlyBandsSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Pris per tidsbånd")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text("Standardpris brukes for timer som ikke faller i et bånd. Bånd lar deg sette ulike priser for arbeidstid, kveld og helg.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+            }
+
+            if !form.pricingBands.isEmpty {
+                VStack(spacing: 8) {
+                    ForEach(form.pricingBands) { band in
+                        bandRow(band)
+                    }
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Hurtigvalg")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.neutral600)
+
+                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                    ForEach(BandPrefill.defaults) { prefill in
+                        Button {
+                            bandSheetPrefill = prefill
+                            showAddBandSheet = true
+                        } label: {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(prefill.label)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(.neutral900)
+                                Text(prefill.subtitle)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.neutral500)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 8)
+                            .background(Color.neutral50)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.neutral200, lineWidth: 1))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+
+            Button {
+                bandSheetPrefill = nil
+                showAddBandSheet = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                    Text("Legg til eget bånd")
+                }
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.primary700)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .background(Color.primary50)
+                .clipShape(Capsule())
+            }
+        }
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 1))
+        .padding(.horizontal, 16)
+        .padding(.top, 4)
+    }
+
+    private func bandRow(_ band: WizardPricingBand) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: "clock")
+                .foregroundStyle(Color.primary600)
+                .font(.system(size: 13))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(formatBandLabel(band))
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral900)
+                Text("\(band.price) kr/time")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.neutral600)
+            }
+            Spacer()
+            Button {
+                form.pricingBands.removeAll { $0.id == band.id }
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.red.opacity(0.7))
+            }
+        }
+        .padding(10)
+        .background(Color.neutral50)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func formatBandLabel(_ band: WizardPricingBand) -> String {
+        let weekdaysMask = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4)
+        let weekendMask = (1 << 5) | (1 << 6)
+        let allMask = weekdaysMask | weekendMask
+        let mask = band.dayMask
+        let dayPart: String
+        if mask == allMask { dayPart = "Alle dager" }
+        else if mask == weekdaysMask { dayPart = "Hverdager" }
+        else if mask == weekendMask { dayPart = "Helg" }
+        else {
+            let names = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"]
+            dayPart = (0..<7).compactMap { i in (mask & (1 << i)) != 0 ? names[i] : nil }.joined(separator: ", ")
+        }
+        let sh = String(format: "%02d", band.startHour)
+        let eh = String(format: "%02d", band.endHour)
+        return "\(dayPart) · \(sh):00–\(eh):00"
     }
 
     // MARK: - Header

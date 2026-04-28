@@ -163,6 +163,24 @@ struct HourlyPriceEntry: Codable, Hashable {
     let source: String  // "base" | "hourly" | "override"
 }
 
+/// Time-bånd-regel som settes opp i wizard og inserts som listing_pricing_rules
+/// etter publisering. Holdes lokalt i form-state.
+struct WizardPricingBand: Identifiable, Hashable {
+    let id: UUID
+    var dayMask: Int
+    var startHour: Int
+    var endHour: Int
+    var price: Int
+
+    init(id: UUID = UUID(), dayMask: Int, startHour: Int, endHour: Int, price: Int) {
+        self.id = id
+        self.dayMask = dayMask
+        self.startHour = startHour
+        self.endHour = endHour
+        self.price = price
+    }
+}
+
 enum ListingCategory: String, Codable, CaseIterable {
     case parking
     case camping
