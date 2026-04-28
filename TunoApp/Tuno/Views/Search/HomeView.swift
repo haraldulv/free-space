@@ -67,12 +67,11 @@ struct HomeView: View {
                                 Task { await listingService.fetchHomeListings(category: category) }
                             } label: {
                                 VStack(spacing: 7) {
-                                    Image(category.lucideIcon)
-                                        .renderingMode(.template)
+                                    Image(category.categoryIcon)
                                         .resizable()
                                         .aspectRatio(contentMode: .fit)
-                                        .foregroundStyle(selectedCategory == category ? Color.primary600 : .neutral400)
-                                        .frame(width: 30, height: 30)
+                                        .frame(width: 36, height: 36)
+                                        .opacity(selectedCategory == category ? 1.0 : 0.5)
                                         .scaleEffect(selectedCategory == category ? 1.0 : 0.88)
                                         .animation(.spring(response: 0.35, dampingFraction: 0.65), value: selectedCategory)
                                     Text(category.tabLabel)

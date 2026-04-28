@@ -99,15 +99,15 @@ struct WhereSheet: View {
 
     private var categoryFloatingPill: some View {
         HStack(spacing: 0) {
-            categoryFloatingTab(.camping, label: "Camping", icon: "tent.fill")
-            categoryFloatingTab(.parking, label: "Parkering", icon: "car.fill")
+            categoryFloatingTab(.camping, label: "Camping")
+            categoryFloatingTab(.parking, label: "Parkering")
         }
         .padding(4)
         .background(Capsule().fill(Color.white))
         .shadow(color: .black.opacity(0.10), radius: 8, y: 2)
     }
 
-    private func categoryFloatingTab(_ value: ListingCategory, label: String, icon: String) -> some View {
+    private func categoryFloatingTab(_ value: ListingCategory, label: String) -> some View {
         let isSelected = category == value
         return Button {
             withAnimation(.easeInOut(duration: 0.2)) {
@@ -119,16 +119,18 @@ struct WhereSheet: View {
             }
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(isSelected ? .white : .neutral500)
+                Image(value.categoryIcon)
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 20, height: 20)
+                    .opacity(isSelected ? 1.0 : 0.55)
                 Text(label)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(isSelected ? .white : .neutral500)
+                    .foregroundStyle(isSelected ? .neutral900 : .neutral500)
             }
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(Capsule().fill(isSelected ? Color.neutral900 : Color.clear))
+            .padding(.vertical, 6)
+            .background(Capsule().fill(isSelected ? Color.neutral100 : Color.clear))
         }
         .buttonStyle(.plain)
     }

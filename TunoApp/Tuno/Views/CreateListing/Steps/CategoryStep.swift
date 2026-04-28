@@ -13,7 +13,7 @@ struct CategoryStep: View {
                     isSelected: form.category == .camping,
                     title: "Camping",
                     subtitle: "Bobil, campingvogn eller telt",
-                    iconName: "tent.fill"
+                    assetName: "category-camping"
                 ) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
                         form.setCategory(.camping)
@@ -24,7 +24,7 @@ struct CategoryStep: View {
                     isSelected: form.category == .parking,
                     title: "Parkering",
                     subtitle: "Pendlere, beboere eller lading",
-                    iconName: "car.fill"
+                    assetName: "category-parking"
                 ) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
                         form.setCategory(.parking)
@@ -39,7 +39,7 @@ private struct CategoryCard: View {
     let isSelected: Bool
     let title: String
     let subtitle: String
-    let iconName: String
+    let assetName: String
     let action: () -> Void
 
     var body: some View {
@@ -48,11 +48,12 @@ private struct CategoryCard: View {
                 HStack {
                     ZStack {
                         RoundedRectangle(cornerRadius: 18)
-                            .fill(isSelected ? Color.primary600 : Color.primary50)
+                            .fill(isSelected ? Color.primary50 : Color.neutral50)
                             .frame(width: 72, height: 72)
-                        Image(systemName: iconName)
-                            .font(.system(size: 32, weight: .medium))
-                            .foregroundStyle(isSelected ? .white : .primary700)
+                        Image(assetName)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 56, height: 56)
                     }
                     Spacer()
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")

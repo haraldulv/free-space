@@ -217,6 +217,16 @@ enum ListingCategory: String, Codable, CaseIterable {
         case .parking: return "lucide-car"
         }
     }
+
+    /// Branded 3D-PNG-ikoner brukt i kategori-velgere (forsiden, WhereSheet,
+    /// wizard-CategoryStep). Original-rendret (ikke template) så fargene
+    /// beholdes uavhengig av foregroundStyle.
+    var categoryIcon: String {
+        switch self {
+        case .camping: return "category-camping"
+        case .parking: return "category-parking"
+        }
+    }
 }
 
 enum VehicleType: String, Codable, CaseIterable {
