@@ -62,10 +62,10 @@ struct SearchView: View {
         self.initialPlace = initialPlace
         self.useMyLocationOnAppear = useMyLocationOnAppear
         self.openWhereSheetOnAppear = openWhereSheetOnAppear
-        _showWhereSheet = State(initialValue: openWhereSheetOnAppear)
-        // Ved åpning fra forside-pille: skjul kart-laget til brukeren har
-        // lukket WhereSheet første gang (via Søk eller xmark). Ellers vis
-        // alt umiddelbart (vanlig direkte-åpning av SearchView).
+        _showWhereSheet = State(initialValue: false)
+        // Ved åpning fra forside-pille: render WhereSheet INLINE (ikke som
+        // fullScreenCover) til brukeren har lukket den første gang. Inline
+        // unngår cover-presentasjonsanimasjonen og gir umiddelbar visning.
         _hasDismissedInitialSheet = State(initialValue: !openWhereSheetOnAppear)
         _query = State(initialValue: initialQuery)
         _checkIn = State(initialValue: initialCheckIn)
@@ -116,38 +116,103 @@ struct SearchView: View {
     @State private var hasDismissedInitialSheet: Bool
 
     var body: some View {
+        Group {
+            if hasDismissedInitialSheet {
+                mainSearchUI
+            } else {
+                // Inline WhereSheet — rendres umiddelbart uten cover-delay.
+                // Brukes kun ved åpning fra forside-pille; etter første
+                // dismiss byttes body til mainSearchUI med kartet.
+                WhereSheet(
+                    isPresented: Binding(
+                        get: { !hasDismissedInitialSheet },
+                        set: { newValue in if !newValue { hasDismissedInitialSheet = true } }
+                    ),
+                    category: Binding(
+                        get: { filters.category ?? .camping },
+                        set: { filters.category = $0 }
+                    ),
+                    query: $query,
+                    checkIn: $checkIn,
+                    checkOut: $checkOut,
+                    startMinutes: $startMinutes,
+                    endMinutes: $endMinutes,
+                    bookingPref: $bookingPref,
+                    vehicles: $vehicles,
+                    placesService: placesService,
+                    locationManager: locationManager,
+                    onSelectPlace: handleSelectPlace,
+                    onUseMyLocation: goToMyLocation,
+                    onSearch: {
+                        filters.bookingPreference = bookingPref
+                        filters.vehicleTypes = vehicles
+                        hasDismissedInitialSheet = true
+                        performSearch()
+                    }
+                )
+            }
+        }
+        .task {
+            if hasInitialLocation { return }
+            // Hvis brukeren valgte et sted i Hvor-modalen, gå dit først
+            if let place = initialPlace {
+                if let detail = await placesService.getPlaceDetail(placeId: place.id) {
+                    setSearchCenter(lat: detail.lat, lng: detail.lng, zoom: 11)
+                    hasInitialLocation = true
+                    await searchAt(lat: detail.lat, lng: detail.lng)
+                    return
+                }
+            }
+            locationManager.requestPermission()
+            if useMyLocationOnAppear || hasInitialLocation == false {
+                if let loc = locationManager.userLocation {
+                    setSearchCenter(lat: loc.latitude, lng: loc.longitude, zoom: 12)
+                    hasInitialLocation = true
+                    await searchAt(lat: loc.latitude, lng: loc.longitude)
+                    return
+                }
+            }
+            await searchAt(lat: nil, lng: nil)
+        }
+        .onReceive(locationManager.$userLocation) { newLoc in
+            guard let loc = newLoc, !hasInitialLocation else { return }
+            hasInitialLocation = true
+            setSearchCenter(lat: loc.latitude, lng: loc.longitude, zoom: 12)
+            performSearch()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
+            dismiss()
+        }
+    }
+
+    private var mainSearchUI: some View {
         NavigationStack(path: $navigationPath) {
             ZStack(alignment: .top) {
-                if hasDismissedInitialSheet {
-                    mapLayer
+                mapLayer
 
-                    // Liste-drawer (kun når ingen boble er valgt) — overlayes på kartet
-                    if selectedListingIndex == nil {
-                        BottomListDrawer(
-                            listings: filteredListings,
-                            isFavorited: { id in favoritesService.favoriteIds.contains(id) },
-                            onFavorite: toggleFavorite,
-                            onSelect: { listing in
-                                navigationPath.append(listing)
-                            }
-                        )
-                        .zIndex(1)
-                        .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-
-                    topBar
-                        .zIndex(2)
-
-                    if showSearchHere {
-                        searchHereLayer
-                            .zIndex(3)
-                    }
-
-                    bottomLayer
-                        .zIndex(2)
-                } else {
-                    Color.white.ignoresSafeArea()
+                if selectedListingIndex == nil {
+                    BottomListDrawer(
+                        listings: filteredListings,
+                        isFavorited: { id in favoritesService.favoriteIds.contains(id) },
+                        onFavorite: toggleFavorite,
+                        onSelect: { listing in
+                            navigationPath.append(listing)
+                        }
+                    )
+                    .zIndex(1)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
+
+                topBar
+                    .zIndex(2)
+
+                if showSearchHere {
+                    searchHereLayer
+                        .zIndex(3)
+                }
+
+                bottomLayer
+                    .zIndex(2)
             }
             .background(Color.neutral50)
             .toolbar(.hidden, for: .navigationBar)
@@ -174,7 +239,6 @@ struct SearchView: View {
                     onUseMyLocation: goToMyLocation,
                     onSearch: {
                         showWhereSheet = false
-                        // Synk filtre med valgte verdier i Hvor-modalen
                         filters.bookingPreference = bookingPref
                         filters.vehicleTypes = vehicles
                         performSearch()
@@ -190,42 +254,6 @@ struct SearchView: View {
                     onApply: performSearch
                 )
                 .presentationDetents([.large])
-            }
-            .task {
-                if hasInitialLocation { return }
-                // Hvis brukeren valgte et sted i Hvor-modalen, gå dit først
-                if let place = initialPlace {
-                    if let detail = await placesService.getPlaceDetail(placeId: place.id) {
-                        setSearchCenter(lat: detail.lat, lng: detail.lng, zoom: 11)
-                        hasInitialLocation = true
-                        await searchAt(lat: detail.lat, lng: detail.lng)
-                        return
-                    }
-                }
-                locationManager.requestPermission()
-                if useMyLocationOnAppear || hasInitialLocation == false {
-                    if let loc = locationManager.userLocation {
-                        setSearchCenter(lat: loc.latitude, lng: loc.longitude, zoom: 12)
-                        hasInitialLocation = true
-                        await searchAt(lat: loc.latitude, lng: loc.longitude)
-                        return
-                    }
-                }
-                await searchAt(lat: nil, lng: nil)
-            }
-            .onReceive(locationManager.$userLocation) { newLoc in
-                guard let loc = newLoc, !hasInitialLocation else { return }
-                hasInitialLocation = true
-                setSearchCenter(lat: loc.latitude, lng: loc.longitude, zoom: 12)
-                performSearch()
-            }
-            .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
-                dismiss()
-            }
-            .onChange(of: showWhereSheet) { _, isPresented in
-                // Når WhereSheet lukkes (Søk eller xmark) skal kart-laget vises.
-                // Åpning igjen senere skal IKKE skjule kartet bak igjen.
-                if !isPresented { hasDismissedInitialSheet = true }
             }
         }
     }
@@ -244,6 +272,9 @@ struct SearchView: View {
             onSelect: { id in
                 hideKeyboard()
                 if let id, let idx = filteredListings.firstIndex(where: { $0.id == id }) {
+                    // Marker boblen som besøkt umiddelbart, så den nedtones
+                    // ved neste tap (uten å vente på at brukeren åpner detaljvisning).
+                    visitedStore.markVisited(id)
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
                         selectedListingIndex = idx
                     }

@@ -60,10 +60,12 @@ struct FiltersSheet: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { isPresented = false } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.neutral700)
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(Color(.systemGray3))
                     }
+                    .accessibilityLabel("Lukk")
                 }
                 ToolbarItem(placement: .principal) {
                     Text("Filter")

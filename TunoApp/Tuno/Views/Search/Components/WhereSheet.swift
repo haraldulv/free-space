@@ -70,12 +70,12 @@ struct WhereSheet: View {
                     Button {
                         isPresented = false
                     } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.neutral900)
-                            .frame(width: 32, height: 32)
-                            .background(Circle().fill(Color.neutral50))
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 28))
+                            .symbolRenderingMode(.hierarchical)
+                            .foregroundStyle(Color(.systemGray3))
                     }
+                    .accessibilityLabel("Lukk")
                 }
             }
             .onAppear { typing = query }

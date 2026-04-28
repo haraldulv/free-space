@@ -51,7 +51,7 @@ struct MapListingBigCard: View {
         }
         .background(.white)
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .shadow(color: .black.opacity(0.18), radius: 14, y: 4)
+        .shadow(color: .black.opacity(0.10), radius: 10, y: 0)
         .contentShape(RoundedRectangle(cornerRadius: 16))
         .onTapGesture { onTap() }
     }

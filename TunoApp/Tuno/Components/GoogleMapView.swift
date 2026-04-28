@@ -158,6 +158,7 @@ struct SearchMapView: UIViewRepresentable {
         context.coordinator.lastCenterLat = centerLat
         context.coordinator.lastCenterLng = centerLng
         context.coordinator.lastSelectedListingId = selectedListingId
+        context.coordinator.lastVisitedIds = visitedIds
 
         addMarkers(to: mapView, coordinator: context.coordinator)
 
@@ -176,30 +177,37 @@ struct SearchMapView: UIViewRepresentable {
         context.coordinator.lastCenterLng = centerLng
         context.coordinator.lastCenterZoom = centerZoom
 
-        // Diff markers. Full rebuild kun ved endring i listings eller visited-IDs.
-        // Selection-endring oppdaterer KUN de to relevante markørene (gammel +
-        // ny), så tap-respons føles umiddelbar selv med 50+ bobler på kartet.
+        // Diff markers. Full rebuild KUN ved endring i listings-settet.
+        // Selection- og visited-endringer oppdaterer kun de relevante
+        // markørenes iconView, så tap-respons føles umiddelbar.
         let listingsKey = listings.compactMap { $0.lat != nil && $0.lng != nil ? $0.id : nil }.sorted().joined(separator: ",")
-        let visitedKey = visitedIds.sorted().joined(separator: ",")
-        let newIdsKey = "\(listingsKey)|\(visitedKey)"
-        if newIdsKey != context.coordinator.lastListingIdsKey {
+        if listingsKey != context.coordinator.lastListingIdsKey {
             mapView.clear()
             context.coordinator.markerToId.removeAll()
             addMarkers(to: mapView, coordinator: context.coordinator, selectedId: selectedListingId)
-            context.coordinator.lastListingIdsKey = newIdsKey
+            context.coordinator.lastListingIdsKey = listingsKey
             context.coordinator.lastSelectedListingId = selectedListingId
-        } else if selectedListingId != context.coordinator.lastSelectedListingId {
-            let prevId = context.coordinator.lastSelectedListingId
-            let currId = selectedListingId
-            for (marker, id) in context.coordinator.markerToId where id == prevId || id == currId {
-                guard let listing = listings.first(where: { $0.id == id }) else { continue }
-                marker.iconView = Self.createPriceBubble(
-                    listing: listing,
-                    isVisited: visitedIds.contains(id),
-                    isSelected: id == currId
-                )
+            context.coordinator.lastVisitedIds = visitedIds
+        } else {
+            let visitedDiff = visitedIds.symmetricDifference(context.coordinator.lastVisitedIds)
+            let selectionChanged = selectedListingId != context.coordinator.lastSelectedListingId
+            if !visitedDiff.isEmpty || selectionChanged {
+                var idsToUpdate: Set<String> = visitedDiff
+                if selectionChanged {
+                    if let prev = context.coordinator.lastSelectedListingId { idsToUpdate.insert(prev) }
+                    if let curr = selectedListingId { idsToUpdate.insert(curr) }
+                }
+                for (marker, id) in context.coordinator.markerToId where idsToUpdate.contains(id) {
+                    guard let listing = listings.first(where: { $0.id == id }) else { continue }
+                    marker.iconView = Self.createPriceBubble(
+                        listing: listing,
+                        isVisited: visitedIds.contains(id),
+                        isSelected: id == selectedListingId
+                    )
+                }
+                context.coordinator.lastSelectedListingId = selectedListingId
+                context.coordinator.lastVisitedIds = visitedIds
             }
-            context.coordinator.lastSelectedListingId = selectedListingId
         }
 
         if centerChanged, let lat = centerLat, let lng = centerLng {
@@ -288,6 +296,14 @@ struct SearchMapView: UIViewRepresentable {
         label.center = CGPoint(x: container.frame.width / 2, y: container.frame.height / 2)
         container.addSubview(label)
 
+        // Eksplisitt shadowPath følger den avrundede formen. Uten dette
+        // beregner CALayer skyggen fra alpha-mask, som kan rendre som
+        // en firkant rundt boblen i stedet for en avrundet glow.
+        container.layer.shadowPath = UIBezierPath(
+            roundedRect: container.bounds,
+            cornerRadius: container.layer.cornerRadius
+        ).cgPath
+
         return container
     }
 
@@ -303,6 +319,7 @@ struct SearchMapView: UIViewRepresentable {
         var lastCenterZoom: Float?
         var lastListingIdsKey: String = ""
         var lastSelectedListingId: String?
+        var lastVisitedIds: Set<String> = []
         var userMovedMap = false
         var debounceWorkItem: DispatchWorkItem?
 
