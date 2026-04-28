@@ -10,9 +10,13 @@ import CoreLocation
 /// - Bunnbar med "Fjern alle" + "Søk"
 struct WhereSheet: View {
     @Binding var isPresented: Bool
+    @Binding var category: ListingCategory
     @Binding var query: String
     @Binding var checkIn: Date?
     @Binding var checkOut: Date?
+    /// Tidspunkt for parkering. NULL = uspesifisert (vis kun datoer).
+    @Binding var startHour: Int?
+    @Binding var endHour: Int?
     @Binding var bookingPref: BookingPreference
     @Binding var vehicles: Set<VehicleType>
     @ObservedObject var placesService: PlacesService
@@ -41,9 +45,13 @@ struct WhereSheet: View {
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
+                        categorySection
                         searchField
                         nearbyAndSuggestedSection
                         whenSection
+                        if category == .parking {
+                            timeRangeSection
+                        }
                         bookingPrefSection
                         vehicleSection
                     }
@@ -91,6 +99,108 @@ struct WhereSheet: View {
                 )
                 .presentationDetents([.large])
             }
+        }
+    }
+
+    // MARK: - Category picker (camping vs parkering)
+
+    private var categorySection: some View {
+        HStack(spacing: 0) {
+            categorySegment(.camping, label: "Camping", icon: "tent.fill", subtitle: "Per natt")
+            categorySegment(.parking, label: "Parkering", icon: "car.fill", subtitle: "Per time")
+        }
+        .padding(3)
+        .background(Color.neutral100)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    private func categorySegment(_ value: ListingCategory, label: String, icon: String, subtitle: String) -> some View {
+        let isSelected = category == value
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                category = value
+            }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(isSelected ? .primary600 : .neutral500)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(label)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(isSelected ? .neutral900 : .neutral500)
+                    Text(subtitle)
+                        .font(.system(size: 11))
+                        .foregroundStyle(isSelected ? .primary600 : .neutral400)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(isSelected ? Color.white : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 11))
+            .shadow(color: isSelected ? .black.opacity(0.06) : .clear, radius: 2, y: 1)
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Time range (kun parkering)
+
+    private var timeRangeSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text("Tidspunkt")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.neutral500)
+                    .textCase(.uppercase)
+                Spacer()
+                if startHour != nil || endHour != nil {
+                    Button("Nullstill") {
+                        startHour = nil
+                        endHour = nil
+                    }
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.neutral500)
+                }
+            }
+
+            HStack(spacing: 8) {
+                hourChip(label: "Fra", value: startHour) { newVal in
+                    startHour = newVal
+                    if let s = startHour, let e = endHour, e <= s {
+                        endHour = min(24, s + 1)
+                    }
+                }
+                hourChip(label: "Til", value: endHour) { newVal in
+                    endHour = newVal
+                }
+            }
+
+            Text("Default-søk er hele dagen. Velg tid for å filtrere på parkeringer som er ledige akkurat da.")
+                .font(.system(size: 11))
+                .foregroundStyle(.neutral400)
+        }
+    }
+
+    private func hourChip(label: String, value: Int?, onSelect: @escaping (Int) -> Void) -> some View {
+        Menu {
+            ForEach(0..<24, id: \.self) { h in
+                Button(String(format: "%02d:00", h)) { onSelect(h) }
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                Text(value.map { String(format: "%02d:00", $0) } ?? "Velg tid")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(value == nil ? .neutral400 : .neutral900)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
         }
     }
 
@@ -183,7 +293,8 @@ struct WhereSheet: View {
             onUseMyLocation()
             query = "I nærheten"
             typing = "I nærheten"
-            isPresented = false
+            // Trigger søket — onSearch lukker sheet og åpner kartet via parent.
+            onSearch()
         } label: {
             HStack(spacing: 14) {
                 ZStack {
@@ -215,11 +326,20 @@ struct WhereSheet: View {
             typing = dest.name
             placesService.autocomplete(query: dest.name)
             Task {
-                try? await Task.sleep(nanoseconds: 350_000_000)
-                if let first = placesService.predictions.first {
-                    onSelectPlace(first)
-                    isPresented = false
+                // Vent opp til 1.5s på prediction før vi gir opp.
+                // 350ms-fast-sleep slo ofte ut når Places API var treg, og brukeren
+                // havnet tilbake på forsiden uten place satt.
+                for _ in 0..<15 {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                    if let first = placesService.predictions.first {
+                        onSelectPlace(first)
+                        onSearch()
+                        return
+                    }
                 }
+                // Fallback: hadde ikke en prediction, men feltet er fylt — la søket gå
+                // med kun query (SearchView geokoder selv ved fallback).
+                onSearch()
             }
         } label: {
             HStack(spacing: 14) {
@@ -403,6 +523,8 @@ struct WhereSheet: View {
                     query = ""
                     checkIn = nil
                     checkOut = nil
+                    startHour = nil
+                    endHour = nil
                     bookingPref = .all
                     vehicles = [.motorhome]
                     placesService.clear()

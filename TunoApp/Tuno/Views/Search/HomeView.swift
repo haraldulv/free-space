@@ -13,6 +13,8 @@ struct HomeView: View {
     @State private var pendingQuery: String = ""
     @State private var pendingCheckIn: Date?
     @State private var pendingCheckOut: Date?
+    @State private var pendingStartHour: Int?
+    @State private var pendingEndHour: Int?
     @State private var pendingBookingPref: BookingPreference = .all
     @State private var pendingVehicles: Set<VehicleType> = [.motorhome]
     @State private var pendingPlace: PlacePrediction?
@@ -149,9 +151,12 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $showWhereSheet) {
             WhereSheet(
                 isPresented: $showWhereSheet,
+                category: $selectedCategory,
                 query: $pendingQuery,
                 checkIn: $pendingCheckIn,
                 checkOut: $pendingCheckOut,
+                startHour: $pendingStartHour,
+                endHour: $pendingEndHour,
                 bookingPref: $pendingBookingPref,
                 vehicles: $pendingVehicles,
                 placesService: placesService,
@@ -178,6 +183,8 @@ struct HomeView: View {
                 initialQuery: pendingQuery,
                 initialCheckIn: pendingCheckIn,
                 initialCheckOut: pendingCheckOut,
+                initialStartHour: pendingStartHour,
+                initialEndHour: pendingEndHour,
                 initialBookingPref: pendingBookingPref,
                 initialVehicles: pendingVehicles,
                 initialCategory: selectedCategory,

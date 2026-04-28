@@ -26,6 +26,8 @@ struct SearchView: View {
     private let initialQuery: String
     private let initialCheckIn: Date?
     private let initialCheckOut: Date?
+    private let initialStartHour: Int?
+    private let initialEndHour: Int?
     private let initialBookingPref: BookingPreference
     private let initialVehicles: Set<VehicleType>
     private let initialCategory: ListingCategory?
@@ -36,6 +38,8 @@ struct SearchView: View {
         initialQuery: String = "",
         initialCheckIn: Date? = nil,
         initialCheckOut: Date? = nil,
+        initialStartHour: Int? = nil,
+        initialEndHour: Int? = nil,
         initialBookingPref: BookingPreference = .all,
         initialVehicles: Set<VehicleType> = [.motorhome],
         initialCategory: ListingCategory? = nil,
@@ -45,6 +49,8 @@ struct SearchView: View {
         self.initialQuery = initialQuery
         self.initialCheckIn = initialCheckIn
         self.initialCheckOut = initialCheckOut
+        self.initialStartHour = initialStartHour
+        self.initialEndHour = initialEndHour
         self.initialBookingPref = initialBookingPref
         self.initialVehicles = initialVehicles
         self.initialCategory = initialCategory
@@ -53,6 +59,8 @@ struct SearchView: View {
         _query = State(initialValue: initialQuery)
         _checkIn = State(initialValue: initialCheckIn)
         _checkOut = State(initialValue: initialCheckOut)
+        _startHour = State(initialValue: initialStartHour)
+        _endHour = State(initialValue: initialEndHour)
         var f = SearchFilters()
         f.bookingPreference = initialBookingPref
         f.vehicleTypes = initialVehicles
@@ -66,6 +74,8 @@ struct SearchView: View {
     @State private var query = ""
     @State private var checkIn: Date?
     @State private var checkOut: Date?
+    @State private var startHour: Int?
+    @State private var endHour: Int?
     @State private var vehicles: Set<VehicleType> = [.motorhome]
     @State private var bookingPref: BookingPreference = .all
     @State private var filters = SearchFilters()
@@ -127,9 +137,15 @@ struct SearchView: View {
             .fullScreenCover(isPresented: $showWhereSheet) {
                 WhereSheet(
                     isPresented: $showWhereSheet,
+                    category: Binding(
+                        get: { filters.category ?? .camping },
+                        set: { filters.category = $0 }
+                    ),
                     query: $query,
                     checkIn: $checkIn,
                     checkOut: $checkOut,
+                    startHour: $startHour,
+                    endHour: $endHour,
                     bookingPref: $bookingPref,
                     vehicles: $vehicles,
                     placesService: placesService,
@@ -318,6 +334,10 @@ struct SearchView: View {
     private var filteredListings: [Listing] {
         listingService.searchResults.filter { listing in
             if let cat = filters.category, listing.category != cat { return false }
+            // Tidspunkt valgt → kun parkering-per-time gir mening
+            if filters.category == .parking, (startHour != nil || endHour != nil) {
+                if listing.priceUnit != .hour { return false }
+            }
             if !filters.vehicleTypes.isEmpty {
                 if let t = listing.vehicleType, !filters.vehicleTypes.contains(t) { return false }
             }
@@ -342,6 +362,10 @@ struct SearchView: View {
 
     private var searchPillSubtitle: String {
         var parts: [String] = []
+        // Kategori — vises først for tydelighet
+        if let cat = filters.category {
+            parts.append(cat == .camping ? "Camping" : "Parkering")
+        }
         if let i = checkIn, let o = checkOut {
             let df = DateFormatter()
             df.dateFormat = "d. MMM"
@@ -349,6 +373,9 @@ struct SearchView: View {
             parts.append("\(df.string(from: i))–\(df.string(from: o))")
         } else {
             parts.append("Når som helst")
+        }
+        if let s = startHour, let e = endHour {
+            parts.append(String(format: "%02d–%02d", s, e))
         }
         if vehicles.isEmpty {
             parts.append("Alle kjøretøy")
