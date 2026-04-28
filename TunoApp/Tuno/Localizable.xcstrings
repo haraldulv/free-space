@@ -538,9 +538,6 @@
     "24 timer før" : {
 
     },
-    "30 min-trinn. Default-søk er hele dagen." : {
-
-    },
     "Administrer push-varslinger i iOS-innstillinger." : {
 
     },
@@ -2909,6 +2906,9 @@
         }
       }
     },
+    "Hvor?" : {
+
+    },
     "Hvordan var oppholdet?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3482,7 +3482,7 @@
         }
       }
     },
-    "Kjøretøystype (velg flere)" : {
+    "Kjøretøytype (velg flere)" : {
 
     },
     "Kjøretøytyper" : {
@@ -4522,13 +4522,13 @@
     "Møt verten" : {
 
     },
-    "Når" : {
-
-    },
     "Når ankommer du?" : {
 
     },
     "Når er plassene dine ledige?" : {
+
+    },
+    "Når?" : {
 
     },
     "natt" : {
@@ -6476,9 +6476,6 @@
           }
         }
       }
-    },
-    "Tidspunkt" : {
-
     },
     "Til" : {
 

@@ -79,15 +79,7 @@ struct WhereSheet: View {
                 checkIn: $checkIn,
                 checkOut: $checkOut,
                 initialEditingCheckIn: datePickerEditingCheckIn,
-                onDone: {
-                    showDatePicker = false
-                    // Auto-hopp til "Hvem" når begge datoene er valgt
-                    if checkIn != nil && checkOut != nil {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                            activeStep = .hvem
-                        }
-                    }
-                }
+                onDone: { showDatePicker = false }
             )
             .presentationDetents([.large])
         }
@@ -306,9 +298,6 @@ struct WhereSheet: View {
                     typing = prediction.mainText
                     placesService.clear()
                     onSelectPlace(prediction)
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                        activeStep = .når
-                    }
                 } label: {
                     HStack(spacing: 14) {
                         ZStack {
@@ -379,20 +368,13 @@ struct WhereSheet: View {
             typing = dest.name
             placesService.autocomplete(query: dest.name)
             Task {
-                // Vent på prediction og auto-hopp til Når-steget når stedet er valgt
+                // Vent på prediction og oppdater søk når stedet er valgt
                 for _ in 0..<15 {
                     try? await Task.sleep(nanoseconds: 100_000_000)
                     if let first = placesService.predictions.first {
                         onSelectPlace(first)
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                            activeStep = .når
-                        }
                         return
                     }
-                }
-                // Fallback: hadde ikke prediction — hopp likevel
-                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                    activeStep = .når
                 }
             }
         } label: {
@@ -513,10 +495,6 @@ struct WhereSheet: View {
         return Button {
             if startMinutes == nil { startMinutes = start }
             endMinutes = min(24 * 60, start + durationMinutes)
-            // Auto-hopp til Hvem-steget etter varighet er valgt
-            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
-                activeStep = .hvem
-            }
         } label: {
             Text(label)
                 .font(.system(size: 13, weight: .semibold))
@@ -628,6 +606,15 @@ struct WhereSheet: View {
 
     // MARK: - Bottom bar
 
+    /// Steg-rekkefølge for "Neste"-knappen.
+    private var nextStep: Step? {
+        switch activeStep {
+        case .hvor: return .når
+        case .når: return .hvem
+        case .hvem: return nil  // siste — knappen blir "Søk"
+        }
+    }
+
     private var bottomBar: some View {
         VStack(spacing: 0) {
             Divider()
@@ -650,20 +637,36 @@ struct WhereSheet: View {
 
                 Spacer()
 
-                Button {
-                    onSearch()
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text("Søk")
+                if let next = nextStep {
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            activeStep = next
+                        }
+                    } label: {
+                        Text("Neste")
                             .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 36)
+                            .padding(.vertical, 14)
+                            .background(Color.neutral900)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 14)
-                    .background(Color.primary600)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                } else {
+                    Button {
+                        onSearch()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Søk")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 14)
+                        .background(Color.primary600)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
                 }
             }
             .padding(.horizontal, 16)

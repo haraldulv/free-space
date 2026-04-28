@@ -298,7 +298,7 @@ struct SearchView: View {
                 )
 
                 VStack(spacing: 10) {
-                    FilterCircleButton(activeCount: filters.activeCount) {
+                    FilterCircleButton(activeCount: filters.activeCount(dynamicMaxPrice: dynamicMaxPriceForBadge)) {
                         hideKeyboard()
                         showFiltersSheet = true
                     }
@@ -387,7 +387,7 @@ struct SearchView: View {
                 if let t = listing.vehicleType, !filters.vehicleTypes.contains(t) { return false }
             }
             let price = listing.price ?? 0
-            if price < filters.priceMin || (filters.priceMax < 5000 && price > filters.priceMax) { return false }
+            if price < filters.priceMin || (filters.priceMax > 0 && price > filters.priceMax) { return false }
             switch filters.bookingPreference {
             case .all: break
             case .directOnly: if listing.instantBooking != true { return false }
@@ -403,6 +403,13 @@ struct SearchView: View {
 
     private var priceArray: [Int] {
         listingService.searchResults.compactMap { $0.price }.filter { $0 > 0 }
+    }
+
+    /// Beregner samme dynamicMaxPrice som FiltersSheet bruker, så badge på
+    /// filter-knappen reflekterer korrekt om pris-filteret er aktivt.
+    private var dynamicMaxPriceForBadge: Int {
+        guard let m = priceArray.max() else { return 1000 }
+        return ((m + 99) / 100) * 100
     }
 
     private var searchPillSubtitle: String {

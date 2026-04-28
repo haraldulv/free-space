@@ -9,29 +9,36 @@ enum BookingPreference: String, Equatable, CaseIterable {
 }
 
 /// Modeltype for søk + filter-valg. Delt mellom WhereSheet (søkepille)
-/// og FiltersSheet (filter-knapp). Ansvarsfordeling:
-/// - WhereSheet eier: category, vehicleTypes, bookingPreference (kjernen i søket)
-/// - FiltersSheet eier: priceMin/priceMax, amenities (forfining)
+/// og FiltersSheet (filter-knapp). Begge oppdaterer samme state, så
+/// endringer ett sted speiles automatisk det andre.
+///
+/// `priceMax = 0` er sentinel for "ingen øvre grense" — søk filtrerer
+/// kun hvis verdien er strengt større enn 0.
 struct SearchFilters: Equatable {
     var category: ListingCategory? = nil
     var vehicleTypes: Set<VehicleType> = []
     var priceMin: Int = 0
-    var priceMax: Int = 5000
+    var priceMax: Int = 0
     var bookingPreference: BookingPreference = .all
     var amenities: Set<AmenityType> = []
 
-    /// Antall aktive filtre satt FRA FiltersSheet (badge på filter-knappen).
-    /// Kategori/kjøretøy/bookingtype telles ikke fordi de styres av WhereSheet.
-    var activeCount: Int {
+    /// Antall aktive filtre — driver badge på FilterCircleButton.
+    /// `dynamicMaxPrice` er øvre grense fra current listings; den brukes
+    /// til å sammenligne om priceMax representerer en faktisk begrensning.
+    func activeCount(dynamicMaxPrice: Int) -> Int {
         var n = 0
-        if priceMin > 0 || priceMax < 5000 { n += 1 }
+        if category != nil { n += 1 }
+        if !vehicleTypes.isEmpty { n += 1 }
+        if priceMin > 0 || (priceMax > 0 && priceMax < dynamicMaxPrice) { n += 1 }
+        if bookingPreference != .all { n += 1 }
         if !amenities.isEmpty { n += 1 }
         return n
     }
 }
 
-/// Filter-modal som forfiner søket. Inneholder bare ting som IKKE finnes
-/// i søkepillen (WhereSheet): pris og fasiliteter.
+/// Filter-modal. 1:1 med WhereSheet — kategori, kjøretøy og bookingtype
+/// vises også her så endringer kan gjøres begge steder. Pris og fasiliteter
+/// er forfining som ikke er i søkepillen.
 struct FiltersSheet: View {
     @Binding var isPresented: Bool
     @Binding var filters: SearchFilters
@@ -41,10 +48,36 @@ struct FiltersSheet: View {
 
     @State private var draft = SearchFilters()
 
+    /// Maks pris å bruke som histogram-bound. Tar høyeste pris fra current
+    /// listings, eller 1000 som fallback hvis ingen listings.
+    private var dynamicMaxPrice: Int {
+        let valid = prices.filter { $0 > 0 }
+        guard let m = valid.max() else { return 1000 }
+        // Rund opp til nærmeste hundre for et fint slider-bound.
+        return ((m + 99) / 100) * 100
+    }
+
+    /// Fasiliteter relevant for valgt kategori. Parkering: sikkerhet/komfort.
+    /// Camping: tilkoblinger/natur/komfort. Begge: handicap, kjæledyr.
+    private var relevantAmenities: [AmenityType] {
+        switch draft.category {
+        case .parking:
+            return [.evCharging, .covered, .securityCamera, .gated, .lighting, .handicapAccessible]
+        case .camping:
+            return [.electricity, .water, .toilets, .showers, .wifi, .wasteDisposal,
+                    .campfire, .lakeAccess, .mountainView, .petsAllowed, .handicapAccessible]
+        case .none:
+            return AmenityType.allCases
+        }
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
+                    typeSection
+                    vehicleSection
+                    bookingPrefSection
                     priceSection
                     amenitiesSection
                 }
@@ -73,30 +106,103 @@ struct FiltersSheet: View {
                 }
             }
         }
-        .onAppear { draft = filters }
+        .onAppear {
+            draft = filters
+            // Sentinel 0 → vis hele rangen som default (slider på maks)
+            if draft.priceMax == 0 { draft.priceMax = dynamicMaxPrice }
+        }
     }
 
     // MARK: - Sections
+
+    private var typeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Type plass")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.neutral900)
+            HStack(spacing: 8) {
+                segmentButton(label: "Alle", isSelected: draft.category == nil) {
+                    draft.category = nil
+                }
+                segmentButton(label: "Camping", isSelected: draft.category == .camping) {
+                    draft.category = .camping
+                    if draft.vehicleTypes.contains(where: { $0 == .car }) || draft.vehicleTypes.isEmpty {
+                        draft.vehicleTypes = [.motorhome, .campervan]
+                    }
+                }
+                segmentButton(label: "Parkering", isSelected: draft.category == .parking) {
+                    draft.category = .parking
+                    draft.vehicleTypes = [.car]
+                }
+            }
+        }
+    }
+
+    private var vehicleSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Kjøretøytype")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.neutral900)
+            FlowLayout(spacing: 8) {
+                ForEach(VehicleType.allCases, id: \.self) { type in
+                    chip(
+                        label: type.displayName,
+                        icon: type.icon,
+                        isSelected: draft.vehicleTypes.contains(type)
+                    ) {
+                        if draft.vehicleTypes.contains(type) {
+                            draft.vehicleTypes.remove(type)
+                        } else {
+                            draft.vehicleTypes.insert(type)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private var bookingPrefSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Bestillingstype")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.neutral900)
+            HStack(spacing: 8) {
+                segmentButton(label: "Alle", isSelected: draft.bookingPreference == .all) {
+                    draft.bookingPreference = .all
+                }
+                segmentButton(label: "Direkte", isSelected: draft.bookingPreference == .directOnly) {
+                    draft.bookingPreference = .directOnly
+                }
+                segmentButton(label: "Forespørsel", isSelected: draft.bookingPreference == .requestOnly) {
+                    draft.bookingPreference = .requestOnly
+                }
+            }
+        }
+    }
 
     private var priceSection: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Pris")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.neutral900)
-            Text("Turpris i NOK")
+            Text("Total pris i NOK")
                 .font(.system(size: 13))
                 .foregroundStyle(.neutral500)
 
             PriceHistogram(
                 prices: prices,
-                bounds: 0...5000,
+                bounds: 0...dynamicMaxPrice,
                 lowerBound: $draft.priceMin,
                 upperBound: $draft.priceMax
             )
 
             HStack(spacing: 12) {
                 priceField(label: "Minst", value: draft.priceMin)
-                priceField(label: "Maksimalt", value: draft.priceMax, suffix: "+")
+                priceField(
+                    label: "Maksimalt",
+                    value: draft.priceMax,
+                    suffix: draft.priceMax >= dynamicMaxPrice ? "+" : ""
+                )
             }
         }
     }
@@ -106,17 +212,23 @@ struct FiltersSheet: View {
             Text("Fasiliteter")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.neutral900)
-            FlowLayout(spacing: 8) {
-                ForEach(AmenityType.allCases, id: \.self) { amenity in
-                    chip(
-                        label: amenity.label,
-                        icon: amenity.icon,
-                        isSelected: draft.amenities.contains(amenity)
-                    ) {
-                        if draft.amenities.contains(amenity) {
-                            draft.amenities.remove(amenity)
-                        } else {
-                            draft.amenities.insert(amenity)
+            if relevantAmenities.isEmpty {
+                Text("Ingen relevante fasiliteter for valgt kategori")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
+            } else {
+                FlowLayout(spacing: 10) {
+                    ForEach(relevantAmenities, id: \.self) { amenity in
+                        chip(
+                            label: amenity.label,
+                            icon: amenity.icon,
+                            isSelected: draft.amenities.contains(amenity)
+                        ) {
+                            if draft.amenities.contains(amenity) {
+                                draft.amenities.remove(amenity)
+                            } else {
+                                draft.amenities.insert(amenity)
+                            }
                         }
                     }
                 }
@@ -125,6 +237,23 @@ struct FiltersSheet: View {
     }
 
     // MARK: - UI helpers
+
+    private func segmentButton(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isSelected ? .neutral900 : .neutral500)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(isSelected ? Color.white : Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(isSelected ? Color.neutral900 : Color.neutral200, lineWidth: isSelected ? 2 : 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
 
     private func chip(label: String, icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -167,11 +296,8 @@ struct FiltersSheet: View {
             Divider()
             HStack {
                 Button("Fjern alle") {
-                    // Reset bare det FiltersSheet eier — kategori/kjøretøy/booking
-                    // styres av WhereSheet og skal ikke nullstilles herfra.
-                    draft.priceMin = 0
-                    draft.priceMax = 5000
-                    draft.amenities = []
+                    draft = SearchFilters()
+                    draft.priceMax = dynamicMaxPrice
                 }
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.neutral700)
@@ -180,6 +306,9 @@ struct FiltersSheet: View {
                 Spacer()
 
                 Button {
+                    // Konverter "fullt utdratt slider" tilbake til sentinel 0
+                    // så activeCount ikke teller pris som aktivt filter.
+                    if draft.priceMax >= dynamicMaxPrice { draft.priceMax = 0 }
                     filters = draft
                     onApply()
                     isPresented = false

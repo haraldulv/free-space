@@ -247,13 +247,9 @@ struct SearchMapView: UIViewRepresentable {
     static func createPriceBubble(listing: Listing, isVisited: Bool, isSelected: Bool) -> UIView {
         let container = UIView()
 
-        // Felles skygge — subtil glow under boblen
-        container.layer.shadowColor = UIColor.black.cgColor
-        container.layer.shadowOffset = CGSize(width: 0, height: 1)
-        container.layer.shadowRadius = 3
-        container.layer.shadowOpacity = 0.12
-
-        // Felles 0.5px hairline-border som gjør boblen tydelig på lyse kart
+        // Kun hairline-border, ingen drop shadow. CALayer-skygge gir alltid
+        // en subtil firkantet halo selv med shadowPath, og Airbnb klarer
+        // seg med bare border for synlighet på lyse kart.
         container.layer.borderWidth = 0.5
 
         if isSelected {
@@ -261,10 +257,10 @@ struct SearchMapView: UIViewRepresentable {
             container.layer.borderColor = UIColor.black.withAlphaComponent(0.2).cgColor
         } else if isVisited {
             container.backgroundColor = UIColor(red: 0.93, green: 0.93, blue: 0.93, alpha: 1)
-            container.layer.borderColor = UIColor.black.withAlphaComponent(0.10).cgColor
+            container.layer.borderColor = UIColor.black.withAlphaComponent(0.15).cgColor
         } else {
             container.backgroundColor = .white
-            container.layer.borderColor = UIColor.black.withAlphaComponent(0.10).cgColor
+            container.layer.borderColor = UIColor.black.withAlphaComponent(0.15).cgColor
         }
         container.layer.cornerRadius = 16
 
@@ -296,14 +292,6 @@ struct SearchMapView: UIViewRepresentable {
         container.frame = CGRect(x: 0, y: 0, width: label.frame.width + padding * 2, height: height)
         label.center = CGPoint(x: container.frame.width / 2, y: container.frame.height / 2)
         container.addSubview(label)
-
-        // Eksplisitt shadowPath følger den avrundede formen. Uten dette
-        // beregner CALayer skyggen fra alpha-mask, som kan rendre som
-        // en firkant rundt boblen i stedet for en avrundet glow.
-        container.layer.shadowPath = UIBezierPath(
-            roundedRect: container.bounds,
-            cornerRadius: container.layer.cornerRadius
-        ).cgPath
 
         return container
     }
