@@ -182,6 +182,12 @@ struct HostCalendarView: View {
                             .padding(.top, 12)
                     }
 
+                    if (listing.priceUnit ?? .natt) == .hour {
+                        hourlyHintBanner
+                            .padding(.horizontal, 16)
+                            .padding(.top, hasMultipleSpots ? 4 : 12)
+                    }
+
                     if isLoading {
                         ProgressView().padding(.top, 40)
                     } else {
@@ -329,6 +335,28 @@ struct HostCalendarView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Hourly-hint (vises på toppen for parkering per time)
+
+    private var hourlyHintBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "clock.fill")
+                .foregroundStyle(.primary600)
+                .font(.system(size: 13))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Standardpris \(basePrice) kr/time")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text("Sett ulike priser for arbeidstid, kveld og helg via Prisregler øverst til høyre.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.primary50)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - Range-hint bar (vises når anker er satt)
