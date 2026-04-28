@@ -14,6 +14,9 @@
         }
       }
     },
+    ":" : {
+
+    },
     "·" : {
 
     },
@@ -250,6 +253,9 @@
         }
       }
     },
+    "%@ kr/time" : {
+
+    },
     "%@ kr%@" : {
       "localizations" : {
         "de" : {
@@ -267,7 +273,6 @@
       }
     },
     "%@ plasser" : {
-      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -320,6 +325,9 @@
           }
         }
       }
+    },
+    "%@:00" : {
+
     },
     "%@/%@" : {
       "localizations" : {
@@ -530,6 +538,9 @@
     "24 timer før" : {
 
     },
+    "30 min-trinn. Default-søk er hele dagen." : {
+
+    },
     "Administrer push-varslinger i iOS-innstillinger." : {
 
     },
@@ -605,9 +616,6 @@
       }
     },
     "Alle varsler vil slettes permanent." : {
-
-    },
-    "Anbefalt for deg" : {
 
     },
     "Angre" : {
@@ -1035,7 +1043,7 @@
         }
       }
     },
-    "Bestillingsalternativer" : {
+    "Bestillingstype" : {
 
     },
     "Betal %@ kr" : {
@@ -1328,6 +1336,9 @@
           }
         }
       }
+    },
+    "Dager" : {
+
     },
     "Datoer" : {
       "extractionState" : "manual",
@@ -2201,9 +2212,6 @@
         }
       }
     },
-    "Foreslåtte reisemål" : {
-
-    },
     "Forespørsel" : {
       "localizations" : {
         "de" : {
@@ -2546,6 +2554,9 @@
       }
     },
     "Gjeste-favoritt" : {
+
+    },
+    "Gjestefavoritt" : {
 
     },
     "Gjesten betaler" : {
@@ -3471,7 +3482,7 @@
         }
       }
     },
-    "Kjøretøytype" : {
+    "Kjøretøystype (velg flere)" : {
 
     },
     "Kjøretøytyper" : {
@@ -3501,6 +3512,9 @@
       }
     },
     "Klikk for å endre. Maks 5 MB." : {
+
+    },
+    "Klokkeslett" : {
 
     },
     "Kom i gang med Tuno" : {
@@ -3703,10 +3717,10 @@
         }
       }
     },
-    "kr%@" : {
+    "kr/time" : {
 
     },
-    "Kun direktebooking" : {
+    "kr%@" : {
 
     },
     "Kun synlig for deg. Nyttig hvis du har flere annonser." : {
@@ -3850,9 +3864,6 @@
           }
         }
       }
-    },
-    "La oss lage din første annonse" : {
-
     },
     "La stå tomt for å bruke annonsens standardpris." : {
       "extractionState" : "manual",
@@ -4016,6 +4027,9 @@
         }
       }
     },
+    "Legg til eget bånd" : {
+
+    },
     "Legg til eget tillegg" : {
 
     },
@@ -4038,6 +4052,9 @@
           }
         }
       }
+    },
+    "Legg til pris for bestemte dager og klokkeslett — f.eks. arbeidstid, kveld eller helg. Bånd uten dekning bruker standardprisen." : {
+
     },
     "Legg til sesong" : {
 
@@ -4503,6 +4520,9 @@
 
     },
     "Møt verten" : {
+
+    },
+    "Når" : {
 
     },
     "Når ankommer du?" : {
@@ -5223,9 +5243,6 @@
         }
       }
     },
-    "Plasser du kan booke umiddelbart" : {
-
-    },
     "Plasser plassene dine" : {
 
     },
@@ -5438,6 +5455,9 @@
           }
         }
       }
+    },
+    "Pris per tidsbånd" : {
+
     },
     "Pris-modell" : {
 
@@ -6024,6 +6044,9 @@
         }
       }
     },
+    "Sett ulike priser for arbeidstid, kveld og helg via Prisregler øverst til høyre." : {
+
+    },
     "Siste bookings" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6285,7 +6308,16 @@
         }
       }
     },
+    "Standardpris %@ kr/time" : {
+
+    },
+    "Standardpris brukes for timer som ikke faller i et bånd. Bånd lar deg sette ulike priser for arbeidstid, kveld og helg." : {
+
+    },
     "Standardpris er %@ kr. La stå tomt for å beholde standardpris." : {
+
+    },
+    "Standardpris er %@ kr/time. Legg til time-bånd som gjelder bestemte dager og klokkeslett." : {
 
     },
     "Standardpris per natt" : {
@@ -6445,6 +6477,9 @@
         }
       }
     },
+    "Tidspunkt" : {
+
+    },
     "Til" : {
 
     },
@@ -6569,6 +6604,9 @@
           }
         }
       }
+    },
+    "Time-bånd" : {
+
     },
     "Time-spesifikk parkering kommer snart. Inntil videre regnes hvert valgte døgn som ett 24-timers opphold." : {
 
@@ -6758,9 +6796,6 @@
 
     },
     "Turpris i NOK" : {
-
-    },
-    "Type sted" : {
 
     },
     "Typisk svartid: %@" : {

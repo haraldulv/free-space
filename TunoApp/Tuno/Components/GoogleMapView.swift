@@ -241,29 +241,30 @@ struct SearchMapView: UIViewRepresentable {
     /// - **Default** (hvit + svart tekst): nøytral, ikke besøkt
     /// - **Visited** (lys grå + svart tekst): brukeren har trykket på denne før
     /// - **Selected** (svart + hvit tekst): aktivt valgt — kort vises
+    /// Alle tilstander har 0.5px subtil border og lett "soft glow"-skygge,
+    /// så bobler står klart mot kartet uten å se ut som firkanter.
     /// Lik størrelse i alle tilstander så bobler ikke "hopper" ved tap.
     static func createPriceBubble(listing: Listing, isVisited: Bool, isSelected: Bool) -> UIView {
         let container = UIView()
 
+        // Felles skygge — subtil glow under boblen
+        container.layer.shadowColor = UIColor.black.cgColor
+        container.layer.shadowOffset = CGSize(width: 0, height: 1)
+        container.layer.shadowRadius = 3
+        container.layer.shadowOpacity = 0.12
+
+        // Felles 0.5px hairline-border som gjør boblen tydelig på lyse kart
+        container.layer.borderWidth = 0.5
+
         if isSelected {
             container.backgroundColor = UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
-            container.layer.shadowColor = UIColor.black.cgColor
-            container.layer.shadowOpacity = 0.28
-            container.layer.shadowOffset = CGSize(width: 0, height: 3)
-            container.layer.shadowRadius = 5
+            container.layer.borderColor = UIColor.black.withAlphaComponent(0.2).cgColor
         } else if isVisited {
-            // Lys grå-tonet ned versjon av default — subtil "har sett før"-tilstand.
             container.backgroundColor = UIColor(red: 0.93, green: 0.93, blue: 0.93, alpha: 1)
-            container.layer.shadowColor = UIColor.black.cgColor
-            container.layer.shadowOpacity = 0.12
-            container.layer.shadowOffset = CGSize(width: 0, height: 2)
-            container.layer.shadowRadius = 3
+            container.layer.borderColor = UIColor.black.withAlphaComponent(0.10).cgColor
         } else {
             container.backgroundColor = .white
-            container.layer.shadowColor = UIColor.black.cgColor
-            container.layer.shadowOpacity = 0.18
-            container.layer.shadowOffset = CGSize(width: 0, height: 2)
-            container.layer.shadowRadius = 4
+            container.layer.borderColor = UIColor.black.withAlphaComponent(0.10).cgColor
         }
         container.layer.cornerRadius = 16
 

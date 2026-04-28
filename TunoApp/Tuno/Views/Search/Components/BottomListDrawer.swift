@@ -169,3 +169,24 @@ struct MapTypeToggleButton: View {
         .buttonStyle(.plain)
     }
 }
+
+/// Sirkel-knapp for å sentrere kartet på brukerens egen posisjon.
+/// Plasseres under MapTypeToggleButton i søke-toolbaren.
+struct MyLocationButton: View {
+    let onTap: () -> Void
+
+    var body: some View {
+        Button(action: onTap) {
+            Image(systemName: "location.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.neutral900)
+                .frame(width: 48, height: 48)
+                .background(Color.white)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+                .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Min posisjon")
+    }
+}

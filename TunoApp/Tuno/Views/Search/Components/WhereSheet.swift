@@ -1,21 +1,18 @@
 import SwiftUI
 import CoreLocation
 
-/// Airbnb-stil full-screen "Hvor?"-modal som åpnes ved tap på SearchPill.
-/// Alle inputs er synlige uten å scrolle på normale skjermer:
-/// - Søkefelt + 3 stedsforslag (i nærheten + Oslo + Bergen + Lofoten)
-/// - Inn/Ut datovelger med ekte range-picker (tap chip → bytter aktiv dato)
-/// - Direktebooking 3-state segment: Alle / Direkte / Forespørsel
-/// - Multi-select kjøretøystyper som chips
-/// - Bunnbar med "Fjern alle" + "Søk"
+/// Airbnb-stil step-by-step søke-modal. Tre kort som ekspanderer ett ad
+/// gangen (Hvor / Når / Hvem) med auto-hopp etter valg. Material-blur
+/// bakgrunn lar kartet skinne gjennom subtilt. Kategori-pille svever
+/// over kortene som flytende segmentknapp.
 struct WhereSheet: View {
+    enum Step: Hashable { case hvor, når, hvem }
+
     @Binding var isPresented: Bool
     @Binding var category: ListingCategory
     @Binding var query: String
     @Binding var checkIn: Date?
     @Binding var checkOut: Date?
-    /// Tidspunkt for parkering. Lagret som total minutter siden midnatt
-    /// (0..1440, 30-min step). NULL = uspesifisert.
     @Binding var startMinutes: Int?
     @Binding var endMinutes: Int?
     @Binding var bookingPref: BookingPreference
@@ -26,12 +23,11 @@ struct WhereSheet: View {
     let onUseMyLocation: () -> Void
     let onSearch: () -> Void
 
+    @State private var activeStep: Step = .hvor
     @State private var typing: String = ""
     @State private var showDatePicker = false
     @State private var datePickerEditingCheckIn = true
 
-    /// 3 destinasjoner med varierte ikon-bakgrunnsfarger så Hvor-listen
-    /// ikke blir for grønn.
     private static let suggestedDestinations: [SuggestedDestination] = [
         .init(name: "Oslo", subtitle: "Hovedstaden", icon: "building.2.fill",
               tint: Color(red: 0.91, green: 0.31, blue: 0.31), bg: Color(red: 1.0, green: 0.92, blue: 0.92)),
@@ -42,143 +38,223 @@ struct WhereSheet: View {
     ]
 
     var body: some View {
-        NavigationStack {
+        ZStack {
+            // Material-blur bakgrunn — lar kartet/forsiden skinne gjennom
+            // som subtilt blurret stoff. Etterligner Airbnb sin søke-overlay.
+            Color.clear
+                .background(.ultraThinMaterial)
+                .ignoresSafeArea()
+
             VStack(spacing: 0) {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        categorySection
-                        searchField
-                        nearbyAndSuggestedSection
-                        whenSection
-                        if category == .parking {
-                            timeRangeSection
-                        }
-                        bookingPrefSection
-                        vehicleSection
+                floatingHeader
+                    .padding(.horizontal, 16)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 12) {
+                        whereCard
+                        whenCard
+                        whoCard
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 8)
                     .padding(.bottom, 24)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: activeStep)
                 }
 
                 bottomBar
             }
-            .background(Color.white.ignoresSafeArea())
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        isPresented = false
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .font(.system(size: 28))
-                            .symbolRenderingMode(.hierarchical)
-                            .foregroundStyle(Color(.systemGray3))
+        }
+        .onAppear { typing = query }
+        .onChange(of: typing) { _, newValue in
+            if newValue.isEmpty {
+                placesService.clear()
+            } else {
+                placesService.autocomplete(query: newValue)
+            }
+        }
+        .sheet(isPresented: $showDatePicker) {
+            DateRangePicker(
+                checkIn: $checkIn,
+                checkOut: $checkOut,
+                initialEditingCheckIn: datePickerEditingCheckIn,
+                onDone: {
+                    showDatePicker = false
+                    // Auto-hopp til "Hvem" når begge datoene er valgt
+                    if checkIn != nil && checkOut != nil {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            activeStep = .hvem
+                        }
                     }
-                    .accessibilityLabel("Lukk")
                 }
-            }
-            .onAppear { typing = query }
-            .onChange(of: typing) { _, newValue in
-                if newValue.isEmpty {
-                    placesService.clear()
-                } else {
-                    placesService.autocomplete(query: newValue)
-                }
-            }
-            .sheet(isPresented: $showDatePicker) {
-                DateRangePicker(
-                    checkIn: $checkIn,
-                    checkOut: $checkOut,
-                    initialEditingCheckIn: datePickerEditingCheckIn,
-                    onDone: { showDatePicker = false }
-                )
-                .presentationDetents([.large])
-            }
+            )
+            .presentationDetents([.large])
         }
     }
 
-    // MARK: - Category picker (camping vs parkering)
+    // MARK: - Floating header (kategori sveve + xmark)
 
-    private var categorySection: some View {
+    private var floatingHeader: some View {
+        HStack(spacing: 12) {
+            Button { isPresented = false } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.system(size: 28))
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(Color(.systemGray3))
+            }
+            .accessibilityLabel("Lukk")
+
+            Spacer()
+
+            categoryFloatingPill
+
+            Spacer()
+
+            Color.clear.frame(width: 28, height: 28)
+        }
+    }
+
+    private var categoryFloatingPill: some View {
         HStack(spacing: 0) {
-            categorySegment(.camping, label: "Camping", icon: "tent.fill")
-            categorySegment(.parking, label: "Parkering", icon: "car.fill")
+            categoryFloatingTab(.camping, label: "Camping", icon: "tent.fill")
+            categoryFloatingTab(.parking, label: "Parkering", icon: "car.fill")
         }
-        .padding(3)
-        .background(Color.neutral100)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .padding(4)
+        .background(Capsule().fill(Color.white))
+        .shadow(color: .black.opacity(0.10), radius: 8, y: 2)
     }
 
-    private func categorySegment(_ value: ListingCategory, label: String, icon: String) -> some View {
+    private func categoryFloatingTab(_ value: ListingCategory, label: String, icon: String) -> some View {
         let isSelected = category == value
         return Button {
             withAnimation(.easeInOut(duration: 0.2)) {
                 let previous = category
                 category = value
-                // Bytte kategori → resett kjøretøy-defaults til kategoriens forventede.
-                // Camping = bobil + campingbil, Parkering = personbil.
                 if previous != value {
                     vehicles = (value == .camping) ? [.motorhome, .campervan] : [.car]
                 }
             }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(isSelected ? .primary600 : .neutral500)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(isSelected ? .white : .neutral500)
                 Text(label)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(isSelected ? .neutral900 : .neutral500)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(isSelected ? .white : .neutral500)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(isSelected ? Color.white : Color.clear)
-            .clipShape(RoundedRectangle(cornerRadius: 11))
-            .shadow(color: isSelected ? .black.opacity(0.06) : .clear, radius: 2, y: 1)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(isSelected ? Color.neutral900 : Color.clear))
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Time range (kun parkering)
+    // MARK: - Cards
 
-    private var timeRangeSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("Tidspunkt")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.neutral500)
-                    .textCase(.uppercase)
-                Spacer()
-                if startMinutes != nil || endMinutes != nil {
-                    Button("Nullstill") {
-                        startMinutes = nil
-                        endMinutes = nil
-                    }
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.neutral500)
-                }
+    @ViewBuilder
+    private var whereCard: some View {
+        if activeStep == .hvor {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Hvor?")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                searchField
+                nearbyAndSuggestedSection
             }
-
-            HStack(spacing: 16) {
-                TimeWheelPicker(label: "Fra", minutes: $startMinutes)
-                    .frame(maxWidth: .infinity)
-                TimeWheelPicker(label: "Til", minutes: $endMinutes)
-                    .frame(maxWidth: .infinity)
-            }
-            .onChange(of: startMinutes) { _, newVal in
-                if let s = newVal, let e = endMinutes, e <= s {
-                    endMinutes = min(24 * 60, s + 30)
-                }
-            }
-
-            Text("30 min-trinn. Default-søk er hele dagen.")
-                .font(.system(size: 11))
-                .foregroundStyle(.neutral400)
+            .padding(20)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
+            .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
+        } else {
+            collapsedCard(title: "Hvor", value: query.isEmpty ? "Søk etter reisemål" : query, step: .hvor)
         }
     }
 
-    // MARK: - Search field & destinations
+    @ViewBuilder
+    private var whenCard: some View {
+        if activeStep == .når {
+            VStack(alignment: .leading, spacing: 16) {
+                Text("Når?")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                if category == .parking {
+                    timeRangeSection
+                } else {
+                    whenSection
+                }
+            }
+            .padding(20)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
+            .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
+        } else {
+            collapsedCard(title: "Når", value: whenSummary, step: .når)
+        }
+    }
+
+    @ViewBuilder
+    private var whoCard: some View {
+        if activeStep == .hvem {
+            VStack(alignment: .leading, spacing: 20) {
+                Text(category == .parking ? "Hva slags bil?" : "Hva slags kjøretøy?")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                vehicleSection
+                bookingPrefSection
+            }
+            .padding(20)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
+            .shadow(color: .black.opacity(0.06), radius: 12, y: 4)
+        } else {
+            collapsedCard(title: "Kjøretøy", value: whoSummary, step: .hvem)
+        }
+    }
+
+    private func collapsedCard(title: String, value: String, step: Step) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                activeStep = step
+            }
+        } label: {
+            HStack {
+                Text(title)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                Spacer()
+                Text(value)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
+            .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
+            .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var whenSummary: String {
+        if let i = checkIn, let o = checkOut {
+            let df = DateFormatter()
+            df.dateFormat = "d. MMM"
+            df.locale = Locale(identifier: "nb_NO")
+            return "\(df.string(from: i))–\(df.string(from: o))"
+        }
+        if category == .parking, let s = startMinutes, let e = endMinutes {
+            return String(format: "%02d:%02d–%02d:%02d", s/60, s%60, e/60, e%60)
+        }
+        return "Legg til datoer"
+    }
+
+    private var whoSummary: String {
+        if vehicles.isEmpty { return "Alle kjøretøy" }
+        if vehicles.count == 1, let v = vehicles.first { return v.displayName }
+        return "\(vehicles.count) kjøretøy"
+    }
+
+    // MARK: - Where: search field + suggestions
 
     private var searchField: some View {
         HStack(spacing: 10) {
@@ -230,6 +306,9 @@ struct WhereSheet: View {
                     typing = prediction.mainText
                     placesService.clear()
                     onSelectPlace(prediction)
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        activeStep = .når
+                    }
                 } label: {
                     HStack(spacing: 14) {
                         ZStack {
@@ -267,7 +346,7 @@ struct WhereSheet: View {
             onUseMyLocation()
             query = "I nærheten"
             typing = "I nærheten"
-            // Trigger søket — onSearch lukker sheet og åpner kartet via parent.
+            // "I nærheten" lukker hele sheet og søker direkte (Airbnb-paritet)
             onSearch()
         } label: {
             HStack(spacing: 14) {
@@ -300,20 +379,21 @@ struct WhereSheet: View {
             typing = dest.name
             placesService.autocomplete(query: dest.name)
             Task {
-                // Vent opp til 1.5s på prediction før vi gir opp.
-                // 350ms-fast-sleep slo ofte ut når Places API var treg, og brukeren
-                // havnet tilbake på forsiden uten place satt.
+                // Vent på prediction og auto-hopp til Når-steget når stedet er valgt
                 for _ in 0..<15 {
                     try? await Task.sleep(nanoseconds: 100_000_000)
                     if let first = placesService.predictions.first {
                         onSelectPlace(first)
-                        onSearch()
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            activeStep = .når
+                        }
                         return
                     }
                 }
-                // Fallback: hadde ikke en prediction, men feltet er fylt — la søket gå
-                // med kun query (SearchView geokoder selv ved fallback).
-                onSearch()
+                // Fallback: hadde ikke prediction — hopp likevel
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    activeStep = .når
+                }
             }
         } label: {
             HStack(spacing: 14) {
@@ -340,15 +420,10 @@ struct WhereSheet: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - When section
+    // MARK: - When (camping)
 
     private var whenSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Når")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.neutral500)
-                .textCase(.uppercase)
-
             HStack(spacing: 8) {
                 dateChip(label: "Innsjekk", date: checkIn) {
                     datePickerEditingCheckIn = true
@@ -387,6 +462,72 @@ struct WhereSheet: View {
         df.dateFormat = "d. MMM"
         df.locale = Locale(identifier: "nb_NO")
         return df.string(from: date)
+    }
+
+    // MARK: - When (parkering): tidspunkt
+
+    /// Nåværende klokkeslett rundet opp til nærmeste hele 30 minutter.
+    /// Eksempler: 14:07 → 14:30, 14:32 → 15:00, 23:50 → 24:00.
+    private static func roundedNowMinutes() -> Int {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        let total = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+        let snapped = ((total + 29) / 30) * 30
+        return min(snapped, 24 * 60)
+    }
+
+    private var timeRangeSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 16) {
+                TimeWheelPicker(label: "Fra", minutes: $startMinutes)
+                    .frame(maxWidth: .infinity)
+                TimeWheelPicker(label: "Til", minutes: $endMinutes)
+                    .frame(maxWidth: .infinity)
+            }
+            .onChange(of: startMinutes) { _, newVal in
+                if let s = newVal, let e = endMinutes, e <= s {
+                    endMinutes = min(24 * 60, s + 30)
+                }
+            }
+
+            // Hurtigvalg for varighet — relative til startMinutes
+            HStack(spacing: 8) {
+                durationChip(label: "1 time", hours: 1)
+                durationChip(label: "2 timer", hours: 2)
+                durationChip(label: "4 timer", hours: 4)
+            }
+        }
+        .onAppear {
+            // Default: starttid = nå rundet opp til halvtimen, slutt = +1 time
+            if startMinutes == nil {
+                let start = Self.roundedNowMinutes()
+                startMinutes = start
+                if endMinutes == nil { endMinutes = min(24 * 60, start + 60) }
+            }
+        }
+    }
+
+    private func durationChip(label: String, hours: Int) -> some View {
+        let durationMinutes = hours * 60
+        let start = startMinutes ?? Self.roundedNowMinutes()
+        let isSelected = (endMinutes ?? -1) == min(24 * 60, start + durationMinutes)
+        return Button {
+            if startMinutes == nil { startMinutes = start }
+            endMinutes = min(24 * 60, start + durationMinutes)
+            // Auto-hopp til Hvem-steget etter varighet er valgt
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                activeStep = .hvem
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isSelected ? .white : .neutral900)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(isSelected ? Color.neutral900 : Color.neutral50)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(isSelected ? Color.clear : Color.neutral200, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Booking preference
@@ -436,12 +577,11 @@ struct WhereSheet: View {
 
     private var vehicleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Kjøretøystype (velg flere)")
+            Text("Kjøretøytype (velg flere)")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.neutral500)
                 .textCase(.uppercase)
 
-            // 3 chips per rad, deretter 2 til = 5 totalt på 2 rader
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ForEach(VehicleType.allCases, id: \.self) { type in
                     vehicleChip(type)
@@ -502,6 +642,7 @@ struct WhereSheet: View {
                     bookingPref = .all
                     vehicles = (category == .camping) ? [.motorhome, .campervan] : [.car]
                     placesService.clear()
+                    activeStep = .hvor
                 }
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.neutral700)
@@ -528,7 +669,7 @@ struct WhereSheet: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
         }
-        .background(Color.white)
+        .background(.regularMaterial)
     }
 }
 
@@ -669,8 +810,6 @@ struct DateRangePicker: View {
                 return cal
             }())
             .onChange(of: tempIn) { _, newValue in
-                // Når Inn endres: hold Ut > Inn. Bytt automatisk til Ut-tab
-                // sånn at brukeren kan velge Ut umiddelbart etter.
                 if tempOut <= newValue {
                     tempOut = Calendar.current.date(byAdding: .day, value: 1, to: newValue)!
                 }

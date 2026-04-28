@@ -115,18 +115,25 @@ struct SearchView: View {
     /// search-lag bak denne flaggen til WhereSheet er lukket første gang.
     @State private var hasDismissedInitialSheet: Bool
 
+    /// Vis WhereSheet som overlay over kartet (blur-effekten i sheet-en
+    /// trenger noe synlig bak for å fungere). True ved åpning fra forsiden
+    /// (før første dismiss) og når brukeren tapper søkepillen i kartet.
+    private var whereSheetVisible: Bool { showWhereSheet || !hasDismissedInitialSheet }
+
     var body: some View {
-        Group {
-            if hasDismissedInitialSheet {
-                mainSearchUI
-            } else {
-                // Inline WhereSheet — rendres umiddelbart uten cover-delay.
-                // Brukes kun ved åpning fra forside-pille; etter første
-                // dismiss byttes body til mainSearchUI med kartet.
+        ZStack {
+            mainSearchUI
+
+            if whereSheetVisible {
                 WhereSheet(
                     isPresented: Binding(
-                        get: { !hasDismissedInitialSheet },
-                        set: { newValue in if !newValue { hasDismissedInitialSheet = true } }
+                        get: { whereSheetVisible },
+                        set: { newValue in
+                            if !newValue {
+                                showWhereSheet = false
+                                hasDismissedInitialSheet = true
+                            }
+                        }
                     ),
                     category: Binding(
                         get: { filters.category ?? .camping },
@@ -146,12 +153,15 @@ struct SearchView: View {
                     onSearch: {
                         filters.bookingPreference = bookingPref
                         filters.vehicleTypes = vehicles
+                        showWhereSheet = false
                         hasDismissedInitialSheet = true
                         performSearch()
                     }
                 )
+                .transition(.opacity)
             }
         }
+        .animation(.easeInOut(duration: 0.18), value: whereSheetVisible)
         .task {
             if hasInitialLocation { return }
             // Hvis brukeren valgte et sted i Hvor-modalen, gå dit først
@@ -218,32 +228,6 @@ struct SearchView: View {
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Listing.self) { listing in
                 ListingDetailView(listingId: listing.id)
-            }
-            .fullScreenCover(isPresented: $showWhereSheet) {
-                WhereSheet(
-                    isPresented: $showWhereSheet,
-                    category: Binding(
-                        get: { filters.category ?? .camping },
-                        set: { filters.category = $0 }
-                    ),
-                    query: $query,
-                    checkIn: $checkIn,
-                    checkOut: $checkOut,
-                    startMinutes: $startMinutes,
-                    endMinutes: $endMinutes,
-                    bookingPref: $bookingPref,
-                    vehicles: $vehicles,
-                    placesService: placesService,
-                    locationManager: locationManager,
-                    onSelectPlace: handleSelectPlace,
-                    onUseMyLocation: goToMyLocation,
-                    onSearch: {
-                        showWhereSheet = false
-                        filters.bookingPreference = bookingPref
-                        filters.vehicleTypes = vehicles
-                        performSearch()
-                    }
-                )
             }
             .sheet(isPresented: $showFiltersSheet) {
                 FiltersSheet(
@@ -324,6 +308,10 @@ struct SearchView: View {
                         }
                     }
                     .frame(width: 48, height: 48)
+                    MyLocationButton(onTap: {
+                        hideKeyboard()
+                        goToMyLocation()
+                    })
                 }
             }
             .padding(.horizontal, 12)
