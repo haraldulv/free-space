@@ -104,10 +104,17 @@ struct BookingView: View {
     @State private var checkIn: Date? = nil
     @State private var checkOut: Date? = nil
     @State private var showCalendar = false
+    /// Hvilken dato (innsjekk vs utsjekk) som redigeres når calendarSheet
+    /// åpnes for hourly-modus. true = innsjekk, false = utsjekk.
+    @State private var calendarEditingStart = true
     /// For hourly-mode: brukeren velger én dato + start-/slutt-time.
     /// Disse settes etter dato-velg og driver checkIn/checkOut (selve datoene
     /// kombineres med timene før insert).
+    /// Innsjekk-dato for hourly booking (uten klokke).
     @State private var hourlyDate: Date? = nil
+    /// Utsjekk-dato — settes automatisk = hourlyDate, men kan overstyres
+    /// hvis brukeren parkerer over natt (f.eks. innsjekk 22:00, utsjekk 08:00 dagen etter).
+    @State private var hourlyEndDate: Date? = nil
     /// Totalminutter siden midnatt (0..1440, 30-min step). Default 08:00 / 17:00.
     @State private var startMinutes: Int = 8 * 60
     @State private var endMinutes: Int = 17 * 60
@@ -437,6 +444,13 @@ struct BookingView: View {
                 if hourlyDate == nil, let storedIn = ctx.checkIn {
                     hourlyDate = Calendar.current.startOfDay(for: storedIn)
                 }
+                if hourlyEndDate == nil {
+                    if let storedOut = ctx.checkOut {
+                        hourlyEndDate = Calendar.current.startOfDay(for: storedOut)
+                    } else {
+                        hourlyEndDate = hourlyDate
+                    }
+                }
                 if let s = ctx.startMinutes { startMinutes = s }
                 if let e = ctx.endMinutes { endMinutes = e }
                 syncHourlyToCheckInOut()
@@ -588,38 +602,14 @@ struct BookingView: View {
             Text("Når ankommer du?")
                 .font(.system(size: 18, weight: .semibold))
 
-            // Dato-velger (én dag)
-            Button {
-                showCalendar = true
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "calendar")
-                        .foregroundStyle(.neutral500)
-                    if let date = hourlyDate {
-                        Text(formatShort(date))
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(.neutral900)
-                    } else {
-                        Text("Velg dato")
-                            .font(.system(size: 15))
-                            .foregroundStyle(.neutral500)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.neutral400)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 14)
-                .background(Color.neutral50)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+            // Innsjekk + utsjekk dato-velgere
+            HStack(spacing: 8) {
+                hourlyDateChip(label: "Innsjekk", date: hourlyDate, isStart: true)
+                hourlyDateChip(label: "Utsjekk", date: hourlyEndDate ?? hourlyDate, isStart: false)
             }
-            .buttonStyle(.plain)
 
-            // Time-velgere (kun synlig når dato er valgt). Samme rullehjul-
-            // komponent som i kartsøket (TimeWheelPicker fra WhereSheet) for
-            // konsistent UX og 30-min trinn.
+            // Time-velgere + hurtigknapper (kun synlig når innsjekk-dato er valgt).
+            // Samme rullehjul-komponent som i kartsøket for konsistent UX.
             if hourlyDate != nil {
                 HStack(spacing: 16) {
                     TimeWheelPicker(label: "Fra", minutes: Binding(
@@ -634,6 +624,12 @@ struct BookingView: View {
                     .frame(maxWidth: .infinity)
                 }
 
+                HStack(spacing: 8) {
+                    durationQuickChip(label: "1 time", hours: 1)
+                    durationQuickChip(label: "2 timer", hours: 2)
+                    durationQuickChip(label: "4 timer", hours: 4)
+                }
+
                 if hours > 0 {
                     Text("\(hours) \(hours == 1 ? "time" : "timer")")
                         .font(.system(size: 14))
@@ -641,21 +637,98 @@ struct BookingView: View {
                 }
             }
         }
-        .onChange(of: hourlyDate) { _, _ in syncHourlyToCheckInOut() }
+        .onChange(of: hourlyDate) { _, newDate in
+            // Default utsjekk = innsjekk hvis ikke satt eller utsjekk er før innsjekk
+            if let nd = newDate {
+                if hourlyEndDate == nil { hourlyEndDate = nd }
+                else if let end = hourlyEndDate, end < nd { hourlyEndDate = nd }
+            }
+            syncHourlyToCheckInOut()
+        }
+        .onChange(of: hourlyEndDate) { _, _ in syncHourlyToCheckInOut() }
         .onChange(of: startMinutes) { _, newValue in
-            if endMinutes <= newValue { endMinutes = min(24 * 60, newValue + 30) }
+            if (hourlyEndDate ?? hourlyDate) == hourlyDate, endMinutes <= newValue {
+                endMinutes = min(24 * 60, newValue + 30)
+            }
             syncHourlyToCheckInOut()
         }
         .onChange(of: endMinutes) { _, _ in syncHourlyToCheckInOut() }
     }
 
-    /// Bygg checkIn/checkOut Date-objekter fra hourlyDate + start/endMinutes.
+    /// Kompakt dato-chip for innsjekk/utsjekk i parkering-flyt. Tap åpner
+    /// dato-kalender-sheet og setter hourlyDate (innsjekk) eller hourlyEndDate (utsjekk).
+    private func hourlyDateChip(label: String, date: Date?, isStart: Bool) -> some View {
+        Button {
+            calendarEditingStart = isStart
+            // Pre-fyll calendar-binding med eksisterende dato så brukeren ser hvor de er.
+            checkIn = isStart ? hourlyDate : (hourlyEndDate ?? hourlyDate)
+            showCalendar = true
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                Text(date.map(formatShort) ?? "Velg dato")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(date == nil ? .neutral400 : .neutral900)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Hurtigvalg for varighet (samme som kartsøk). Setter endMinutes/endDate
+    /// basert på startMinutes + N timer. Hvis det krysser midnatt, bumper utsjekk-dato.
+    private func durationQuickChip(label: String, hours: Int) -> some View {
+        let totalMinutes = startMinutes + hours * 60
+        let crossesMidnight = totalMinutes > 24 * 60
+        let targetEndMinutes = crossesMidnight ? totalMinutes - 24 * 60 : totalMinutes
+        let isSelected: Bool = {
+            guard endMinutes == targetEndMinutes else { return false }
+            if crossesMidnight {
+                guard let start = hourlyDate, let end = hourlyEndDate else { return false }
+                let cal = Calendar.current
+                return cal.dateComponents([.day], from: start, to: end).day == 1
+            } else {
+                return (hourlyEndDate ?? hourlyDate) == hourlyDate
+            }
+        }()
+        return Button {
+            endMinutes = targetEndMinutes
+            if let start = hourlyDate {
+                hourlyEndDate = crossesMidnight
+                    ? Calendar.current.date(byAdding: .day, value: 1, to: start)
+                    : start
+            }
+            syncHourlyToCheckInOut()
+        } label: {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isSelected ? .white : .neutral900)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(isSelected ? Color.neutral900 : Color.neutral50)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(isSelected ? Color.clear : Color.neutral200, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Bygg checkIn/checkOut Date-objekter fra hourlyDate (start) + hourlyEndDate +
+    /// start/endMinutes. Innsjekk og utsjekk er ofte samme dag, men hourlyEndDate
+    /// kan også være senere for parkering over natt.
     private func syncHourlyToCheckInOut() {
-        guard isHourly, let date = hourlyDate else { return }
+        guard isHourly, let startDay = hourlyDate else { return }
         let cal = Calendar.current
-        let day = cal.startOfDay(for: date)
-        checkIn = cal.date(byAdding: .minute, value: startMinutes, to: day)
-        checkOut = cal.date(byAdding: .minute, value: endMinutes, to: day)
+        let inDay = cal.startOfDay(for: startDay)
+        let outDay = cal.startOfDay(for: hourlyEndDate ?? startDay)
+        checkIn = cal.date(byAdding: .minute, value: startMinutes, to: inDay)
+        checkOut = cal.date(byAdding: .minute, value: endMinutes, to: outDay)
     }
 
     private var calendarSheet: some View {
@@ -695,7 +768,14 @@ struct BookingView: View {
                     Spacer()
                     Button {
                         if isHourly, let ci = checkIn {
-                            hourlyDate = Calendar.current.startOfDay(for: ci)
+                            let day = Calendar.current.startOfDay(for: ci)
+                            if calendarEditingStart {
+                                hourlyDate = day
+                                // Sørg for at utsjekk ikke er før innsjekk
+                                if let end = hourlyEndDate, end < day { hourlyEndDate = day }
+                            } else {
+                                hourlyEndDate = day
+                            }
                             syncHourlyToCheckInOut()
                         }
                         showCalendar = false

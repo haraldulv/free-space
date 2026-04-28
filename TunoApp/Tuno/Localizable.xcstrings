@@ -1278,6 +1278,9 @@
     "Bytter språk…" : {
 
     },
+    "Camping" : {
+
+    },
     "Camping / Bobil" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2845,6 +2848,9 @@
     "Hva gjør plassen din spesiell? Utsikt, omgivelser, fasiliteter, tips til gjester …" : {
 
     },
+    "Hva passer her" : {
+
+    },
     "Hva slags plass leier du ut?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4341,6 +4347,9 @@
           }
         }
       }
+    },
+    "Maks lengde %@m" : {
+
     },
     "Månedlig inntekt" : {
       "extractionState" : "manual",

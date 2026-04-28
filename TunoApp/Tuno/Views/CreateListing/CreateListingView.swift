@@ -276,26 +276,36 @@ struct CreateListingView: View {
 
                 await authManager.loadProfile()
                 if let listing = inserted.first {
-                    // Persist time-bånd-regler (parkering per time) etter at listing-id finnes.
-                    // Uke-spesifikke bånd (dragget til en uke i kalenderen) får
-                    // start_date/end_date for den ISO-uken; default-bånd er nil/nil.
+                    // Persist time-bånd-regler (parkering per time). Bånd med
+                    // .allWeeks blir én rad (start_date/end_date = NULL). Bånd
+                    // med .specificWeeks(set) blir N rader, en per ISO-uke,
+                    // hver med start_date = mandag og end_date = søndag.
                     for band in form.pricingBands {
-                        var startDate: String? = nil
-                        var endDate: String? = nil
-                        if case .specificWeek(let y, let w) = band.weekScope,
-                           let range = PriceRulesStep.dateRangeForWeek(year: y, week: w) {
-                            startDate = range.start
-                            endDate = range.end
+                        switch band.weekScope {
+                        case .allWeeks:
+                            try? await PricingService.addHourlyBandRule(
+                                listingId: listing.id,
+                                dayMask: band.dayMask,
+                                startHour: band.startHour,
+                                endHour: band.endHour,
+                                price: band.price,
+                                startDate: nil,
+                                endDate: nil
+                            )
+                        case .specificWeeks(let weeks):
+                            for week in weeks {
+                                guard let range = PriceRulesStep.dateRangeForWeek(year: week.year, week: week.weekNum) else { continue }
+                                try? await PricingService.addHourlyBandRule(
+                                    listingId: listing.id,
+                                    dayMask: band.dayMask,
+                                    startHour: band.startHour,
+                                    endHour: band.endHour,
+                                    price: band.price,
+                                    startDate: range.start,
+                                    endDate: range.end
+                                )
+                            }
                         }
-                        try? await PricingService.addHourlyBandRule(
-                            listingId: listing.id,
-                            dayMask: band.dayMask,
-                            startHour: band.startHour,
-                            endHour: band.endHour,
-                            price: band.price,
-                            startDate: startDate,
-                            endDate: endDate
-                        )
                     }
                     newListing = listing
                 }
