@@ -454,10 +454,11 @@ enum PriceUnit: String, Codable {
     }
 
     /// Default-enhet for en gitt kategori. Brukes når plass ikke har eksplisitt overstyring.
+    /// Parkering defaulter til per time — utleier kan bytte til døgn (.time) i wizarden.
     static func defaultUnit(for category: ListingCategory) -> PriceUnit {
         switch category {
         case .camping: return .natt
-        case .parking: return .time   // døgn
+        case .parking: return .hour
         }
     }
 }

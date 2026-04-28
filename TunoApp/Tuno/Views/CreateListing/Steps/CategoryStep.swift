@@ -12,26 +12,82 @@ struct CategoryStep: View {
                 CategoryCard(
                     isSelected: form.category == .camping,
                     title: "Camping",
-                    subtitle: "Bobil, campingvogn eller telt",
+                    subtitle: "Per natt · for bobil, campingvogn eller telt",
                     iconName: "tent.fill"
                 ) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
-                        form.category = .camping
+                        form.setCategory(.camping)
                     }
                 }
 
                 CategoryCard(
                     isSelected: form.category == .parking,
                     title: "Parkering",
-                    subtitle: "Pendlere, beboerparkering eller lading",
+                    subtitle: "Per time eller døgn · pendlere, beboere eller lading",
                     iconName: "car.fill"
                 ) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
-                        form.category = .parking
+                        form.setCategory(.parking)
                     }
+                }
+
+                if form.category == .parking {
+                    parkingPricingPicker
+                        .transition(.opacity.combined(with: .move(edge: .top)))
                 }
             }
         }
+    }
+
+    private var parkingPricingPicker: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Hvordan vil du prise plassen?")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.neutral900)
+            Text("Du kan sette ulike priser for arbeidstid, kveld og helg under Kalender → Prisregler etter publisering.")
+                .font(.system(size: 12))
+                .foregroundStyle(.neutral500)
+
+            HStack(spacing: 8) {
+                pricingOption(unit: .hour, label: "Per time", subtitle: "Korttidsparkering")
+                pricingOption(unit: .time, label: "Per døgn", subtitle: "Langtidsparkering")
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.neutral50)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
+    }
+
+    private func pricingOption(unit: PriceUnit, label: String, subtitle: String) -> some View {
+        let selected = form.priceUnit == unit
+        return Button {
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) {
+                form.priceUnit = unit
+            }
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack {
+                    Text(label)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(selected ? .primary700 : .neutral900)
+                    Spacer()
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 16))
+                        .foregroundStyle(selected ? .primary600 : .neutral300)
+                }
+                Text(subtitle)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral500)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(selected ? Color.primary50 : Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(selected ? Color.primary600 : Color.neutral200, lineWidth: selected ? 1.5 : 1))
+        }
+        .buttonStyle(.plain)
     }
 }
 
