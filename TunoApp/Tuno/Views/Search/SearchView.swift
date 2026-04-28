@@ -479,6 +479,13 @@ struct SearchView: View {
     }
 
     private func performSearch() {
+        // Lagre valgte datoer/tider i SearchContextStore så BookingView kan
+        // pre-fylle dem når brukeren tapper en annonse fra søkeresultatet.
+        let store = SearchContextStore.shared
+        store.checkIn = checkIn
+        store.checkOut = checkOut
+        store.startMinutes = startMinutes
+        store.endMinutes = endMinutes
         Task { await searchAt(lat: searchLat, lng: searchLng, radiusKm: 30) }
     }
 

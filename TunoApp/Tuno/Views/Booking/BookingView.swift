@@ -108,8 +108,9 @@ struct BookingView: View {
     /// Disse settes etter dato-velg og driver checkIn/checkOut (selve datoene
     /// kombineres med timene før insert).
     @State private var hourlyDate: Date? = nil
-    @State private var startHour: Int = 8
-    @State private var endHour: Int = 17
+    /// Totalminutter siden midnatt (0..1440, 30-min step). Default 08:00 / 17:00.
+    @State private var startMinutes: Int = 8 * 60
+    @State private var endMinutes: Int = 17 * 60
     @State private var licensePlate = ""
     @State private var isRentalCar = false
     @State private var availableSpots: Int?
@@ -265,7 +266,7 @@ struct BookingView: View {
     private var isFormValid: Bool {
         let vehicleOK = isRentalCar || !licensePlate.trimmingCharacters(in: .whitespaces).isEmpty
         let spotOK = !hasSpotLevelPricing || !selectedSpotIds.isEmpty
-        let datesOK = isHourly ? (hourlyDate != nil && endHour > startHour) : hasDates
+        let datesOK = isHourly ? (hourlyDate != nil && endMinutes > startMinutes) : hasDates
         return datesOK && vehicleOK && spotOK
     }
 
@@ -426,6 +427,19 @@ struct BookingView: View {
             // Forvalg plass hvis brukeren klikket seg inn fra et Plasser-kort.
             if let preId = preSelectedSpotId, selectedSpotIds.isEmpty {
                 selectedSpotIds.insert(preId)
+            }
+            // Pre-fyll datoer/tidspunkter fra kartsøket — brukeren slipper å
+            // skrive samme info to ganger. Bare når lokal state er null.
+            let ctx = SearchContextStore.shared
+            if checkIn == nil, let storedIn = ctx.checkIn { checkIn = storedIn }
+            if checkOut == nil, let storedOut = ctx.checkOut { checkOut = storedOut }
+            if isHourly {
+                if hourlyDate == nil, let storedIn = ctx.checkIn {
+                    hourlyDate = Calendar.current.startOfDay(for: storedIn)
+                }
+                if let s = ctx.startMinutes { startMinutes = s }
+                if let e = ctx.endMinutes { endMinutes = e }
+                syncHourlyToCheckInOut()
             }
             async let avail: () = checkAvailability()
             async let booked = bookingService.fetchBookedDates(listingId: listing.id)
@@ -603,14 +617,21 @@ struct BookingView: View {
             }
             .buttonStyle(.plain)
 
-            // Time-velgere (kun synlig når dato er valgt)
+            // Time-velgere (kun synlig når dato er valgt). Samme rullehjul-
+            // komponent som i kartsøket (TimeWheelPicker fra WhereSheet) for
+            // konsistent UX og 30-min trinn.
             if hourlyDate != nil {
-                HStack(spacing: 12) {
-                    hourPicker(label: "Fra", selection: $startHour, range: 0..<24)
-                    Image(systemName: "arrow.right")
-                        .foregroundStyle(.neutral400)
-                        .font(.system(size: 13, weight: .semibold))
-                    hourPicker(label: "Til", selection: $endHour, range: (startHour + 1)...24)
+                HStack(spacing: 16) {
+                    TimeWheelPicker(label: "Fra", minutes: Binding(
+                        get: { startMinutes },
+                        set: { startMinutes = $0 ?? startMinutes }
+                    ))
+                    .frame(maxWidth: .infinity)
+                    TimeWheelPicker(label: "Til", minutes: Binding(
+                        get: { endMinutes },
+                        set: { endMinutes = $0 ?? endMinutes }
+                    ))
+                    .frame(maxWidth: .infinity)
                 }
 
                 if hours > 0 {
@@ -621,54 +642,20 @@ struct BookingView: View {
             }
         }
         .onChange(of: hourlyDate) { _, _ in syncHourlyToCheckInOut() }
-        .onChange(of: startHour) { _, newValue in
-            if endHour <= newValue { endHour = min(24, newValue + 1) }
+        .onChange(of: startMinutes) { _, newValue in
+            if endMinutes <= newValue { endMinutes = min(24 * 60, newValue + 30) }
             syncHourlyToCheckInOut()
         }
-        .onChange(of: endHour) { _, _ in syncHourlyToCheckInOut() }
+        .onChange(of: endMinutes) { _, _ in syncHourlyToCheckInOut() }
     }
 
-    private func hourPicker(label: String, selection: Binding<Int>, range: any RangeExpression<Int>) -> some View {
-        let values: [Int] = {
-            if let r = range as? Range<Int> { return Array(r) }
-            if let r = range as? ClosedRange<Int> { return Array(r) }
-            return Array(0..<24)
-        }()
-        return VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.neutral500)
-            Menu {
-                ForEach(values, id: \.self) { hour in
-                    Button(String(format: "%02d:00", hour)) {
-                        selection.wrappedValue = hour
-                    }
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Text(String(format: "%02d:00", selection.wrappedValue))
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                    Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.neutral500)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Color.neutral50)
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.neutral200, lineWidth: 1))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-        }
-    }
-
-    /// Bygg checkIn/checkOut Date-objekter fra hourlyDate + start/endHour.
+    /// Bygg checkIn/checkOut Date-objekter fra hourlyDate + start/endMinutes.
     private func syncHourlyToCheckInOut() {
         guard isHourly, let date = hourlyDate else { return }
         let cal = Calendar.current
         let day = cal.startOfDay(for: date)
-        checkIn = cal.date(byAdding: .hour, value: startHour, to: day)
-        checkOut = cal.date(byAdding: .hour, value: endHour, to: day)
+        checkIn = cal.date(byAdding: .minute, value: startMinutes, to: day)
+        checkOut = cal.date(byAdding: .minute, value: endMinutes, to: day)
     }
 
     private var calendarSheet: some View {

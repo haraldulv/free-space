@@ -77,6 +77,7 @@
 		8B3FFD2821A8DBF0C4752B71 /* BookingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A031A3724EC9DE0FAFF7A4A /* BookingView.swift */; };
 		8DE4BBDB474E278A300397DE /* BlockedSlots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41E71E1C8EA6E28F59A76B9A /* BlockedSlots.swift */; };
 		90D70482683053BEFF821336 /* EarningsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C68D73AEFE78CC1D1DEE15 /* EarningsView.swift */; };
+		96B48987F842D9D98F4FE0F7 /* SearchContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D0D12BC80A797DF8A6DEED /* SearchContextStore.swift */; };
 		96BC4BC4EB06699B3E5A5D69 /* HostSpotDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E78282D80E5F27037C4EC4 /* HostSpotDetailView.swift */; };
 		9AE9EF8B07B0FB00DF4149AF /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D0ADDAE2EA91F5F458E3E5A /* SupabaseService.swift */; };
 		A8470E43E8EF688AF0A4112C /* welcome-tent.json in Resources */ = {isa = PBXBuildFile; fileRef = 0B723EAA2CB71B866808AE9D /* welcome-tent.json */; };
@@ -158,6 +159,7 @@
 		3CB173E040FBC726599E7A89 /* PlacesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlacesService.swift; sourceTree = "<group>"; };
 		3D0ADDAE2EA91F5F458E3E5A /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
 		3D457F224FB227BB0280276E /* AddressStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressStep.swift; sourceTree = "<group>"; };
+		40D0D12BC80A797DF8A6DEED /* SearchContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchContextStore.swift; sourceTree = "<group>"; };
 		41E71E1C8EA6E28F59A76B9A /* BlockedSlots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockedSlots.swift; sourceTree = "<group>"; };
 		425E4953E02A6C131CFEB198 /* empty-spots.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "empty-spots.json"; sourceTree = "<group>"; };
 		4706792C26101B180693BACF /* InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputField.swift; sourceTree = "<group>"; };
@@ -446,6 +448,7 @@
 				41E71E1C8EA6E28F59A76B9A /* BlockedSlots.swift */,
 				CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */,
 				8912249569F172B1FAC73845 /* PersonnummerHelper.swift */,
+				40D0D12BC80A797DF8A6DEED /* SearchContextStore.swift */,
 				ABC8284C8DB15BB1AECA34F0 /* VisitedListingsStore.swift */,
 			);
 			path = Utils;
@@ -735,6 +738,7 @@
 				1A1B9BC09172D4EBECCDB2C3 /* PushNotificationManager.swift in Sources */,
 				C0BA2DBEE5876C34B94A911D /* QRCodeView.swift in Sources */,
 				30DB0664F70CAF9A54C49E83 /* RegisterView.swift in Sources */,
+				96B48987F842D9D98F4FE0F7 /* SearchContextStore.swift in Sources */,
 				CCC01BD7E34A8531A3C71E2A /* SearchHerePill.swift in Sources */,
 				FE23B05A859AA8FCC5B7D037 /* SearchPill.swift in Sources */,
 				E912DD2299D28C54B1846A12 /* SearchView.swift in Sources */,
@@ -800,7 +804,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 112;
+				CURRENT_PROJECT_VERSION = 113;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -900,7 +904,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 112;
+				CURRENT_PROJECT_VERSION = 113;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

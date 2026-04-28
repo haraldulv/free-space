@@ -113,6 +113,8 @@ struct ListingDetailView: View {
                             amenitiesCard(amenities: amenities)
                         }
 
+                        suitableForCard(listing: listing)
+
                         combinedSpotsSection(listing: listing)
 
                         locationCard(listing: listing, hideExact: hideExact)
@@ -313,26 +315,22 @@ struct ListingDetailView: View {
 
             Divider().frame(height: 40)
 
-            // Kolonne 3: Kjøretøy-type (Lucide-ikon + label)
+            // Kolonne 3: Annonse-type (kategori — Camping eller Parkering)
             VStack(spacing: 4) {
-                if let vehicleType = listing.vehicleType {
-                    Image(vehicleType.lucideIcon)
-                        .renderingMode(.template)
+                if let category = listing.category {
+                    Image(category.categoryIcon)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 22, height: 22)
-                        .foregroundStyle(.neutral900)
-                    Text(vehicleType.displayName)
+                        .frame(width: 28, height: 28)
+                    Text(category == .parking ? "Parkering" : "Camping")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.neutral700)
                 } else {
-                    Image("lucide-caravan")
-                        .renderingMode(.template)
+                    Image("category-camping")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 22, height: 22)
-                        .foregroundStyle(.neutral900)
-                    Text("Bobil")
+                        .frame(width: 28, height: 28)
+                    Text("Camping")
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.neutral700)
                 }
@@ -641,6 +639,54 @@ struct ListingDetailView: View {
         .overlay(
             RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 0.5)
         )
+    }
+
+    // MARK: - "Hva passer her"-seksjon (kjøretøytype + maks-lengde + spot-detaljer)
+
+    @ViewBuilder
+    private func suitableForCard(listing: Listing) -> some View {
+        // Aggregert kjøretøytype-info: vis listing-nivå + per-plass forskjeller.
+        let listingVehicle = listing.vehicleType
+        let spotVehicles = (listing.spotMarkers ?? []).compactMap { $0.vehicleType }
+        let allVehicles = Set(spotVehicles + (listingVehicle.map { [$0] } ?? []))
+
+        if !allVehicles.isEmpty {
+            sectionCard {
+                VStack(alignment: .leading, spacing: 14) {
+                    Text("Hva passer her")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.neutral900)
+
+                    VStack(spacing: 10) {
+                        ForEach(Array(allVehicles).sorted(by: { $0.displayName < $1.displayName }), id: \.self) { vt in
+                            HStack(spacing: 12) {
+                                Image(vt.lucideIcon)
+                                    .renderingMode(.template)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 22, height: 22)
+                                    .foregroundStyle(.primary600)
+                                    .frame(width: 36, height: 36)
+                                    .background(Circle().fill(Color.primary50))
+
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(vt.displayName)
+                                        .font(.system(size: 15, weight: .semibold))
+                                        .foregroundStyle(.neutral900)
+                                    if !vt.isCompact, let maxLen = listing.maxVehicleLength, maxLen > 0 {
+                                        Text("Maks lengde \(Int(maxLen))m")
+                                            .font(.system(size: 13))
+                                            .foregroundStyle(.neutral500)
+                                    }
+                                }
+
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Location card (default standard, toggle satellitt, fullscreen-knapp)

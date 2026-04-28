@@ -425,6 +425,17 @@ struct WhereSheet: View {
                     editingCheckIn = false
                 }
             }
+            .onAppear {
+                // SwiftUI DatePicker.graphical trigges ikke onChange når initial
+                // og valgt verdi er identisk. Hvis vi lar checkIn være nil og
+                // bruker `.. ?? Date()` som default, kan ikke brukeren velge i
+                // dag (DatePicker har allerede i dag som "valgt"). Vi initialiserer
+                // proaktivt så tap på en annen dato + tilbake fungerer som forventet.
+                if checkIn == nil { checkIn = Date() }
+                if checkOut == nil {
+                    checkOut = Calendar.current.date(byAdding: .day, value: 1, to: checkIn ?? Date())
+                }
+            }
 
             DatePicker(
                 "",
