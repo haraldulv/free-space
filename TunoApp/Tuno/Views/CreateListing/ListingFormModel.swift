@@ -14,7 +14,7 @@ final class ListingFormModel: ObservableObject {
     /// (alle tre er mini-wizards med én plass per slide).
     /// Steg 8 = Booking (direktebooking vs godkjenn først).
     /// Steg 9 = Beskrivelse (tittel + valgfri beskrivelse av annonsen).
-    let totalSteps = 15
+    let totalSteps = 16
 
     // MARK: - Step 1: Category
     @Published var category: ListingCategory? = .camping
@@ -85,9 +85,18 @@ final class ListingFormModel: ObservableObject {
         spot.priceUnit ?? priceUnit
     }
 
-    // MARK: - Step labels (for progress) — 15 steg
+    // MARK: - Step labels (for progress) — 16 steg
     var stepLabels: [String] {
-        ["Velkommen", "Kategori", "Adresse", "Plasser", "Marker", "Kjøretøy", "Pris", "Tillegg", "Booking", "Beskrivelse", "Bilder", "Fasiliteter", "Meldinger", "Kalender", "Klar"]
+        ["Velkommen", "Kategori", "Adresse", "Plasser", "Marker", "Kjøretøy", "Pris", "Tillegg", "Booking", "Beskrivelse", "Bilder", "Fasiliteter", "Meldinger", "Prisbånd", "Kalender", "Klar"]
+    }
+
+    /// Pris-bånd-steget (13) er kun relevant for parkering per time.
+    /// Andre kategorier hopper over det automatisk i goNext/goBack.
+    var skipsPricingRulesStep: Bool {
+        if category != .parking { return true }
+        if priceUnit == .hour { return false }
+        if spotMarkers.contains(where: { $0.priceUnit == .hour }) { return false }
+        return true
     }
 
     // MARK: - Validation per step
@@ -160,8 +169,8 @@ final class ListingFormModel: ObservableObject {
     /// når vi starter på neste plass.
     var displayProgress: Double {
         let spotCount = max(1, spotMarkers.count)
-        // 5 pre-mini (0–4) + 3*N mini + 7 post-mini (8 Booking → 14 Klar)
-        let totalVirtual = 12 + 3 * spotCount
+        // 5 pre-mini (0–4) + 3*N mini + 8 post-mini (8 Booking → 15 Klar)
+        let totalVirtual = 13 + 3 * spotCount
         let pos: Int
         if currentStep < 5 {
             pos = currentStep
@@ -209,6 +218,10 @@ final class ListingFormModel: ObservableObject {
                 if currentStepHasMiniWizard {
                     currentSpotIndex = 0
                 }
+                // Hopp over Prisbånd-steget for ikke-parkering-per-time.
+                if currentStep == 13 && skipsPricingRulesStep {
+                    currentStep = 14
+                }
             }
         }
     }
@@ -232,6 +245,12 @@ final class ListingFormModel: ObservableObject {
             }
             // Første plass på steg 5 — tilbake til MarkSpots (4).
             withAnimation(.easeInOut(duration: 0.32)) { currentStep = 4 }
+            return
+        }
+
+        // Hopp over Prisbånd-steget når brukeren går bakover for ikke-parkering-per-time
+        if currentStep == 14 && skipsPricingRulesStep {
+            withAnimation(.easeInOut(duration: 0.32)) { currentStep = 12 }
             return
         }
 

@@ -163,6 +163,14 @@ struct HourlyPriceEntry: Codable, Hashable {
     let source: String  // "base" | "hourly" | "override"
 }
 
+/// Når et prisbånd skal være aktivt. Default = alle uker, men brukeren kan
+/// overstyre for én bestemt ISO-uke ved å dra båndet til en uke-celle i
+/// wizardens pris-steg.
+enum WeekScope: Hashable {
+    case allWeeks
+    case specificWeek(year: Int, week: Int)
+}
+
 /// Time-bånd-regel som settes opp i wizard og inserts som listing_pricing_rules
 /// etter publisering. Holdes lokalt i form-state.
 struct WizardPricingBand: Identifiable, Hashable {
@@ -171,13 +179,15 @@ struct WizardPricingBand: Identifiable, Hashable {
     var startHour: Int
     var endHour: Int
     var price: Int
+    var weekScope: WeekScope
 
-    init(id: UUID = UUID(), dayMask: Int, startHour: Int, endHour: Int, price: Int) {
+    init(id: UUID = UUID(), dayMask: Int, startHour: Int, endHour: Int, price: Int, weekScope: WeekScope = .allWeeks) {
         self.id = id
         self.dayMask = dayMask
         self.startHour = startHour
         self.endHour = endHour
         self.price = price
+        self.weekScope = weekScope
     }
 }
 

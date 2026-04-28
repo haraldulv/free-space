@@ -298,6 +298,9 @@ struct WhereSheet: View {
                     typing = prediction.mainText
                     placesService.clear()
                     onSelectPlace(prediction)
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        activeStep = .når
+                    }
                 } label: {
                     HStack(spacing: 14) {
                         ZStack {
@@ -368,12 +371,23 @@ struct WhereSheet: View {
             typing = dest.name
             placesService.autocomplete(query: dest.name)
             Task {
-                // Vent på prediction og oppdater søk når stedet er valgt
+                // Vent på prediction og oppdater søk når stedet er valgt,
+                // deretter auto-hopp til Når-steget.
                 for _ in 0..<15 {
                     try? await Task.sleep(nanoseconds: 100_000_000)
                     if let first = placesService.predictions.first {
                         onSelectPlace(first)
+                        await MainActor.run {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                activeStep = .når
+                            }
+                        }
                         return
+                    }
+                }
+                await MainActor.run {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        activeStep = .når
                     }
                 }
             }

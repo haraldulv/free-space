@@ -92,20 +92,23 @@ enum PricingService {
 
     /// Legg til et time-bånd for parkering per time.
     /// Et bånd treffer en booking-time hvis dagen er i `dayMask` OG `startHour <= time < endHour`.
-    /// Multiple bånd kan defineres. Ved overlapp vinner regelen som ble lagt til først (DB-rekkefølge).
+    /// `startDate`/`endDate` (yyyy-MM-dd) avgrenser regelen til en spesifikk
+    /// dato-rangen (typisk én ISO-uke). NIL = gjelder alle uker.
     static func addHourlyBandRule(
         listingId: String,
         dayMask: Int,
         startHour: Int,
         endHour: Int,
         price: Int,
+        startDate: String? = nil,
+        endDate: String? = nil
     ) async throws {
         let rule = NewRule(
             listing_id: listingId,
             kind: "hourly",
             day_mask: dayMask,
-            start_date: nil,
-            end_date: nil,
+            start_date: startDate,
+            end_date: endDate,
             start_hour: startHour,
             end_hour: endHour,
             price: price,

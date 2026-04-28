@@ -129,8 +129,9 @@ struct CreateListingView: View {
             PhotosStep(form: form).tag(10)
             AmenitiesStep(form: form).tag(11)
             MessagesStep(form: form).tag(12)
-            CalendarStep(form: form).tag(13)
-            PublishStep(form: form).tag(14)
+            PriceRulesStep(form: form).tag(13)
+            CalendarStep(form: form).tag(14)
+            PublishStep(form: form).tag(15)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         .animation(.easeInOut(duration: 0.32), value: form.currentStep)
@@ -262,13 +263,24 @@ struct CreateListingView: View {
                 await authManager.loadProfile()
                 if let listing = inserted.first {
                     // Persist time-bånd-regler (parkering per time) etter at listing-id finnes.
+                    // Uke-spesifikke bånd (dragget til en uke i kalenderen) får
+                    // start_date/end_date for den ISO-uken; default-bånd er nil/nil.
                     for band in form.pricingBands {
+                        var startDate: String? = nil
+                        var endDate: String? = nil
+                        if case .specificWeek(let y, let w) = band.weekScope,
+                           let range = PriceRulesStep.dateRangeForWeek(year: y, week: w) {
+                            startDate = range.start
+                            endDate = range.end
+                        }
                         try? await PricingService.addHourlyBandRule(
                             listingId: listing.id,
                             dayMask: band.dayMask,
                             startHour: band.startHour,
                             endHour: band.endHour,
                             price: band.price,
+                            startDate: startDate,
+                            endDate: endDate
                         )
                     }
                     newListing = listing
