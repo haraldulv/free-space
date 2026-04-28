@@ -115,9 +115,18 @@ struct BookingView: View {
     /// Utsjekk-dato — settes automatisk = hourlyDate, men kan overstyres
     /// hvis brukeren parkerer over natt (f.eks. innsjekk 22:00, utsjekk 08:00 dagen etter).
     @State private var hourlyEndDate: Date? = nil
-    /// Totalminutter siden midnatt (0..1440, 30-min step). Default 08:00 / 17:00.
-    @State private var startMinutes: Int = 8 * 60
-    @State private var endMinutes: Int = 17 * 60
+    /// Totalminutter siden midnatt (0..1440, 30-min step). Default = nåværende
+    /// tid rundet opp til nærmeste 30 min (samme som kartsøket). End = +1 time.
+    @State private var startMinutes: Int = BookingView.roundedNowMinutes()
+    @State private var endMinutes: Int = min(24 * 60, BookingView.roundedNowMinutes() + 60)
+
+    /// Nåværende klokkeslett rundet opp til nærmeste hele 30 minutter.
+    private static func roundedNowMinutes() -> Int {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: Date())
+        let total = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+        let snapped = ((total + 29) / 30) * 30
+        return min(snapped, 24 * 60)
+    }
     @State private var licensePlate = ""
     @State private var isRentalCar = false
     @State private var availableSpots: Int?
@@ -441,8 +450,13 @@ struct BookingView: View {
             if checkIn == nil, let storedIn = ctx.checkIn { checkIn = storedIn }
             if checkOut == nil, let storedOut = ctx.checkOut { checkOut = storedOut }
             if isHourly {
-                if hourlyDate == nil, let storedIn = ctx.checkIn {
-                    hourlyDate = Calendar.current.startOfDay(for: storedIn)
+                // Pre-fyll fra context (kartsøk), eller default til i dag.
+                if hourlyDate == nil {
+                    if let storedIn = ctx.checkIn {
+                        hourlyDate = Calendar.current.startOfDay(for: storedIn)
+                    } else {
+                        hourlyDate = Calendar.current.startOfDay(for: Date())
+                    }
                 }
                 if hourlyEndDate == nil {
                     if let storedOut = ctx.checkOut {
@@ -602,39 +616,39 @@ struct BookingView: View {
             Text("Når ankommer du?")
                 .font(.system(size: 18, weight: .semibold))
 
+            // Hurtigknapper for varighet — synlig umiddelbart så brukeren
+            // raskt kan velge "1 time / 2 timer / 4 timer" uten å måtte
+            // navigere kalender og tidspunkt-velgere først.
+            HStack(spacing: 8) {
+                durationQuickChip(label: "1 time", hours: 1)
+                durationQuickChip(label: "2 timer", hours: 2)
+                durationQuickChip(label: "4 timer", hours: 4)
+            }
+
             // Innsjekk + utsjekk dato-velgere
             HStack(spacing: 8) {
                 hourlyDateChip(label: "Innsjekk", date: hourlyDate, isStart: true)
                 hourlyDateChip(label: "Utsjekk", date: hourlyEndDate ?? hourlyDate, isStart: false)
             }
 
-            // Time-velgere + hurtigknapper (kun synlig når innsjekk-dato er valgt).
-            // Samme rullehjul-komponent som i kartsøket for konsistent UX.
-            if hourlyDate != nil {
-                HStack(spacing: 16) {
-                    TimeWheelPicker(label: "Fra", minutes: Binding(
-                        get: { startMinutes },
-                        set: { startMinutes = $0 ?? startMinutes }
-                    ))
-                    .frame(maxWidth: .infinity)
-                    TimeWheelPicker(label: "Til", minutes: Binding(
-                        get: { endMinutes },
-                        set: { endMinutes = $0 ?? endMinutes }
-                    ))
-                    .frame(maxWidth: .infinity)
-                }
+            // Tids-rullehjul — alltid synlig (samme som kartsøket).
+            HStack(spacing: 16) {
+                TimeWheelPicker(label: "Fra", minutes: Binding(
+                    get: { startMinutes },
+                    set: { startMinutes = $0 ?? startMinutes }
+                ))
+                .frame(maxWidth: .infinity)
+                TimeWheelPicker(label: "Til", minutes: Binding(
+                    get: { endMinutes },
+                    set: { endMinutes = $0 ?? endMinutes }
+                ))
+                .frame(maxWidth: .infinity)
+            }
 
-                HStack(spacing: 8) {
-                    durationQuickChip(label: "1 time", hours: 1)
-                    durationQuickChip(label: "2 timer", hours: 2)
-                    durationQuickChip(label: "4 timer", hours: 4)
-                }
-
-                if hours > 0 {
-                    Text("\(hours) \(hours == 1 ? "time" : "timer")")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.neutral500)
-                }
+            if hours > 0 {
+                Text("\(hours) \(hours == 1 ? "time" : "timer")")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral500)
             }
         }
         .onChange(of: hourlyDate) { _, newDate in

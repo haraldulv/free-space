@@ -71,6 +71,9 @@ struct PriceRulesStep: View {
                     )
                 )
             }
+            // .id tvinger SwiftUI til å rebyggge sheet per prefill-tap, så
+            // selectedDays/startHour/endHour blir synkronisert riktig.
+            .id(bandSheetPrefill?.id ?? "blank")
         }
         .sheet(item: Binding(
             get: { weekScopeBandId.map { IdentifiedUUID(value: $0) } },

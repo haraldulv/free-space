@@ -654,7 +654,6 @@ struct MyListingsView: View {
     @State private var showCreateListing = false
     @State private var deleteTarget: Listing?
     @State private var qrTarget: Listing?
-    @State private var statsTarget: Listing?
 
     var body: some View {
         Group {
@@ -730,25 +729,16 @@ struct MyListingsView: View {
 
                                 Spacer()
 
-                                HStack(spacing: 12) {
-                                    Button {
-                                        qrTarget = listing
-                                    } label: {
-                                        Image(systemName: "qrcode")
-                                            .font(.system(size: 16))
-                                            .foregroundStyle(.neutral500)
-                                    }
-                                    .buttonStyle(.plain)
-
-                                    Button {
-                                        statsTarget = listing
-                                    } label: {
-                                        Image(systemName: "chart.bar")
-                                            .font(.system(size: 16))
-                                            .foregroundStyle(.neutral500)
-                                    }
-                                    .buttonStyle(.plain)
+                                Button {
+                                    qrTarget = listing
+                                } label: {
+                                    Image(systemName: "qrcode")
+                                        .font(.system(size: 16))
+                                        .foregroundStyle(.neutral500)
                                 }
+                                .buttonStyle(.plain)
+                                // Inntekts-knapp fjernet — inntekter vises i
+                                // egen Inntekter-fane under Profil.
                             }
                         }
                         .swipeActions(edge: .trailing) {
@@ -783,9 +773,6 @@ struct MyListingsView: View {
         }
         .sheet(item: $qrTarget) { listing in
             QRCodeModal(listing: listing)
-        }
-        .navigationDestination(item: $statsTarget) { listing in
-            HostListingStatsView(listing: listing)
         }
         .alert("Slett annonse?", isPresented: .init(
             get: { deleteTarget != nil },
