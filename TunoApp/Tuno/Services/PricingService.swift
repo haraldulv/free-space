@@ -12,6 +12,10 @@ enum PricingService {
         let day_mask: Int?
         let start_date: String?
         let end_date: String?
+        /// Hourly-bånd: time 0..23 (inklusiv). NULL for weekend/season.
+        let start_hour: Int?
+        /// Hourly-bånd: time 1..24 (eksklusiv). NULL for weekend/season.
+        let end_hour: Int?
         let price: Int
     }
 
@@ -28,6 +32,8 @@ enum PricingService {
         let day_mask: Int?
         let start_date: String?
         let end_date: String?
+        let start_hour: Int?
+        let end_hour: Int?
         let price: Int
     }
 
@@ -50,6 +56,8 @@ enum PricingService {
                 day_mask: weekendDayMask,
                 start_date: nil,
                 end_date: nil,
+                start_hour: nil,
+                end_hour: nil,
                 price: price,
             )
             try await supabase
@@ -72,6 +80,34 @@ enum PricingService {
             day_mask: nil,
             start_date: startDate,
             end_date: endDate,
+            start_hour: nil,
+            end_hour: nil,
+            price: price,
+        )
+        try await supabase
+            .from("listing_pricing_rules")
+            .insert(rule)
+            .execute()
+    }
+
+    /// Legg til et time-bånd for parkering per time.
+    /// Et bånd treffer en booking-time hvis dagen er i `dayMask` OG `startHour <= time < endHour`.
+    /// Multiple bånd kan defineres. Ved overlapp vinner regelen som ble lagt til først (DB-rekkefølge).
+    static func addHourlyBandRule(
+        listingId: String,
+        dayMask: Int,
+        startHour: Int,
+        endHour: Int,
+        price: Int,
+    ) async throws {
+        let rule = NewRule(
+            listing_id: listingId,
+            kind: "hourly",
+            day_mask: dayMask,
+            start_date: nil,
+            end_date: nil,
+            start_hour: startHour,
+            end_hour: endHour,
             price: price,
         )
         try await supabase
@@ -298,5 +334,123 @@ enum PricingService {
         }
         // 4) Base
         return NightlyPriceEntry(date: iso, price: basePrice, source: "base")
+    }
+
+    // MARK: - Hourly pricing (parkering per time)
+
+    /// Beregn per-time pris-breakdown for hourly bookings.
+    /// Presedens: override (per dato) > hourly-bånd (matchende dag+time) > base hourly-pris.
+    /// `start`/`end` tolkes som timestamps (samme dag forventes — multi-dags hourly er ikke i v1).
+    static func hourlyPriceBreakdown(
+        listingId: String,
+        baseHourlyPrice: Int,
+        start: Date,
+        end: Date,
+    ) async -> [HourlyPriceEntry] {
+        let rules: [Rule]
+        let overrides: [Override]
+        do {
+            rules = try await supabase
+                .from("listing_pricing_rules")
+                .select()
+                .eq("listing_id", value: listingId)
+                .execute()
+                .value
+        } catch {
+            rules = []
+        }
+        do {
+            overrides = try await supabase
+                .from("listing_pricing_overrides")
+                .select()
+                .eq("listing_id", value: listingId)
+                .gte("date", value: format(start))
+                .lte("date", value: format(end))
+                .execute()
+                .value
+        } catch {
+            overrides = []
+        }
+
+        return buildHourlyBreakdown(
+            from: start,
+            to: end,
+            baseHourlyPrice: baseHourlyPrice,
+            rules: rules,
+            overrides: overrides,
+        )
+    }
+
+    static func buildHourlyBreakdown(
+        from start: Date,
+        to end: Date,
+        baseHourlyPrice: Int,
+        rules: [Rule],
+        overrides: [Override],
+    ) -> [HourlyPriceEntry] {
+        var result: [HourlyPriceEntry] = []
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+
+        let isoTimestamp = ISO8601DateFormatter()
+        isoTimestamp.timeZone = TimeZone(identifier: "Europe/Oslo")
+        isoTimestamp.formatOptions = [.withInternetDateTime]
+
+        var cursor = start
+        while cursor < end {
+            let dayKey = format(cursor)
+            let hour = cal.component(.hour, from: cursor)
+            let bit = weekdayBit(cursor)
+
+            let entry = resolveHourly(
+                cursor: cursor,
+                hour: hour,
+                bit: bit,
+                dayKey: dayKey,
+                baseHourlyPrice: baseHourlyPrice,
+                rules: rules,
+                overrides: overrides,
+                isoTimestamp: isoTimestamp,
+            )
+            result.append(entry)
+
+            guard let next = cal.date(byAdding: .hour, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return result
+    }
+
+    private static func resolveHourly(
+        cursor: Date,
+        hour: Int,
+        bit: Int,
+        dayKey: String,
+        baseHourlyPrice: Int,
+        rules: [Rule],
+        overrides: [Override],
+        isoTimestamp: ISO8601DateFormatter,
+    ) -> HourlyPriceEntry {
+        let stamp = isoTimestamp.string(from: cursor)
+
+        // 1) Override (per dato — gjelder hele dagen)
+        if let o = overrides.first(where: { $0.date == dayKey }) {
+            return HourlyPriceEntry(hourAt: stamp, price: o.price, source: "override")
+        }
+
+        // 2) Hourly-bånd: matchende dag-bit OG time i [start_hour, end_hour)
+        if let band = rules.first(where: { r in
+            guard r.kind == "hourly",
+                  let mask = r.day_mask,
+                  let sh = r.start_hour,
+                  let eh = r.end_hour else { return false }
+            let dayMatches = (mask & (1 << bit)) != 0
+            let hourMatches = hour >= sh && hour < eh
+            return dayMatches && hourMatches
+        }) {
+            return HourlyPriceEntry(hourAt: stamp, price: band.price, source: "hourly")
+        }
+
+        // 3) Base
+        return HourlyPriceEntry(hourAt: stamp, price: baseHourlyPrice, source: "base")
     }
 }

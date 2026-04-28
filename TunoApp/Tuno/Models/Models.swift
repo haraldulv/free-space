@@ -155,6 +155,14 @@ struct NightlyPriceEntry: Codable, Hashable {
     let source: String  // "base" | "weekend" | "season" | "override"
 }
 
+/// Per-time pris-entry for hourly bookings (parkering per time).
+struct HourlyPriceEntry: Codable, Hashable {
+    /// ISO 8601 timestamp for time-blokken (Europe/Oslo).
+    let hourAt: String
+    let price: Int
+    let source: String  // "base" | "hourly" | "override"
+}
+
 enum ListingCategory: String, Codable, CaseIterable {
     case parking
     case camping
