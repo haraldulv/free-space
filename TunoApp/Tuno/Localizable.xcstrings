@@ -712,7 +712,7 @@
         }
       }
     },
-    "Annonsen er publisert! 🎉" : {
+    "Annonsen er publisert!" : {
 
     },
     "Annonsens standardpris er %@ kr/%@. Legg til helg-pris eller sesong-regler som overstyrer." : {
@@ -1501,13 +1501,16 @@
     "Dra et bånd hit ↓" : {
 
     },
+    "Dra et bånd hit for å overstyre denne uken" : {
+
+    },
     "Dra og slipp for å endre rekkefølge. Bildet lengst til venstre er forsidebildet." : {
 
     },
     "Dra og slipp for å endre rekkefølge. Første bilde er forsidebildet." : {
 
     },
-    "Du er godkjent! 🎉" : {
+    "Du er godkjent!" : {
 
     },
     "Du får utbetalt din andel etter oppholdet (minus Tunos servicegebyr)." : {
@@ -4356,6 +4359,9 @@
         }
       }
     },
+    "Mange tar høyere pris i rushtiden eller helger. Du kan også beholde én fast pris hele uken." : {
+
+    },
     "Mangler betalingsinformasjon" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6533,6 +6539,9 @@
         }
       }
     },
+    "Tilbake til fast pris" : {
+
+    },
     "Tilgjengelig i dag" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7318,6 +7327,9 @@
           }
         }
       }
+    },
+    "Vil du variere prisen?" : {
+
     },
     "Vis %@ annonser" : {
 

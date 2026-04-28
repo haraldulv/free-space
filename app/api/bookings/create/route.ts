@@ -182,15 +182,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: overlappingBookings } = await supabase
+    // For hourly bookings er check_in og check_out som regel samme dato, så
+    // den vanlige `.lt(check_in, checkOut)`-sjekken misser eksisterende hourly
+    // på samme dag. Vi henter alle bookings i dato-rangen (inclusive) og
+    // filtrerer i kode: hourly-mot-hourly via timestamp-overlap, hourly-mot-
+    // daily via dato-medlemskap.
+    const isHourlyCheck = isHourly && checkInAt && checkOutAt;
+    const overlapQuery = supabase
       .from("bookings")
-      .select("selected_spot_ids")
+      .select("selected_spot_ids, check_in, check_out, check_in_at, check_out_at")
       .eq("listing_id", listingId)
-      .in("status", ["confirmed", "pending", "requested"])
-      .lt("check_in", checkOut)
-      .gt("check_out", checkIn);
+      .in("status", ["confirmed", "pending", "requested"]);
 
-    const bookedCount = (overlappingBookings || []).reduce((sum, row) => {
+    const { data: rawOverlap } = isHourlyCheck
+      ? await overlapQuery.lte("check_in", checkOut).gte("check_out", checkIn)
+      : await overlapQuery.lt("check_in", checkOut).gt("check_out", checkIn);
+
+    const overlappingBookings = (rawOverlap || []).filter((b) => {
+      if (!isHourlyCheck) return true;  // daily-flyt: SQL har allerede filtrert riktig
+      if (b.check_in_at && b.check_out_at) {
+        // Hourly-mot-hourly: krever ekte tidsoverlapp
+        const newIn = new Date(checkInAt!).getTime();
+        const newOut = new Date(checkOutAt!).getTime();
+        const bIn = new Date(b.check_in_at).getTime();
+        const bOut = new Date(b.check_out_at).getTime();
+        return newIn < bOut && newOut > bIn;
+      }
+      // Hourly-mot-daily: daily blokkerer [check_in, check_out)-rangen
+      return checkIn >= b.check_in && checkIn < b.check_out;
+    });
+
+    const bookedCount = overlappingBookings.reduce((sum, row) => {
       const ids = row.selected_spot_ids as string[] | null;
       return sum + (ids && ids.length > 0 ? ids.length : 1);
     }, 0);
@@ -212,17 +234,23 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: "En eller flere av de valgte plassene er allerede booket. Velg andre plasser." });
       }
 
-      // Sjekk manuelt blokkerte datoer per plass
+      // Sjekk manuelt blokkerte datoer per plass.
+      // Hourly bookings har checkIn === checkOut (samme dag) — while-løkken
+      // gir tom liste, så vi inkluderer datoen eksplisitt i hourly-flyt.
       const spotMarkers = (listing.spot_markers as SpotMarker[] | null) || [];
       const datesInRange: string[] = [];
-      const cursor = new Date(checkIn);
-      const end = new Date(checkOut);
-      while (cursor < end) {
-        const y = cursor.getFullYear();
-        const m = String(cursor.getMonth() + 1).padStart(2, "0");
-        const d = String(cursor.getDate()).padStart(2, "0");
-        datesInRange.push(`${y}-${m}-${d}`);
-        cursor.setDate(cursor.getDate() + 1);
+      if (isHourlyCheck) {
+        datesInRange.push(checkIn);
+      } else {
+        const cursor = new Date(checkIn);
+        const end = new Date(checkOut);
+        while (cursor < end) {
+          const y = cursor.getFullYear();
+          const m = String(cursor.getMonth() + 1).padStart(2, "0");
+          const d = String(cursor.getDate()).padStart(2, "0");
+          datesInRange.push(`${y}-${m}-${d}`);
+          cursor.setDate(cursor.getDate() + 1);
+        }
       }
       for (const spotId of selectedSpotIds) {
         const spot = spotMarkers.find((s) => s.id === spotId);

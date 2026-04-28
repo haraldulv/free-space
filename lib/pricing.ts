@@ -232,15 +232,25 @@ export function resolveHourlyPrice(
   const override = overrides.find((o) => o.date === dateIso);
   if (override) return { price: override.price, source: "override" };
 
-  // 2) Hourly-bånd
-  const band = rules.find((r) => {
+  // 2) Hourly-bånd. Uke-spesifikke regler (har start_date/end_date) vinner
+  // over default-bånd (null/null) når begge matcher samme tidspunkt.
+  const matchingBands = rules.filter((r) => {
     if (r.kind !== "hourly") return false;
     if (typeof r.dayMask !== "number") return false;
     if (r.startHour === null || r.endHour === null) return false;
+    if (r.startDate && dateIso < r.startDate) return false;
+    if (r.endDate && dateIso > r.endDate) return false;
     const dayMatches = (r.dayMask & (1 << bit)) !== 0;
     const hourMatches = hour >= r.startHour && hour < r.endHour;
     return dayMatches && hourMatches;
   });
+  // Sortér: dato-avgrensede regler først (mer spesifikke vinner)
+  matchingBands.sort((a, b) => {
+    const aSpecific = a.startDate !== null || a.endDate !== null ? 1 : 0;
+    const bSpecific = b.startDate !== null || b.endDate !== null ? 1 : 0;
+    return bSpecific - aSpecific;
+  });
+  const band = matchingBands[0];
   if (band) return { price: band.price, source: "hourly" };
 
   // 3) Base

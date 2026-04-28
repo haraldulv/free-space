@@ -440,16 +440,27 @@ enum PricingService {
             return HourlyPriceEntry(hourAt: stamp, price: o.price, source: "override")
         }
 
-        // 2) Hourly-bånd: matchende dag-bit OG time i [start_hour, end_hour)
-        if let band = rules.first(where: { r in
+        // 2) Hourly-bånd: matchende dag-bit OG time i [start_hour, end_hour).
+        // Uke-spesifikke regler (har start_date/end_date) vinner over default
+        // når begge matcher samme tidspunkt — så drag-til-uke-overstyringer
+        // virker som forventet.
+        let matching = rules.filter { r in
             guard r.kind == "hourly",
                   let mask = r.day_mask,
                   let sh = r.start_hour,
                   let eh = r.end_hour else { return false }
+            if let sd = r.start_date, dayKey < sd { return false }
+            if let ed = r.end_date, dayKey > ed { return false }
             let dayMatches = (mask & (1 << bit)) != 0
             let hourMatches = hour >= sh && hour < eh
             return dayMatches && hourMatches
-        }) {
+        }
+        let sorted = matching.sorted { a, b in
+            let aSpecific = (a.start_date != nil) || (a.end_date != nil)
+            let bSpecific = (b.start_date != nil) || (b.end_date != nil)
+            return aSpecific && !bSpecific
+        }
+        if let band = sorted.first {
             return HourlyPriceEntry(hourAt: stamp, price: band.price, source: "hourly")
         }
 
