@@ -125,6 +125,7 @@ struct BookingView: View {
     @State private var spotExtrasQty: [String: [String: Int]] = [:]
     @State private var bookedDates: BookingService.BookedDates?
     @State private var nightlyPriceBreakdown: [NightlyPriceEntry] = []
+    @State private var hourlyPriceBreakdown: [HourlyPriceEntry] = []
     @State private var loadingBreakdown = false
 
     private var hasSpotLevelPricing: Bool {
@@ -171,6 +172,10 @@ struct BookingView: View {
         if hasSpotLevelPricing && !selectedSpots.isEmpty {
             return selectedSpots.reduce(0) { $0 + ($1.price ?? listing.price ?? 0) * units }
         }
+        if isHourly, !hourlyPriceBreakdown.isEmpty {
+            // hourlyPriceBreakdown brukes for parkering per time (band-basert per-time-pris).
+            return hourlyPriceBreakdown.reduce(0) { $0 + $1.price }
+        }
         if !nightlyPriceBreakdown.isEmpty, !isHourly {
             // nightlyPriceBreakdown brukes kun for camping/døgn (regler-basert per-natt-pris).
             let perNight = nightlyPriceBreakdown.reduce(0) { $0 + $1.price }
@@ -181,6 +186,10 @@ struct BookingView: View {
     }
 
     private func loadPriceBreakdown() {
+        if isHourly {
+            loadHourlyPriceBreakdown()
+            return
+        }
         guard let checkIn, let checkOut, nights > 0, !hasSpotLevelPricing else {
             nightlyPriceBreakdown = []
             return
@@ -195,6 +204,26 @@ struct BookingView: View {
             )
             await MainActor.run {
                 nightlyPriceBreakdown = breakdown
+                loadingBreakdown = false
+            }
+        }
+    }
+
+    private func loadHourlyPriceBreakdown() {
+        guard let ci = checkIn, let co = checkOut, hours > 0, !hasSpotLevelPricing else {
+            hourlyPriceBreakdown = []
+            return
+        }
+        loadingBreakdown = true
+        Task {
+            let breakdown = await PricingService.hourlyPriceBreakdown(
+                listingId: listing.id,
+                baseHourlyPrice: listing.price ?? 0,
+                start: ci,
+                end: co,
+            )
+            await MainActor.run {
+                hourlyPriceBreakdown = breakdown
                 loadingBreakdown = false
             }
         }
@@ -763,7 +792,22 @@ struct BookingView: View {
 
     private var priceBreakdown: some View {
         VStack(spacing: 10) {
-            if let groups = nightlyGroups, groups.count > 1 {
+            if let groups = hourlyGroups, groups.count > 1 {
+                ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
+                    HStack(spacing: 4) {
+                        Text("\(g.price) kr × \(g.count) \(g.count == 1 ? "time" : "timer")")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.neutral600)
+                        Text("(\(hourlySourceLabel(g.source)))")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral400)
+                        Spacer()
+                        Text("\(g.price * g.count) kr")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.neutral600)
+                    }
+                }
+            } else if let groups = nightlyGroups, groups.count > 1 {
                 ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
                     HStack(spacing: 4) {
                         Text("\(g.price) kr × \(g.count) \(g.count == 1 ? "natt" : "netter")")
@@ -833,6 +877,19 @@ struct BookingView: View {
         return result
     }
 
+    private var hourlyGroups: [(price: Int, source: String, count: Int)]? {
+        guard isHourly, !hourlyPriceBreakdown.isEmpty, !hasSpotLevelPricing else { return nil }
+        var result: [(price: Int, source: String, count: Int)] = []
+        for entry in hourlyPriceBreakdown {
+            if let last = result.last, last.price == entry.price, last.source == entry.source {
+                result[result.count - 1].count += 1
+            } else {
+                result.append((price: entry.price, source: entry.source, count: 1))
+            }
+        }
+        return result
+    }
+
     private func sourceLabel(_ source: String) -> String {
         switch source {
         case "weekend": return "helg"
@@ -842,7 +899,21 @@ struct BookingView: View {
         }
     }
 
+    private func hourlySourceLabel(_ source: String) -> String {
+        switch source {
+        case "hourly": return "tidsbånd"
+        case "override": return "tilpasset"
+        default: return "standard"
+        }
+    }
+
     private var baseLineLabel: String {
+        if isHourly {
+            if hasSpotLevelPricing && !selectedSpots.isEmpty {
+                return "\(selectedSpots.count) plass\(selectedSpots.count > 1 ? "er" : "") × \(hours) \(hours == 1 ? "time" : "timer")"
+            }
+            return "\(listing.price ?? 0) kr × \(hours) \(hours == 1 ? "time" : "timer")"
+        }
         if hasSpotLevelPricing && !selectedSpots.isEmpty {
             return "\(selectedSpots.count) plass\(selectedSpots.count > 1 ? "er" : "") × \(nights) \(nights == 1 ? "natt" : "netter")"
         }
