@@ -8,35 +8,30 @@ enum BookingPreference: String, Equatable, CaseIterable {
     case requestOnly  // Kun forespørsel
 }
 
-/// Modeltype for alle filter-valg som brukes i FiltersSheet og av søk.
+/// Modeltype for søk + filter-valg. Delt mellom WhereSheet (søkepille)
+/// og FiltersSheet (filter-knapp). Ansvarsfordeling:
+/// - WhereSheet eier: category, vehicleTypes, bookingPreference (kjernen i søket)
+/// - FiltersSheet eier: priceMin/priceMax, amenities (forfining)
 struct SearchFilters: Equatable {
-    var category: ListingCategory? = nil  // nil = "Hvilken som helst"
+    var category: ListingCategory? = nil
     var vehicleTypes: Set<VehicleType> = []
     var priceMin: Int = 0
     var priceMax: Int = 5000
     var bookingPreference: BookingPreference = .all
-    var noHostCheckIn: Bool = false
-    var freeCancellation: Bool = false
-    var petsAllowed: Bool = false
     var amenities: Set<AmenityType> = []
 
-    /// Hvor mange filtre er aktive — vises som badge på FilterCircleButton.
+    /// Antall aktive filtre satt FRA FiltersSheet (badge på filter-knappen).
+    /// Kategori/kjøretøy/bookingtype telles ikke fordi de styres av WhereSheet.
     var activeCount: Int {
         var n = 0
-        if category != nil { n += 1 }
-        if !vehicleTypes.isEmpty { n += 1 }
         if priceMin > 0 || priceMax < 5000 { n += 1 }
-        if bookingPreference != .all { n += 1 }
-        if noHostCheckIn { n += 1 }
-        if freeCancellation { n += 1 }
-        if petsAllowed { n += 1 }
         if !amenities.isEmpty { n += 1 }
         return n
     }
 }
 
-/// Full Airbnb-paritet filter-modal med alle seksjoner: anbefalt, type
-/// sted, kjøretøy, pris-histogram, bestillingsalternativer, fasiliteter.
+/// Filter-modal som forfiner søket. Inneholder bare ting som IKKE finnes
+/// i søkepillen (WhereSheet): pris og fasiliteter.
 struct FiltersSheet: View {
     @Binding var isPresented: Bool
     @Binding var filters: SearchFilters
@@ -50,11 +45,7 @@ struct FiltersSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    recommendedSection
-                    typeSection
-                    vehicleSection
                     priceSection
-                    bookingOptionsSection
                     amenitiesSection
                 }
                 .padding(.horizontal, 20)
@@ -85,82 +76,9 @@ struct FiltersSheet: View {
 
     // MARK: - Sections
 
-    private var recommendedSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Anbefalt for deg")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.neutral900)
-            HStack(spacing: 10) {
-                recommendedCard(
-                    icon: "bolt.fill",
-                    label: "Direktebooking",
-                    isSelected: draft.bookingPreference == .directOnly
-                ) {
-                    draft.bookingPreference = draft.bookingPreference == .directOnly ? .all : .directOnly
-                }
-                recommendedCard(
-                    icon: "key.fill",
-                    label: "Innsjekking uten vert",
-                    isSelected: draft.noHostCheckIn
-                ) {
-                    draft.noHostCheckIn.toggle()
-                }
-                recommendedCard(
-                    icon: "pawprint.fill",
-                    label: "Tillater kjæledyr",
-                    isSelected: draft.petsAllowed
-                ) {
-                    draft.petsAllowed.toggle()
-                }
-            }
-        }
-    }
-
-    private var typeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Type sted")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.neutral900)
-            HStack(spacing: 8) {
-                segmentButton(label: "Hvilken som helst", isSelected: draft.category == nil) {
-                    draft.category = nil
-                }
-                segmentButton(label: "Camping", isSelected: draft.category == .camping) {
-                    draft.category = .camping
-                }
-                segmentButton(label: "Parkering", isSelected: draft.category == .parking) {
-                    draft.category = .parking
-                }
-            }
-        }
-    }
-
-    private var vehicleSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Kjøretøytype")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.neutral900)
-            FlowLayout(spacing: 8) {
-                ForEach(VehicleType.allCases, id: \.self) { type in
-                    chip(
-                        label: type.displayName,
-                        icon: type.icon,
-                        isSelected: draft.vehicleTypes.contains(type)
-                    ) {
-                        if draft.vehicleTypes.contains(type) {
-                            draft.vehicleTypes.remove(type)
-                        } else {
-                            draft.vehicleTypes.insert(type)
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     private var priceSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Pris per natt")
+            Text("Pris")
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.neutral900)
             Text("Turpris i NOK")
@@ -177,31 +95,6 @@ struct FiltersSheet: View {
             HStack(spacing: 12) {
                 priceField(label: "Minst", value: draft.priceMin)
                 priceField(label: "Maksimalt", value: draft.priceMax, suffix: "+")
-            }
-        }
-    }
-
-    private var bookingOptionsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Bestillingsalternativer")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.neutral900)
-            FlowLayout(spacing: 8) {
-                chip(label: "Direktebooking", icon: "bolt.fill", isSelected: draft.bookingPreference == .directOnly) {
-                    draft.bookingPreference = draft.bookingPreference == .directOnly ? .all : .directOnly
-                }
-                chip(label: "Forespørsel", icon: "envelope.fill", isSelected: draft.bookingPreference == .requestOnly) {
-                    draft.bookingPreference = draft.bookingPreference == .requestOnly ? .all : .requestOnly
-                }
-                chip(label: "Innsjekking uten vert", icon: "key.fill", isSelected: draft.noHostCheckIn) {
-                    draft.noHostCheckIn.toggle()
-                }
-                chip(label: "Gratis kansellering", icon: "calendar.badge.checkmark", isSelected: draft.freeCancellation) {
-                    draft.freeCancellation.toggle()
-                }
-                chip(label: "Tillater kjæledyr", icon: "pawprint.fill", isSelected: draft.petsAllowed) {
-                    draft.petsAllowed.toggle()
-                }
             }
         }
     }
@@ -230,49 +123,6 @@ struct FiltersSheet: View {
     }
 
     // MARK: - UI helpers
-
-    private func recommendedCard(icon: String, label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 24))
-                    .foregroundStyle(isSelected ? .primary600 : .neutral700)
-                Text(label)
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(isSelected ? .primary700 : .neutral700)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 18)
-            .padding(.horizontal, 8)
-            .background(isSelected ? Color.primary50 : Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 2 : 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func segmentButton(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(isSelected ? .neutral900 : .neutral600)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(isSelected ? Color.white : Color.neutral50)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isSelected ? Color.neutral900 : Color.neutral200, lineWidth: isSelected ? 2 : 1)
-                )
-        }
-        .buttonStyle(.plain)
-    }
 
     private func chip(label: String, icon: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
@@ -315,7 +165,11 @@ struct FiltersSheet: View {
             Divider()
             HStack {
                 Button("Fjern alle") {
-                    draft = SearchFilters()
+                    // Reset bare det FiltersSheet eier — kategori/kjøretøy/booking
+                    // styres av WhereSheet og skal ikke nullstilles herfra.
+                    draft.priceMin = 0
+                    draft.priceMax = 5000
+                    draft.amenities = []
                 }
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.neutral700)
