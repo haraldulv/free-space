@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Zap, MapPin, Bus, Caravan, Car, CalendarX2, Clock } from "lucide-react";
+import { Zap, MapPin, Bus, Caravan, Car, Truck, Bike, CalendarX2, Clock } from "lucide-react";
 import { useAmenityConfig } from "@/components/features/AmenityList";
 import type { Amenity, ListingCategory, VehicleType } from "@/types";
 import { vehicleLabels } from "@/types";
@@ -11,6 +11,8 @@ const vehicleIcons: Record<VehicleType, React.ElementType> = {
   motorhome: Bus,
   campervan: Caravan,
   car: Car,
+  van: Truck,
+  motorcycle: Bike,
 };
 
 interface ReviewStepProps {

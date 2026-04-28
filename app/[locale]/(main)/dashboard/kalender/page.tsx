@@ -100,6 +100,8 @@ export default async function HostCalendarPage({
       dayMask: (row.day_mask as number | null) ?? null,
       startDate: (row.start_date as string | null) ?? null,
       endDate: (row.end_date as string | null) ?? null,
+      startHour: (row.start_hour as number | null) ?? null,
+      endHour: (row.end_hour as number | null) ?? null,
       price: row.price as number,
     });
   }

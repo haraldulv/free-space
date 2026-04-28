@@ -2,6 +2,7 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 export type PriceSource = "base" | "weekend" | "season" | "override";
+export type HourlyPriceSource = "base" | "hourly" | "override";
 
 export interface NightlyPrice {
   /** ISO dato "YYYY-MM-DD" (natten som starter denne datoen) */
@@ -10,13 +11,24 @@ export interface NightlyPrice {
   source: PriceSource;
 }
 
+export interface HourlyPrice {
+  /** ISO 8601 timestamp for time-blokken (Europe/Oslo). */
+  hourAt: string;
+  price: number;
+  source: HourlyPriceSource;
+}
+
 export interface PricingRule {
   id: string;
   listingId: string;
-  kind: "weekend" | "season";
+  kind: "weekend" | "season" | "hourly";
   dayMask: number | null;        // bitmask: bit 0 = Mandag, bit 6 = Søndag
   startDate: string | null;      // for 'season'
   endDate: string | null;        // for 'season', inclusive
+  /** Hourly bånd: time 0..23 (inklusiv). NULL ellers. */
+  startHour: number | null;
+  /** Hourly bånd: time 1..24 (eksklusiv). NULL ellers. */
+  endHour: number | null;
   price: number;
 }
 
@@ -169,6 +181,146 @@ export function applyPriceBreakdown(breakdown: NightlyPrice[]): number {
   return breakdown.reduce((sum, n) => sum + n.price, 0);
 }
 
+// MARK: - Hourly pricing (parkering per time)
+
+interface ResolveHourlyInput {
+  listingId: string;
+  /** ISO 8601 timestamp for ankomst (Europe/Oslo forventet). */
+  checkInAt: string;
+  /** ISO 8601 timestamp for avgang (Europe/Oslo forventet). */
+  checkOutAt: string;
+  /** Base hourly-pris (kr/time). */
+  basePrice: number;
+}
+
+/**
+ * Returnerer en Oslo-TZ-projeksjon av et timestamp (date + hour + weekday-bit).
+ * Server kjører i UTC, så vi må eksplisitt konvertere før .getHours()/weekdayBit.
+ */
+function osloHourParts(d: Date): { dateIso: string; hour: number; weekdayBit: number } {
+  // Intl gir oss part-by-part — bruker en kjent TZ-formatter.
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Oslo",
+    year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", weekday: "short", hourCycle: "h23",
+  });
+  const parts = fmt.formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value || "";
+  const dateIso = `${get("year")}-${get("month")}-${get("day")}`;
+  const hour = parseInt(get("hour"), 10);
+  // Mon=0 ... Sun=6 — Intl returnerer "Mon", "Tue" etc.
+  const wdMap: Record<string, number> = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+  const weekdayBit = wdMap[get("weekday")] ?? 0;
+  return { dateIso, hour, weekdayBit };
+}
+
+/**
+ * Server-autoritativ hourly-resolution. Presedens: override (per dato) > hourly-bånd
+ * (matchende dag-bit + time i [start_hour, end_hour)) > base hourly-pris.
+ *
+ * MERK: alle tids-sammenligninger gjøres i Europe/Oslo, uavhengig av server-TZ.
+ */
+export function resolveHourlyPrice(
+  hourCursor: Date,
+  basePrice: number,
+  rules: PricingRule[],
+  overrides: PricingOverride[],
+): { price: number; source: HourlyPriceSource } {
+  const { dateIso, hour, weekdayBit: bit } = osloHourParts(hourCursor);
+
+  // 1) Override (per dato — gjelder hele døgnet)
+  const override = overrides.find((o) => o.date === dateIso);
+  if (override) return { price: override.price, source: "override" };
+
+  // 2) Hourly-bånd
+  const band = rules.find((r) => {
+    if (r.kind !== "hourly") return false;
+    if (typeof r.dayMask !== "number") return false;
+    if (r.startHour === null || r.endHour === null) return false;
+    const dayMatches = (r.dayMask & (1 << bit)) !== 0;
+    const hourMatches = hour >= r.startHour && hour < r.endHour;
+    return dayMatches && hourMatches;
+  });
+  if (band) return { price: band.price, source: "hourly" };
+
+  // 3) Base
+  return { price: basePrice, source: "base" };
+}
+
+export async function getHourlyPrices(input: ResolveHourlyInput): Promise<HourlyPrice[]> {
+  const supabase = await createServerClient();
+  const startDate = input.checkInAt.slice(0, 10);
+  const endDate = input.checkOutAt.slice(0, 10);
+
+  const [rulesRes, overridesRes] = await Promise.all([
+    supabase
+      .from("listing_pricing_rules")
+      .select("*")
+      .eq("listing_id", input.listingId),
+    supabase
+      .from("listing_pricing_overrides")
+      .select("*")
+      .eq("listing_id", input.listingId)
+      .gte("date", startDate)
+      .lte("date", endDate),
+  ]);
+
+  const rules: PricingRule[] = (rulesRes.data || []).map(rowToRule);
+  const overrides: PricingOverride[] = (overridesRes.data || []).map(rowToOverride);
+
+  return buildHourlyBreakdown(input, rules, overrides);
+}
+
+export async function getHourlyPricesWithServiceClient(
+  input: ResolveHourlyInput,
+  url: string,
+  serviceKey: string,
+): Promise<HourlyPrice[]> {
+  const supabase = createServiceClient(url, serviceKey);
+  const startDate = input.checkInAt.slice(0, 10);
+  const endDate = input.checkOutAt.slice(0, 10);
+
+  const [rulesRes, overridesRes] = await Promise.all([
+    supabase
+      .from("listing_pricing_rules")
+      .select("*")
+      .eq("listing_id", input.listingId),
+    supabase
+      .from("listing_pricing_overrides")
+      .select("*")
+      .eq("listing_id", input.listingId)
+      .gte("date", startDate)
+      .lte("date", endDate),
+  ]);
+
+  const rules: PricingRule[] = (rulesRes.data || []).map(rowToRule);
+  const overrides: PricingOverride[] = (overridesRes.data || []).map(rowToOverride);
+
+  return buildHourlyBreakdown(input, rules, overrides);
+}
+
+function buildHourlyBreakdown(
+  input: ResolveHourlyInput,
+  rules: PricingRule[],
+  overrides: PricingOverride[],
+): HourlyPrice[] {
+  const result: HourlyPrice[] = [];
+  const cursor = new Date(input.checkInAt);
+  const end = new Date(input.checkOutAt);
+
+  while (cursor < end) {
+    const { price, source } = resolveHourlyPrice(cursor, input.basePrice, rules, overrides);
+    result.push({ hourAt: cursor.toISOString(), price, source });
+    cursor.setHours(cursor.getHours() + 1);
+  }
+  return result;
+}
+
+/** Summer hourly pris-breakdown til total (før service-fee). */
+export function applyHourlyPriceBreakdown(breakdown: HourlyPrice[]): number {
+  return breakdown.reduce((sum, h) => sum + h.price, 0);
+}
+
 function rowToRule(row: Record<string, unknown>): PricingRule {
   return {
     id: row.id as string,
@@ -177,6 +329,8 @@ function rowToRule(row: Record<string, unknown>): PricingRule {
     dayMask: (row.day_mask as number | null) ?? null,
     startDate: (row.start_date as string | null) ?? null,
     endDate: (row.end_date as string | null) ?? null,
+    startHour: (row.start_hour as number | null) ?? null,
+    endHour: (row.end_hour as number | null) ?? null,
     price: row.price as number,
   };
 }

@@ -53,6 +53,9 @@ export default function SearchBar({
     motorhome: tv("motorhome"),
     campervan: tv("campervan"),
     car: tv("car"),
+    // Disse er enn så lenge kun parking-relevante; bruker engelsk fallback til oversettelse er på plass.
+    van: "Varebil",
+    motorcycle: "Motorsykkel",
   };
   const [location, setLocation] = useState(initialQuery);
   const [vehicle, setVehicle] = useState<VehicleType>(initialVehicle || "motorhome");

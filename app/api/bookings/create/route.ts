@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe";
 import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS } from "@/lib/config";
-import { getNightlyPricesWithServiceClient, applyPriceBreakdown, type NightlyPrice } from "@/lib/pricing";
+import {
+  getNightlyPricesWithServiceClient,
+  applyPriceBreakdown,
+  getHourlyPricesWithServiceClient,
+  applyHourlyPriceBreakdown,
+  type NightlyPrice,
+  type HourlyPrice,
+} from "@/lib/pricing";
 import type { SpotMarker, ListingExtra, SelectedExtras } from "@/types";
 
 async function computeTotalWithBreakdown(args: {
@@ -12,12 +19,23 @@ async function computeTotalWithBreakdown(args: {
   listingExtras: ListingExtra[] | null;
   checkIn: string;
   checkOut: string;
+  /** Hourly mode: full timestamps when set. Drives per-hour pricing. */
+  checkInAt?: string | null;
+  checkOutAt?: string | null;
   selectedSpotIds?: string[];
   selectedExtras?: SelectedExtras;
-}): Promise<{ total: number; breakdown: NightlyPrice[] | null }> {
+}): Promise<{ total: number; breakdown: NightlyPrice[] | HourlyPrice[] | null }> {
+  const isHourly = !!(args.checkInAt && args.checkOutAt);
   const start = new Date(args.checkIn);
   const end = new Date(args.checkOut);
   const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  const hours = isHourly
+    ? Math.max(1, Math.round((new Date(args.checkOutAt!).getTime() - new Date(args.checkInAt!).getTime()) / (1000 * 60 * 60)))
+    : 0;
+  // Antall enheter for pris-beregning — timer for parkering per time, netter ellers.
+  const units = isHourly ? hours : nights;
+  // Extras betales per natt/døgn for daglige bookinger, men engangs for hourly (tunet pris-modell).
+  const extrasUnits = isHourly ? 1 : nights;
 
   const selectedSpots = (args.spotMarkers || []).filter(
     (s) => s.id && args.selectedSpotIds?.includes(s.id),
@@ -25,10 +43,24 @@ async function computeTotalWithBreakdown(args: {
   const hasPerSpotPricing = selectedSpots.length > 0 && selectedSpots.some((s) => s.price != null);
 
   let baseTotal: number;
-  let breakdown: NightlyPrice[] | null = null;
+  let breakdown: NightlyPrice[] | HourlyPrice[] | null = null;
 
   if (hasPerSpotPricing) {
-    baseTotal = selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * nights, 0);
+    baseTotal = selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * units, 0);
+  } else if (isHourly) {
+    // Hourly listing: per-time-resolution med band-regler (override > hourly-bånd > base).
+    const hourlyBreakdown = await getHourlyPricesWithServiceClient(
+      {
+        listingId: args.listingId,
+        checkInAt: args.checkInAt!,
+        checkOutAt: args.checkOutAt!,
+        basePrice: args.listingPrice,
+      },
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+    breakdown = hourlyBreakdown;
+    baseTotal = applyHourlyPriceBreakdown(hourlyBreakdown);
   } else {
     breakdown = await getNightlyPricesWithServiceClient(
       {
@@ -48,7 +80,7 @@ async function computeTotalWithBreakdown(args: {
   for (const entry of args.selectedExtras?.listing || []) {
     const canonical = (args.listingExtras || []).find((e) => e.id === entry.id);
     if (!canonical) continue;
-    extrasTotal += canonical.price * (canonical.perNight ? nights : 1) * entry.quantity;
+    extrasTotal += canonical.price * (canonical.perNight ? extrasUnits : 1) * entry.quantity;
   }
   for (const [spotId, entries] of Object.entries(args.selectedExtras?.spots || {})) {
     const spot = selectedSpots.find((s) => s.id === spotId);
@@ -56,7 +88,7 @@ async function computeTotalWithBreakdown(args: {
     for (const entry of entries) {
       const canonical = (spot.extras || []).find((e) => e.id === entry.id);
       if (!canonical) continue;
-      extrasTotal += canonical.price * (canonical.perNight ? nights : 1) * entry.quantity;
+      extrasTotal += canonical.price * (canonical.perNight ? extrasUnits : 1) * entry.quantity;
     }
   }
 
@@ -89,6 +121,8 @@ export async function POST(request: NextRequest) {
       listingId,
       checkIn,
       checkOut,
+      checkInAt,
+      checkOutAt,
       licensePlate,
       isRentalCar,
       selectedSpotIds,
@@ -97,6 +131,9 @@ export async function POST(request: NextRequest) {
       listingId: string;
       checkIn: string;
       checkOut: string;
+      /** ISO timestamps for hourly bookings. NULL for daily/nightly. */
+      checkInAt?: string | null;
+      checkOutAt?: string | null;
       licensePlate?: string;
       isRentalCar?: boolean;
       selectedSpotIds?: string[];
@@ -106,6 +143,7 @@ export async function POST(request: NextRequest) {
     if (!listingId || !checkIn || !checkOut) {
       return NextResponse.json({ error: "Mangler påkrevde felt" }, { status: 400 });
     }
+    const isHourly = !!(checkInAt && checkOutAt);
 
     // Check availability
     const { data: listing } = await supabase
@@ -130,6 +168,8 @@ export async function POST(request: NextRequest) {
       listingExtras: listing.extras as ListingExtra[] | null,
       checkIn,
       checkOut,
+      checkInAt,
+      checkOutAt,
       selectedSpotIds,
       selectedExtras,
     });
@@ -222,6 +262,9 @@ export async function POST(request: NextRequest) {
         listing_id: listingId,
         check_in: checkIn,
         check_out: checkOut,
+        // Hourly bookings: lagre faktisk timestamp-vindu i tillegg til check_in/check_out (samme dag).
+        check_in_at: isHourly ? checkInAt : null,
+        check_out_at: isHourly ? checkOutAt : null,
         // Snapshot tidspunkter — host-endringer på listing skal ikke ramme eksisterende bookinger.
         check_in_time: (listing.check_in_time as string) || "15:00",
         check_out_time: (listing.check_out_time as string) || "11:00",

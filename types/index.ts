@@ -2,25 +2,40 @@ export type ListingCategory = "parking" | "camping";
 
 export type ListingTag = "popular" | "featured" | "available_today";
 
-export type VehicleType = "car" | "campervan" | "motorhome";
+export type VehicleType = "car" | "campervan" | "motorhome" | "van" | "motorcycle";
 
 export const vehicleLabels: Record<VehicleType, string> = {
   motorhome: "Bobil",
   campervan: "Campingbil",
   car: "Personbil",
+  van: "Varebil",
+  motorcycle: "Motorsykkel",
 };
 
 export const vehicleLengths: Record<VehicleType, number> = {
+  motorcycle: 2,
   car: 5,
+  van: 6,
   campervan: 7,
   motorhome: 10,
 };
 
-/** Vehicle size hierarchy — a listing for motorhome fits all, campervan fits campervan+car, etc. */
+/**
+ * Vehicle size hierarchy — hvilke biltyper kan en plass for X ta imot.
+ * En plass merket "motorhome" kan også ta mindre kjøretøy. MC/varebil er kompakte.
+ */
 export const vehicleFitsIn: Record<VehicleType, VehicleType[]> = {
-  car: ["car", "campervan", "motorhome"],
+  motorcycle: ["motorcycle", "car", "van", "campervan", "motorhome"],
+  car: ["car", "van", "campervan", "motorhome"],
+  van: ["van", "campervan", "motorhome"],
   campervan: ["campervan", "motorhome"],
   motorhome: ["motorhome"],
+};
+
+/** Hvilke biltyper er relevante per kategori. Camping = campingkjøretøy; parkering = alle. */
+export const VEHICLE_TYPES_BY_CATEGORY: Record<ListingCategory, VehicleType[]> = {
+  camping: ["motorhome", "campervan", "car"],
+  parking: ["car", "van", "motorcycle", "campervan", "motorhome"],
 };
 
 export interface SearchFilters {
@@ -103,15 +118,39 @@ export interface Host {
   listingsCount: number;
 }
 
+export type PriceUnit = "time" | "natt" | "hour";
+
+export const priceUnitLabels: Record<PriceUnit, string> = {
+  time: "døgn",
+  natt: "natt",
+  hour: "time",
+};
+
 export interface SpotMarker {
   id?: string;
   lat: number;
   lng: number;
   label?: string;
+  description?: string;
   price?: number;
+  vehicleMaxLength?: number;
+  /** Multi-select biltyper — bruk denne fra build 61+. Singel `vehicleType` er backward-compat. */
+  vehicleTypes?: VehicleType[];
+  /** @deprecated bruk `vehicleTypes`. Beholdes for decode av seedede listings. */
+  vehicleType?: VehicleType;
+  /** Per-plass priceUnit — overstyrer listing.priceUnit. Kun parkering bruker dette. */
+  priceUnit?: PriceUnit;
   extras?: ListingExtra[];
   blockedDates?: string[];
   checkinMessage?: string;
+  images?: string[];
+}
+
+/** Returner effective vehicleTypes på en SpotMarker — håndterer backward-compat. */
+export function getEffectiveVehicleTypes(spot: Pick<SpotMarker, "vehicleTypes" | "vehicleType">): VehicleType[] {
+  if (spot.vehicleTypes && spot.vehicleTypes.length > 0) return spot.vehicleTypes;
+  if (spot.vehicleType) return [spot.vehicleType];
+  return [];
 }
 
 /**
@@ -174,7 +213,7 @@ export interface Listing {
   spotMarkers?: SpotMarker[];
   hideExactLocation?: boolean;
   price: number;
-  priceUnit: "time" | "natt";
+  priceUnit: PriceUnit;
   rating: number;
   reviewCount: number;
   amenities: Amenity[];
