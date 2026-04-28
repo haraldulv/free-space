@@ -5,7 +5,6 @@ struct HomeView: View {
     @EnvironmentObject var favoritesService: FavoritesService
     @StateObject private var listingService = ListingService()
     @State private var searchText = ""
-    @State private var showWhereSheet = false
     @State private var showSearch = false
     @State private var selectedCategory: ListingCategory = .camping
 
@@ -13,8 +12,8 @@ struct HomeView: View {
     @State private var pendingQuery: String = ""
     @State private var pendingCheckIn: Date?
     @State private var pendingCheckOut: Date?
-    @State private var pendingStartHour: Int?
-    @State private var pendingEndHour: Int?
+    @State private var pendingStartMinutes: Int?
+    @State private var pendingEndMinutes: Int?
     @State private var pendingBookingPref: BookingPreference = .all
     @State private var pendingVehicles: Set<VehicleType> = [.motorhome, .campervan]
     @State private var pendingPlace: PlacePrediction?
@@ -31,7 +30,11 @@ struct HomeView: View {
                     // Åpner WhereSheet (full-screen) først; brukeren går videre
                     // til SearchView/kart kun ved å trykke Søk i modalen.
                     Button {
-                        showWhereSheet = true
+                        // Åpne SearchView direkte med WhereSheet aktivert. Tidligere
+                        // skjedde det i to trinn (HomeView WhereSheet → 0.25s sleep →
+                        // SearchView), men det ga et kort glimt av forsiden mellom
+                        // overgangene. Nå er alt inni ett fullScreenCover.
+                        showSearch = true
                     } label: {
                         HStack(spacing: 10) {
                             Image(systemName: "magnifyingglass")
@@ -150,48 +153,19 @@ struct HomeView: View {
         .navigationDestination(for: Listing.self) { listing in
             ListingDetailView(listingId: listing.id)
         }
-        .fullScreenCover(isPresented: $showWhereSheet) {
-            WhereSheet(
-                isPresented: $showWhereSheet,
-                category: $selectedCategory,
-                query: $pendingQuery,
-                checkIn: $pendingCheckIn,
-                checkOut: $pendingCheckOut,
-                startHour: $pendingStartHour,
-                endHour: $pendingEndHour,
-                bookingPref: $pendingBookingPref,
-                vehicles: $pendingVehicles,
-                placesService: placesService,
-                locationManager: locationManager,
-                onSelectPlace: { prediction in
-                    pendingPlace = prediction
-                    pendingUseMyLocation = false
-                },
-                onUseMyLocation: {
-                    pendingPlace = nil
-                    pendingUseMyLocation = true
-                },
-                onSearch: {
-                    showWhereSheet = false
-                    // Liten pause så sheet rekker å lukke før kart presenteres
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        showSearch = true
-                    }
-                }
-            )
-        }
         .fullScreenCover(isPresented: $showSearch) {
             SearchView(
                 initialQuery: pendingQuery,
                 initialCheckIn: pendingCheckIn,
                 initialCheckOut: pendingCheckOut,
-                initialStartHour: pendingStartHour,
-                initialEndHour: pendingEndHour,
+                initialStartMinutes: pendingStartMinutes,
+                initialEndMinutes: pendingEndMinutes,
                 initialBookingPref: pendingBookingPref,
                 initialVehicles: pendingVehicles,
                 initialCategory: selectedCategory,
                 initialPlace: pendingPlace,
-                useMyLocationOnAppear: pendingUseMyLocation
+                useMyLocationOnAppear: pendingUseMyLocation,
+                openWhereSheetOnAppear: true
             )
         }
         .task {

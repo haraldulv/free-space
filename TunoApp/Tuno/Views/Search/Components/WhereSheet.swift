@@ -14,9 +14,10 @@ struct WhereSheet: View {
     @Binding var query: String
     @Binding var checkIn: Date?
     @Binding var checkOut: Date?
-    /// Tidspunkt for parkering. NULL = uspesifisert (vis kun datoer).
-    @Binding var startHour: Int?
-    @Binding var endHour: Int?
+    /// Tidspunkt for parkering. Lagret som total minutter siden midnatt
+    /// (0..1440, 30-min step). NULL = uspesifisert.
+    @Binding var startMinutes: Int?
+    @Binding var endMinutes: Int?
     @Binding var bookingPref: BookingPreference
     @Binding var vehicles: Set<VehicleType>
     @ObservedObject var placesService: PlacesService
@@ -149,54 +150,31 @@ struct WhereSheet: View {
                     .foregroundStyle(.neutral500)
                     .textCase(.uppercase)
                 Spacer()
-                if startHour != nil || endHour != nil {
+                if startMinutes != nil || endMinutes != nil {
                     Button("Nullstill") {
-                        startHour = nil
-                        endHour = nil
+                        startMinutes = nil
+                        endMinutes = nil
                     }
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(.neutral500)
                 }
             }
 
-            HStack(spacing: 8) {
-                hourChip(label: "Fra", value: startHour) { newVal in
-                    startHour = newVal
-                    if let s = startHour, let e = endHour, e <= s {
-                        endHour = min(24, s + 1)
-                    }
-                }
-                hourChip(label: "Til", value: endHour) { newVal in
-                    endHour = newVal
+            HStack(spacing: 16) {
+                TimeWheelPicker(label: "Fra", minutes: $startMinutes)
+                    .frame(maxWidth: .infinity)
+                TimeWheelPicker(label: "Til", minutes: $endMinutes)
+                    .frame(maxWidth: .infinity)
+            }
+            .onChange(of: startMinutes) { _, newVal in
+                if let s = newVal, let e = endMinutes, e <= s {
+                    endMinutes = min(24 * 60, s + 30)
                 }
             }
 
-            Text("Default-søk er hele dagen. Velg tid for å filtrere på parkeringer som er ledige akkurat da.")
+            Text("30 min-trinn. Default-søk er hele dagen.")
                 .font(.system(size: 11))
                 .foregroundStyle(.neutral400)
-        }
-    }
-
-    private func hourChip(label: String, value: Int?, onSelect: @escaping (Int) -> Void) -> some View {
-        Menu {
-            ForEach(0..<24, id: \.self) { h in
-                Button(String(format: "%02d:00", h)) { onSelect(h) }
-            }
-        } label: {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.neutral500)
-                Text(value.map { String(format: "%02d:00", $0) } ?? "Velg tid")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(value == nil ? .neutral400 : .neutral900)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(Color.neutral50)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
         }
     }
 
@@ -519,8 +497,8 @@ struct WhereSheet: View {
                     query = ""
                     checkIn = nil
                     checkOut = nil
-                    startHour = nil
-                    endHour = nil
+                    startMinutes = nil
+                    endMinutes = nil
                     bookingPref = .all
                     vehicles = (category == .camping) ? [.motorhome, .campervan] : [.car]
                     placesService.clear()
@@ -561,6 +539,63 @@ private struct SuggestedDestination: Identifiable {
     let icon: String
     let tint: Color
     let bg: Color
+}
+
+/// Kompakt rullehjul-tidsvelger. To wheels: time (0..23) + minutt (0/30).
+/// Eksponerer total minutter siden midnatt via `minutes`-binding.
+struct TimeWheelPicker: View {
+    let label: String
+    @Binding var minutes: Int?
+
+    private var hour: Int { (minutes ?? 0) / 60 }
+    private var minute: Int { (minutes ?? 0) % 60 }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.neutral500)
+
+            HStack(spacing: 0) {
+                Picker("", selection: Binding(
+                    get: { hour },
+                    set: { newH in
+                        let m = minute
+                        minutes = newH * 60 + m
+                    }
+                )) {
+                    ForEach(0..<24, id: \.self) { h in
+                        Text(String(format: "%02d", h)).tag(h)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 60, height: 110)
+                .clipped()
+
+                Text(":")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(minutes == nil ? .neutral400 : .neutral900)
+
+                Picker("", selection: Binding(
+                    get: { minute },
+                    set: { newM in
+                        let h = hour
+                        minutes = h * 60 + newM
+                    }
+                )) {
+                    ForEach([0, 30], id: \.self) { m in
+                        Text(String(format: "%02d", m)).tag(m)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(width: 60, height: 110)
+                .clipped()
+            }
+            .background(Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+        }
+    }
 }
 
 /// Ekte range-picker for Inn/Ut. To tabs øverst som veksler hvilken

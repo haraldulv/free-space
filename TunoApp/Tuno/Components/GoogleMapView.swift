@@ -168,8 +168,12 @@ struct SearchMapView: UIViewRepresentable {
 
         // Check if center changed (new place search or "my location")
         let centerChanged = centerLat != context.coordinator.lastCenterLat || centerLng != context.coordinator.lastCenterLng
+        // En eksplisitt zoom-endring (nytt søk-zoom) skal alltid respekteres.
+        // Kun-pan (uendret centerZoom) skal ikke overstyre brukerens current zoom.
+        let zoomChanged = centerZoom != context.coordinator.lastCenterZoom
         context.coordinator.lastCenterLat = centerLat
         context.coordinator.lastCenterLng = centerLng
+        context.coordinator.lastCenterZoom = centerZoom
 
         // Diff markers — re-bygg hvis listings, visited-IDs eller valgt
         // marker har endret seg. Inkludert i diff-key så vi får riktige
@@ -186,7 +190,9 @@ struct SearchMapView: UIViewRepresentable {
         }
 
         if centerChanged, let lat = centerLat, let lng = centerLng {
-            let zoom: Float = centerZoom ?? 11
+            // Ved kun-pan (samme centerZoom som sist, eller nil): behold mapView's
+            // nåværende zoom så vi ikke overstyrer brukerens manuelle zoom-justering.
+            let zoom: Float = zoomChanged ? (centerZoom ?? 11) : mapView.camera.zoom
             let camera = GMSCameraPosition(latitude: lat, longitude: lng, zoom: zoom)
             mapView.animate(to: camera)
         }
@@ -302,6 +308,7 @@ struct SearchMapView: UIViewRepresentable {
         weak var mapView: GMSMapView?
         var lastCenterLat: Double?
         var lastCenterLng: Double?
+        var lastCenterZoom: Float?
         var lastListingIdsKey: String = ""
         var userMovedMap = false
         var debounceWorkItem: DispatchWorkItem?

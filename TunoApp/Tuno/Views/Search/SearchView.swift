@@ -26,41 +26,48 @@ struct SearchView: View {
     private let initialQuery: String
     private let initialCheckIn: Date?
     private let initialCheckOut: Date?
-    private let initialStartHour: Int?
-    private let initialEndHour: Int?
+    private let initialStartMinutes: Int?
+    private let initialEndMinutes: Int?
     private let initialBookingPref: BookingPreference
     private let initialVehicles: Set<VehicleType>
     private let initialCategory: ListingCategory?
     private let initialPlace: PlacePrediction?
     private let useMyLocationOnAppear: Bool
+    /// Når true åpnes WhereSheet umiddelbart ved presentasjon (forsidens
+    /// pille bruker dette for å gå direkte fra forsiden til kart-flow uten
+    /// dobbel fullScreenCover).
+    private let openWhereSheetOnAppear: Bool
 
     init(
         initialQuery: String = "",
         initialCheckIn: Date? = nil,
         initialCheckOut: Date? = nil,
-        initialStartHour: Int? = nil,
-        initialEndHour: Int? = nil,
+        initialStartMinutes: Int? = nil,
+        initialEndMinutes: Int? = nil,
         initialBookingPref: BookingPreference = .all,
         initialVehicles: Set<VehicleType> = [.motorhome],
         initialCategory: ListingCategory? = nil,
         initialPlace: PlacePrediction? = nil,
-        useMyLocationOnAppear: Bool = false
+        useMyLocationOnAppear: Bool = false,
+        openWhereSheetOnAppear: Bool = false
     ) {
         self.initialQuery = initialQuery
         self.initialCheckIn = initialCheckIn
         self.initialCheckOut = initialCheckOut
-        self.initialStartHour = initialStartHour
-        self.initialEndHour = initialEndHour
+        self.initialStartMinutes = initialStartMinutes
+        self.initialEndMinutes = initialEndMinutes
         self.initialBookingPref = initialBookingPref
         self.initialVehicles = initialVehicles
         self.initialCategory = initialCategory
         self.initialPlace = initialPlace
         self.useMyLocationOnAppear = useMyLocationOnAppear
+        self.openWhereSheetOnAppear = openWhereSheetOnAppear
+        _showWhereSheet = State(initialValue: openWhereSheetOnAppear)
         _query = State(initialValue: initialQuery)
         _checkIn = State(initialValue: initialCheckIn)
         _checkOut = State(initialValue: initialCheckOut)
-        _startHour = State(initialValue: initialStartHour)
-        _endHour = State(initialValue: initialEndHour)
+        _startMinutes = State(initialValue: initialStartMinutes)
+        _endMinutes = State(initialValue: initialEndMinutes)
         var f = SearchFilters()
         f.bookingPreference = initialBookingPref
         f.vehicleTypes = initialVehicles
@@ -74,8 +81,8 @@ struct SearchView: View {
     @State private var query = ""
     @State private var checkIn: Date?
     @State private var checkOut: Date?
-    @State private var startHour: Int?
-    @State private var endHour: Int?
+    @State private var startMinutes: Int?
+    @State private var endMinutes: Int?
     @State private var vehicles: Set<VehicleType> = [.motorhome]
     @State private var bookingPref: BookingPreference = .all
     @State private var filters = SearchFilters()
@@ -144,8 +151,8 @@ struct SearchView: View {
                     query: $query,
                     checkIn: $checkIn,
                     checkOut: $checkOut,
-                    startHour: $startHour,
-                    endHour: $endHour,
+                    startMinutes: $startMinutes,
+                    endMinutes: $endMinutes,
                     bookingPref: $bookingPref,
                     vehicles: $vehicles,
                     placesService: placesService,
@@ -298,13 +305,14 @@ struct SearchView: View {
                         get: { idx },
                         set: { newIdx in
                             selectedListingIndex = newIdx
-                            // Pann kartet til den nye listingens posisjon
+                            // Pann kartet til den nye listingens posisjon — uten å
+                            // overstyre brukerens zoom-nivå (kart-coordinatoren
+                            // beholder current zoom når kun center endres).
                             if filteredListings.indices.contains(newIdx),
                                let lat = filteredListings[newIdx].lat,
                                let lng = filteredListings[newIdx].lng {
                                 searchLat = lat
                                 searchLng = lng
-                                searchZoom = max(searchZoom ?? 11, 12)
                             }
                         }
                     ),
@@ -335,7 +343,7 @@ struct SearchView: View {
         listingService.searchResults.filter { listing in
             if let cat = filters.category, listing.category != cat { return false }
             // Tidspunkt valgt → kun parkering-per-time gir mening
-            if filters.category == .parking, (startHour != nil || endHour != nil) {
+            if filters.category == .parking, (startMinutes != nil || endMinutes != nil) {
                 if listing.priceUnit != .hour { return false }
             }
             if !filters.vehicleTypes.isEmpty {
@@ -374,8 +382,8 @@ struct SearchView: View {
         } else {
             parts.append("Når som helst")
         }
-        if let s = startHour, let e = endHour {
-            parts.append(String(format: "%02d–%02d", s, e))
+        if let s = startMinutes, let e = endMinutes {
+            parts.append(String(format: "%02d:%02d–%02d:%02d", s/60, s%60, e/60, e%60))
         }
         if vehicles.isEmpty {
             parts.append("Alle kjøretøy")
