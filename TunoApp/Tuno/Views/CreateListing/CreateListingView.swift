@@ -114,27 +114,41 @@ struct CreateListingView: View {
         }
     }
 
-    private var stepsTabView: some View {
-        TabView(selection: $form.currentStep) {
-            WelcomeStep(form: form).tag(0)
-            CategoryStep(form: form).tag(1)
-            AddressStep(form: form, placesService: placesService).tag(2)
-            SpotCountStep(form: form).tag(3)
-            MarkSpotsStep(form: form).tag(4)
-            SpotDetailsStep(form: form).tag(5)
-            SpotPriceStep(form: form).tag(6)
-            SpotExtrasStep(form: form).tag(7)
-            InstantBookingStep(form: form).tag(8)
-            DescriptionStep(form: form).tag(9)
-            PhotosStep(form: form).tag(10)
-            AmenitiesStep(form: form).tag(11)
-            MessagesStep(form: form).tag(12)
-            PriceRulesStep(form: form).tag(13)
-            CalendarStep(form: form).tag(14)
-            PublishStep(form: form).tag(15)
+    /// Custom switch-based step container. Erstatter TabView(.page) som
+    /// tillot horisontal sveiping forbi deaktiverte Neste-knapper. Nå
+    /// styres flyten utelukkende av WizardNavBar-knappene.
+    @ViewBuilder
+    private func currentStepView() -> some View {
+        switch form.currentStep {
+        case 0: WelcomeStep(form: form)
+        case 1: CategoryStep(form: form)
+        case 2: AddressStep(form: form, placesService: placesService)
+        case 3: SpotCountStep(form: form)
+        case 4: MarkSpotsStep(form: form)
+        case 5: SpotDetailsStep(form: form)
+        case 6: SpotPriceStep(form: form)
+        case 7: SpotExtrasStep(form: form)
+        case 8: InstantBookingStep(form: form)
+        case 9: DescriptionStep(form: form)
+        case 10: PhotosStep(form: form)
+        case 11: AmenitiesStep(form: form)
+        case 12: MessagesStep(form: form)
+        case 13: PriceRulesStep(form: form)
+        case 14: CalendarStep(form: form)
+        case 15: PublishStep(form: form)
+        default: EmptyView()
         }
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .animation(.easeInOut(duration: 0.32), value: form.currentStep)
+    }
+
+    private var stepsTabView: some View {
+        currentStepView()
+            .id(form.currentStep)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .transition(.asymmetric(
+                insertion: .move(edge: .trailing).combined(with: .opacity),
+                removal: .move(edge: .leading).combined(with: .opacity)
+            ))
+            .animation(.easeInOut(duration: 0.32), value: form.currentStep)
     }
 
     private var navBar: some View {

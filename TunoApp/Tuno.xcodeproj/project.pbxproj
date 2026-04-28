@@ -47,6 +47,7 @@
 		4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01854C020C64868465F39BDC /* Models.swift */; };
 		4E17A41B84E1DD294B056FBA /* complete.json in Resources */ = {isa = PBXBuildFile; fileRef = 503D4E39A3B4AE369206B712 /* complete.json */; };
 		4ED3E93250A6738DFDAD8848 /* WhereSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DE80E0F57ED28043A953489 /* WhereSheet.swift */; };
+		52F36D48C8D895936C319C5F /* parking.png in Resources */ = {isa = PBXBuildFile; fileRef = DC1B2723E875C7128C9687CD /* parking.png */; };
 		53263F543ED69E31B489D2D5 /* SpotPlacementSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */; };
 		53A0D526B1C2D389C36E2A64 /* PricingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E3029710A8D3475494799E /* PricingService.swift */; };
 		5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */; };
@@ -60,6 +61,7 @@
 		6B9D27F1FAB9F57992BA3988 /* EmailVerifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BB2C75ED50A9F54DA87638 /* EmailVerifiedView.swift */; };
 		6C826D7E9B46A7DA4740DFA6 /* PriceRulesStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A9EC5E71200181A2554E2E6 /* PriceRulesStep.swift */; };
 		6CB4EB3DA766CB6BC5FC1B67 /* SpotDetailCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1213A1E7AC0AB0C6683A1A43 /* SpotDetailCard.swift */; };
+		6FBE494863C2B42EFAFE6C0E /* camping.png in Resources */ = {isa = PBXBuildFile; fileRef = EAB9785990D824D579D1AC18 /* camping.png */; };
 		707BCE8A8EA006E7F8604A34 /* AmenitiesStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE00FBD7C2654A066869B1E1 /* AmenitiesStep.swift */; };
 		720B1D6584518DD3B2B802EE /* ImageDropDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E4DD0720CB861E932C5AECA /* ImageDropDelegate.swift */; };
 		73B8EB3DF9047F8C4CD14B83 /* GoogleMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 145471A0700B346EE653A3F5 /* GoogleMapView.swift */; };
@@ -224,12 +226,14 @@
 		DA06602EF8129BE55A4E5CEC /* PriceHistogram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceHistogram.swift; sourceTree = "<group>"; };
 		DAD96E8DCCD58804E7D8E5F9 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		DB14096D1AEF4406960194CB /* BookingConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingConfirmationView.swift; sourceTree = "<group>"; };
+		DC1B2723E875C7128C9687CD /* parking.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = parking.png; sourceTree = "<group>"; };
 		DF8A3195D726FC00B6EA4A3D /* InstantBookingStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantBookingStep.swift; sourceTree = "<group>"; };
 		E168ECC061FD115C52320C1F /* SpotDetailsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotDetailsStep.swift; sourceTree = "<group>"; };
 		E2C215EEFA3B9EF4585A8AE8 /* Tuno.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tuno.entitlements; sourceTree = "<group>"; };
 		E526C4504EA007084624767F /* SpotExtrasStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotExtrasStep.swift; sourceTree = "<group>"; };
 		E87B8810AD3DEB96DEDF5A94 /* LaunchScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchScreen.swift; sourceTree = "<group>"; };
 		E9E57AB4DC338617AB61C3E7 /* ListingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingService.swift; sourceTree = "<group>"; };
+		EAB9785990D824D579D1AC18 /* camping.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = camping.png; sourceTree = "<group>"; };
 		EB67EEF4A6A12892A1B1697E /* ListingFormModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingFormModel.swift; sourceTree = "<group>"; };
 		EB9D8E4A793C78DF69B126D5 /* CalendarStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarStep.swift; sourceTree = "<group>"; };
 		ED34354F8C7AAA6F81D0CB62 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
@@ -471,6 +475,15 @@
 			path = HostOnboarding;
 			sourceTree = "<group>";
 		};
+		AF58A5E3DABA682FCB1DF888 /* CategoryIcons */ = {
+			isa = PBXGroup;
+			children = (
+				EAB9785990D824D579D1AC18 /* camping.png */,
+				DC1B2723E875C7128C9687CD /* parking.png */,
+			);
+			path = CategoryIcons;
+			sourceTree = "<group>";
+		};
 		C093C2F60DEA1CADCE9ED881 /* Messages */ = {
 			isa = PBXGroup;
 			children = (
@@ -535,6 +548,7 @@
 		E97A715A2737C8BC92C32D6B /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				AF58A5E3DABA682FCB1DF888 /* CategoryIcons */,
 				2F5D2133E43944DC80E77CAB /* Lottie */,
 			);
 			path = Resources;
@@ -626,10 +640,12 @@
 				249014FE9C51150340A11E57 /* Assets.xcassets in Resources */,
 				1D314A0646D1BBDD98D88023 /* Globe.json in Resources */,
 				2C4D3EB18F8321977CD47D5C /* Localizable.xcstrings in Resources */,
+				6FBE494863C2B42EFAFE6C0E /* camping.png in Resources */,
 				4E17A41B84E1DD294B056FBA /* complete.json in Resources */,
 				234D3400830F6E45E00E0099 /* confetti.json in Resources */,
 				87D3139C0104F4350A1AAC1B /* empty-spots.json in Resources */,
 				23227ACC572BB0ECF18932ED /* ny-annonse.json in Resources */,
+				52F36D48C8D895936C319C5F /* parking.png in Resources */,
 				666AD7D7FA51A19DC149E1EF /* progress-pin.json in Resources */,
 				E6CE29815C06CCD871A9AD5F /* success-confetti.json in Resources */,
 				A8470E43E8EF688AF0A4112C /* welcome-tent.json in Resources */,
@@ -784,7 +800,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 109;
+				CURRENT_PROJECT_VERSION = 110;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -884,7 +900,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 109;
+				CURRENT_PROJECT_VERSION = 110;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

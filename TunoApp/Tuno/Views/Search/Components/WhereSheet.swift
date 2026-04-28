@@ -25,8 +25,7 @@ struct WhereSheet: View {
 
     @State private var activeStep: Step = .hvor
     @State private var typing: String = ""
-    @State private var showDatePicker = false
-    @State private var datePickerEditingCheckIn = true
+    @State private var editingCheckIn: Bool = true
 
     private static let suggestedDestinations: [SuggestedDestination] = [
         .init(name: "Oslo", subtitle: "Hovedstaden", icon: "building.2.fill",
@@ -74,15 +73,6 @@ struct WhereSheet: View {
                 placesService.autocomplete(query: newValue)
             }
         }
-        .sheet(isPresented: $showDatePicker) {
-            DateRangePicker(
-                checkIn: $checkIn,
-                checkOut: $checkOut,
-                initialEditingCheckIn: datePickerEditingCheckIn,
-                onDone: { showDatePicker = false }
-            )
-            .presentationDetents([.large])
-        }
     }
 
     // MARK: - Floating header (kategori sveve + xmark)
@@ -90,10 +80,10 @@ struct WhereSheet: View {
     private var floatingHeader: some View {
         HStack(spacing: 12) {
             Button { isPresented = false } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .symbolRenderingMode(.hierarchical)
-                    .foregroundStyle(Color(.systemGray3))
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.neutral700)
+                    .frame(width: 32, height: 32)
             }
             .accessibilityLabel("Lukk")
 
@@ -103,7 +93,7 @@ struct WhereSheet: View {
 
             Spacer()
 
-            Color.clear.frame(width: 28, height: 28)
+            Color.clear.frame(width: 32, height: 32)
         }
     }
 
@@ -170,10 +160,10 @@ struct WhereSheet: View {
                 Text("Når?")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.neutral900)
+                inlineDatePicker
                 if category == .parking {
+                    Divider()
                     timeRangeSection
-                } else {
-                    whenSection
                 }
             }
             .padding(20)
@@ -418,27 +408,71 @@ struct WhereSheet: View {
 
     // MARK: - When (camping)
 
-    private var whenSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    /// Inline date picker — embedded direkte i whenCard (ingen separat sheet).
+    /// Innsjekk/Utsjekk-tabs øverst styrer hvilken dato som redigeres,
+    /// graphical kalender-grid under viser månedsoversikt.
+    private var inlineDatePicker: some View {
+        VStack(spacing: 12) {
             HStack(spacing: 8) {
-                dateChip(label: "Innsjekk", date: checkIn) {
-                    datePickerEditingCheckIn = true
-                    showDatePicker = true
+                dateTab(label: "Innsjekk", date: checkIn, isActive: editingCheckIn) {
+                    editingCheckIn = true
                 }
-                dateChip(label: "Utsjekk", date: checkOut) {
-                    datePickerEditingCheckIn = false
-                    showDatePicker = true
+                dateTab(label: "Utsjekk", date: checkOut, isActive: !editingCheckIn) {
+                    editingCheckIn = false
                 }
+            }
+
+            DatePicker(
+                "",
+                selection: editingCheckIn
+                    ? Binding(
+                        get: { checkIn ?? Date() },
+                        set: { newValue in
+                            checkIn = newValue
+                            // Hold Utsjekk > Innsjekk
+                            if let out = checkOut, out <= newValue {
+                                checkOut = Calendar.current.date(byAdding: .day, value: 1, to: newValue)
+                            }
+                            // Auto-bytt til Utsjekk-tab så brukeren kan velge ferdig
+                            withAnimation(.easeInOut(duration: 0.18)) { editingCheckIn = false }
+                        }
+                      )
+                    : Binding(
+                        get: { checkOut ?? Calendar.current.date(byAdding: .day, value: 1, to: checkIn ?? Date()) ?? Date() },
+                        set: { checkOut = $0 }
+                      ),
+                in: editingCheckIn
+                    ? Date()...
+                    : (checkIn.map { Calendar.current.date(byAdding: .day, value: 1, to: $0) ?? Date() } ?? Date())...,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.graphical)
+            .labelsHidden()
+            .environment(\.locale, Locale(identifier: "nb_NO"))
+            .environment(\.calendar, {
+                var cal = Calendar(identifier: .gregorian)
+                cal.firstWeekday = 2
+                return cal
+            }())
+
+            if checkIn != nil || checkOut != nil {
+                Button("Nullstill datoer") {
+                    checkIn = nil
+                    checkOut = nil
+                    editingCheckIn = true
+                }
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.neutral600)
             }
         }
     }
 
-    private func dateChip(label: String, date: Date?, onTap: @escaping () -> Void) -> some View {
+    private func dateTab(label: String, date: Date?, isActive: Bool, onTap: @escaping () -> Void) -> some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.neutral500)
+                    .foregroundStyle(isActive ? .primary600 : .neutral500)
                 Text(date.map(formatDate) ?? "Velg dato")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(date == nil ? .neutral400 : .neutral900)
@@ -446,9 +480,12 @@ struct WhereSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(Color.neutral50)
+            .background(isActive ? Color.primary50 : Color.neutral50)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isActive ? Color.primary600 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
+            )
         }
         .buttonStyle(.plain)
     }
@@ -756,124 +793,3 @@ struct TimeWheelPicker: View {
     }
 }
 
-/// Ekte range-picker for Inn/Ut. To tabs øverst som veksler hvilken
-/// dato man redigerer. Validerer at Ut > Inn automatisk.
-struct DateRangePicker: View {
-    @Binding var checkIn: Date?
-    @Binding var checkOut: Date?
-    let initialEditingCheckIn: Bool
-    let onDone: () -> Void
-
-    @State private var editingCheckIn: Bool = true
-    @State private var tempIn: Date = Date()
-    @State private var tempOut: Date = Calendar.current.date(byAdding: .day, value: 1, to: Date())!
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Button("Nullstill") {
-                    checkIn = nil
-                    checkOut = nil
-                    onDone()
-                }
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.neutral500)
-
-                Spacer()
-
-                Text("Velg datoer")
-                    .font(.system(size: 17, weight: .semibold))
-
-                Spacer()
-
-                Button("Bruk") {
-                    checkIn = tempIn
-                    checkOut = tempOut
-                    onDone()
-                }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.primary600)
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 18)
-            .padding(.bottom, 12)
-
-            HStack(spacing: 8) {
-                rangeTab(label: "Innsjekk", date: tempIn, isActive: editingCheckIn) {
-                    editingCheckIn = true
-                }
-                rangeTab(label: "Utsjekk", date: tempOut, isActive: !editingCheckIn) {
-                    editingCheckIn = false
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-
-            Divider()
-
-            DatePicker(
-                "",
-                selection: editingCheckIn ? $tempIn : $tempOut,
-                in: editingCheckIn ? Date()... : Calendar.current.date(byAdding: .day, value: 1, to: tempIn)!...,
-                displayedComponents: .date
-            )
-            .datePickerStyle(.graphical)
-            .labelsHidden()
-            .padding(.horizontal, 12)
-            .environment(\.locale, Locale(identifier: "nb_NO"))
-            .environment(\.calendar, {
-                var cal = Calendar(identifier: .gregorian)
-                cal.firstWeekday = 2
-                return cal
-            }())
-            .onChange(of: tempIn) { _, newValue in
-                if tempOut <= newValue {
-                    tempOut = Calendar.current.date(byAdding: .day, value: 1, to: newValue)!
-                }
-                if editingCheckIn {
-                    withAnimation(.easeInOut(duration: 0.18)) { editingCheckIn = false }
-                }
-            }
-
-            Spacer()
-        }
-        .onAppear {
-            editingCheckIn = initialEditingCheckIn
-            if let i = checkIn { tempIn = i }
-            if let o = checkOut { tempOut = o }
-            if tempOut <= tempIn {
-                tempOut = Calendar.current.date(byAdding: .day, value: 1, to: tempIn)!
-            }
-        }
-    }
-
-    private func rangeTab(label: String, date: Date, isActive: Bool, onTap: @escaping () -> Void) -> some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(isActive ? .primary600 : .neutral500)
-                Text(formatDate(date))
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(isActive ? .neutral900 : .neutral500)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(isActive ? Color.primary50 : Color.neutral50)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isActive ? Color.primary600 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let df = DateFormatter()
-        df.dateFormat = "d. MMMM"
-        df.locale = Locale(identifier: "nb_NO")
-        return df.string(from: date)
-    }
-}

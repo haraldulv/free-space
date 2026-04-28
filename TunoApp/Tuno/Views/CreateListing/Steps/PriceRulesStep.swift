@@ -5,7 +5,10 @@ import UIKit
 /// Brukeren oppretter standard-bånd som gjelder ALLE uker, og kan dra
 /// et bånd til en spesifikk uke i kalenderen for å overstyre den uken.
 struct PriceRulesStep: View {
+    enum Phase { case ask, editing }
+
     @ObservedObject var form: ListingFormModel
+    @State private var phase: Phase = .ask
     @State private var showAddBandSheet = false
     @State private var bandSheetPrefill: BandPrefill?
     @State private var dropTargetWeekKey: String?
@@ -41,18 +44,19 @@ struct PriceRulesStep: View {
     }()
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            headerSection
-
-            ScrollView {
-                LazyVStack(spacing: 22) {
-                    standardBandsSection
-                    weekCalendarSection
-                }
-                .padding(.bottom, 32)
+        Group {
+            switch phase {
+            case .ask: askPhase
+            case .editing: editingPhase
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .animation(.easeInOut(duration: 0.25), value: phase)
+        .onAppear {
+            // Hvis brukeren går tilbake til steget med eksisterende bånd,
+            // hopp rett til editing-fasen.
+            if !form.pricingBands.isEmpty { phase = .editing }
+        }
         .sheet(isPresented: $showAddBandSheet) {
             AddHourlyBandSheet(
                 basePrice: basePriceHint,
@@ -71,10 +75,116 @@ struct PriceRulesStep: View {
         }
     }
 
-    // MARK: - Header
+    // MARK: - Ask phase ("vil du variere prisen?")
 
-    private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+    private var askPhase: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Vil du variere prisen?")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                Text("Mange tar høyere pris i rushtiden eller helger. Du kan også beholde én fast pris hele uken.")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral500)
+                    .lineSpacing(2)
+            }
+            .padding(.horizontal, 24)
+            .padding(.top, 12)
+            .padding(.bottom, 24)
+
+            VStack(spacing: 12) {
+                askChoiceCard(
+                    icon: "checkmark.circle.fill",
+                    title: "Nei, fast pris",
+                    subtitle: "Bruk samme pris hele uken og hopp videre.",
+                    accent: .neutral900
+                ) {
+                    form.pricingBands.removeAll()
+                    form.goNext()
+                }
+
+                askChoiceCard(
+                    icon: "chart.bar.fill",
+                    title: "Ja, varier prisen",
+                    subtitle: "Sett ulike priser for tidsbånd og spesifikke uker.",
+                    accent: .primary600
+                ) {
+                    withAnimation(.easeInOut(duration: 0.25)) { phase = .editing }
+                }
+            }
+            .padding(.horizontal, 16)
+
+            Spacer()
+        }
+    }
+
+    private func askChoiceCard(icon: String, title: String, subtitle: String, accent: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(accent.opacity(0.10))
+                        .frame(width: 48, height: 48)
+                    Image(systemName: icon)
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(accent)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text(subtitle)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral500)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral400)
+            }
+            .padding(16)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Editing phase (bånd-editor + uke-kalender)
+
+    private var editingPhase: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            editingHeader
+
+            ScrollView {
+                LazyVStack(spacing: 22) {
+                    standardBandsSection
+                    weekCalendarSection
+                }
+                .padding(.bottom, 32)
+            }
+        }
+    }
+
+    private var editingHeader: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    form.pricingBands.removeAll()
+                    phase = .ask
+                }
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 11, weight: .semibold))
+                    Text("Tilbake til fast pris")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(.neutral600)
+            }
+            .buttonStyle(.plain)
+
             Text("Sett priser for tidsperioder")
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.neutral900)
@@ -84,7 +194,7 @@ struct PriceRulesStep: View {
                 .lineSpacing(2)
         }
         .padding(.horizontal, 24)
-        .padding(.top, 12)
+        .padding(.top, 8)
         .padding(.bottom, 14)
     }
 
@@ -287,7 +397,26 @@ struct PriceRulesStep: View {
                 }
             }
 
-            if !bands.isEmpty {
+            if bands.isEmpty {
+                // Stiplet drop-indikator når uken ikke har overstyringer ennå —
+                // gjør det åpenbart at man kan dra et bånd hit.
+                HStack(spacing: 6) {
+                    Image(systemName: "hand.point.up.left.fill")
+                        .font(.system(size: 11))
+                    Text("Dra et bånd hit for å overstyre denne uken")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(isDropTarget ? .primary700 : .neutral400)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(
+                            isDropTarget ? Color.primary600 : Color.neutral300,
+                            style: StrokeStyle(lineWidth: 1.5, dash: [4])
+                        )
+                )
+            } else {
                 VStack(spacing: 6) {
                     ForEach(bands) { band in
                         bandRow(band, isDefault: false)
@@ -321,9 +450,16 @@ struct PriceRulesStep: View {
     @ViewBuilder
     private func bandRow(_ band: WizardPricingBand, isDefault: Bool) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: "line.3.horizontal")
-                .foregroundStyle(.neutral400)
-                .font(.system(size: 13))
+            // Tydeligere drag-handle: 4-veis pil i sirkel — signaliserer
+            // at båndet kan dras til en uke i kalenderen under.
+            ZStack {
+                Circle()
+                    .fill(Color.neutral100)
+                    .frame(width: 32, height: 32)
+                Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.neutral500)
+            }
             VStack(alignment: .leading, spacing: 2) {
                 Text(formatBandLabel(band))
                     .font(.system(size: 13))
