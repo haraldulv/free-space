@@ -63,6 +63,10 @@ struct SearchView: View {
         self.useMyLocationOnAppear = useMyLocationOnAppear
         self.openWhereSheetOnAppear = openWhereSheetOnAppear
         _showWhereSheet = State(initialValue: openWhereSheetOnAppear)
+        // Ved åpning fra forside-pille: skjul kart-laget til brukeren har
+        // lukket WhereSheet første gang (via Søk eller xmark). Ellers vis
+        // alt umiddelbart (vanlig direkte-åpning av SearchView).
+        _hasDismissedInitialSheet = State(initialValue: !openWhereSheetOnAppear)
         _query = State(initialValue: initialQuery)
         _checkIn = State(initialValue: initialCheckIn)
         _checkOut = State(initialValue: initialCheckOut)
@@ -105,36 +109,45 @@ struct SearchView: View {
     // Sheet-flagg
     @State private var showWhereSheet = false
     @State private var showFiltersSheet = false
+    /// Når SearchView åpnes med `openWhereSheetOnAppear=true` (forside-pille)
+    /// vil SwiftUI rendre body (kart + topBar) ETT frame før fullScreenCover
+    /// legger WhereSheet over. Det gir et synlig kart-glimt. Vi gater alle
+    /// search-lag bak denne flaggen til WhereSheet er lukket første gang.
+    @State private var hasDismissedInitialSheet: Bool
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack(alignment: .top) {
-                mapLayer
+                if hasDismissedInitialSheet {
+                    mapLayer
 
-                // Liste-drawer (kun når ingen boble er valgt) — overlayes på kartet
-                if selectedListingIndex == nil {
-                    BottomListDrawer(
-                        listings: filteredListings,
-                        isFavorited: { id in favoritesService.favoriteIds.contains(id) },
-                        onFavorite: toggleFavorite,
-                        onSelect: { listing in
-                            navigationPath.append(listing)
-                        }
-                    )
-                    .zIndex(1)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    // Liste-drawer (kun når ingen boble er valgt) — overlayes på kartet
+                    if selectedListingIndex == nil {
+                        BottomListDrawer(
+                            listings: filteredListings,
+                            isFavorited: { id in favoritesService.favoriteIds.contains(id) },
+                            onFavorite: toggleFavorite,
+                            onSelect: { listing in
+                                navigationPath.append(listing)
+                            }
+                        )
+                        .zIndex(1)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+
+                    topBar
+                        .zIndex(2)
+
+                    if showSearchHere {
+                        searchHereLayer
+                            .zIndex(3)
+                    }
+
+                    bottomLayer
+                        .zIndex(2)
+                } else {
+                    Color.white.ignoresSafeArea()
                 }
-
-                topBar
-                    .zIndex(2)
-
-                if showSearchHere {
-                    searchHereLayer
-                        .zIndex(3)
-                }
-
-                bottomLayer
-                    .zIndex(2)
             }
             .background(Color.neutral50)
             .toolbar(.hidden, for: .navigationBar)
@@ -208,6 +221,11 @@ struct SearchView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
                 dismiss()
+            }
+            .onChange(of: showWhereSheet) { _, isPresented in
+                // Når WhereSheet lukkes (Søk eller xmark) skal kart-laget vises.
+                // Åpning igjen senere skal IKKE skjule kartet bak igjen.
+                if !isPresented { hasDismissedInitialSheet = true }
             }
         }
     }

@@ -157,6 +157,7 @@ struct SearchMapView: UIViewRepresentable {
         context.coordinator.mapView = mapView
         context.coordinator.lastCenterLat = centerLat
         context.coordinator.lastCenterLng = centerLng
+        context.coordinator.lastSelectedListingId = selectedListingId
 
         addMarkers(to: mapView, coordinator: context.coordinator)
 
@@ -175,18 +176,30 @@ struct SearchMapView: UIViewRepresentable {
         context.coordinator.lastCenterLng = centerLng
         context.coordinator.lastCenterZoom = centerZoom
 
-        // Diff markers — re-bygg hvis listings, visited-IDs eller valgt
-        // marker har endret seg. Inkludert i diff-key så vi får riktige
-        // bobler (visited-grå, selected-grønn) uten konstant flikker.
+        // Diff markers. Full rebuild kun ved endring i listings eller visited-IDs.
+        // Selection-endring oppdaterer KUN de to relevante markørene (gammel +
+        // ny), så tap-respons føles umiddelbar selv med 50+ bobler på kartet.
         let listingsKey = listings.compactMap { $0.lat != nil && $0.lng != nil ? $0.id : nil }.sorted().joined(separator: ",")
         let visitedKey = visitedIds.sorted().joined(separator: ",")
-        let selectedKey = selectedListingId ?? ""
-        let newIdsKey = "\(listingsKey)|\(visitedKey)|\(selectedKey)"
+        let newIdsKey = "\(listingsKey)|\(visitedKey)"
         if newIdsKey != context.coordinator.lastListingIdsKey {
             mapView.clear()
             context.coordinator.markerToId.removeAll()
-            addMarkers(to: mapView, coordinator: context.coordinator)
+            addMarkers(to: mapView, coordinator: context.coordinator, selectedId: selectedListingId)
             context.coordinator.lastListingIdsKey = newIdsKey
+            context.coordinator.lastSelectedListingId = selectedListingId
+        } else if selectedListingId != context.coordinator.lastSelectedListingId {
+            let prevId = context.coordinator.lastSelectedListingId
+            let currId = selectedListingId
+            for (marker, id) in context.coordinator.markerToId where id == prevId || id == currId {
+                guard let listing = listings.first(where: { $0.id == id }) else { continue }
+                marker.iconView = Self.createPriceBubble(
+                    listing: listing,
+                    isVisited: visitedIds.contains(id),
+                    isSelected: id == currId
+                )
+            }
+            context.coordinator.lastSelectedListingId = selectedListingId
         }
 
         if centerChanged, let lat = centerLat, let lng = centerLng {
@@ -198,8 +211,9 @@ struct SearchMapView: UIViewRepresentable {
         }
     }
 
-    private func addMarkers(to mapView: GMSMapView, coordinator: Coordinator) {
+    private func addMarkers(to mapView: GMSMapView, coordinator: Coordinator, selectedId: String? = nil) {
         let validListings = listings.filter { $0.lat != nil && $0.lng != nil }
+        let activeSelectedId = selectedId ?? selectedListingId
 
         for listing in validListings {
             let marker = GMSMarker()
@@ -207,7 +221,7 @@ struct SearchMapView: UIViewRepresentable {
             marker.iconView = Self.createPriceBubble(
                 listing: listing,
                 isVisited: visitedIds.contains(listing.id),
-                isSelected: selectedListingId == listing.id
+                isSelected: activeSelectedId == listing.id
             )
             marker.groundAnchor = CGPoint(x: 0.5, y: 0.5)
             marker.map = mapView
@@ -215,27 +229,23 @@ struct SearchMapView: UIViewRepresentable {
         }
     }
 
-    /// Bygger en pris-boble med 4 styling-states:
-    /// - **Visited** (lys grå, gråtekst, ingen ramme): gjengangere
-    /// - **Selected** (Tuno-grønn fyll, hvit tekst, stor): aktiv
-    /// - **Direktebooking** (hvit + ⚡ + grønn ramme): tydelig signal
-    /// - **Default** (hvit + svart tekst + shadow): nøytral
+    /// Bygger en pris-boble i Airbnb-stil med 3 tilstander:
+    /// - **Default** (hvit + svart tekst): nøytral, ikke besøkt
+    /// - **Visited** (lys grå + svart tekst): brukeren har trykket på denne før
+    /// - **Selected** (svart + hvit tekst): aktivt valgt — kort vises
+    /// Lik størrelse i alle tilstander så bobler ikke "hopper" ved tap.
     static func createPriceBubble(listing: Listing, isVisited: Bool, isSelected: Bool) -> UIView {
         let container = UIView()
-        let isInstant = listing.instantBooking == true
 
-        // Background + border per state
         if isSelected {
-            container.backgroundColor = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1)  // primary600
-            container.layer.borderWidth = 0
+            container.backgroundColor = UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
             container.layer.shadowColor = UIColor.black.cgColor
-            container.layer.shadowOpacity = 0.25
+            container.layer.shadowOpacity = 0.28
             container.layer.shadowOffset = CGSize(width: 0, height: 3)
-            container.layer.shadowRadius = 6
+            container.layer.shadowRadius = 5
         } else if isVisited {
-            // Mørkere grå så det er tydelig at brukeren har sett denne før
-            container.backgroundColor = UIColor(red: 0.45, green: 0.45, blue: 0.45, alpha: 1)
-            container.layer.borderWidth = 0
+            // Lys grå-tonet ned versjon av default — subtil "har sett før"-tilstand.
+            container.backgroundColor = UIColor(red: 0.93, green: 0.93, blue: 0.93, alpha: 1)
             container.layer.shadowColor = UIColor.black.cgColor
             container.layer.shadowOpacity = 0.12
             container.layer.shadowOffset = CGSize(width: 0, height: 2)
@@ -246,33 +256,15 @@ struct SearchMapView: UIViewRepresentable {
             container.layer.shadowOpacity = 0.18
             container.layer.shadowOffset = CGSize(width: 0, height: 2)
             container.layer.shadowRadius = 4
-            // Ingen grønn ramme på instant booking — det blir for forstyrrende.
-            // Statusen vises via en liten grønn prikk foran prisen i stedet.
         }
         container.layer.cornerRadius = 16
 
         let label = UILabel()
         let text = NSMutableAttributedString()
-        let textColor: UIColor = {
-            if isSelected { return .white }
-            if isVisited { return .white }
-            return UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
-        }()
+        let textColor: UIColor = isSelected
+            ? .white
+            : UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
         let secondaryColor = textColor.withAlphaComponent(0.65)
-
-        if isInstant {
-            // Liten grønn prikk foran prisen for direktebooking — universal
-            // status-indikator, ikke forvekslet med EV-charging eller andre symboler.
-            let dotColor: UIColor = isSelected || isVisited
-                ? .white
-                : UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1)
-            let dotConfig = UIImage.SymbolConfiguration(pointSize: 8, weight: .bold)
-            let dotAttachment = NSTextAttachment()
-            dotAttachment.image = UIImage(systemName: "circle.fill", withConfiguration: dotConfig)?
-                .withTintColor(dotColor, renderingMode: .alwaysOriginal)
-            text.append(NSAttributedString(attachment: dotAttachment))
-            text.append(NSAttributedString(string: "  "))
-        }
 
         text.append(NSAttributedString(
             string: "\(listing.displayPriceText) kr",
@@ -290,8 +282,8 @@ struct SearchMapView: UIViewRepresentable {
         label.attributedText = text
         label.sizeToFit()
 
-        let padding: CGFloat = isSelected ? 14 : 12
-        let height: CGFloat = isSelected ? 36 : 32
+        let padding: CGFloat = 12
+        let height: CGFloat = 32
         container.frame = CGRect(x: 0, y: 0, width: label.frame.width + padding * 2, height: height)
         label.center = CGPoint(x: container.frame.width / 2, y: container.frame.height / 2)
         container.addSubview(label)
@@ -310,6 +302,7 @@ struct SearchMapView: UIViewRepresentable {
         var lastCenterLng: Double?
         var lastCenterZoom: Float?
         var lastListingIdsKey: String = ""
+        var lastSelectedListingId: String?
         var userMovedMap = false
         var debounceWorkItem: DispatchWorkItem?
 
