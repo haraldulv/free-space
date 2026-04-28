@@ -330,20 +330,17 @@ struct ListingPublishedCelebration: View {
                 .onTapGesture { onDismiss() }
 
             VStack(spacing: 24) {
-                LottieOrFallback(name: "success-confetti") {
-                    ZStack {
-                        Circle()
-                            .fill(Color.primary600)
-                            .frame(width: 120, height: 120)
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 56, weight: .bold))
-                            .foregroundStyle(.white)
-                    }
+                ZStack {
+                    Circle()
+                        .fill(Color.primary600)
+                        .frame(width: 120, height: 120)
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 56, weight: .bold))
+                        .foregroundStyle(.white)
                 }
-                .frame(width: 200, height: 200)
 
                 VStack(spacing: 8) {
-                    Text("Annonsen er publisert! 🎉")
+                    Text("Annonsen er publisert!")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(.neutral900)
                     Text("Gjester kan nå finne og bestille hos deg.")
@@ -370,6 +367,12 @@ struct ListingPublishedCelebration: View {
             .padding(.horizontal, 36)
             .scaleEffect(scale)
             .opacity(opacity)
+
+            // Konfetti renner over hele skjermen (kortet inkludert).
+            // allowsHitTesting(false) så taps fortsatt går igjennom til kortet.
+            LottieOrFallback(name: "confetti") { EmptyView() }
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
         }
         .onAppear {
             withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {

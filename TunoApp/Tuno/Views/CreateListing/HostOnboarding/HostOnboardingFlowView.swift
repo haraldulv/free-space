@@ -661,7 +661,7 @@ private struct StatusStep: View {
 
     private var successCard: some View {
         VStack(spacing: 20) {
-            LottieOrFallback(name: "success-confetti") {
+            LottieOrFallback(name: "complete") {
                 ZStack {
                     Circle()
                         .fill(Color.primary600)
@@ -674,7 +674,7 @@ private struct StatusStep: View {
             .frame(width: 200, height: 200)
 
             VStack(spacing: 8) {
-                Text("Du er godkjent! 🎉")
+                Text("Du er godkjent!")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(.neutral900)
                 Text("Klar til å lage din første annonse. Utbetalinger skjer automatisk etter hvert opphold.")

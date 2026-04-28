@@ -20,6 +20,7 @@
 		1C32E4CA70F86F9BAF6C8EA2 /* DescriptionStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D08232C248CE64924B19723 /* DescriptionStep.swift */; };
 		1D314A0646D1BBDD98D88023 /* Globe.json in Resources */ = {isa = PBXBuildFile; fileRef = CB03B6FF2B6DA8FCAC15788C /* Globe.json */; };
 		23227ACC572BB0ECF18932ED /* ny-annonse.json in Resources */ = {isa = PBXBuildFile; fileRef = ED8BDCBFB9D65C5B686E088E /* ny-annonse.json */; };
+		234D3400830F6E45E00E0099 /* confetti.json in Resources */ = {isa = PBXBuildFile; fileRef = D3868CEAFB9411DDE736AF88 /* confetti.json */; };
 		239CA481C3CC9C22AD9D3096 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8372F9628ACCC2AB21993B03 /* SettingsView.swift */; };
 		23E22E74F79A0D6B738FFD7F /* ChatService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CF2C4D557CBB8DCF564CD2A /* ChatService.swift */; };
 		249014FE9C51150340A11E57 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 2E7F63CFB5AB083DA9258409 /* Assets.xcassets */; };
@@ -44,6 +45,7 @@
 		468941D0A90A4A4D9C423A60 /* VisitedListingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC8284C8DB15BB1AECA34F0 /* VisitedListingsStore.swift */; };
 		481B700D9FEB3AFB038F6A9E /* PhotosStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3357259B4CCDFE2FA9F1745C /* PhotosStep.swift */; };
 		4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01854C020C64868465F39BDC /* Models.swift */; };
+		4E17A41B84E1DD294B056FBA /* complete.json in Resources */ = {isa = PBXBuildFile; fileRef = 503D4E39A3B4AE369206B712 /* complete.json */; };
 		4ED3E93250A6738DFDAD8848 /* WhereSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9DE80E0F57ED28043A953489 /* WhereSheet.swift */; };
 		53263F543ED69E31B489D2D5 /* SpotPlacementSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */; };
 		53A0D526B1C2D389C36E2A64 /* PricingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E3029710A8D3475494799E /* PricingService.swift */; };
@@ -160,6 +162,7 @@
 		49328B9F033AAE32F12579CD /* Tuno.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tuno.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4D9B33BBC5E75BE977852EBE /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		4FF267768B92B52734B7568A /* WizardNavBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WizardNavBar.swift; sourceTree = "<group>"; };
+		503D4E39A3B4AE369206B712 /* complete.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = complete.json; sourceTree = "<group>"; };
 		537CD1B9259B6FDD9DBA8E37 /* ImageCropPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageCropPicker.swift; sourceTree = "<group>"; };
 		5416B142A121192B7EDCA9A2 /* LocationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocationManager.swift; sourceTree = "<group>"; };
 		5467FA534273021B9B949773 /* WizardProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WizardProgressBar.swift; sourceTree = "<group>"; };
@@ -214,6 +217,7 @@
 		CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IBANGenerator.swift; sourceTree = "<group>"; };
 		CF1513FE906EE61E579B662D /* BookingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingService.swift; sourceTree = "<group>"; };
 		D04AE83B5E261BA41D246388 /* MarkSpotsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkSpotsStep.swift; sourceTree = "<group>"; };
+		D3868CEAFB9411DDE736AF88 /* confetti.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = confetti.json; sourceTree = "<group>"; };
 		D3BB2C75ED50A9F54DA87638 /* EmailVerifiedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailVerifiedView.swift; sourceTree = "<group>"; };
 		D49112D9A0860BD7EB235BDE /* CachedAsyncImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedAsyncImage.swift; sourceTree = "<group>"; };
 		D542E42BA6CD2042CD0922EB /* MapBottomCardCarousel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBottomCardCarousel.swift; sourceTree = "<group>"; };
@@ -314,6 +318,8 @@
 		2F5D2133E43944DC80E77CAB /* Lottie */ = {
 			isa = PBXGroup;
 			children = (
+				503D4E39A3B4AE369206B712 /* complete.json */,
+				D3868CEAFB9411DDE736AF88 /* confetti.json */,
 				425E4953E02A6C131CFEB198 /* empty-spots.json */,
 				CB03B6FF2B6DA8FCAC15788C /* Globe.json */,
 				ED8BDCBFB9D65C5B686E088E /* ny-annonse.json */,
@@ -620,6 +626,8 @@
 				249014FE9C51150340A11E57 /* Assets.xcassets in Resources */,
 				1D314A0646D1BBDD98D88023 /* Globe.json in Resources */,
 				2C4D3EB18F8321977CD47D5C /* Localizable.xcstrings in Resources */,
+				4E17A41B84E1DD294B056FBA /* complete.json in Resources */,
+				234D3400830F6E45E00E0099 /* confetti.json in Resources */,
 				87D3139C0104F4350A1AAC1B /* empty-spots.json in Resources */,
 				23227ACC572BB0ECF18932ED /* ny-annonse.json in Resources */,
 				666AD7D7FA51A19DC149E1EF /* progress-pin.json in Resources */,
@@ -776,7 +784,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 108;
+				CURRENT_PROJECT_VERSION = 109;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -876,7 +884,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 108;
+				CURRENT_PROJECT_VERSION = 109;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

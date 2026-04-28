@@ -272,6 +272,16 @@
         }
       }
     },
+    "%@ overstyring%@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ overstyring%2$@"
+          }
+        }
+      }
+    },
     "%@ plasser" : {
       "localizations" : {
         "de" : {
@@ -294,7 +304,6 @@
       }
     },
     "%@–%@" : {
-      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1192,6 +1201,9 @@
         }
       }
     },
+    "Bruk hurtigvalg under, eller legg til et eget bånd. Standard-prisen brukes for timer som ikke faller innenfor et bånd." : {
+
+    },
     "Bruker annonsens pris" : {
       "localizations" : {
         "de" : {
@@ -1485,6 +1497,9 @@
           }
         }
       }
+    },
+    "Dra et bånd hit ↓" : {
+
     },
     "Dra og slipp for å endre rekkefølge. Bildet lengst til venstre er forsidebildet." : {
 
@@ -2550,6 +2565,9 @@
         }
       }
     },
+    "Gjelder alle uker" : {
+
+    },
     "Gjeste-favoritt" : {
 
     },
@@ -3188,6 +3206,12 @@
         }
       }
     },
+    "Ingen prisbånd ennå" : {
+
+    },
+    "Ingen relevante fasiliteter for valgt kategori" : {
+
+    },
     "Ingen resultater" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3481,6 +3505,9 @@
           }
         }
       }
+    },
+    "Kjøretøytype" : {
+
     },
     "Kjøretøytype (velg flere)" : {
 
@@ -3881,6 +3908,9 @@
           }
         }
       }
+    },
+    "Lag prisbånd som standard gjelder alle uker. Dra et bånd til en spesifikk uke for å overstyre prisen den uken." : {
+
     },
     "Lagre" : {
       "extractionState" : "manual",
@@ -5456,9 +5486,6 @@
         }
       }
     },
-    "Pris per tidsbånd" : {
-
-    },
     "Pris-modell" : {
 
     },
@@ -5993,6 +6020,9 @@
     "Sett pris for en periode (f.eks. sommeruker). Overstyrer helg og standard." : {
 
     },
+    "Sett priser for tidsperioder" : {
+
+    },
     "Sett ulik melding per plass (f.eks. ulike port-koder)." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6288,6 +6318,9 @@
         }
       }
     },
+    "Spesielle uker" : {
+
+    },
     "Språk" : {
       "localizations" : {
         "de" : {
@@ -6297,6 +6330,9 @@
           }
         }
       }
+    },
+    "Standard" : {
+
     },
     "Standard %@ kr%@" : {
       "localizations" : {
@@ -6309,9 +6345,6 @@
       }
     },
     "Standardpris %@ kr/time" : {
-
-    },
-    "Standardpris brukes for timer som ikke faller i et bånd. Bånd lar deg sette ulike priser for arbeidstid, kveld og helg." : {
 
     },
     "Standardpris er %@ kr. La stå tomt for å beholde standardpris." : {
@@ -6671,6 +6704,9 @@
         }
       }
     },
+    "Total pris i NOK" : {
+
+    },
     "Totalt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6792,7 +6828,7 @@
     "Tuno-vert" : {
 
     },
-    "Turpris i NOK" : {
+    "Type plass" : {
 
     },
     "Typisk svartid: %@" : {
@@ -6814,6 +6850,9 @@
           }
         }
       }
+    },
+    "Uke %@" : {
+
     },
     "Ukjent" : {
       "extractionState" : "manual",
