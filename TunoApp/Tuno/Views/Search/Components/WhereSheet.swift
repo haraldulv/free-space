@@ -78,7 +78,7 @@ struct WhereSheet: View {
     // MARK: - Floating header (kategori sveve + xmark)
 
     private var floatingHeader: some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             Button { isPresented = false } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .semibold))
@@ -86,10 +86,11 @@ struct WhereSheet: View {
                     .frame(width: 32, height: 32)
             }
             .accessibilityLabel("Lukk")
+            .padding(.top, 8)
 
             Spacer()
 
-            categoryFloatingPill
+            categoryFloatingTabs
 
             Spacer()
 
@@ -97,14 +98,14 @@ struct WhereSheet: View {
         }
     }
 
-    private var categoryFloatingPill: some View {
-        HStack(spacing: 0) {
+    /// Airbnb-stil floating kategori-tabs: ikoner med tekst under, hviler
+    /// rett oppå blur-bakgrunnen (ingen pille). Aktiv kategori har en
+    /// kort sort strek under teksten.
+    private var categoryFloatingTabs: some View {
+        HStack(alignment: .top, spacing: 28) {
             categoryFloatingTab(.camping, label: "Camping")
             categoryFloatingTab(.parking, label: "Parkering")
         }
-        .padding(4)
-        .background(Capsule().fill(Color.white))
-        .shadow(color: .black.opacity(0.10), radius: 8, y: 2)
     }
 
     private func categoryFloatingTab(_ value: ListingCategory, label: String) -> some View {
@@ -118,19 +119,20 @@ struct WhereSheet: View {
                 }
             }
         } label: {
-            HStack(spacing: 6) {
+            VStack(spacing: 4) {
                 Image(value.categoryIcon)
                     .resizable()
                     .aspectRatio(contentMode: .fit)
-                    .frame(width: 20, height: 20)
+                    .frame(width: 36, height: 36)
                     .opacity(isSelected ? 1.0 : 0.55)
                 Text(label)
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 12, weight: isSelected ? .semibold : .medium))
                     .foregroundStyle(isSelected ? .neutral900 : .neutral500)
+                Rectangle()
+                    .fill(isSelected ? Color.neutral900 : Color.clear)
+                    .frame(height: 2)
+                    .frame(width: 24)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 6)
-            .background(Capsule().fill(isSelected ? Color.neutral100 : Color.clear))
         }
         .buttonStyle(.plain)
     }
