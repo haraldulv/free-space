@@ -74,6 +74,7 @@
 		7AF18FF996F0B291CFB71478 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDD24B1220789582C10AF6F /* ChatView.swift */; };
 		80D0258D5D4F3DF9EBC406F5 /* MarkSpotsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04AE83B5E261BA41D246388 /* MarkSpotsStep.swift */; };
 		826D4094CB6C79BB766161D3 /* PublicProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69D03627A981C3C64EF47F06 /* PublicProfileView.swift */; };
+		8280ACB48EDA130DB444F9C6 /* CalendarCoachMarksOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE34052184FD68CD7F263681 /* CalendarCoachMarksOverlay.swift */; };
 		8366B42E53C29B755B8EB7ED /* SpotExtrasStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = E526C4504EA007084624767F /* SpotExtrasStep.swift */; };
 		87D3139C0104F4350A1AAC1B /* empty-spots.json in Resources */ = {isa = PBXBuildFile; fileRef = 425E4953E02A6C131CFEB198 /* empty-spots.json */; };
 		8B3FFD2821A8DBF0C4752B71 /* BookingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A031A3724EC9DE0FAFF7A4A /* BookingView.swift */; };
@@ -259,6 +260,7 @@
 		F9A10E906BFD039DCF513926 /* TimePickerField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePickerField.swift; sourceTree = "<group>"; };
 		F9C68D73AEFE78CC1D1DEE15 /* EarningsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarningsView.swift; sourceTree = "<group>"; };
 		FBE71C1EE64D63048F5BD2F5 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
+		FE34052184FD68CD7F263681 /* CalendarCoachMarksOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarCoachMarksOverlay.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -383,6 +385,7 @@
 			isa = PBXGroup;
 			children = (
 				6F63AA41F2D5F12E98EC1DAA /* BandPriceOverrideSheet.swift */,
+				FE34052184FD68CD7F263681 /* CalendarCoachMarksOverlay.swift */,
 				1C62328BAF7DE7328480EAF9 /* LottieView.swift */,
 				4FF267768B92B52734B7568A /* WizardNavBar.swift */,
 				411181AFF3AC2C69BF0D3CB4 /* WizardPricingCalendarView.swift */,
@@ -705,6 +708,7 @@
 				79F6757D7436EF3EEF1EEAC2 /* BookingsView.swift in Sources */,
 				2A5ACD0FEC4B1F31E23B6AE5 /* BottomListDrawer.swift in Sources */,
 				CBF09B2CA4A4927619137D59 /* CachedAsyncImage.swift in Sources */,
+				8280ACB48EDA130DB444F9C6 /* CalendarCoachMarksOverlay.swift in Sources */,
 				D24A25653E6E0006953AF2B8 /* CalendarStep.swift in Sources */,
 				AA7B4CA530ABE701BE17F593 /* CategoryStep.swift in Sources */,
 				23E22E74F79A0D6B738FFD7F /* ChatService.swift in Sources */,
@@ -836,7 +840,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 127;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -936,7 +940,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 126;
+				CURRENT_PROJECT_VERSION = 127;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

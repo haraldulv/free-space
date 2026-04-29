@@ -14,8 +14,37 @@ struct WizardPricingCalendarView: View {
     @State private var selectedDates: Set<String> = []
     @State private var rangeAnchor: String?
     @State private var showDatePriceSheet = false
+    @State private var hasScrolledToCurrent = false
+    @State private var coachMarksAnchors: [String: CGRect] = [:]
+    @State private var showCoachMarks = false
+    @State private var containerSize: CGSize = .zero
+    @AppStorage("priceVariationCoachMarksDismissed") private var coachMarksDismissed = false
 
     private let monthsAhead = 6
+
+    /// ID til uken som inneholder dagens dato — brukes som scroll-target.
+    private var currentWeekRowId: String? {
+        let cal = Self.osloCalendar
+        let today = cal.startOfDay(for: Date())
+        for monthStart in visibleMonths {
+            for week in weeksFor(monthStart) {
+                if week.days.contains(where: { d in
+                    guard let d else { return false }
+                    return cal.isDate(d, inSameDayAs: today) ||
+                        cal.compare(d, to: today, toGranularity: .day) == .orderedSame
+                }) {
+                    return week.id
+                }
+                // Sjekk også om dagens dato faller innenfor uke-rangen via weekKey
+                let year = cal.component(.yearForWeekOfYear, from: today)
+                let weekNum = cal.component(.weekOfYear, from: today)
+                if week.key.year == year && week.key.weekNum == weekNum {
+                    return week.id
+                }
+            }
+        }
+        return nil
+    }
 
     private var availability: WizardSpotAvailability {
         form.availability(for: spotId)
@@ -78,20 +107,68 @@ struct WizardPricingCalendarView: View {
     }
 
     var body: some View {
+        bodyContent
+            .coordinateSpace(name: "wizardCalendar")
+            .background(
+                GeometryReader { geom in
+                    Color.clear
+                        .onAppear { containerSize = geom.size }
+                        .onChange(of: geom.size) { _, new in containerSize = new }
+                }
+            )
+            .onPreferenceChange(CoachMarkAnchorsKey.self) { value in
+                coachMarksAnchors = value
+            }
+            .overlay {
+                if showCoachMarks {
+                    CalendarCoachMarksOverlay(
+                        isPresented: $showCoachMarks,
+                        anchors: coachMarksAnchors,
+                        containerSize: containerSize
+                    )
+                    .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.25), value: showCoachMarks)
+            .onAppear {
+                // Vis coach-marks første gang brukeren ser kalenderen for et bånd-listing.
+                if !bands.isEmpty && !coachMarksDismissed && !showCoachMarks {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                        showCoachMarks = true
+                    }
+                }
+            }
+    }
+
+    private var bodyContent: some View {
         ZStack(alignment: .bottom) {
             Group {
                 if bands.isEmpty {
                     emptyHint
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 24) {
-                            headerHint
-                                .padding(.horizontal, 16)
-                            ForEach(visibleMonths, id: \.self) { monthStart in
-                                monthSection(monthStart)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 24) {
+                                headerHint
+                                    .padding(.horizontal, 16)
+                                ForEach(visibleMonths, id: \.self) { monthStart in
+                                    monthSection(monthStart)
+                                }
+                                // plass for bottom action-bar
+                                Color.clear.frame(height: selectedDates.isEmpty ? 32 : 130)
                             }
-                            // plass for bottom action-bar
-                            Color.clear.frame(height: selectedDates.isEmpty ? 32 : 130)
+                        }
+                        .onAppear {
+                            guard !hasScrolledToCurrent else { return }
+                            if let target = currentWeekRowId {
+                                // Kjør litt forsinket så LazyVStack rekker å bygge.
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                    proxy.scrollTo(target, anchor: .top)
+                                    hasScrolledToCurrent = true
+                                }
+                            } else {
+                                hasScrolledToCurrent = true
+                            }
                         }
                     }
                 }
@@ -195,6 +272,7 @@ struct WizardPricingCalendarView: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Nullstill valg")
+        .coachMarkAnchor(id: "clear-button")
     }
 
     // MARK: - Bottom action bar
@@ -271,8 +349,8 @@ struct WizardPricingCalendarView: View {
             .padding(.horizontal, 12)
 
             VStack(spacing: 6) {
-                ForEach(weeksFor(monthStart), id: \.id) { week in
-                    weekRow(week)
+                ForEach(Array(weeksFor(monthStart).enumerated()), id: \.element.id) { idx, week in
+                    weekRow(week, isFirstAnchor: monthStart == visibleMonths.first && idx == 0)
                 }
             }
             .padding(.horizontal, 12)
@@ -280,17 +358,27 @@ struct WizardPricingCalendarView: View {
     }
 
     @ViewBuilder
-    private func weekRow(_ week: WeekRow) -> some View {
+    private func weekRow(_ week: WeekRow, isFirstAnchor: Bool = false) -> some View {
         let segCount = bands.flatMap { bandSegments(mask: $0.dayMask) }.count
         let cellHeight: CGFloat = 64
         let bandLayerStart: CGFloat = 22  // y-pos under dato-tallet
         let totalHeight = cellHeight + 6  // litt margin under
 
         ZStack(alignment: .topLeading) {
+            // 1. Bånd-bars TEGNES FØRST (under) — bakgrunnslag
+            if segCount > 0 {
+                bandsOverlay(week: week, isFirstAnchor: isFirstAnchor)
+                    .padding(.top, bandLayerStart)
+                    .frame(height: cellHeight - bandLayerStart)
+                    .allowsHitTesting(true)
+            }
+
+            // 2. Dato-celler ØVERST — outline + tall ligger oppå båndene.
+            // Cellens fyll er gjennomsiktig på default, så båndet vises gjennom.
             HStack(spacing: 3) {
                 ForEach(0..<7, id: \.self) { col in
                     if let date = week.days[col] {
-                        dayCell(date: date)
+                        dayCell(date: date, anchorTag: isFirstAnchor && col == firstNonNilCol(week) ? "day-cell" : nil)
                             .frame(maxWidth: .infinity, minHeight: cellHeight)
                     } else {
                         Color.clear.frame(maxWidth: .infinity, minHeight: cellHeight)
@@ -298,36 +386,32 @@ struct WizardPricingCalendarView: View {
                 }
             }
             .frame(height: cellHeight)
-
-            // Bånd-bars OVER cellene (overlapper midten/under tallet)
-            if segCount > 0 {
-                bandsOverlay(week: week)
-                    .padding(.top, bandLayerStart)
-                    .frame(height: cellHeight - bandLayerStart)
-                    .allowsHitTesting(true)
-            }
+            .allowsHitTesting(true)
         }
         .frame(height: totalHeight)
+        .id(week.id)
     }
 
     @ViewBuilder
-    private func bandsOverlay(week: WeekRow) -> some View {
+    private func bandsOverlay(week: WeekRow, isFirstAnchor: Bool) -> some View {
         GeometryReader { g in
             let cellSpacing: CGFloat = 3
             let totalSpacing = cellSpacing * 6
             let cellWidth = max(0, (g.size.width - totalSpacing) / 7)
 
             VStack(alignment: .leading, spacing: 3) {
-                ForEach(bands) { band in
+                ForEach(Array(bands.enumerated()), id: \.element.id) { bandIdx, band in
                     let segs = bandSegments(mask: band.dayMask)
                     ForEach(segs.indices, id: \.self) { i in
                         let seg = segs[i]
+                        let tag: String? = (isFirstAnchor && bandIdx == 0 && i == 0) ? "band-bar" : nil
                         bandBar(
                             band: band,
                             week: week,
                             segment: seg,
                             cellWidth: cellWidth,
-                            cellSpacing: cellSpacing
+                            cellSpacing: cellSpacing,
+                            anchorTag: tag
                         )
                     }
                 }
@@ -341,7 +425,8 @@ struct WizardPricingCalendarView: View {
         week: WeekRow,
         segment seg: (start: Int, end: Int),
         cellWidth: CGFloat,
-        cellSpacing: CGFloat
+        cellSpacing: CGFloat,
+        anchorTag: String? = nil
     ) -> some View {
         let resolved = priceForBand(band, weekKey: week.key)
         let isOverride = resolved.scope != nil
@@ -379,40 +464,42 @@ struct WizardPricingCalendarView: View {
         }
         .buttonStyle(.plain)
         .offset(x: xOffset + 2)
+        .modifier(OptionalCoachMarkAnchor(tag: anchorTag))
     }
 
-    /// Palett av bånd-farger basert på id-hash. Distinkte men begrensede sett.
-    /// Override = mer mettet, default = pastell-versjon for å skille visuelt.
+    /// Palett av bånd-farger basert på id-hash. Dempede pastell-versjoner som
+    /// ikke distraherer fra dato-tallene. Override = synlig mer mettet for å
+    /// skille seg ut når brukeren har satt egen pris.
     private func bandPalette(for band: WizardPricingBand) -> BandPalette {
         let palettes: [BandPalette] = [
             BandPalette(  // Tuno-grønn
-                bgDefault: Color(hex: "#5fcf96"),
-                bgOverride: Color(hex: "#10b981"),
-                border: Color(hex: "#10b981").opacity(0.6),
+                bgDefault: Color(hex: "#86d9b1").opacity(0.85),
+                bgOverride: Color(hex: "#46c185"),
+                border: Color(hex: "#46c185").opacity(0.35),
                 text: .white
             ),
             BandPalette(  // Lavendel
-                bgDefault: Color(hex: "#a78bfa"),
-                bgOverride: Color(hex: "#7c3aed"),
-                border: Color(hex: "#7c3aed").opacity(0.6),
+                bgDefault: Color(hex: "#c4b5fd").opacity(0.85),
+                bgOverride: Color(hex: "#8b5cf6"),
+                border: Color(hex: "#8b5cf6").opacity(0.35),
                 text: .white
             ),
             BandPalette(  // Korall
-                bgDefault: Color(hex: "#fb923c"),
-                bgOverride: Color(hex: "#ea580c"),
-                border: Color(hex: "#ea580c").opacity(0.6),
+                bgDefault: Color(hex: "#fdba74").opacity(0.85),
+                bgOverride: Color(hex: "#f97316"),
+                border: Color(hex: "#f97316").opacity(0.35),
                 text: .white
             ),
             BandPalette(  // Sky
-                bgDefault: Color(hex: "#60a5fa"),
-                bgOverride: Color(hex: "#2563eb"),
-                border: Color(hex: "#2563eb").opacity(0.6),
+                bgDefault: Color(hex: "#93c5fd").opacity(0.85),
+                bgOverride: Color(hex: "#3b82f6"),
+                border: Color(hex: "#3b82f6").opacity(0.35),
                 text: .white
             ),
             BandPalette(  // Rose
-                bgDefault: Color(hex: "#f472b6"),
-                bgOverride: Color(hex: "#db2777"),
-                border: Color(hex: "#db2777").opacity(0.6),
+                bgDefault: Color(hex: "#f9a8d4").opacity(0.85),
+                bgOverride: Color(hex: "#ec4899"),
+                border: Color(hex: "#ec4899").opacity(0.35),
                 text: .white
             ),
         ]
@@ -423,7 +510,7 @@ struct WizardPricingCalendarView: View {
     // MARK: - Day cell (samme stil som HostCalendarView)
 
     @ViewBuilder
-    private func dayCell(date: Date) -> some View {
+    private func dayCell(date: Date, anchorTag: String? = nil) -> some View {
         let iso = Self.isoFormatter.string(from: date)
         let day = Self.osloCalendar.component(.day, from: date)
         let startOfToday = Self.osloCalendar.startOfDay(for: Date())
@@ -476,14 +563,25 @@ struct WizardPricingCalendarView: View {
         }
         .buttonStyle(.plain)
         .disabled(isPast)
+        .modifier(OptionalCoachMarkAnchor(tag: anchorTag))
+    }
+
+    private func firstNonNilCol(_ week: WeekRow) -> Int {
+        for col in 0..<7 {
+            if week.days[col] != nil { return col }
+        }
+        return 0
     }
 
     private func cellBackground(isPast: Bool, isSelected: Bool, isAnchor: Bool, isBlocked: Bool, hasOverride: Bool) -> Color {
-        if isAnchor { return Color.primary600.opacity(0.18) }
-        if isSelected { return Color.primary600.opacity(0.10) }
-        if isBlocked { return Color.neutral100 }
-        if hasOverride { return Color(hex: "#ecfdf5") }
-        return Color.white
+        // Default = .clear så bånd-bar synes under cellen.
+        // Selected/anker/blokk/override = semi-transparent for å skille seg ut
+        // uten å skjule båndet helt.
+        if isAnchor { return Color.primary600.opacity(0.20) }
+        if isSelected { return Color.primary600.opacity(0.12) }
+        if isBlocked { return Color.neutral100.opacity(0.85) }
+        if hasOverride { return Color(hex: "#ecfdf5").opacity(0.85) }
+        return Color.clear
     }
 
     private func cellBorder(isSelected: Bool, isAnchor: Bool, isPast: Bool) -> Color {
