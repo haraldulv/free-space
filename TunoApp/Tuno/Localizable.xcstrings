@@ -329,6 +329,16 @@
     "%@:00" : {
 
     },
+    "%@:00 – %@:00" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@:00 – %2$@:00"
+          }
+        }
+      }
+    },
     "%@/%@" : {
       "localizations" : {
         "nb" : {
@@ -732,6 +742,9 @@
           }
         }
       }
+    },
+    "Åpningstider" : {
+
     },
     "Apple" : {
 
@@ -1706,6 +1719,9 @@
       }
     },
     "Egendefinerte tillegg" : {
+
+    },
+    "Eget bånd" : {
 
     },
     "Eksakt adresse deles etter bekreftet booking." : {
@@ -5477,9 +5493,6 @@
         }
       }
     },
-    "Pris-modell" : {
-
-    },
     "Prisenhet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6472,6 +6485,9 @@
     "Tag bildene til riktig plass" : {
 
     },
+    "Tap for å aktivere" : {
+
+    },
     "Tap for å plassere" : {
 
     },
@@ -7141,7 +7157,7 @@
     "Velg hvilke plasser blokkering gjelder for. Prisoverstyringer gjelder hele annonsen." : {
 
     },
-    "Velg om plassen leies ut per døgn (24t) eller per time." : {
+    "Velg om plassen alltid er ledig, eller sett bestemte tider den kan leies ut." : {
 
     },
     "Velg plass" : {

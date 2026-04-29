@@ -131,6 +131,7 @@
 		F67F9C6B23D453F78B1C7ED9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FFF7A576FF6BA28D9AC107D /* AuthManager.swift */; };
 		F7F6F0104883482373D27D01 /* BookingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF1513FE906EE61E579B662D /* BookingService.swift */; };
 		FE23B05A859AA8FCC5B7D037 /* SearchPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34085B6A08D14716ACA21EA1 /* SearchPill.swift */; };
+		FFC836D6FEC0D9E8B9346EA5 /* WizardPricingCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 411181AFF3AC2C69BF0D3CB4 /* WizardPricingCalendarView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -166,6 +167,7 @@
 		3D457F224FB227BB0280276E /* AddressStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressStep.swift; sourceTree = "<group>"; };
 		40D0D12BC80A797DF8A6DEED /* SearchContextStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchContextStore.swift; sourceTree = "<group>"; };
 		40D5D06E16F5E9919282FBCB /* home.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = home.png; sourceTree = "<group>"; };
+		411181AFF3AC2C69BF0D3CB4 /* WizardPricingCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WizardPricingCalendarView.swift; sourceTree = "<group>"; };
 		41E71E1C8EA6E28F59A76B9A /* BlockedSlots.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlockedSlots.swift; sourceTree = "<group>"; };
 		425E4953E02A6C131CFEB198 /* empty-spots.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "empty-spots.json"; sourceTree = "<group>"; };
 		4706792C26101B180693BACF /* InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputField.swift; sourceTree = "<group>"; };
@@ -380,6 +382,7 @@
 			children = (
 				1C62328BAF7DE7328480EAF9 /* LottieView.swift */,
 				4FF267768B92B52734B7568A /* WizardNavBar.swift */,
+				411181AFF3AC2C69BF0D3CB4 /* WizardPricingCalendarView.swift */,
 				5467FA534273021B9B949773 /* WizardProgressBar.swift */,
 				91BD5B56FDD4700D7C849E70 /* WizardScreen.swift */,
 				CE37F2B39F267A7C3F849A4C /* WizardTooltip.swift */,
@@ -785,6 +788,7 @@
 				B6F0518213F5AE5FEF63012A /* WelcomeStep.swift in Sources */,
 				4ED3E93250A6738DFDAD8848 /* WhereSheet.swift in Sources */,
 				3F9B2D62042A08F8EAD36159 /* WizardNavBar.swift in Sources */,
+				FFC836D6FEC0D9E8B9346EA5 /* WizardPricingCalendarView.swift in Sources */,
 				E3BDAE469F940943E2DB8E2E /* WizardProgressBar.swift in Sources */,
 				66712985E67581E25E1DBAAF /* WizardScreen.swift in Sources */,
 				77CC3D34760D44AE1F1F1CB5 /* WizardTooltip.swift in Sources */,
@@ -828,7 +832,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 119;
+				CURRENT_PROJECT_VERSION = 120;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -928,7 +932,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 119;
+				CURRENT_PROJECT_VERSION = 120;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

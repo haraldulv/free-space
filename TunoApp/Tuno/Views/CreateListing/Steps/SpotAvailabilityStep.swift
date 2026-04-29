@@ -6,8 +6,7 @@ import SwiftUI
 /// listing_pricing_rules (kind='hourly') med spot_id ved publisering.
 struct SpotAvailabilityStep: View {
     @ObservedObject var form: ListingFormModel
-    @State private var showAddBandSheet = false
-    @State private var bandSheetPrefill: BandPrefill?
+    @State private var sheetWrapper: PrefillSheetWrapper?
 
     private var spot: SpotMarker? {
         form.spotMarkers.indices.contains(form.currentSpotIndex)
@@ -42,15 +41,14 @@ struct SpotAvailabilityStep: View {
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
         .animation(.easeInOut(duration: 0.28), value: form.currentSpotIndex)
-        .sheet(isPresented: $showAddBandSheet) {
+        .sheet(item: $sheetWrapper) { wrap in
             AddHourlyBandSheet(
                 basePrice: 0,
-                prefill: bandSheetPrefill,
+                prefill: wrap.prefill,
                 mode: .availability
             ) { dayMask, startHour, endHour, _ in
                 addBand(dayMask: dayMask, startHour: startHour, endHour: endHour)
             }
-            .id(bandSheetPrefill?.id ?? "blank")
         }
     }
 
@@ -156,8 +154,7 @@ struct SpotAvailabilityStep: View {
                     .textCase(.uppercase)
                 ForEach(prefills) { prefill in
                     Button {
-                        bandSheetPrefill = prefill
-                        showAddBandSheet = true
+                        sheetWrapper = PrefillSheetWrapper(prefill: prefill)
                     } label: {
                         HStack(spacing: 12) {
                             Image(systemName: "plus.circle.fill")
@@ -180,8 +177,7 @@ struct SpotAvailabilityStep: View {
                     .buttonStyle(.plain)
                 }
                 Button {
-                    bandSheetPrefill = nil
-                    showAddBandSheet = true
+                    sheetWrapper = PrefillSheetWrapper(prefill: nil)
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "plus")
@@ -288,4 +284,12 @@ private extension Array {
     subscript(safe index: Int) -> Element? {
         indices.contains(index) ? self[index] : nil
     }
+}
+
+/// Wrapper som lar `.sheet(item:)` håndtere både prefill og "eget bånd" (nil).
+/// Identitet baseres på prefill.id, eller "empty" for tom — så SwiftUI bygger
+/// sheet på nytt per tap.
+struct PrefillSheetWrapper: Identifiable {
+    let prefill: BandPrefill?
+    var id: String { prefill?.id ?? "empty" }
 }

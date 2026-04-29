@@ -653,26 +653,12 @@ struct AddHourlyBandSheet: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Klokkeslett")
                 .font(.system(size: 14, weight: .semibold))
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Fra").font(.system(size: 12)).foregroundStyle(.neutral500)
-                    Stepper(value: $startHour, in: 0...23) {
-                        Text("\(twoDigit(startHour)):00")
-                            .font(.system(size: 15, weight: .medium))
-                            .monospacedDigit()
-                    }
+            HStack(spacing: 16) {
+                HourWheelPicker(label: "Fra", hour: $startHour, range: 0...23)
                     .onChange(of: startHour) { _, newVal in
                         if endHour <= newVal { endHour = min(24, newVal + 1) }
                     }
-                }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Til").font(.system(size: 12)).foregroundStyle(.neutral500)
-                    Stepper(value: $endHour, in: max(1, startHour + 1)...24) {
-                        Text("\(twoDigit(endHour)):00")
-                            .font(.system(size: 15, weight: .medium))
-                            .monospacedDigit()
-                    }
-                }
+                HourWheelPicker(label: "Til", hour: $endHour, range: max(1, startHour + 1)...24)
             }
         }
     }
@@ -696,5 +682,31 @@ struct AddHourlyBandSheet: View {
 
     private func twoDigit(_ n: Int) -> String {
         n < 10 ? "0\(n)" : "\(n)"
+    }
+}
+
+/// Rullehjul for klokketid (heltimer). Brukes i AddHourlyBandSheet.
+struct HourWheelPicker: View {
+    let label: String
+    @Binding var hour: Int
+    let range: ClosedRange<Int>
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.neutral500)
+            Picker("", selection: $hour) {
+                ForEach(Array(range), id: \.self) { h in
+                    Text(String(format: "%02d:00", h)).tag(h)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(width: 100, height: 110)
+            .clipped()
+            .background(Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+        }
     }
 }

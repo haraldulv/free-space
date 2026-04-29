@@ -138,13 +138,23 @@ struct SpotPriceContent: View {
                 )
             }
         }
+        .onAppear {
+            // Default: parkering = per time aktivert (ingen pris satt = 0).
+            // pricePerHour != nil betyr "checked"; verdi 0 = brukeren må skrive pris.
+            guard form.spotMarkers.indices.contains(index) else { return }
+            let s = form.spotMarkers[index]
+            if form.category == .parking, s.pricePerHour == nil, s.pricePerNight == nil {
+                form.spotMarkers[index].pricePerHour = 0
+                form.spotMarkers[index].priceUnit = .hour
+            }
+        }
     }
 
     @ViewBuilder
     private var parkingDualPricing: some View {
         if let s = spot {
-            let hourEnabled = (s.pricePerHour ?? 0) > 0 || s.priceUnit == .hour
-            let nightEnabled = (s.pricePerNight ?? 0) > 0
+            let hourEnabled = s.pricePerHour != nil
+            let nightEnabled = s.pricePerNight != nil
             VStack(spacing: 14) {
                 pricingRow(
                     label: "Per time",
@@ -152,16 +162,15 @@ struct SpotPriceContent: View {
                     price: Binding(
                         get: { s.pricePerHour ?? 0 },
                         set: { newValue in
-                            form.spotMarkers[index].pricePerHour = newValue > 0 ? newValue : nil
+                            // Behold ikke-nil mens checkbox er på, selv om verdien er 0
+                            form.spotMarkers[index].pricePerHour = newValue
                             updatePrimaryPriceUnit()
                         }
                     ),
                     unitLabel: "time",
                     onToggle: { isOn in
                         if isOn {
-                            if (form.spotMarkers[index].pricePerHour ?? 0) == 0 {
-                                form.spotMarkers[index].pricePerHour = 50
-                            }
+                            form.spotMarkers[index].pricePerHour = 0
                         } else {
                             form.spotMarkers[index].pricePerHour = nil
                         }
@@ -174,16 +183,14 @@ struct SpotPriceContent: View {
                     price: Binding(
                         get: { s.pricePerNight ?? 0 },
                         set: { newValue in
-                            form.spotMarkers[index].pricePerNight = newValue > 0 ? newValue : nil
+                            form.spotMarkers[index].pricePerNight = newValue
                             updatePrimaryPriceUnit()
                         }
                     ),
                     unitLabel: "døgn",
                     onToggle: { isOn in
                         if isOn {
-                            if (form.spotMarkers[index].pricePerNight ?? 0) == 0 {
-                                form.spotMarkers[index].pricePerNight = 200
-                            }
+                            form.spotMarkers[index].pricePerNight = 0
                         } else {
                             form.spotMarkers[index].pricePerNight = nil
                         }
@@ -257,12 +264,13 @@ struct SpotPriceContent: View {
     private func updatePrimaryPriceUnit() {
         guard form.spotMarkers.indices.contains(index) else { return }
         let s = form.spotMarkers[index]
-        if (s.pricePerHour ?? 0) > 0 {
+        if let h = s.pricePerHour, h >= 0 {
+            // Per-time aktiv (selv om verdi er 0)
             form.spotMarkers[index].priceUnit = .hour
-            form.spotMarkers[index].price = s.pricePerHour
-        } else if (s.pricePerNight ?? 0) > 0 {
+            form.spotMarkers[index].price = h > 0 ? h : (s.pricePerNight ?? 0)
+        } else if let n = s.pricePerNight, n >= 0 {
             form.spotMarkers[index].priceUnit = form.category == .parking ? .time : .natt
-            form.spotMarkers[index].price = s.pricePerNight
+            form.spotMarkers[index].price = n
         } else {
             form.spotMarkers[index].price = nil
         }

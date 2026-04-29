@@ -341,36 +341,14 @@ struct CreateListingView: View {
                         }
                     }
 
-                    // Legacy: listing-wide bånd fra PriceRulesStep editing-fase.
-                    // Beholdes for v1 — kommer til å erstattes av WizardPricingCalendarView.
-                    for band in form.pricingBands {
-                        switch band.weekScope {
-                        case .allWeeks:
-                            try? await PricingService.addHourlyBandRule(
-                                listingId: listing.id,
-                                dayMask: band.dayMask,
-                                startHour: band.startHour,
-                                endHour: band.endHour,
-                                price: band.price,
-                                startDate: nil,
-                                endDate: nil,
-                                spotId: nil
-                            )
-                        case .specificWeeks(let weeks):
-                            for week in weeks {
-                                guard let range = PriceRulesStep.dateRangeForWeek(year: week.year, week: week.weekNum) else { continue }
-                                try? await PricingService.addHourlyBandRule(
-                                    listingId: listing.id,
-                                    dayMask: band.dayMask,
-                                    startHour: band.startHour,
-                                    endHour: band.endHour,
-                                    price: band.price,
-                                    startDate: range.start,
-                                    endDate: range.end,
-                                    spotId: nil
-                                )
-                            }
-                        }
+                    // Listing-wide pris-overstyringer fra kalender-redigereren.
+                    for over in form.listingDateOverrides {
+                        try? await PricingService.setOverride(
+                            listingId: listing.id,
+                            date: over.date,
+                            price: over.price,
+                            spotId: nil
+                        )
                     }
                     newListing = listing
                 }

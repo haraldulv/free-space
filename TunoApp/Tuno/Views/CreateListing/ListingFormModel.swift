@@ -60,12 +60,15 @@ final class ListingFormModel: ObservableObject {
     @Published var checkoutMessageSendHoursBefore: Int = 2
     @Published var skippedMessages = false
 
-    // MARK: - Step 14: Pris-variasjon (legacy listing-wide bånd)
-    /// Listing-wide pris-bånd. Beholdt for PriceRulesStep editing-fase v1.
-    /// Nye SpotAvailabilityStep-bånd lagres i `availabilityBySpotId` per plass.
-    @Published var pricingBands: [WizardPricingBand] = []
+    // MARK: - Step 14: Pris-variasjon (kalender-redigerer)
+    /// Listing-wide pris-overstyringer satt via PriceRulesStep kalender-redigerer.
+    /// Persisteres som listing_pricing_overrides (spot_id=NULL) ved publisering.
+    @Published var listingDateOverrides: [WizardDateOverride] = []
+    /// Brukerens valg fra ask-fasen ("Vil du variere prisen?"). Ingenting lagres
+    /// hvis Nei, og brukeren havner direkte på kalender-redigerer hvis Ja.
+    @Published var hasOpenedPriceVariation: Bool = false
 
-    // MARK: - Step 15: Kalender (blocked_dates)
+    // MARK: - Step 15: Kalender (blocked_dates) — kun camping
     @Published var blockedDates: Set<String> = []
 
     // MARK: - Listing-level (settes ved review)
@@ -114,16 +117,17 @@ final class ListingFormModel: ObservableObject {
         category != .parking
     }
 
-    /// Pris-variasjon-steget (14) er kun relevant for parkering per time.
-    /// Andre kategorier hopper over det automatisk.
+    /// Pris-variasjon-steget (14) er kun relevant for parkering.
+    /// Camping skipper det helt.
     var skipsPricingRulesStep: Bool {
-        if category != .parking { return true }
-        // Vis steget hvis ANY plass har time-pris (pricePerHour eller priceUnit=.hour)
-        let anySpotHasHourly = spotMarkers.contains { spot in
-            (spot.pricePerHour ?? 0) > 0 || spot.priceUnit == .hour
-        }
-        if anySpotHasHourly || priceUnit == .hour { return false }
-        return true
+        category != .parking
+    }
+
+    /// Kalender-steget (15) blokkerer datoer. For parkering er tilgjengelighet
+    /// allerede definert via tilgjengelighets-bånd, så vi hopper over.
+    /// Camping bruker fortsatt CalendarStep til å blokkere spesifikke datoer.
+    var skipsCalendarStep: Bool {
+        category == .parking
     }
 
     // MARK: - Validation per step
@@ -245,9 +249,13 @@ final class ListingFormModel: ObservableObject {
                 if currentStepHasMiniWizard {
                     currentSpotIndex = 0
                 }
-                // Hopp over Pris-variasjon-steget for ikke-parkering-per-time
+                // Hopp over Pris-variasjon-steget for camping
                 if currentStep == 14 && skipsPricingRulesStep {
                     currentStep = 15
+                }
+                // Hopp over Kalender-steget for parkering
+                if currentStep == 15 && skipsCalendarStep {
+                    currentStep = 16
                 }
             }
         }
@@ -277,7 +285,16 @@ final class ListingFormModel: ObservableObject {
             return
         }
 
-        // Hopp over Pris-variasjon når brukeren går bakover for ikke-parkering-per-time
+        // Hopp over Kalender bakover for parkering (allerede skippet ved fremover)
+        if currentStep == 16 && skipsCalendarStep {
+            // Gå tilbake fra Publiser → enten PriceRules (14) eller Messages (13)
+            withAnimation(.easeInOut(duration: 0.32)) {
+                currentStep = skipsPricingRulesStep ? 13 : 14
+            }
+            return
+        }
+
+        // Hopp over Pris-variasjon når brukeren går bakover (camping)
         if currentStep == 15 && skipsPricingRulesStep {
             withAnimation(.easeInOut(duration: 0.32)) { currentStep = 13 }
             return
