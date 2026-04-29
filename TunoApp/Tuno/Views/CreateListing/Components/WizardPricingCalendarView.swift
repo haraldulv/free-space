@@ -1,21 +1,23 @@
 import SwiftUI
 
-/// Pris-variasjon-kalender per plass — Airbnb-stil. Multi-måned grid med
-/// store dato-celler som viser dato + effektiv pris per time. Tap-anker for
-/// multi-select. Når dager er valgt, sticky bottom action-bar med:
-///   - Date-range pille + lukke-X
-///   - "Tilgjengelig"-toggle (blokker/avblokker)
-///   - "Pris per time" stort tall + Tilpasset-knapp
+/// Pris-variasjon-kalender per plass — Airbnb-inspirert fullskjerm-design.
+/// Sticky ukedag-header øverst. Multi-måned grid med store dato-celler som
+/// viser dato + bånd-bars (samme y-linje) + effektiv pris. Tap-anker for
+/// multi-select. Glassmorphism action-bar i bunn med Tilgjengelig-toggle og
+/// inline pris-editor.
 struct WizardPricingCalendarView: View {
     @ObservedObject var form: ListingFormModel
     let spotId: String
 
     @State private var selectedDates: Set<String> = []
     @State private var rangeAnchor: String?
-    @State private var showDatePriceSheet = false
     @State private var hasScrolledToCurrent = false
+    @State private var priceEditValue: Int = 0
+    @FocusState private var priceEditFocused: Bool
 
     private let monthsAhead = 6
+    private let cellHeight: CGFloat = 96
+    private let cellSpacing: CGFloat = 6
 
     private var availability: WizardSpotAvailability {
         form.availability(for: spotId)
@@ -101,63 +103,76 @@ struct WizardPricingCalendarView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            Group {
-                if bands.isEmpty {
-                    emptyHint
-                } else {
-                    ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(spacing: 20) {
-                                weekdayHeader
-                                    .padding(.horizontal, 12)
-                                    .padding(.top, 4)
-                                ForEach(visibleMonths, id: \.self) { monthStart in
-                                    monthSection(monthStart)
-                                }
-                                Color.clear.frame(height: selectedDates.isEmpty ? 24 : 220)
+        VStack(spacing: 0) {
+            stickyWeekdayHeader
+
+            if bands.isEmpty {
+                emptyHint
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(spacing: 18) {
+                            ForEach(visibleMonths, id: \.self) { monthStart in
+                                monthSection(monthStart)
                             }
                         }
-                        .onAppear {
-                            guard !hasScrolledToCurrent else { return }
-                            if let target = currentWeekRowId {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                    proxy.scrollTo(target, anchor: .top)
-                                    hasScrolledToCurrent = true
-                                }
-                            } else {
+                        .padding(.top, 8)
+                    }
+                    .onAppear {
+                        guard !hasScrolledToCurrent else { return }
+                        if let target = currentWeekRowId {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                proxy.scrollTo(target, anchor: .top)
                                 hasScrolledToCurrent = true
                             }
+                        } else {
+                            hasScrolledToCurrent = true
                         }
                     }
                 }
             }
-
+        }
+        .safeAreaInset(edge: .bottom) {
             if !selectedDates.isEmpty {
                 actionBar
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.easeInOut(duration: 0.22), value: selectedDates.isEmpty)
-        .sheet(isPresented: $showDatePriceSheet) {
-            DatePriceSheet(
-                basePerHour: basePerHour,
-                selectedCount: selectedDates.count,
-                currentPrice: averageSelectedPrice() ?? basePerHour,
-                onSave: { price in
-                    applyDateOverride(price: price)
-                    showDatePriceSheet = false
-                },
-                onCancel: { showDatePriceSheet = false }
-            )
-            .presentationDetents([.fraction(0.32)])
+        .onChange(of: priceEditFocused) { _, focused in
+            if !focused {
+                commitPriceEdit()
+            }
         }
+    }
+
+    // MARK: - Sticky weekday header
+
+    private var stickyWeekdayHeader: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                ForEach(["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"], id: \.self) { day in
+                    Text(day)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.neutral500)
+                        .frame(maxWidth: .infinity)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+
+            Rectangle()
+                .fill(Color.neutral200)
+                .frame(height: 0.5)
+        }
+        .background(Color.white)
     }
 
     // MARK: - Tom-tilstand
 
     private var emptyHint: some View {
         VStack(spacing: 8) {
+            Spacer()
             Image(systemName: "clock.badge.questionmark")
                 .font(.system(size: 32))
                 .foregroundStyle(.neutral400)
@@ -168,21 +183,9 @@ struct WizardPricingCalendarView: View {
                 .font(.system(size: 13))
                 .foregroundStyle(.neutral500)
                 .multilineTextAlignment(.center)
+            Spacer()
         }
         .padding(24)
-    }
-
-    // MARK: - Weekday header
-
-    private var weekdayHeader: some View {
-        HStack(spacing: 0) {
-            ForEach(["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"], id: \.self) { day in
-                Text(day)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.neutral500)
-                    .frame(maxWidth: .infinity)
-            }
-        }
     }
 
     // MARK: - Month section
@@ -195,7 +198,7 @@ struct WizardPricingCalendarView: View {
                 .foregroundStyle(.neutral900)
                 .padding(.horizontal, 20)
 
-            VStack(spacing: 6) {
+            VStack(spacing: cellSpacing) {
                 ForEach(weeksFor(monthStart), id: \.id) { week in
                     weekRow(week)
                 }
@@ -206,21 +209,32 @@ struct WizardPricingCalendarView: View {
 
     @ViewBuilder
     private func weekRow(_ week: WeekRow) -> some View {
-        HStack(spacing: 6) {
-            ForEach(0..<7, id: \.self) { col in
-                if let date = week.days[col] {
-                    dayCell(date: date)
-                        .frame(maxWidth: .infinity)
-                } else {
-                    Color.clear.frame(maxWidth: .infinity, minHeight: 88)
+        ZStack(alignment: .topLeading) {
+            // 1. Dato-celler i bunn
+            HStack(spacing: cellSpacing) {
+                ForEach(0..<7, id: \.self) { col in
+                    if let date = week.days[col] {
+                        dayCell(date: date)
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Color.clear.frame(maxWidth: .infinity)
+                    }
                 }
             }
+            .frame(height: cellHeight)
+
+            // 2. Bånd-bars i overlay (alltid samme y-koordinat innenfor uken)
+            if !bands.isEmpty {
+                bandsOverlay(week: week)
+                    .frame(height: cellHeight)
+                    .allowsHitTesting(false)
+            }
         }
-        .frame(minHeight: 88)
+        .frame(height: cellHeight)
         .id(week.id)
     }
 
-    // MARK: - Day cell (Airbnb-stil — stort kort med dato + pris)
+    // MARK: - Day cell
 
     @ViewBuilder
     private func dayCell(date: Date) -> some View {
@@ -252,11 +266,11 @@ struct WizardPricingCalendarView: View {
                         lineWidth: isAnchor ? 2 : (isSelected || isBlocked ? 1.5 : 1)
                     )
 
-                VStack(spacing: 4) {
+                VStack(spacing: 0) {
                     Text("\(day)")
                         .font(.system(size: 16, weight: (isSelected || isAnchor) ? .bold : .semibold))
-                        .foregroundStyle(cellText(isPast: isPast, isBlocked: isBlocked, isSelected: isSelected, isAnchor: isAnchor))
-                        .padding(.top, 10)
+                        .foregroundStyle(cellText(isPast: isPast, isBlocked: isBlocked))
+                        .padding(.top, 8)
 
                     Spacer(minLength: 0)
 
@@ -280,7 +294,7 @@ struct WizardPricingCalendarView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(height: 88)
+            .frame(height: cellHeight)
         }
         .buttonStyle(.plain)
         .disabled(isPast)
@@ -304,7 +318,7 @@ struct WizardPricingCalendarView: View {
         return Color.neutral200
     }
 
-    private func cellText(isPast: Bool, isBlocked: Bool, isSelected: Bool, isAnchor: Bool) -> Color {
+    private func cellText(isPast: Bool, isBlocked: Bool) -> Color {
         if isPast { return Color.neutral300 }
         if isBlocked { return Color.neutral400 }
         return Color.neutral900
@@ -316,11 +330,67 @@ struct WizardPricingCalendarView: View {
         return Color.neutral500
     }
 
-    // MARK: - Bottom action bar (Airbnb-stil)
+    // MARK: - Bånd-bars overlay (samme y-linje innenfor uken, alle bånd stables)
+
+    @ViewBuilder
+    private func bandsOverlay(week: WeekRow) -> some View {
+        GeometryReader { g in
+            let totalSpacing = cellSpacing * 6
+            let cellWidth = max(0, (g.size.width - totalSpacing) / 7)
+            let bandHeight: CGFloat = 4
+            let bandStackSpacing: CGFloat = 3
+            let bandStartY: CGFloat = 36  // mellom dato-tall (8-26) og pris (~75-90)
+
+            ForEach(Array(bands.enumerated()), id: \.element.id) { bandIdx, band in
+                let segs = bandSegments(mask: band.dayMask)
+                ForEach(segs.indices, id: \.self) { i in
+                    let seg = segs[i]
+                    let resolved = priceForBand(band, weekKey: week.key)
+                    let isOverride = resolved.scope != nil
+                    let palette = bandPalette(for: band)
+                    let xOffset = CGFloat(seg.start) * (cellWidth + cellSpacing)
+                    let width = CGFloat(seg.end - seg.start + 1) * cellWidth + CGFloat(seg.end - seg.start) * cellSpacing
+                    let yOffset = bandStartY + CGFloat(bandIdx) * (bandHeight + bandStackSpacing)
+
+                    Capsule()
+                        .fill(isOverride ? palette.bgOverride : palette.bgDefault)
+                        .frame(width: max(0, width - 8), height: bandHeight)
+                        .offset(x: xOffset + 4, y: yOffset)
+                }
+            }
+        }
+    }
+
+    /// Dempede pastell-paletter basert på bånd-id-hash. Override = mettet for å skille seg ut.
+    private func bandPalette(for band: WizardPricingBand) -> BandPalette {
+        let palettes: [BandPalette] = [
+            BandPalette(bgDefault: Color(hex: "#86d9b1").opacity(0.85), bgOverride: Color(hex: "#46c185"), border: .clear, text: .white),
+            BandPalette(bgDefault: Color(hex: "#c4b5fd").opacity(0.85), bgOverride: Color(hex: "#8b5cf6"), border: .clear, text: .white),
+            BandPalette(bgDefault: Color(hex: "#fdba74").opacity(0.85), bgOverride: Color(hex: "#f97316"), border: .clear, text: .white),
+            BandPalette(bgDefault: Color(hex: "#93c5fd").opacity(0.85), bgOverride: Color(hex: "#3b82f6"), border: .clear, text: .white),
+            BandPalette(bgDefault: Color(hex: "#f9a8d4").opacity(0.85), bgOverride: Color(hex: "#ec4899"), border: .clear, text: .white),
+        ]
+        let idx = abs(band.id.hashValue) % palettes.count
+        return palettes[idx]
+    }
+
+    private func bandSegments(mask: Int) -> [(start: Int, end: Int)] {
+        var result: [(Int, Int)] = []
+        var inSeg = false
+        var segStart = 0
+        for col in 0..<7 {
+            let isSet = (mask & (1 << col)) != 0
+            if isSet && !inSeg { segStart = col; inSeg = true }
+            else if !isSet && inSeg { result.append((segStart, col - 1)); inSeg = false }
+        }
+        if inSeg { result.append((segStart, 6)) }
+        return result
+    }
+
+    // MARK: - Bottom action bar (glassmorphism cards)
 
     private var actionBar: some View {
         VStack(spacing: 10) {
-            // Topp-rad: dato-range pille + lukke-X
             HStack(spacing: 10) {
                 dateRangePill
                 Spacer()
@@ -338,26 +408,19 @@ struct WizardPricingCalendarView: View {
             }
             .padding(.horizontal, 16)
 
-            // To-kort layout: Tilgjengelig + Pris/Tilpasset
             HStack(alignment: .top, spacing: 10) {
                 availabilityCard
                 priceCard
             }
             .padding(.horizontal, 12)
-            .padding(.bottom, 8)
+            .padding(.bottom, 12)
         }
         .padding(.top, 10)
         .background(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(.ultraThinMaterial)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .stroke(Color.white.opacity(0.4), lineWidth: 0.5)
-                )
-                .shadow(color: .black.opacity(0.10), radius: 16, y: -4)
+            Rectangle()
+                .fill(Color.white)
+                .ignoresSafeArea(edges: .bottom)
         )
-        .padding(.horizontal, 12)
-        .padding(.bottom, 8)
     }
 
     private var dateRangePill: some View {
@@ -381,7 +444,7 @@ struct WizardPricingCalendarView: View {
         return Button {
             toggleBlockSelected()
         } label: {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 6) {
                     Text("Tilgjengelig")
                         .font(.system(size: 13, weight: .semibold))
@@ -390,12 +453,10 @@ struct WizardPricingCalendarView: View {
                         .fill(allOpen ? Color(hex: "#22c55e") : Color(hex: "#ef4444"))
                         .frame(width: 7, height: 7)
                 }
-                Spacer(minLength: 6)
-
-                // Toggle-bryter Airbnb-stil: liten capsule med to states
+                Spacer(minLength: 0)
                 ZStack(alignment: allOpen ? .trailing : .leading) {
                     Capsule()
-                        .fill(Color.white.opacity(0.18))
+                        .fill(Color.white.opacity(0.16))
                         .frame(width: 76, height: 32)
                     Capsule()
                         .fill(Color.white)
@@ -412,70 +473,84 @@ struct WizardPricingCalendarView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(14)
             .frame(height: 130)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(Color.neutral900)
-            )
+            .background(glassCardBackground)
         }
         .buttonStyle(.plain)
     }
 
     private var priceCard: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Pris per time")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Text("\(currentSelectedPriceText)")
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(.white)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                }
-                Spacer(minLength: 0)
-            }
+            Text("Pris per time")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
 
             Spacer(minLength: 0)
 
-            Button {
-                showDatePriceSheet = true
-            } label: {
-                HStack(spacing: 6) {
-                    Text("Tilpasset pris")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Spacer()
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
-                .background(Color.white.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-            }
-            .buttonStyle(.plain)
+            inlinePriceEditor
+
+            Spacer(minLength: 0)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .frame(height: 130)
-        .background(
-            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                .fill(Color.neutral900)
-        )
+        .background(glassCardBackground)
     }
 
-    private var currentSelectedPriceText: String {
-        let prices = selectedDates.compactMap { iso -> Int? in
-            guard let date = Self.isoFormatter.date(from: iso) else { return nil }
-            return priceForDate(date)?.amount
+    private var inlinePriceEditor: some View {
+        HStack(spacing: 10) {
+            Button {
+                stepPrice(by: -10)
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 26, height: 26)
+                    .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
+            }
+            .buttonStyle(.plain)
+
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                TextField("", value: $priceEditValue, formatter: NumberFormatter())
+                    .focused($priceEditFocused)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.white)
+                    .fixedSize()
+                    .frame(minWidth: 40)
+                    .onAppear { syncPriceEditFromSelection() }
+                    .onChange(of: selectedDates) { _, _ in syncPriceEditFromSelection() }
+                Text("kr")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+
+            Button {
+                stepPrice(by: 10)
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 26, height: 26)
+                    .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
+            }
+            .buttonStyle(.plain)
         }
-        guard !prices.isEmpty else { return "\(basePerHour) kr" }
-        let minP = prices.min() ?? basePerHour
-        let maxP = prices.max() ?? basePerHour
-        if minP == maxP { return "\(minP) kr" }
-        return "\(minP)–\(maxP) kr"
+    }
+
+    /// Glassmorphism: mørk frosted glass med hairline-kant.
+    private var glassCardBackground: some View {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.black.opacity(0.55))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
     }
 
     private func formatDateRange() -> String {
@@ -510,14 +585,12 @@ struct WizardPricingCalendarView: View {
         let weekNum = cal.component(.weekOfYear, from: date)
         let weekKey = WeekKey(year: year, weekNum: weekNum)
 
-        // Finn første bånd som matcher dagen
         for band in bands {
             if (band.dayMask & (1 << bit)) != 0 {
                 let resolved = priceForBand(band, weekKey: weekKey)
                 return ResolvedDayPrice(amount: resolved.price, isOverride: resolved.scope != nil)
             }
         }
-        // Ingen bånd matcher dagen — alltid ledig fallback til base
         return ResolvedDayPrice(amount: basePerHour, isOverride: false)
     }
 
@@ -589,7 +662,6 @@ struct WizardPricingCalendarView: View {
         let allBlocked = selectedDates.allSatisfy { existing.contains($0) }
         var updated = existing
         if allBlocked {
-            // Avblokkér
             updated.subtract(selectedDates)
         } else {
             updated.formUnion(selectedDates)
@@ -597,25 +669,43 @@ struct WizardPricingCalendarView: View {
         form.spotMarkers[idx].blockedDates = updated.isEmpty ? nil : Array(updated).sorted()
     }
 
-    private func applyDateOverride(price: Int) {
-        var avail = availability
-        for date in selectedDates {
-            if let i = avail.dateOverrides.firstIndex(where: { $0.date == date }) {
-                avail.dateOverrides[i].price = price
-            } else {
-                avail.dateOverrides.append(WizardDateOverride(date: date, price: price))
-            }
-        }
-        form.setAvailability(avail, for: spotId)
-    }
-
-    private func averageSelectedPrice() -> Int? {
+    private func syncPriceEditFromSelection() {
         let prices = selectedDates.compactMap { iso -> Int? in
             guard let date = Self.isoFormatter.date(from: iso) else { return nil }
             return priceForDate(date)?.amount
         }
-        guard !prices.isEmpty else { return nil }
-        return prices.reduce(0, +) / prices.count
+        if let first = prices.first {
+            priceEditValue = first
+        } else {
+            priceEditValue = basePerHour
+        }
+    }
+
+    private func stepPrice(by delta: Int) {
+        let newValue = max(0, priceEditValue + delta)
+        priceEditValue = newValue
+        applyDateOverride(price: newValue)
+    }
+
+    private func commitPriceEdit() {
+        applyDateOverride(price: priceEditValue)
+    }
+
+    private func applyDateOverride(price: Int) {
+        var avail = availability
+        if price <= 0 || price == basePerHour {
+            // Fjern overstyring hvis prisen er null eller lik base
+            avail.dateOverrides.removeAll { selectedDates.contains($0.date) }
+        } else {
+            for date in selectedDates {
+                if let i = avail.dateOverrides.firstIndex(where: { $0.date == date }) {
+                    avail.dateOverrides[i].price = price
+                } else {
+                    avail.dateOverrides.append(WizardDateOverride(date: date, price: price))
+                }
+            }
+        }
+        form.setAvailability(avail, for: spotId)
     }
 
     // MARK: - Måned-uker-helper
@@ -666,6 +756,13 @@ struct WeekRow: Identifiable {
     }
 }
 
+struct BandPalette {
+    let bgDefault: Color
+    let bgOverride: Color
+    let border: Color
+    let text: Color
+}
+
 extension WizardPricingCalendarView {
     static func dateRangeForWeek(year: Int, week: Int) -> (start: String, end: String)? {
         var cal = Calendar(identifier: .iso8601)
@@ -683,67 +780,5 @@ extension WizardPricingCalendarView {
         f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
         f.locale = Locale(identifier: "en_US_POSIX")
         return (f.string(from: monday), f.string(from: sunday))
-    }
-}
-
-/// Sheet for å sette pris for valgte enkelt-datoer. Brukes fra "Tilpasset pris"-knappen
-/// i bunn-actionbar.
-private struct DatePriceSheet: View {
-    let basePerHour: Int
-    let selectedCount: Int
-    let currentPrice: Int
-    let onSave: (Int) -> Void
-    let onCancel: () -> Void
-
-    @State private var priceText: String = ""
-    @FocusState private var focused: Bool
-
-    var body: some View {
-        NavigationStack {
-            VStack(alignment: .leading, spacing: 16) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Tilpasset pris for \(selectedCount) \(selectedCount == 1 ? "dag" : "dager")")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.neutral900)
-                    Text("Standardpris er \(basePerHour) kr/time. Sett en annen pris for valgte datoer.")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral500)
-                }
-                HStack(spacing: 10) {
-                    TextField("\(basePerHour)", text: $priceText)
-                        .focused($focused)
-                        .keyboardType(.numberPad)
-                        .font(.system(size: 28, weight: .bold))
-                        .foregroundStyle(.primary600)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 12)
-                        .frame(maxWidth: 160)
-                        .background(Color.primary50)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    Text("kr/time")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.neutral500)
-                    Spacer()
-                }
-                Spacer()
-            }
-            .padding(20)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Avbryt") { onCancel() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Lagre") {
-                        if let p = Int(priceText), p > 0 { onSave(p) }
-                    }
-                    .fontWeight(.semibold)
-                    .disabled((Int(priceText) ?? 0) <= 0)
-                }
-            }
-            .onAppear {
-                priceText = "\(currentPrice)"
-                focused = true
-            }
-        }
     }
 }

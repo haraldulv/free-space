@@ -129,42 +129,12 @@ struct SpotPriceVariationStep: View {
 
     @ViewBuilder
     private func editingPhase(spotId: String, index: Int) -> some View {
-        VStack(alignment: .leading, spacing: 0) {
-            VStack(alignment: .leading, spacing: 6) {
-                editingHeader(index: index)
-                Button {
-                    var avail = form.availability(for: spotId)
-                    avail.bandPriceOverrides.removeAll()
-                    form.setAvailability(avail, for: spotId)
-                    phasePerSpot[spotId] = .ask
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "chevron.left")
-                            .font(.system(size: 11, weight: .semibold))
-                        Text("Tilbake til fast pris")
-                            .font(.system(size: 13, weight: .semibold))
-                    }
-                    .foregroundStyle(.neutral600)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 24)
-            .padding(.top, 8)
-            .padding(.bottom, 12)
-
-            // WizardPricingCalendarView har sin egen ScrollView — INGEN outer
-            // ScrollView, ellers kolliderer SwiftUI-layout og rendrer ask +
-            // editing overlappende.
-            WizardPricingCalendarView(form: form, spotId: spotId)
-        }
-    }
-
-    @ViewBuilder
-    private func editingHeader(index: Int) -> some View {
-        let total = form.spotMarkers.count
-        Text(total == 1 ? "Pris-variasjon" : "Pris-variasjon for plass \(index + 1)")
-            .font(.system(size: 24, weight: .bold))
-            .foregroundStyle(.neutral900)
+        // Full-skjerm: ingen header, ingen "Tilbake til fast pris"-pille.
+        // Kalenderen tar all plass. Wizard-progress-bar skjules via
+        // form.fullscreenStep. Brukeren går tilbake via WizardNavBar nederst.
+        WizardPricingCalendarView(form: form, spotId: spotId)
+            .onAppear { form.fullscreenStep = true }
+            .onDisappear { form.fullscreenStep = false }
     }
 }
 

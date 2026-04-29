@@ -134,16 +134,6 @@
         }
       }
     },
-    "%@ %@ valgt" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ %2$@ valgt"
-          }
-        }
-      }
-    },
     "%@ → %@" : {
       "localizations" : {
         "de" : {
@@ -2576,9 +2566,6 @@
         }
       }
     },
-    "Gjelder" : {
-
-    },
     "Gjeste-favoritt" : {
 
     },
@@ -2827,9 +2814,6 @@
     "Hold samtaler i Tuno" : {
 
     },
-    "Hopp over" : {
-
-    },
     "Hovedposisjon" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3037,9 +3021,6 @@
           }
         }
       }
-    },
-    "Ikke vis denne guiden igjen" : {
-
     },
     "Ikke vis denne meldingen igjen" : {
 
@@ -5509,6 +5490,9 @@
         }
       }
     },
+    "Pris per time" : {
+
+    },
     "Prisenhet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6367,9 +6351,6 @@
     "Standardpris er %@ kr/time. Sett en annen pris for valgte datoer." : {
 
     },
-    "Standardpris er %@ kr/time. Sett en annen pris for valgte uker." : {
-
-    },
     "Standardpris per natt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6392,16 +6373,6 @@
     },
     "Start-dato satt" : {
 
-    },
-    "Steg %@ av %@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Steg %1$@ av %2$@"
-          }
-        }
-      }
     },
     "Største kjøretøy som passer på plassen, i meter. Påkrevd for bobil og campingbil." : {
 
@@ -6520,9 +6491,6 @@
     "Tap for å plassere" : {
 
     },
-    "Tap på et bånd for å endre prisen for den uken eller spesifikke uker. Tap dato-celler for å blokkere eller sette pris per dag." : {
-
-    },
     "Tap på kartet for å justere hovedposisjon. Bruk \"Marker plasser\" for å plassere individuelle plass-markører." : {
 
     },
@@ -6567,6 +6535,9 @@
       }
     },
     "Tilbake til fast pris" : {
+
+    },
+    "Tilgjengelig" : {
 
     },
     "Tilgjengelig i dag" : {
@@ -6667,6 +6638,19 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add-ons"
+          }
+        }
+      }
+    },
+    "Tilpasset pris" : {
+
+    },
+    "Tilpasset pris for %@ %@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Tilpasset pris for %1$@ %2$@"
           }
         }
       }
@@ -6886,9 +6870,6 @@
           }
         }
       }
-    },
-    "Uke %@" : {
-
     },
     "Ukjent" : {
       "extractionState" : "manual",

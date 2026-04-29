@@ -45,15 +45,19 @@ struct CreateListingView: View {
 
     private var mainContent: some View {
         VStack(spacing: 0) {
-            WizardProgressBar(progress: form.displayProgress)
-                .padding(.horizontal, 20)
-            .padding(.top, 4)
-            .padding(.bottom, 12)
+            if !form.fullscreenStep {
+                WizardProgressBar(progress: form.displayProgress)
+                    .padding(.horizontal, 20)
+                    .padding(.top, 4)
+                    .padding(.bottom, 12)
+                    .transition(.move(edge: .top).combined(with: .opacity))
+            }
 
             errorBanner
 
             stepsTabView
         }
+        .animation(.easeInOut(duration: 0.22), value: form.fullscreenStep)
         // Tap utenfor felter lukker tastaturet — standard iOS-mønster.
         .contentShape(Rectangle())
         .onTapGesture {

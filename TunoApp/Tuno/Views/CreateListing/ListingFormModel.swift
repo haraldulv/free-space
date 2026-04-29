@@ -68,6 +68,11 @@ final class ListingFormModel: ObservableObject {
     // MARK: - Step 15: Kalender (blocked_dates) — kun camping
     @Published var blockedDates: Set<String> = []
 
+    // MARK: - Visningsmodus (full-skjerm, satt fra mini-wizard)
+    /// True når et steg ønsker å skjule progress-bar / wizard-chrome (eks.
+    /// SpotPriceVariation editing-fasen som vil dekke hele skjermen).
+    @Published var fullscreenStep: Bool = false
+
     // MARK: - Listing-level (settes ved review)
     @Published var instantBooking = true
     /// Listing-nivå priceUnit — derives fra kategori (camping=natt, parkering=time/døgn).
