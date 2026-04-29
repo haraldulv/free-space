@@ -2,7 +2,9 @@ import { createClient as createServerClient } from "@/lib/supabase/server";
 import { createClient as createServiceClient } from "@supabase/supabase-js";
 
 export type PriceSource = "base" | "weekend" | "season" | "override";
-export type HourlyPriceSource = "base" | "hourly" | "override";
+export type HourlyPriceSource = "base" | "hourly" | "override" | "unavailable";
+
+export type AvailabilityMode = "always" | "bands";
 
 export interface NightlyPrice {
   /** ISO dato "YYYY-MM-DD" (natten som starter denne datoen) */
@@ -30,12 +32,16 @@ export interface PricingRule {
   /** Hourly bånd: time 1..24 (eksklusiv). NULL ellers. */
   endHour: number | null;
   price: number;
+  /** Hvilken plass (SpotMarker.id) regelen gjelder. NULL = listing-wide. */
+  spotId: string | null;
 }
 
 export interface PricingOverride {
   listingId: string;
   date: string;
   price: number;
+  /** Hvilken plass (SpotMarker.id) overstyringen gjelder. NULL = listing-wide. */
+  spotId: string | null;
 }
 
 /** Default helg-maske: fredag (bit 4), lørdag (bit 5), søndag (bit 6). */
@@ -191,6 +197,10 @@ interface ResolveHourlyInput {
   checkOutAt: string;
   /** Base hourly-pris (kr/time). */
   basePrice: number;
+  /** Spot som booking gjelder for. NULL = listing-wide kun. */
+  spotId?: string | null;
+  /** Plassens availability_mode (fra listings-tabellen). Default 'always'. */
+  availabilityMode?: AvailabilityMode;
 }
 
 /**
@@ -215,27 +225,36 @@ function osloHourParts(d: Date): { dateIso: string; hour: number; weekdayBit: nu
 }
 
 /**
- * Server-autoritativ hourly-resolution. Presedens: override (per dato) > hourly-bånd
- * (matchende dag-bit + time i [start_hour, end_hour)) > base hourly-pris.
+ * Server-autoritativ hourly-resolution. Presedens:
+ *   1) override (per dato — spot-spesifikk vinner over listing-wide)
+ *   2) hourly-bånd (spot-spesifikk + dato-spesifikk vinner i den rekkefølgen)
+ *   3) unavailable (kun når mode='bands' og det finnes båndregler men ingen match)
+ *   4) base hourly-pris
  *
  * MERK: alle tids-sammenligninger gjøres i Europe/Oslo, uavhengig av server-TZ.
+ *
+ * `rules` og `overrides` skal være pre-filtrert til de som er relevante for
+ * målet (spot_id IS NULL OR spot_id=targetSpotId), eller alle hvis ikke per-spot.
  */
 export function resolveHourlyPrice(
   hourCursor: Date,
   basePrice: number,
   rules: PricingRule[],
   overrides: PricingOverride[],
+  availabilityMode: AvailabilityMode = "always",
 ): { price: number; source: HourlyPriceSource } {
   const { dateIso, hour, weekdayBit: bit } = osloHourParts(hourCursor);
 
-  // 1) Override (per dato — gjelder hele døgnet)
-  const override = overrides.find((o) => o.date === dateIso);
+  // 1) Override (per dato — gjelder hele døgnet). Spot-spesifikk vinner over listing-wide.
+  const matchingOverrides = overrides
+    .filter((o) => o.date === dateIso)
+    .sort((a, b) => (b.spotId ? 1 : 0) - (a.spotId ? 1 : 0));
+  const override = matchingOverrides[0];
   if (override) return { price: override.price, source: "override" };
 
-  // 2) Hourly-bånd. Uke-spesifikke regler (har start_date/end_date) vinner
-  // over default-bånd (null/null) når begge matcher samme tidspunkt.
-  const matchingBands = rules.filter((r) => {
-    if (r.kind !== "hourly") return false;
+  // 2) Hourly-bånd. Spot-spesifikk vinner over listing-wide, dato-spesifikk vinner over allWeeks.
+  const hourlyRules = rules.filter((r) => r.kind === "hourly");
+  const matchingBands = hourlyRules.filter((r) => {
     if (typeof r.dayMask !== "number") return false;
     if (r.startHour === null || r.endHour === null) return false;
     if (r.startDate && dateIso < r.startDate) return false;
@@ -244,16 +263,24 @@ export function resolveHourlyPrice(
     const hourMatches = hour >= r.startHour && hour < r.endHour;
     return dayMatches && hourMatches;
   });
-  // Sortér: dato-avgrensede regler først (mer spesifikke vinner)
   matchingBands.sort((a, b) => {
-    const aSpecific = a.startDate !== null || a.endDate !== null ? 1 : 0;
-    const bSpecific = b.startDate !== null || b.endDate !== null ? 1 : 0;
-    return bSpecific - aSpecific;
+    const aSpot = a.spotId ? 1 : 0;
+    const bSpot = b.spotId ? 1 : 0;
+    if (aSpot !== bSpot) return bSpot - aSpot;
+    const aDate = a.startDate !== null || a.endDate !== null ? 1 : 0;
+    const bDate = b.startDate !== null || b.endDate !== null ? 1 : 0;
+    return bDate - aDate;
   });
   const band = matchingBands[0];
   if (band) return { price: band.price, source: "hourly" };
 
-  // 3) Base
+  // 3) Unavailable-sentinel: kun når mode='bands' OG det finnes båndregler i pre-filtrert
+  // sett, men ingen matcher denne timen. Da er plassen eksplisitt utenfor åpningstiden.
+  if (availabilityMode === "bands" && hourlyRules.length > 0) {
+    return { price: 0, source: "unavailable" };
+  }
+
+  // 4) Base
   return { price: basePrice, source: "base" };
 }
 
@@ -317,9 +344,25 @@ function buildHourlyBreakdown(
   const result: HourlyPrice[] = [];
   const cursor = new Date(input.checkInAt);
   const end = new Date(input.checkOutAt);
+  const mode = input.availabilityMode ?? "always";
+
+  // Pre-filter til spot-relevante regler/overrides: spot_id IS NULL OR spot_id=target.
+  const spotId = input.spotId ?? null;
+  const filteredRules = spotId
+    ? rules.filter((r) => r.spotId === null || r.spotId === spotId)
+    : rules.filter((r) => r.spotId === null);
+  const filteredOverrides = spotId
+    ? overrides.filter((o) => o.spotId === null || o.spotId === spotId)
+    : overrides.filter((o) => o.spotId === null);
 
   while (cursor < end) {
-    const { price, source } = resolveHourlyPrice(cursor, input.basePrice, rules, overrides);
+    const { price, source } = resolveHourlyPrice(
+      cursor,
+      input.basePrice,
+      filteredRules,
+      filteredOverrides,
+      mode,
+    );
     result.push({ hourAt: cursor.toISOString(), price, source });
     cursor.setHours(cursor.getHours() + 1);
   }
@@ -342,6 +385,7 @@ function rowToRule(row: Record<string, unknown>): PricingRule {
     startHour: (row.start_hour as number | null) ?? null,
     endHour: (row.end_hour as number | null) ?? null,
     price: row.price as number,
+    spotId: (row.spot_id as string | null) ?? null,
   };
 }
 
@@ -350,5 +394,11 @@ function rowToOverride(row: Record<string, unknown>): PricingOverride {
     listingId: row.listing_id as string,
     date: row.date as string,
     price: row.price as number,
+    spotId: (row.spot_id as string | null) ?? null,
   };
+}
+
+/** Hjelper: returner true hvis breakdown inneholder en time markert som unavailable. */
+export function hourlyBreakdownHasUnavailable(breakdown: HourlyPrice[]): boolean {
+  return breakdown.some((h) => h.source === "unavailable");
 }

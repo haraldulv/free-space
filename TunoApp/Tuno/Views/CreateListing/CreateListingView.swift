@@ -126,16 +126,17 @@ struct CreateListingView: View {
         case 3: SpotCountStep(form: form)
         case 4: MarkSpotsStep(form: form)
         case 5: SpotDetailsStep(form: form)
-        case 6: SpotPriceStep(form: form)
-        case 7: SpotExtrasStep(form: form)
-        case 8: InstantBookingStep(form: form)
-        case 9: DescriptionStep(form: form)
-        case 10: PhotosStep(form: form)
-        case 11: AmenitiesStep(form: form)
-        case 12: MessagesStep(form: form)
-        case 13: PriceRulesStep(form: form)
-        case 14: CalendarStep(form: form)
-        case 15: PublishStep(form: form)
+        case 6: SpotAvailabilityStep(form: form)
+        case 7: SpotPriceStep(form: form)
+        case 8: SpotExtrasStep(form: form)
+        case 9: InstantBookingStep(form: form)
+        case 10: DescriptionStep(form: form)
+        case 11: PhotosStep(form: form)
+        case 12: AmenitiesStep(form: form)
+        case 13: MessagesStep(form: form)
+        case 14: PriceRulesStep(form: form)
+        case 15: CalendarStep(form: form)
+        case 16: PublishStep(form: form)
         default: EmptyView()
         }
     }
@@ -276,10 +277,72 @@ struct CreateListingView: View {
 
                 await authManager.loadProfile()
                 if let listing = inserted.first {
-                    // Persist time-bånd-regler (parkering per time). Bånd med
-                    // .allWeeks blir én rad (start_date/end_date = NULL). Bånd
-                    // med .specificWeeks(set) blir N rader, en per ISO-uke,
-                    // hver med start_date = mandag og end_date = søndag.
+                    // Persist tilgjengelighets-bånd + pris-overstyring per plass.
+                    // For hver plass:
+                    //   1) Default-bånd-rad per tilgjengelighets-bånd (price=basePerHour, alle uker)
+                    //   2) Override-bånd-rader for hvert bandPriceOverride (per uke-scope)
+                    //   3) Date-overrides → listing_pricing_overrides (per dato)
+                    for spot in form.spotMarkers {
+                        guard let spotId = spot.id else { continue }
+                        let avail = form.availability(for: spotId)
+                        let basePerHour = spot.pricePerHour ?? 0
+                        // 1) Default-bånd-rader (per allWeeks default-pris)
+                        for band in avail.bands {
+                            try? await PricingService.addHourlyBandRule(
+                                listingId: listing.id,
+                                dayMask: band.dayMask,
+                                startHour: band.startHour,
+                                endHour: band.endHour,
+                                price: basePerHour,
+                                startDate: nil,
+                                endDate: nil,
+                                spotId: spotId
+                            )
+                        }
+                        // 2) Override-bånd-rader: én rad per uke i scope
+                        for override in avail.bandPriceOverrides {
+                            guard let band = avail.bands.first(where: { $0.id == override.bandId }) else { continue }
+                            switch override.weekScope {
+                            case .allWeeks:
+                                try? await PricingService.addHourlyBandRule(
+                                    listingId: listing.id,
+                                    dayMask: band.dayMask,
+                                    startHour: band.startHour,
+                                    endHour: band.endHour,
+                                    price: override.price,
+                                    startDate: nil,
+                                    endDate: nil,
+                                    spotId: spotId
+                                )
+                            case .specificWeeks(let weeks):
+                                for week in weeks {
+                                    guard let range = PriceRulesStep.dateRangeForWeek(year: week.year, week: week.weekNum) else { continue }
+                                    try? await PricingService.addHourlyBandRule(
+                                        listingId: listing.id,
+                                        dayMask: band.dayMask,
+                                        startHour: band.startHour,
+                                        endHour: band.endHour,
+                                        price: override.price,
+                                        startDate: range.start,
+                                        endDate: range.end,
+                                        spotId: spotId
+                                    )
+                                }
+                            }
+                        }
+                        // 3) Date-overrides
+                        for dateOverride in avail.dateOverrides {
+                            try? await PricingService.setOverride(
+                                listingId: listing.id,
+                                date: dateOverride.date,
+                                price: dateOverride.price,
+                                spotId: spotId
+                            )
+                        }
+                    }
+
+                    // Legacy: listing-wide bånd fra PriceRulesStep editing-fase.
+                    // Beholdes for v1 — kommer til å erstattes av WizardPricingCalendarView.
                     for band in form.pricingBands {
                         switch band.weekScope {
                         case .allWeeks:
@@ -290,7 +353,8 @@ struct CreateListingView: View {
                                 endHour: band.endHour,
                                 price: band.price,
                                 startDate: nil,
-                                endDate: nil
+                                endDate: nil,
+                                spotId: nil
                             )
                         case .specificWeeks(let weeks):
                             for week in weeks {
@@ -302,7 +366,8 @@ struct CreateListingView: View {
                                     endHour: band.endHour,
                                     price: band.price,
                                     startDate: range.start,
-                                    endDate: range.end
+                                    endDate: range.end,
+                                    spotId: nil
                                 )
                             }
                         }

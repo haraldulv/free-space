@@ -98,6 +98,7 @@
 		C20A38400F387BEF58A71667 /* HostRequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A959B31DE4731320F9A990 /* HostRequestsView.swift */; };
 		C25D7B4AA951AAD25EF7FD36 /* HostOnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */; };
 		C34BE6B3922A411B534762E6 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = A2D7BAFCCFBB3E087B97786C /* GoogleMaps */; };
+		C4FE3857BD5551454054263A /* SpotAvailabilityStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A32E4837D41534ECFB0953 /* SpotAvailabilityStep.swift */; };
 		C76237D5837392B271673FB3 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD96E8DCCD58804E7D8E5F9 /* Theme.swift */; };
 		CA48E2836B846266237AD524 /* ImageCropPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 537CD1B9259B6FDD9DBA8E37 /* ImageCropPicker.swift */; };
 		CB46F5F9050B9E87910DA0CD /* PublishStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B65DE53742FC3A764A59D8C /* PublishStep.swift */; };
@@ -177,6 +178,7 @@
 		5467FA534273021B9B949773 /* WizardProgressBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WizardProgressBar.swift; sourceTree = "<group>"; };
 		54806C1D2B79947D8E8CE6C9 /* HostOnboardingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingService.swift; sourceTree = "<group>"; };
 		56E3029710A8D3475494799E /* PricingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PricingService.swift; sourceTree = "<group>"; };
+		58A32E4837D41534ECFB0953 /* SpotAvailabilityStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotAvailabilityStep.swift; sourceTree = "<group>"; };
 		5A9DFF0FBCEDEA70C1C84433 /* SpotCountStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotCountStep.swift; sourceTree = "<group>"; };
 		5B65DE53742FC3A764A59D8C /* PublishStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishStep.swift; sourceTree = "<group>"; };
 		5C5065BE9CC3C749754F554F /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
@@ -553,6 +555,7 @@
 				3357259B4CCDFE2FA9F1745C /* PhotosStep.swift */,
 				0A9EC5E71200181A2554E2E6 /* PriceRulesStep.swift */,
 				5B65DE53742FC3A764A59D8C /* PublishStep.swift */,
+				58A32E4837D41534ECFB0953 /* SpotAvailabilityStep.swift */,
 				5A9DFF0FBCEDEA70C1C84433 /* SpotCountStep.swift */,
 				1213A1E7AC0AB0C6683A1A43 /* SpotDetailCard.swift */,
 				E168ECC061FD115C52320C1F /* SpotDetailsStep.swift */,
@@ -763,6 +766,7 @@
 				FE23B05A859AA8FCC5B7D037 /* SearchPill.swift in Sources */,
 				E912DD2299D28C54B1846A12 /* SearchView.swift in Sources */,
 				239CA481C3CC9C22AD9D3096 /* SettingsView.swift in Sources */,
+				C4FE3857BD5551454054263A /* SpotAvailabilityStep.swift in Sources */,
 				0FD3445EB4FD7DC8AE465DC3 /* SpotBlockedDatesSection.swift in Sources */,
 				E50042878D13F35711A857AD /* SpotCountStep.swift in Sources */,
 				6CB4EB3DA766CB6BC5FC1B67 /* SpotDetailCard.swift in Sources */,
@@ -824,7 +828,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 118;
+				CURRENT_PROJECT_VERSION = 119;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -924,7 +928,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 118;
+				CURRENT_PROJECT_VERSION = 119;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

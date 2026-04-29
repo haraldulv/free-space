@@ -552,8 +552,16 @@ struct BandPrefill: Identifiable {
 // MARK: - Add bånd-sheet
 
 struct AddHourlyBandSheet: View {
+    enum Mode {
+        /// Vis pris-felt — for pris-bånd-redigerer
+        case pricing
+        /// Skjul pris-felt — for tilgjengelighets-bånd-redigerer (pris settes ellers)
+        case availability
+    }
+
     let basePrice: Int
     let prefill: BandPrefill?
+    var mode: Mode = .pricing
     let onSave: (_ dayMask: Int, _ startHour: Int, _ endHour: Int, _ price: Int) -> Void
 
     @Environment(\.dismiss) var dismiss
@@ -569,7 +577,10 @@ struct AddHourlyBandSheet: View {
     }
 
     private var canSave: Bool {
-        guard let p = Int(priceText), p > 0 else { return false }
+        if mode == .pricing {
+            guard let p = Int(priceText), p > 0 else { return false }
+            return !selectedDays.isEmpty && endHour > startHour
+        }
         return !selectedDays.isEmpty && endHour > startHour
     }
 
@@ -579,11 +590,13 @@ struct AddHourlyBandSheet: View {
                 VStack(alignment: .leading, spacing: 20) {
                     daysSection
                     hoursSection
-                    priceSection
+                    if mode == .pricing {
+                        priceSection
+                    }
                 }
                 .padding(16)
             }
-            .navigationTitle(prefill?.label ?? "Nytt bånd")
+            .navigationTitle(prefill?.label ?? (mode == .availability ? "Nytt åpningstid-bånd" : "Nytt bånd"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -591,10 +604,9 @@ struct AddHourlyBandSheet: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Lagre") {
-                        if let price = Int(priceText) {
-                            onSave(dayMask, startHour, endHour, price)
-                            dismiss()
-                        }
+                        let price = mode == .pricing ? (Int(priceText) ?? 0) : 0
+                        onSave(dayMask, startHour, endHour, price)
+                        dismiss()
                     }
                     .disabled(!canSave)
                     .fontWeight(.semibold)

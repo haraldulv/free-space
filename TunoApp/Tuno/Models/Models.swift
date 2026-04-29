@@ -17,6 +17,12 @@ struct Listing: Codable, Identifiable, Hashable {
     let lng: Double?
     let price: Int?
     let priceUnit: PriceUnit?
+    /// Dual-pricing: per-time-pris (parkering). NULL = denne pris-modusen ikke tilbudt.
+    let pricePerHour: Int?
+    /// Dual-pricing: per-døgn/natt-pris. NULL = denne pris-modusen ikke tilbudt.
+    let pricePerNight: Int?
+    /// 'always' = alltid ledig 24/7. 'bands' = kun ledig innenfor hourly-bånd.
+    let availabilityMode: String?
     let amenities: [String]?
     let maxVehicleLength: Double?
     let spots: Int?
@@ -49,6 +55,9 @@ struct Listing: Codable, Identifiable, Hashable {
         case internalName = "internal_name"
         case vehicleType = "vehicle_type"
         case priceUnit = "price_unit"
+        case pricePerHour = "price_per_hour"
+        case pricePerNight = "price_per_night"
+        case availabilityMode = "availability_mode"
         case maxVehicleLength = "max_vehicle_length"
         case instantBooking = "instant_booking"
         case spotMarkers = "spot_markers"
@@ -100,6 +109,10 @@ struct SpotMarker: Codable, Hashable {
     var label: String?
     var description: String?
     var price: Int?
+    /// Dual-pricing per plass: time-pris. Overstyrer listing-nivå når satt.
+    var pricePerHour: Int?
+    /// Dual-pricing per plass: døgn/natt-pris. Overstyrer listing-nivå når satt.
+    var pricePerNight: Int?
     var vehicleMaxLength: Int?
     /// Multi-select biltyper plassen passer for. Brukes som primær-kilde fra build 61+.
     /// Hvis nil ved decode, derives fra eldre `vehicleType`-felt for backward-compat.
@@ -118,6 +131,8 @@ struct SpotMarker: Codable, Hashable {
 
     enum CodingKeys: String, CodingKey {
         case id, lat, lng, label, description, price, extras, images
+        case pricePerHour = "pricePerHour"
+        case pricePerNight = "pricePerNight"
         case vehicleMaxLength = "vehicleMaxLength"
         case vehicleType = "vehicleType"
         case vehicleTypes = "vehicleTypes"
@@ -196,6 +211,50 @@ struct WizardPricingBand: Identifiable, Hashable {
         self.price = price
         self.weekScope = weekScope
     }
+}
+
+/// Pris-overstyring for et tilgjengelighets-bånd. Brukeren setter en annen
+/// pris for båndet i en spesifikk uke / sett av uker / hele perioden.
+/// Persisteres som ekstra `listing_pricing_rules`-rader (kind='hourly') ved
+/// publisering, med start_date/end_date avledet fra weekScope.
+struct WizardBandPriceOverride: Identifiable, Hashable {
+    let id: UUID
+    /// Refererer til WizardPricingBand.id som denne overstyringen gjelder for.
+    var bandId: UUID
+    var weekScope: WeekScope
+    var price: Int
+
+    init(id: UUID = UUID(), bandId: UUID, weekScope: WeekScope, price: Int) {
+        self.id = id
+        self.bandId = bandId
+        self.weekScope = weekScope
+        self.price = price
+    }
+}
+
+/// Pris-overstyring for en spesifikk dato. Persisteres som rad i
+/// `listing_pricing_overrides`-tabellen ved publisering.
+struct WizardDateOverride: Identifiable, Hashable {
+    let id: UUID
+    var date: String   // "yyyy-MM-dd"
+    var price: Int
+
+    init(id: UUID = UUID(), date: String, price: Int) {
+        self.id = id
+        self.date = date
+        self.price = price
+    }
+}
+
+/// Per-plass-tilgjengelighet og pris-variasjon i wizard-state. Kilde til
+/// sannhet for SpotAvailabilityStep + PriceRulesStep editing-fase. Lagres
+/// IKKE i SpotMarker (som er jsonb) — settes i ListingFormModel og brukes
+/// kun ved publisering for å lage listing_pricing_rules + overrides.
+struct WizardSpotAvailability: Hashable {
+    var alwaysAvailable: Bool = true
+    var bands: [WizardPricingBand] = []
+    var bandPriceOverrides: [WizardBandPriceOverride] = []
+    var dateOverrides: [WizardDateOverride] = []
 }
 
 enum ListingCategory: String, Codable, CaseIterable {

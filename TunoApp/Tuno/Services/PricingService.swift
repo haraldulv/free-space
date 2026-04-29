@@ -17,13 +17,17 @@ enum PricingService {
         /// Hourly-bånd: time 1..24 (eksklusiv). NULL for weekend/season.
         let end_hour: Int?
         let price: Int
+        /// Hvilken plass (SpotMarker.id) regelen gjelder. NULL = listing-wide.
+        let spot_id: String?
     }
 
     struct Override: Codable, Identifiable, Hashable {
-        var id: String { "\(listing_id):\(date)" }
+        var id: String { "\(listing_id):\(date):\(spot_id ?? "")" }
         let listing_id: String
         let date: String
         let price: Int
+        /// Hvilken plass (SpotMarker.id) overstyringen gjelder. NULL = listing-wide.
+        let spot_id: String?
     }
 
     private struct NewRule: Encodable {
@@ -35,6 +39,7 @@ enum PricingService {
         let start_hour: Int?
         let end_hour: Int?
         let price: Int
+        let spot_id: String?
     }
 
     // MARK: - CRUD mot regler
@@ -59,6 +64,7 @@ enum PricingService {
                 start_hour: nil,
                 end_hour: nil,
                 price: price,
+                spot_id: nil,
             )
             try await supabase
                 .from("listing_pricing_rules")
@@ -83,6 +89,7 @@ enum PricingService {
             start_hour: nil,
             end_hour: nil,
             price: price,
+            spot_id: nil,
         )
         try await supabase
             .from("listing_pricing_rules")
@@ -94,6 +101,7 @@ enum PricingService {
     /// Et bånd treffer en booking-time hvis dagen er i `dayMask` OG `startHour <= time < endHour`.
     /// `startDate`/`endDate` (yyyy-MM-dd) avgrenser regelen til en spesifikk
     /// dato-rangen (typisk én ISO-uke). NIL = gjelder alle uker.
+    /// `spotId` setter regelen som per-plass; NULL = listing-wide.
     static func addHourlyBandRule(
         listingId: String,
         dayMask: Int,
@@ -101,7 +109,8 @@ enum PricingService {
         endHour: Int,
         price: Int,
         startDate: String? = nil,
-        endDate: String? = nil
+        endDate: String? = nil,
+        spotId: String? = nil
     ) async throws {
         let rule = NewRule(
             listing_id: listingId,
@@ -112,6 +121,7 @@ enum PricingService {
             start_hour: startHour,
             end_hour: endHour,
             price: price,
+            spot_id: spotId,
         )
         try await supabase
             .from("listing_pricing_rules")
@@ -129,43 +139,56 @@ enum PricingService {
     }
 
     /// Sett override-pris for én dato. Nil/0 sletter eksisterende.
-    static func setOverride(listingId: String, date: String, price: Int?) async throws {
-        try await supabase
+    /// `spotId` scoper override til en plass; NULL = listing-wide.
+    static func setOverride(listingId: String, date: String, price: Int?, spotId: String? = nil) async throws {
+        var deleteQuery = supabase
             .from("listing_pricing_overrides")
             .delete()
             .eq("listing_id", value: listingId)
             .eq("date", value: date)
-            .execute()
+        if let spotId {
+            deleteQuery = deleteQuery.eq("spot_id", value: spotId)
+        } else {
+            deleteQuery = deleteQuery.is("spot_id", value: nil as Bool?)
+        }
+        try await deleteQuery.execute()
 
         if let price, price > 0 {
             struct NewOverride: Encodable {
                 let listing_id: String
                 let date: String
                 let price: Int
+                let spot_id: String?
             }
             try await supabase
                 .from("listing_pricing_overrides")
-                .insert(NewOverride(listing_id: listingId, date: date, price: price))
+                .insert(NewOverride(listing_id: listingId, date: date, price: price, spot_id: spotId))
                 .execute()
         }
     }
 
     /// Sett override for mange datoer samtidig (upsert pattern — slett alle først, insert så).
-    static func setOverrides(listingId: String, dates: [String], price: Int) async throws {
+    static func setOverrides(listingId: String, dates: [String], price: Int, spotId: String? = nil) async throws {
         guard !dates.isEmpty, price > 0 else { return }
-        try await supabase
+        var deleteQuery = supabase
             .from("listing_pricing_overrides")
             .delete()
             .eq("listing_id", value: listingId)
             .in("date", values: dates)
-            .execute()
+        if let spotId {
+            deleteQuery = deleteQuery.eq("spot_id", value: spotId)
+        } else {
+            deleteQuery = deleteQuery.is("spot_id", value: nil as Bool?)
+        }
+        try await deleteQuery.execute()
 
         struct NewOverride: Encodable {
             let listing_id: String
             let date: String
             let price: Int
+            let spot_id: String?
         }
-        let rows = dates.map { NewOverride(listing_id: listingId, date: $0, price: price) }
+        let rows = dates.map { NewOverride(listing_id: listingId, date: $0, price: price, spot_id: spotId) }
         try await supabase
             .from("listing_pricing_overrides")
             .insert(rows)

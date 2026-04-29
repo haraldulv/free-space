@@ -7,8 +7,10 @@ import {
   applyPriceBreakdown,
   getHourlyPricesWithServiceClient,
   applyHourlyPriceBreakdown,
+  hourlyBreakdownHasUnavailable,
   type NightlyPrice,
   type HourlyPrice,
+  type AvailabilityMode,
 } from "@/lib/pricing";
 import type { SpotMarker, ListingExtra, SelectedExtras } from "@/types";
 
@@ -24,7 +26,9 @@ async function computeTotalWithBreakdown(args: {
   checkOutAt?: string | null;
   selectedSpotIds?: string[];
   selectedExtras?: SelectedExtras;
-}): Promise<{ total: number; breakdown: NightlyPrice[] | HourlyPrice[] | null }> {
+  /** Listing availability mode. Brukes for å avvise hourly bookings utenfor bånd. */
+  availabilityMode?: AvailabilityMode;
+}): Promise<{ total: number; breakdown: NightlyPrice[] | HourlyPrice[] | null; unavailable?: boolean }> {
   const isHourly = !!(args.checkInAt && args.checkOutAt);
   const start = new Date(args.checkIn);
   const end = new Date(args.checkOut);
@@ -48,18 +52,26 @@ async function computeTotalWithBreakdown(args: {
   if (hasPerSpotPricing) {
     baseTotal = selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * units, 0);
   } else if (isHourly) {
-    // Hourly listing: per-time-resolution med band-regler (override > hourly-bånd > base).
+    // Hourly listing: per-time-resolution med band-regler.
+    // Per-spot scope: hvis kun én plass er valgt, send spotId så server filtrerer
+    // bånd til den plassens regler (med fallback til listing-wide).
+    const targetSpotId = args.selectedSpotIds?.length === 1 ? args.selectedSpotIds[0] : null;
     const hourlyBreakdown = await getHourlyPricesWithServiceClient(
       {
         listingId: args.listingId,
         checkInAt: args.checkInAt!,
         checkOutAt: args.checkOutAt!,
         basePrice: args.listingPrice,
+        spotId: targetSpotId,
+        availabilityMode: args.availabilityMode ?? "always",
       },
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
     breakdown = hourlyBreakdown;
+    if (hourlyBreakdownHasUnavailable(hourlyBreakdown)) {
+      return { total: 0, breakdown, unavailable: true };
+    }
     baseTotal = applyHourlyPriceBreakdown(hourlyBreakdown);
   } else {
     breakdown = await getNightlyPricesWithServiceClient(
@@ -148,7 +160,7 @@ export async function POST(request: NextRequest) {
     // Check availability
     const { data: listing } = await supabase
       .from("listings")
-      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time")
+      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, availability_mode")
       .eq("id", listingId)
       .single();
 
@@ -161,7 +173,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Rekalkulér totalen autoritativt server-side — klient sender ikke lenger beløp.
-    const { total: totalPrice, breakdown } = await computeTotalWithBreakdown({
+    const { total: totalPrice, breakdown, unavailable } = await computeTotalWithBreakdown({
       listingId,
       listingPrice: listing.price,
       spotMarkers: listing.spot_markers as SpotMarker[] | null,
@@ -172,7 +184,15 @@ export async function POST(request: NextRequest) {
       checkOutAt,
       selectedSpotIds,
       selectedExtras,
+      availabilityMode: (listing.availability_mode as AvailabilityMode) ?? "always",
     });
+
+    if (unavailable) {
+      return NextResponse.json(
+        { error: "Plassen er ikke tilgjengelig på det valgte tidspunktet." },
+        { status: 409 },
+      );
+    }
 
     // Stripe krever minst kr 3 for NOK-betalinger.
     if (totalPrice < 3) {

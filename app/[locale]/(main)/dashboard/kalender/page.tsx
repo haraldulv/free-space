@@ -73,7 +73,7 @@ export default async function HostCalendarPage({
       .lte("check_in", endDate),
     supabase
       .from("listing_pricing_overrides")
-      .select("listing_id, date, price")
+      .select("listing_id, date, price, spot_id")
       .in("listing_id", listingIds)
       .gte("date", startDate)
       .lte("date", endDate),
@@ -87,6 +87,7 @@ export default async function HostCalendarPage({
     listingId: r.listing_id as string,
     date: r.date as string,
     price: r.price as number,
+    spotId: (r.spot_id as string | null) ?? null,
   }));
 
   const rulesByListing = new Map<string, PricingRule[]>();
@@ -103,6 +104,7 @@ export default async function HostCalendarPage({
       startHour: (row.start_hour as number | null) ?? null,
       endHour: (row.end_hour as number | null) ?? null,
       price: row.price as number,
+      spotId: (row.spot_id as string | null) ?? null,
     });
   }
 

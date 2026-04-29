@@ -120,56 +120,152 @@ struct SpotPriceContent: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 22) {
-            // Pris-modell (kun parkering — camping er alltid per natt)
-            if form.category == .parking, let s = spot {
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Pris-modell")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                    Text("Velg om plassen leies ut per døgn (24t) eller per time.")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral500)
-                    let current = form.effectivePriceUnit(for: s)
-                    HStack(spacing: 0) {
-                        priceModelSegment(label: "Per døgn", isSelected: current == .time) {
-                            form.spotMarkers[index].priceUnit = .time
-                        }
-                        priceModelSegment(label: "Per time", isSelected: current == .hour) {
-                            form.spotMarkers[index].priceUnit = .hour
-                        }
-                    }
-                    .background(Color.neutral100)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .padding(.top, 2)
-                }
-            }
-
-            // Stor leken pris-display
-            if let s = spot {
+        VStack(alignment: .leading, spacing: 16) {
+            if form.category == .parking {
+                parkingDualPricing
+            } else if let s = spot {
+                // Camping: kun per natt
                 BigPriceInput(
                     price: Binding(
-                        get: { s.price ?? 0 },
-                        set: { form.spotMarkers[index].price = $0 > 0 ? $0 : nil }
+                        get: { s.pricePerNight ?? s.price ?? 0 },
+                        set: { newValue in
+                            form.spotMarkers[index].pricePerNight = newValue > 0 ? newValue : nil
+                            form.spotMarkers[index].price = newValue > 0 ? newValue : nil
+                            form.spotMarkers[index].priceUnit = .natt
+                        }
                     ),
-                    unitLabel: form.effectivePriceUnit(for: s).displayName
+                    unitLabel: PriceUnit.natt.displayName
                 )
             }
         }
     }
 
     @ViewBuilder
-    private func priceModelSegment(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(label)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(isSelected ? .white : .neutral700)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(isSelected ? Color.primary600 : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+    private var parkingDualPricing: some View {
+        if let s = spot {
+            let hourEnabled = (s.pricePerHour ?? 0) > 0 || s.priceUnit == .hour
+            let nightEnabled = (s.pricePerNight ?? 0) > 0
+            VStack(spacing: 14) {
+                pricingRow(
+                    label: "Per time",
+                    enabled: hourEnabled,
+                    price: Binding(
+                        get: { s.pricePerHour ?? 0 },
+                        set: { newValue in
+                            form.spotMarkers[index].pricePerHour = newValue > 0 ? newValue : nil
+                            updatePrimaryPriceUnit()
+                        }
+                    ),
+                    unitLabel: "time",
+                    onToggle: { isOn in
+                        if isOn {
+                            if (form.spotMarkers[index].pricePerHour ?? 0) == 0 {
+                                form.spotMarkers[index].pricePerHour = 50
+                            }
+                        } else {
+                            form.spotMarkers[index].pricePerHour = nil
+                        }
+                        updatePrimaryPriceUnit()
+                    }
+                )
+                pricingRow(
+                    label: "Per døgn (24t)",
+                    enabled: nightEnabled,
+                    price: Binding(
+                        get: { s.pricePerNight ?? 0 },
+                        set: { newValue in
+                            form.spotMarkers[index].pricePerNight = newValue > 0 ? newValue : nil
+                            updatePrimaryPriceUnit()
+                        }
+                    ),
+                    unitLabel: "døgn",
+                    onToggle: { isOn in
+                        if isOn {
+                            if (form.spotMarkers[index].pricePerNight ?? 0) == 0 {
+                                form.spotMarkers[index].pricePerNight = 200
+                            }
+                        } else {
+                            form.spotMarkers[index].pricePerNight = nil
+                        }
+                        updatePrimaryPriceUnit()
+                    }
+                )
+            }
         }
-        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func pricingRow(
+        label: String,
+        enabled: Bool,
+        price: Binding<Int>,
+        unitLabel: String,
+        onToggle: @escaping (Bool) -> Void
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 12) {
+                Button(action: { onToggle(!enabled) }) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(enabled ? Color.primary600 : Color.white)
+                            .frame(width: 24, height: 24)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 6)
+                                    .stroke(enabled ? Color.primary600 : Color.neutral300, lineWidth: 2)
+                            )
+                        if enabled {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 13, weight: .bold))
+                                .foregroundStyle(.white)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                Text(label)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(enabled ? .neutral900 : .neutral500)
+                Spacer()
+            }
+            if enabled {
+                BigPriceInput(price: price, unitLabel: unitLabel)
+            } else {
+                disabledPriceCard(unitLabel: unitLabel)
+            }
+        }
+        .padding(16)
+        .background(enabled ? Color.primary50 : Color.neutral50)
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(enabled ? Color.primary200 : Color.neutral200, lineWidth: 1)
+        )
+    }
+
+    private func disabledPriceCard(unitLabel: String) -> some View {
+        HStack {
+            Spacer()
+            Text("Tap for å aktivere")
+                .font(.system(size: 13))
+                .foregroundStyle(.neutral400)
+            Spacer()
+        }
+        .frame(height: 60)
+    }
+
+    /// Primær pris-enhet på spot.priceUnit — peker på det som skal vises i søk.
+    /// Default = hour hvis hour er på (matcher screen-design "per time default").
+    private func updatePrimaryPriceUnit() {
+        guard form.spotMarkers.indices.contains(index) else { return }
+        let s = form.spotMarkers[index]
+        if (s.pricePerHour ?? 0) > 0 {
+            form.spotMarkers[index].priceUnit = .hour
+            form.spotMarkers[index].price = s.pricePerHour
+        } else if (s.pricePerNight ?? 0) > 0 {
+            form.spotMarkers[index].priceUnit = form.category == .parking ? .time : .natt
+            form.spotMarkers[index].price = s.pricePerNight
+        } else {
+            form.spotMarkers[index].price = nil
+        }
     }
 }
 
