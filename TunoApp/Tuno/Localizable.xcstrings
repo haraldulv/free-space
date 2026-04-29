@@ -134,6 +134,16 @@
         }
       }
     },
+    "%@ %@ valgt" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ valgt"
+          }
+        }
+      }
+    },
     "%@ → %@" : {
       "localizations" : {
         "de" : {
@@ -6348,6 +6358,9 @@
     "Standardpris er %@ kr/time. Legg til time-bånd som gjelder bestemte dager og klokkeslett." : {
 
     },
+    "Standardpris er %@ kr/time. Sett en annen pris for valgte datoer." : {
+
+    },
     "Standardpris er %@ kr/time. Sett en annen pris for valgte uker." : {
 
     },
@@ -6491,7 +6504,7 @@
     "Tap for å plassere" : {
 
     },
-    "Tap på et bånd i kalenderen for å endre prisen for den uken, alle uker eller spesifikke uker." : {
+    "Tap på et bånd for å endre prisen for den uken eller spesifikke uker. Tap dato-celler for å blokkere eller sette pris per dag." : {
 
     },
     "Tap på kartet for å justere hovedposisjon. Bruk \"Marker plasser\" for å plassere individuelle plass-markører." : {
