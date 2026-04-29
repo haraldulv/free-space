@@ -16,8 +16,11 @@ struct WizardPricingCalendarView: View {
     @FocusState private var priceEditFocused: Bool
 
     private let monthsAhead = 6
-    private let cellHeight: CGFloat = 96
+    private let cellHeight: CGFloat = 110
     private let cellSpacing: CGFloat = 6
+    private let bandHeight: CGFloat = 22
+    private let bandSpacing: CGFloat = 3
+    private let bandStartY: CGFloat = 32
 
     private var availability: WizardSpotAvailability {
         form.availability(for: spotId)
@@ -337,9 +340,6 @@ struct WizardPricingCalendarView: View {
         GeometryReader { g in
             let totalSpacing = cellSpacing * 6
             let cellWidth = max(0, (g.size.width - totalSpacing) / 7)
-            let bandHeight: CGFloat = 4
-            let bandStackSpacing: CGFloat = 3
-            let bandStartY: CGFloat = 36  // mellom dato-tall (8-26) og pris (~75-90)
 
             ForEach(Array(bands.enumerated()), id: \.element.id) { bandIdx, band in
                 let segs = bandSegments(mask: band.dayMask)
@@ -350,12 +350,24 @@ struct WizardPricingCalendarView: View {
                     let palette = bandPalette(for: band)
                     let xOffset = CGFloat(seg.start) * (cellWidth + cellSpacing)
                     let width = CGFloat(seg.end - seg.start + 1) * cellWidth + CGFloat(seg.end - seg.start) * cellSpacing
-                    let yOffset = bandStartY + CGFloat(bandIdx) * (bandHeight + bandStackSpacing)
+                    let yOffset = bandStartY + CGFloat(bandIdx) * (bandHeight + bandSpacing)
 
-                    Capsule()
-                        .fill(isOverride ? palette.bgOverride : palette.bgDefault)
-                        .frame(width: max(0, width - 8), height: bandHeight)
-                        .offset(x: xOffset + 4, y: yOffset)
+                    HStack(spacing: 4) {
+                        Spacer(minLength: 0)
+                        Text("\(resolved.price) kr")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(palette.text)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.horizontal, 6)
+                    .frame(width: max(0, width - 4), height: bandHeight)
+                    .background(
+                        Capsule()
+                            .fill(isOverride ? palette.bgOverride : palette.bgDefault)
+                    )
+                    .offset(x: xOffset + 2, y: yOffset)
                 }
             }
         }
@@ -401,8 +413,8 @@ struct WizardPricingCalendarView: View {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Color.neutral900))
+                        .frame(width: 38, height: 38)
+                        .background(glassCircleBackground)
                 }
                 .buttonStyle(.plain)
             }
@@ -416,11 +428,6 @@ struct WizardPricingCalendarView: View {
             .padding(.bottom, 12)
         }
         .padding(.top, 10)
-        .background(
-            Rectangle()
-                .fill(Color.white)
-                .ignoresSafeArea(edges: .bottom)
-        )
     }
 
     private var dateRangePill: some View {
@@ -434,7 +441,29 @@ struct WizardPricingCalendarView: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
-        .background(Capsule().fill(Color.neutral900))
+        .background(glassPillBackground)
+    }
+
+    /// Glass-Capsule for dato-pillen (samme look som kortene).
+    private var glassPillBackground: some View {
+        Capsule()
+            .fill(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .overlay(
+                Capsule().fill(Color.black.opacity(0.55))
+            )
+            .overlay(
+                Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
+    }
+
+    /// Glass-sirkel for lukke-X.
+    private var glassCircleBackground: some View {
+        Circle()
+            .fill(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .overlay(Circle().fill(Color.black.opacity(0.55)))
+            .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
     }
 
     private var availabilityCard: some View {

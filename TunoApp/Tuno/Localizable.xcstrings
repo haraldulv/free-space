@@ -6348,9 +6348,6 @@
     "Standardpris er %@ kr/time. Legg til time-bånd som gjelder bestemte dager og klokkeslett." : {
 
     },
-    "Standardpris er %@ kr/time. Sett en annen pris for valgte datoer." : {
-
-    },
     "Standardpris per natt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6534,9 +6531,6 @@
         }
       }
     },
-    "Tilbake til fast pris" : {
-
-    },
     "Tilgjengelig" : {
 
     },
@@ -6638,19 +6632,6 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "Add-ons"
-          }
-        }
-      }
-    },
-    "Tilpasset pris" : {
-
-    },
-    "Tilpasset pris for %@ %@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Tilpasset pris for %1$@ %2$@"
           }
         }
       }
