@@ -425,8 +425,8 @@ struct WizardPricingCalendarView: View {
                     ))
                 RoundedRectangle(cornerRadius: 10)
                     .strokeBorder(
-                        cellBorder(isSelected: isSelected, isAnchor: isAnchor),
-                        lineWidth: isAnchor ? 2 : (isSelected ? 1.5 : 0)
+                        cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast),
+                        lineWidth: isAnchor ? 2 : (isSelected ? 1.5 : 1)
                     )
                 VStack(spacing: 0) {
                     Text("\(day)")
@@ -464,10 +464,11 @@ struct WizardPricingCalendarView: View {
         return Color.white
     }
 
-    private func cellBorder(isSelected: Bool, isAnchor: Bool) -> Color {
+    private func cellBorder(isSelected: Bool, isAnchor: Bool, isPast: Bool) -> Color {
         if isAnchor { return Color.primary600 }
         if isSelected { return Color.primary500 }
-        return Color.clear
+        if isPast { return Color.neutral100 }
+        return Color.neutral200
     }
 
     private func cellText(isPast: Bool, isBlocked: Bool) -> Color {
