@@ -1,50 +1,21 @@
 import SwiftUI
 
-/// Pris-variasjon-kalender per plass. Speiler HostCalendarView fra Profil →
-/// Kalender: multi-måned grid med kvadratiske dato-celler, tap-anker for
-/// multi-select. Tilgjengelighets-båndene tegnes som horisontale bars
-/// OVER cellene (likt en booking som strekker seg over flere dager), med
-/// distinkte farger per bånd. Tap på bar → BandPriceOverrideSheet. Tap på
-/// celle → multi-select med bunn-actionbar (Blokker / Sett pris / Fjern overst.).
+/// Pris-variasjon-kalender per plass — Airbnb-stil. Multi-måned grid med
+/// store dato-celler som viser dato + effektiv pris per time. Tap-anker for
+/// multi-select. Når dager er valgt, sticky bottom action-bar med:
+///   - Date-range pille + lukke-X
+///   - "Tilgjengelig"-toggle (blokker/avblokker)
+///   - "Pris per time" stort tall + Tilpasset-knapp
 struct WizardPricingCalendarView: View {
     @ObservedObject var form: ListingFormModel
     let spotId: String
 
-    @State private var sheetTarget: BandOverrideTarget?
     @State private var selectedDates: Set<String> = []
     @State private var rangeAnchor: String?
     @State private var showDatePriceSheet = false
     @State private var hasScrolledToCurrent = false
-    @State private var coachMarksAnchors: [String: CGRect] = [:]
-    @State private var showCoachMarks = false
-    @State private var containerSize: CGSize = .zero
-    @AppStorage("priceVariationCoachMarksDismissed") private var coachMarksDismissed = false
 
     private let monthsAhead = 6
-
-    /// ID til uken som inneholder dagens dato — brukes som scroll-target.
-    private var currentWeekRowId: String? {
-        let cal = Self.osloCalendar
-        let today = cal.startOfDay(for: Date())
-        for monthStart in visibleMonths {
-            for week in weeksFor(monthStart) {
-                if week.days.contains(where: { d in
-                    guard let d else { return false }
-                    return cal.isDate(d, inSameDayAs: today) ||
-                        cal.compare(d, to: today, toGranularity: .day) == .orderedSame
-                }) {
-                    return week.id
-                }
-                // Sjekk også om dagens dato faller innenfor uke-rangen via weekKey
-                let year = cal.component(.yearForWeekOfYear, from: today)
-                let weekNum = cal.component(.weekOfYear, from: today)
-                if week.key.year == year && week.key.weekNum == weekNum {
-                    return week.id
-                }
-            }
-        }
-        return nil
-    }
 
     private var availability: WizardSpotAvailability {
         form.availability(for: spotId)
@@ -96,6 +67,14 @@ struct WizardPricingCalendarView: View {
         return f
     }()
 
+    private static let dayMonthFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d. MMM"
+        f.locale = Locale(identifier: "nb_NO")
+        f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+        return f
+    }()
+
     private var visibleMonths: [Date] {
         let cal = Self.osloCalendar
         let now = cal.startOfDay(for: Date())
@@ -106,41 +85,22 @@ struct WizardPricingCalendarView: View {
         }
     }
 
-    var body: some View {
-        bodyContent
-            .coordinateSpace(name: "wizardCalendar")
-            .background(
-                GeometryReader { geom in
-                    Color.clear
-                        .onAppear { containerSize = geom.size }
-                        .onChange(of: geom.size) { _, new in containerSize = new }
-                }
-            )
-            .onPreferenceChange(CoachMarkAnchorsKey.self) { value in
-                coachMarksAnchors = value
-            }
-            .overlay {
-                if showCoachMarks {
-                    CalendarCoachMarksOverlay(
-                        isPresented: $showCoachMarks,
-                        anchors: coachMarksAnchors,
-                        containerSize: containerSize
-                    )
-                    .transition(.opacity)
+    private var currentWeekRowId: String? {
+        let cal = Self.osloCalendar
+        let today = cal.startOfDay(for: Date())
+        for monthStart in visibleMonths {
+            for week in weeksFor(monthStart) {
+                let year = cal.component(.yearForWeekOfYear, from: today)
+                let weekNum = cal.component(.weekOfYear, from: today)
+                if week.key.year == year && week.key.weekNum == weekNum {
+                    return week.id
                 }
             }
-            .animation(.easeInOut(duration: 0.25), value: showCoachMarks)
-            .onAppear {
-                // Vis coach-marks første gang brukeren ser kalenderen for et bånd-listing.
-                if !bands.isEmpty && !coachMarksDismissed && !showCoachMarks {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                        showCoachMarks = true
-                    }
-                }
-            }
+        }
+        return nil
     }
 
-    private var bodyContent: some View {
+    var body: some View {
         ZStack(alignment: .bottom) {
             Group {
                 if bands.isEmpty {
@@ -148,20 +108,19 @@ struct WizardPricingCalendarView: View {
                 } else {
                     ScrollViewReader { proxy in
                         ScrollView {
-                            LazyVStack(spacing: 24) {
-                                headerHint
-                                    .padding(.horizontal, 16)
+                            LazyVStack(spacing: 20) {
+                                weekdayHeader
+                                    .padding(.horizontal, 12)
+                                    .padding(.top, 4)
                                 ForEach(visibleMonths, id: \.self) { monthStart in
                                     monthSection(monthStart)
                                 }
-                                // plass for bottom action-bar
-                                Color.clear.frame(height: selectedDates.isEmpty ? 32 : 130)
+                                Color.clear.frame(height: selectedDates.isEmpty ? 24 : 220)
                             }
                         }
                         .onAppear {
                             guard !hasScrolledToCurrent else { return }
                             if let target = currentWeekRowId {
-                                // Kjør litt forsinket så LazyVStack rekker å bygge.
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                                     proxy.scrollTo(target, anchor: .top)
                                     hasScrolledToCurrent = true
@@ -179,34 +138,12 @@ struct WizardPricingCalendarView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .overlay(alignment: .topTrailing) {
-            if !selectedDates.isEmpty {
-                clearSelectionButton
-                    .padding(.top, 12)
-                    .padding(.trailing, 16)
-                    .transition(.scale.combined(with: .opacity))
-            }
-        }
         .animation(.easeInOut(duration: 0.22), value: selectedDates.isEmpty)
-        .sheet(item: $sheetTarget) { target in
-            BandPriceOverrideSheet(
-                band: target.band,
-                weekKey: target.weekKey,
-                basePerHour: basePerHour,
-                currentPrice: target.currentPrice,
-                allWeeks: target.matchedScope == .allWeeks,
-                onSave: { newPrice, newScope in
-                    applyOverride(bandId: target.band.id, scope: newScope, price: newPrice)
-                    sheetTarget = nil
-                },
-                onCancel: { sheetTarget = nil }
-            )
-            .presentationDetents([.medium, .large])
-        }
         .sheet(isPresented: $showDatePriceSheet) {
             DatePriceSheet(
                 basePerHour: basePerHour,
                 selectedCount: selectedDates.count,
+                currentPrice: averageSelectedPrice() ?? basePerHour,
                 onSave: { price in
                     applyDateOverride(price: price)
                     showDatePriceSheet = false
@@ -217,26 +154,7 @@ struct WizardPricingCalendarView: View {
         }
     }
 
-    private var headerHint: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "info.circle.fill")
-                .foregroundStyle(.primary600)
-                .font(.system(size: 14))
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Standardpris \(basePerHour) kr/time")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                Text("Tap på et bånd for å endre prisen for den uken eller spesifikke uker. Tap dato-celler for å blokkere eller sette pris per dag.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral600)
-                    .lineSpacing(2)
-            }
-            Spacer()
-        }
-        .padding(12)
-        .background(Color.primary50)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-    }
+    // MARK: - Tom-tilstand
 
     private var emptyHint: some View {
         VStack(spacing: 8) {
@@ -254,103 +172,32 @@ struct WizardPricingCalendarView: View {
         .padding(24)
     }
 
-    // MARK: - Floating rund "nullstill"-knapp
+    // MARK: - Weekday header
 
-    private var clearSelectionButton: some View {
-        Button {
-            selectedDates.removeAll()
-            rangeAnchor = nil
-        } label: {
-            Image(systemName: "xmark")
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(.neutral800)
-                .frame(width: 40, height: 40)
-                .background(Color.white)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
-                .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Nullstill valg")
-        .coachMarkAnchor(id: "clear-button")
-    }
-
-    // MARK: - Bottom action bar
-
-    private var actionBar: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text("\(selectedDates.count) \(selectedDates.count == 1 ? "dag" : "dager") valgt")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                Spacer()
+    private var weekdayHeader: some View {
+        HStack(spacing: 0) {
+            ForEach(["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"], id: \.self) { day in
+                Text(day)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                    .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, 16)
-
-            HStack(spacing: 8) {
-                actionButton(icon: "xmark.square.fill", title: "Blokker") {
-                    blockSelectedDates()
-                }
-                actionButton(icon: "tag.fill", title: "Sett pris") {
-                    showDatePriceSheet = true
-                }
-                actionButton(icon: "arrow.uturn.backward", title: "Fjern overst.") {
-                    clearSelectedOverrides()
-                }
-            }
-            .padding(.horizontal, 12)
         }
-        .padding(.vertical, 12)
-        .background(Color.white)
-        .overlay(Rectangle().fill(Color.neutral200).frame(height: 1), alignment: .top)
-        .shadow(color: .black.opacity(0.06), radius: 10, y: -4)
-    }
-
-    private func actionButton(icon: String, title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 14, weight: .semibold))
-                Text(title)
-                    .font(.system(size: 12, weight: .medium))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-            .foregroundStyle(.neutral800)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .background(Color.neutral100)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Month section
 
     @ViewBuilder
     private func monthSection(_ monthStart: Date) -> some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text(Self.monthNameFormatter.string(from: monthStart).capitalized)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(.neutral900)
-                Spacer()
-            }
-            .padding(.horizontal, 20)
-
-            HStack(spacing: 0) {
-                ForEach(["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"], id: \.self) { day in
-                    Text(day)
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(.neutral500)
-                        .frame(maxWidth: .infinity)
-                }
-            }
-            .padding(.horizontal, 12)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(Self.monthNameFormatter.string(from: monthStart).capitalized)
+                .font(.system(size: 17, weight: .bold))
+                .foregroundStyle(.neutral900)
+                .padding(.horizontal, 20)
 
             VStack(spacing: 6) {
-                ForEach(Array(weeksFor(monthStart).enumerated()), id: \.element.id) { idx, week in
-                    weekRow(week, isFirstAnchor: monthStart == visibleMonths.first && idx == 0)
+                ForEach(weeksFor(monthStart), id: \.id) { week in
+                    weekRow(week)
                 }
             }
             .padding(.horizontal, 12)
@@ -358,159 +205,25 @@ struct WizardPricingCalendarView: View {
     }
 
     @ViewBuilder
-    private func weekRow(_ week: WeekRow, isFirstAnchor: Bool = false) -> some View {
-        let segCount = bands.flatMap { bandSegments(mask: $0.dayMask) }.count
-        let cellHeight: CGFloat = 64
-        let bandLayerStart: CGFloat = 22  // y-pos under dato-tallet
-        let totalHeight = cellHeight + 6  // litt margin under
-
-        ZStack(alignment: .topLeading) {
-            // 1. Bånd-bars TEGNES FØRST (under) — bakgrunnslag
-            if segCount > 0 {
-                bandsOverlay(week: week, isFirstAnchor: isFirstAnchor)
-                    .padding(.top, bandLayerStart)
-                    .frame(height: cellHeight - bandLayerStart)
-                    .allowsHitTesting(true)
-            }
-
-            // 2. Dato-celler ØVERST — outline + tall ligger oppå båndene.
-            // Cellens fyll er gjennomsiktig på default, så båndet vises gjennom.
-            HStack(spacing: 3) {
-                ForEach(0..<7, id: \.self) { col in
-                    if let date = week.days[col] {
-                        dayCell(date: date, anchorTag: isFirstAnchor && col == firstNonNilCol(week) ? "day-cell" : nil)
-                            .frame(maxWidth: .infinity, minHeight: cellHeight)
-                    } else {
-                        Color.clear.frame(maxWidth: .infinity, minHeight: cellHeight)
-                    }
+    private func weekRow(_ week: WeekRow) -> some View {
+        HStack(spacing: 6) {
+            ForEach(0..<7, id: \.self) { col in
+                if let date = week.days[col] {
+                    dayCell(date: date)
+                        .frame(maxWidth: .infinity)
+                } else {
+                    Color.clear.frame(maxWidth: .infinity, minHeight: 88)
                 }
             }
-            .frame(height: cellHeight)
-            .allowsHitTesting(true)
         }
-        .frame(height: totalHeight)
+        .frame(minHeight: 88)
         .id(week.id)
     }
 
-    @ViewBuilder
-    private func bandsOverlay(week: WeekRow, isFirstAnchor: Bool) -> some View {
-        GeometryReader { g in
-            let cellSpacing: CGFloat = 3
-            let totalSpacing = cellSpacing * 6
-            let cellWidth = max(0, (g.size.width - totalSpacing) / 7)
-
-            VStack(alignment: .leading, spacing: 3) {
-                ForEach(Array(bands.enumerated()), id: \.element.id) { bandIdx, band in
-                    let segs = bandSegments(mask: band.dayMask)
-                    ForEach(segs.indices, id: \.self) { i in
-                        let seg = segs[i]
-                        let tag: String? = (isFirstAnchor && bandIdx == 0 && i == 0) ? "band-bar" : nil
-                        bandBar(
-                            band: band,
-                            week: week,
-                            segment: seg,
-                            cellWidth: cellWidth,
-                            cellSpacing: cellSpacing,
-                            anchorTag: tag
-                        )
-                    }
-                }
-            }
-        }
-    }
+    // MARK: - Day cell (Airbnb-stil — stort kort med dato + pris)
 
     @ViewBuilder
-    private func bandBar(
-        band: WizardPricingBand,
-        week: WeekRow,
-        segment seg: (start: Int, end: Int),
-        cellWidth: CGFloat,
-        cellSpacing: CGFloat,
-        anchorTag: String? = nil
-    ) -> some View {
-        let resolved = priceForBand(band, weekKey: week.key)
-        let isOverride = resolved.scope != nil
-        let xOffset = CGFloat(seg.start) * (cellWidth + cellSpacing)
-        let width = CGFloat(seg.end - seg.start + 1) * cellWidth
-                  + CGFloat(seg.end - seg.start) * cellSpacing
-        let palette = bandPalette(for: band)
-
-        Button {
-            sheetTarget = BandOverrideTarget(
-                band: band,
-                weekKey: week.key,
-                currentPrice: resolved.price,
-                matchedScope: resolved.scope
-            )
-        } label: {
-            HStack(spacing: 4) {
-                Spacer(minLength: 0)
-                Text("\(resolved.price) kr")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(palette.text)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, 4)
-            .frame(width: max(0, width - 4), height: 22)
-            .background(isOverride ? palette.bgOverride : palette.bgDefault)
-            .overlay(
-                RoundedRectangle(cornerRadius: 6)
-                    .strokeBorder(palette.border, lineWidth: 1)
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 6))
-            .shadow(color: palette.bgOverride.opacity(0.25), radius: isOverride ? 4 : 0, y: isOverride ? 2 : 0)
-        }
-        .buttonStyle(.plain)
-        .offset(x: xOffset + 2)
-        .modifier(OptionalCoachMarkAnchor(tag: anchorTag))
-    }
-
-    /// Palett av bånd-farger basert på id-hash. Dempede pastell-versjoner som
-    /// ikke distraherer fra dato-tallene. Override = synlig mer mettet for å
-    /// skille seg ut når brukeren har satt egen pris.
-    private func bandPalette(for band: WizardPricingBand) -> BandPalette {
-        let palettes: [BandPalette] = [
-            BandPalette(  // Tuno-grønn
-                bgDefault: Color(hex: "#86d9b1").opacity(0.85),
-                bgOverride: Color(hex: "#46c185"),
-                border: Color(hex: "#46c185").opacity(0.35),
-                text: .white
-            ),
-            BandPalette(  // Lavendel
-                bgDefault: Color(hex: "#c4b5fd").opacity(0.85),
-                bgOverride: Color(hex: "#8b5cf6"),
-                border: Color(hex: "#8b5cf6").opacity(0.35),
-                text: .white
-            ),
-            BandPalette(  // Korall
-                bgDefault: Color(hex: "#fdba74").opacity(0.85),
-                bgOverride: Color(hex: "#f97316"),
-                border: Color(hex: "#f97316").opacity(0.35),
-                text: .white
-            ),
-            BandPalette(  // Sky
-                bgDefault: Color(hex: "#93c5fd").opacity(0.85),
-                bgOverride: Color(hex: "#3b82f6"),
-                border: Color(hex: "#3b82f6").opacity(0.35),
-                text: .white
-            ),
-            BandPalette(  // Rose
-                bgDefault: Color(hex: "#f9a8d4").opacity(0.85),
-                bgOverride: Color(hex: "#ec4899"),
-                border: Color(hex: "#ec4899").opacity(0.35),
-                text: .white
-            ),
-        ]
-        let idx = abs(band.id.hashValue) % palettes.count
-        return palettes[idx]
-    }
-
-    // MARK: - Day cell (samme stil som HostCalendarView)
-
-    @ViewBuilder
-    private func dayCell(date: Date, anchorTag: String? = nil) -> some View {
+    private func dayCell(date: Date) -> some View {
         let iso = Self.isoFormatter.string(from: date)
         let day = Self.osloCalendar.component(.day, from: date)
         let startOfToday = Self.osloCalendar.startOfDay(for: Date())
@@ -519,12 +232,13 @@ struct WizardPricingCalendarView: View {
         let isAnchor = rangeAnchor == iso
         let isBlocked = blockedDates.contains(iso)
         let hasOverride = dateOverrides[iso] != nil
+        let priceInfo = priceForDate(date)
 
         Button {
             handleDayTap(iso: iso, isPast: isPast)
         } label: {
             ZStack {
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 12)
                     .fill(cellBackground(
                         isPast: isPast,
                         isSelected: isSelected,
@@ -532,72 +246,302 @@ struct WizardPricingCalendarView: View {
                         isBlocked: isBlocked,
                         hasOverride: hasOverride
                     ))
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(
-                        cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast),
-                        lineWidth: isAnchor ? 2 : (isSelected ? 1.5 : 1)
+                        cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast, isBlocked: isBlocked),
+                        lineWidth: isAnchor ? 2 : (isSelected || isBlocked ? 1.5 : 1)
                     )
-                VStack(spacing: 0) {
+
+                VStack(spacing: 4) {
                     Text("\(day)")
-                        .font(.system(size: 13, weight: (isSelected || isAnchor) ? .bold : .medium))
-                        .foregroundStyle(cellText(isPast: isPast, isBlocked: isBlocked))
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .padding(.top, 5)
-                    Spacer()
+                        .font(.system(size: 16, weight: (isSelected || isAnchor) ? .bold : .semibold))
+                        .foregroundStyle(cellText(isPast: isPast, isBlocked: isBlocked, isSelected: isSelected, isAnchor: isAnchor))
+                        .padding(.top, 10)
+
+                    Spacer(minLength: 0)
+
                     if isBlocked {
                         Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(.neutral500)
-                            .padding(.bottom, 4)
-                    } else if hasOverride, let p = dateOverrides[iso] {
-                        Text("\(p) kr")
-                            .font(.system(size: 9, weight: .semibold))
-                            .foregroundStyle(.primary700)
+                            .padding(.bottom, 10)
+                    } else if !isPast, let price = priceInfo {
+                        Text("\(price.amount) kr")
+                            .font(.system(size: 11, weight: hasOverride || price.isOverride ? .bold : .medium))
+                            .foregroundStyle(priceTextColor(
+                                isSelected: isSelected,
+                                isAnchor: isAnchor,
+                                isOverride: hasOverride || price.isOverride
+                            ))
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
-                            .padding(.bottom, 4)
+                            .padding(.bottom, 10)
                     }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(height: 64)
+            .frame(height: 88)
         }
         .buttonStyle(.plain)
         .disabled(isPast)
-        .modifier(OptionalCoachMarkAnchor(tag: anchorTag))
     }
 
-    private func firstNonNilCol(_ week: WeekRow) -> Int {
-        for col in 0..<7 {
-            if week.days[col] != nil { return col }
-        }
-        return 0
-    }
+    // MARK: - Cell styling
 
     private func cellBackground(isPast: Bool, isSelected: Bool, isAnchor: Bool, isBlocked: Bool, hasOverride: Bool) -> Color {
-        // Default = .clear så bånd-bar synes under cellen.
-        // Selected/anker/blokk/override = semi-transparent for å skille seg ut
-        // uten å skjule båndet helt.
-        if isAnchor { return Color.primary600.opacity(0.20) }
-        if isSelected { return Color.primary600.opacity(0.12) }
-        if isBlocked { return Color.neutral100.opacity(0.85) }
-        if hasOverride { return Color(hex: "#ecfdf5").opacity(0.85) }
-        return Color.clear
+        if isAnchor { return Color.primary600.opacity(0.18) }
+        if isSelected { return Color.primary600.opacity(0.10) }
+        if isBlocked { return Color.neutral100 }
+        if hasOverride { return Color(hex: "#ecfdf5") }
+        return Color.white
     }
 
-    private func cellBorder(isSelected: Bool, isAnchor: Bool, isPast: Bool) -> Color {
+    private func cellBorder(isSelected: Bool, isAnchor: Bool, isPast: Bool, isBlocked: Bool) -> Color {
         if isAnchor { return Color.primary600 }
         if isSelected { return Color.primary500 }
+        if isBlocked { return Color.neutral300 }
         if isPast { return Color.neutral100 }
         return Color.neutral200
     }
 
-    private func cellText(isPast: Bool, isBlocked: Bool) -> Color {
+    private func cellText(isPast: Bool, isBlocked: Bool, isSelected: Bool, isAnchor: Bool) -> Color {
         if isPast { return Color.neutral300 }
-        if isBlocked { return Color.neutral500 }
+        if isBlocked { return Color.neutral400 }
         return Color.neutral900
     }
 
-    // MARK: - Tap handling
+    private func priceTextColor(isSelected: Bool, isAnchor: Bool, isOverride: Bool) -> Color {
+        if isOverride { return Color.primary700 }
+        if isSelected || isAnchor { return Color.primary700 }
+        return Color.neutral500
+    }
+
+    // MARK: - Bottom action bar (Airbnb-stil)
+
+    private var actionBar: some View {
+        VStack(spacing: 10) {
+            // Topp-rad: dato-range pille + lukke-X
+            HStack(spacing: 10) {
+                dateRangePill
+                Spacer()
+                Button {
+                    selectedDates.removeAll()
+                    rangeAnchor = nil
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Color.neutral900))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+
+            // To-kort layout: Tilgjengelig + Pris/Tilpasset
+            HStack(alignment: .top, spacing: 10) {
+                availabilityCard
+                priceCard
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 8)
+        }
+        .padding(.top, 10)
+        .background(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(.ultraThinMaterial)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .stroke(Color.white.opacity(0.4), lineWidth: 0.5)
+                )
+                .shadow(color: .black.opacity(0.10), radius: 16, y: -4)
+        )
+        .padding(.horizontal, 12)
+        .padding(.bottom, 8)
+    }
+
+    private var dateRangePill: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "calendar")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(formatDateRange())
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Capsule().fill(Color.neutral900))
+    }
+
+    private var availabilityCard: some View {
+        let allBlocked = !selectedDates.isEmpty && selectedDates.allSatisfy { blockedDates.contains($0) }
+        let allOpen = !allBlocked
+
+        return Button {
+            toggleBlockSelected()
+        } label: {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 6) {
+                    Text("Tilgjengelig")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Circle()
+                        .fill(allOpen ? Color(hex: "#22c55e") : Color(hex: "#ef4444"))
+                        .frame(width: 7, height: 7)
+                }
+                Spacer(minLength: 6)
+
+                // Toggle-bryter Airbnb-stil: liten capsule med to states
+                ZStack(alignment: allOpen ? .trailing : .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.18))
+                        .frame(width: 76, height: 32)
+                    Capsule()
+                        .fill(Color.white)
+                        .frame(width: 36, height: 28)
+                        .padding(.horizontal, 2)
+                        .overlay(
+                            Image(systemName: allOpen ? "checkmark" : "xmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.neutral900)
+                        )
+                }
+                .animation(.spring(response: 0.32, dampingFraction: 0.85), value: allOpen)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .frame(height: 130)
+            .background(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.neutral900)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var priceCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Pris per time")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Text("\(currentSelectedPriceText)")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                Spacer(minLength: 0)
+            }
+
+            Spacer(minLength: 0)
+
+            Button {
+                showDatePriceSheet = true
+            } label: {
+                HStack(spacing: 6) {
+                    Text("Tilpasset pris")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Spacer()
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.white)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.white.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 130)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(Color.neutral900)
+        )
+    }
+
+    private var currentSelectedPriceText: String {
+        let prices = selectedDates.compactMap { iso -> Int? in
+            guard let date = Self.isoFormatter.date(from: iso) else { return nil }
+            return priceForDate(date)?.amount
+        }
+        guard !prices.isEmpty else { return "\(basePerHour) kr" }
+        let minP = prices.min() ?? basePerHour
+        let maxP = prices.max() ?? basePerHour
+        if minP == maxP { return "\(minP) kr" }
+        return "\(minP)–\(maxP) kr"
+    }
+
+    private func formatDateRange() -> String {
+        guard !selectedDates.isEmpty else { return "" }
+        let sorted = selectedDates.sorted()
+        guard let first = sorted.first.flatMap({ Self.isoFormatter.date(from: $0) }),
+              let last = sorted.last.flatMap({ Self.isoFormatter.date(from: $0) }) else {
+            return ""
+        }
+        if first == last {
+            return Self.dayMonthFormatter.string(from: first)
+        }
+        return "\(Self.dayMonthFormatter.string(from: first)) – \(Self.dayMonthFormatter.string(from: last))"
+    }
+
+    // MARK: - Pris-oppslag per dato
+
+    private struct ResolvedDayPrice {
+        let amount: Int
+        let isOverride: Bool
+    }
+
+    private func priceForDate(_ date: Date) -> ResolvedDayPrice? {
+        let iso = Self.isoFormatter.string(from: date)
+        if let dateOverride = dateOverrides[iso] {
+            return ResolvedDayPrice(amount: dateOverride, isOverride: true)
+        }
+        let cal = Self.osloCalendar
+        let weekday = cal.component(.weekday, from: date)
+        let bit = (weekday + 5) % 7
+        let year = cal.component(.yearForWeekOfYear, from: date)
+        let weekNum = cal.component(.weekOfYear, from: date)
+        let weekKey = WeekKey(year: year, weekNum: weekNum)
+
+        // Finn første bånd som matcher dagen
+        for band in bands {
+            if (band.dayMask & (1 << bit)) != 0 {
+                let resolved = priceForBand(band, weekKey: weekKey)
+                return ResolvedDayPrice(amount: resolved.price, isOverride: resolved.scope != nil)
+            }
+        }
+        // Ingen bånd matcher dagen — alltid ledig fallback til base
+        return ResolvedDayPrice(amount: basePerHour, isOverride: false)
+    }
+
+    private struct ResolvedPrice {
+        let price: Int
+        let scope: WeekScope?
+    }
+
+    private func priceForBand(_ band: WizardPricingBand, weekKey: WeekKey) -> ResolvedPrice {
+        let overrides = availability.bandPriceOverrides.filter { $0.bandId == band.id }
+        for o in overrides {
+            if case .specificWeeks(let set) = o.weekScope, set.contains(weekKey) {
+                return ResolvedPrice(price: o.price, scope: o.weekScope)
+            }
+        }
+        for o in overrides {
+            if case .allWeeks = o.weekScope {
+                return ResolvedPrice(price: o.price, scope: .allWeeks)
+            }
+        }
+        return ResolvedPrice(price: basePerHour, scope: nil)
+    }
+
+    // MARK: - Tap-handling (multi-select tap-anker)
 
     private func handleDayTap(iso: String, isPast: Bool) {
         guard !isPast else { return }
@@ -639,13 +583,18 @@ struct WizardPricingCalendarView: View {
 
     // MARK: - Action handlers
 
-    private func blockSelectedDates() {
+    private func toggleBlockSelected() {
         guard let idx = spotIndex else { return }
         let existing = Set(form.spotMarkers[idx].blockedDates ?? [])
-        let merged = existing.union(selectedDates)
-        form.spotMarkers[idx].blockedDates = Array(merged).sorted()
-        selectedDates.removeAll()
-        rangeAnchor = nil
+        let allBlocked = selectedDates.allSatisfy { existing.contains($0) }
+        var updated = existing
+        if allBlocked {
+            // Avblokkér
+            updated.subtract(selectedDates)
+        } else {
+            updated.formUnion(selectedDates)
+        }
+        form.spotMarkers[idx].blockedDates = updated.isEmpty ? nil : Array(updated).sorted()
     }
 
     private func applyDateOverride(price: Int) {
@@ -658,91 +607,18 @@ struct WizardPricingCalendarView: View {
             }
         }
         form.setAvailability(avail, for: spotId)
-        selectedDates.removeAll()
-        rangeAnchor = nil
     }
 
-    private func clearSelectedOverrides() {
-        guard let idx = spotIndex else { return }
-        // Fjern dato-overstyringer
-        var avail = availability
-        avail.dateOverrides.removeAll { selectedDates.contains($0.date) }
-        form.setAvailability(avail, for: spotId)
-        // Fjern blokkering
-        let existing = Set(form.spotMarkers[idx].blockedDates ?? [])
-        let updated = existing.subtracting(selectedDates)
-        form.spotMarkers[idx].blockedDates = updated.isEmpty ? nil : Array(updated).sorted()
-        selectedDates.removeAll()
-        rangeAnchor = nil
-    }
-
-    // MARK: - Pris-oppslag
-
-    private struct ResolvedPrice {
-        let price: Int
-        let scope: WeekScope?
-    }
-
-    private func priceForBand(_ band: WizardPricingBand, weekKey: WeekKey) -> ResolvedPrice {
-        let overrides = availability.bandPriceOverrides.filter { $0.bandId == band.id }
-        for o in overrides {
-            if case .specificWeeks(let set) = o.weekScope, set.contains(weekKey) {
-                return ResolvedPrice(price: o.price, scope: o.weekScope)
-            }
+    private func averageSelectedPrice() -> Int? {
+        let prices = selectedDates.compactMap { iso -> Int? in
+            guard let date = Self.isoFormatter.date(from: iso) else { return nil }
+            return priceForDate(date)?.amount
         }
-        for o in overrides {
-            if case .allWeeks = o.weekScope {
-                return ResolvedPrice(price: o.price, scope: .allWeeks)
-            }
-        }
-        return ResolvedPrice(price: basePerHour, scope: nil)
+        guard !prices.isEmpty else { return nil }
+        return prices.reduce(0, +) / prices.count
     }
 
-    private func applyOverride(bandId: UUID, scope: WeekScope, price: Int) {
-        var avail = availability
-        switch scope {
-        case .allWeeks:
-            avail.bandPriceOverrides.removeAll { o in
-                guard o.bandId == bandId else { return false }
-                if case .allWeeks = o.weekScope { return true }
-                return false
-            }
-            if price != basePerHour {
-                avail.bandPriceOverrides.append(WizardBandPriceOverride(
-                    bandId: bandId, weekScope: .allWeeks, price: price
-                ))
-            }
-        case .specificWeeks(let weeks):
-            avail.bandPriceOverrides.removeAll { o in
-                guard o.bandId == bandId else { return false }
-                if case .specificWeeks(let existing) = o.weekScope {
-                    return existing == weeks
-                }
-                return false
-            }
-            if price != basePerHour {
-                avail.bandPriceOverrides.append(WizardBandPriceOverride(
-                    bandId: bandId, weekScope: scope, price: price
-                ))
-            }
-        }
-        form.setAvailability(avail, for: spotId)
-    }
-
-    // MARK: - Helpers
-
-    private func bandSegments(mask: Int) -> [(start: Int, end: Int)] {
-        var result: [(Int, Int)] = []
-        var inSeg = false
-        var segStart = 0
-        for col in 0..<7 {
-            let isSet = (mask & (1 << col)) != 0
-            if isSet && !inSeg { segStart = col; inSeg = true }
-            else if !isSet && inSeg { result.append((segStart, col - 1)); inSeg = false }
-        }
-        if inSeg { result.append((segStart, 6)) }
-        return result
-    }
+    // MARK: - Måned-uker-helper
 
     private func weeksFor(_ monthStart: Date) -> [WeekRow] {
         let cal = Self.osloCalendar
@@ -790,13 +666,6 @@ struct WeekRow: Identifiable {
     }
 }
 
-struct BandPalette {
-    let bgDefault: Color
-    let bgOverride: Color
-    let border: Color
-    let text: Color
-}
-
 extension WizardPricingCalendarView {
     static func dateRangeForWeek(year: Int, week: Int) -> (start: String, end: String)? {
         var cal = Calendar(identifier: .iso8601)
@@ -817,18 +686,12 @@ extension WizardPricingCalendarView {
     }
 }
 
-struct BandOverrideTarget: Identifiable {
-    let band: WizardPricingBand
-    let weekKey: WeekKey
-    let currentPrice: Int
-    let matchedScope: WeekScope?
-    var id: String { "\(band.id):\(weekKey.id)" }
-}
-
-/// Sheet for å sette pris for valgte enkelt-datoer (multi-select via tap-anker).
+/// Sheet for å sette pris for valgte enkelt-datoer. Brukes fra "Tilpasset pris"-knappen
+/// i bunn-actionbar.
 private struct DatePriceSheet: View {
     let basePerHour: Int
     let selectedCount: Int
+    let currentPrice: Int
     let onSave: (Int) -> Void
     let onCancel: () -> Void
 
@@ -839,7 +702,7 @@ private struct DatePriceSheet: View {
         NavigationStack {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Sett pris for \(selectedCount) \(selectedCount == 1 ? "dag" : "dager")")
+                    Text("Tilpasset pris for \(selectedCount) \(selectedCount == 1 ? "dag" : "dager")")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.neutral900)
                     Text("Standardpris er \(basePerHour) kr/time. Sett en annen pris for valgte datoer.")
@@ -877,7 +740,10 @@ private struct DatePriceSheet: View {
                     .disabled((Int(priceText) ?? 0) <= 0)
                 }
             }
-            .onAppear { focused = true }
+            .onAppear {
+                priceText = "\(currentPrice)"
+                focused = true
+            }
         }
     }
 }

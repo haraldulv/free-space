@@ -2827,6 +2827,9 @@
     "Hold samtaler i Tuno" : {
 
     },
+    "Hopp over" : {
+
+    },
     "Hovedposisjon" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3034,6 +3037,9 @@
           }
         }
       }
+    },
+    "Ikke vis denne guiden igjen" : {
+
     },
     "Ikke vis denne meldingen igjen" : {
 
@@ -6386,6 +6392,16 @@
     },
     "Start-dato satt" : {
 
+    },
+    "Steg %@ av %@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Steg %1$@ av %2$@"
+          }
+        }
+      }
     },
     "Største kjøretøy som passer på plassen, i meter. Påkrevd for bobil og campingbil." : {
 
