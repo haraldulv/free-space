@@ -16,8 +16,8 @@ struct WelcomeStep: View {
 
                 StepRow(
                     number: 1,
-                    title: "Fortell oss om stedet ditt",
-                    subtitle: "Del litt grunnleggende informasjon, for eksempel hvor stedet er, og hvor mange plasser det er.",
+                    title: "Beskriv plassen",
+                    subtitle: "Hvor er den, og hvor mange biler eller bobiler er det plass til?",
                     iconName: "new-listing-home"
                 )
 
@@ -27,8 +27,8 @@ struct WelcomeStep: View {
 
                 StepRow(
                     number: 2,
-                    title: "Sørg for å skille deg ut",
-                    subtitle: "Legg til fem eller flere bilder, en tittel og en beskrivelse. Vi hjelper deg.",
+                    title: "Fang oppmerksomheten",
+                    subtitle: "Gode bilder og en tydelig tittel gjør det enkelt for andre å booke.",
                     iconName: "new-listing-stand-out"
                 )
 
@@ -38,8 +38,8 @@ struct WelcomeStep: View {
 
                 StepRow(
                     number: 3,
-                    title: "Sett en pris og publiser",
-                    subtitle: "Velg en startpris, bekreft noen opplysninger og publiser annonsen.",
+                    title: "Sett pris og publiser",
+                    subtitle: "Velg hva det skal koste og lanser når du er klar. Du kan endre alt senere.",
                     iconName: "new-listing-complete"
                 )
             }
