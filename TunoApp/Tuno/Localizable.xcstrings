@@ -5077,9 +5077,6 @@
         }
       }
     },
-    "per time" : {
-
-    },
     "Per time" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6494,7 +6491,7 @@
     "Tap for å plassere" : {
 
     },
-    "Tap på et bånd for å endre prisen for den uken, alle uker, eller velge spesifikke uker." : {
+    "Tap på et bånd i kalenderen for å endre prisen for den uken, alle uker eller spesifikke uker." : {
 
     },
     "Tap på kartet for å justere hovedposisjon. Bruk \"Marker plasser\" for å plassere individuelle plass-markører." : {
