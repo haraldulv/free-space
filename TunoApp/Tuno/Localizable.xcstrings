@@ -134,6 +134,16 @@
         }
       }
     },
+    "%@ %@ valgt" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ %2$@ valgt"
+          }
+        }
+      }
+    },
     "%@ → %@" : {
       "localizations" : {
         "de" : {
@@ -325,9 +335,6 @@
           }
         }
       }
-    },
-    "%@:00" : {
-
     },
     "%@:00 – %@:00" : {
       "localizations" : {
@@ -2191,6 +2198,9 @@
         }
       }
     },
+    "Fjern overst." : {
+
+    },
     "Flott" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2859,9 +2869,6 @@
           }
         }
       }
-    },
-    "Hvert prisbånd gjelder alle uker som standard. Tap på \"Gjelder\"-teksten på et bånd for å begrense til bestemte uker." : {
-
     },
     "Hvilke fasiliteter tilbyr du?" : {
       "extractionState" : "stale",
@@ -4082,9 +4089,6 @@
       }
     },
     "Legg til pris for bestemte dager og klokkeslett — f.eks. arbeidstid, kveld eller helg. Bånd uten dekning bruker standardprisen." : {
-
-    },
-    "Legg til prisbånd" : {
 
     },
     "Legg til sesong" : {
@@ -6024,9 +6028,6 @@
     "Sett pris for en periode (f.eks. sommeruker). Overstyrer helg og standard." : {
 
     },
-    "Sett priser for tidsperioder" : {
-
-    },
     "Sett ulik melding per plass (f.eks. ulike port-koder)." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6342,8 +6343,28 @@
         }
       }
     },
+    "Standardpris %@ %@" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Standardpris %1$@ %2$@"
+          }
+        }
+      }
+    },
     "Standardpris %@ kr/time" : {
 
+    },
+    "Standardpris er %@ %@. Sett en annen pris for de valgte datoene." : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Standardpris er %1$@ %2$@. Sett en annen pris for de valgte datoene."
+          }
+        }
+      }
     },
     "Standardpris er %@ kr. La stå tomt for å beholde standardpris." : {
 
@@ -6483,6 +6504,9 @@
       }
     },
     "Tag bildene til riktig plass" : {
+
+    },
+    "Tap én dag for å starte, tap en annen for å markere et område. Sett pris for valgte datoer." : {
 
     },
     "Tap for å aktivere" : {
@@ -6855,9 +6879,6 @@
         }
       }
     },
-    "Uke %@" : {
-
-    },
     "Ukjent" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7179,9 +7200,6 @@
           }
         }
       }
-    },
-    "Velg uker manuelt" : {
-
     },
     "Velkommen som utleier" : {
       "extractionState" : "manual",

@@ -32,6 +32,7 @@
 		2E72FE537D2EB9BC8706485E /* ProfileSummaryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F65149FFDD665E73DD3401C9 /* ProfileSummaryCard.swift */; };
 		30DB0664F70CAF9A54C49E83 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ED34354F8C7AAA6F81D0CB62 /* RegisterView.swift */; };
 		3205E24587B15BBF7B75324D /* TimePickerField.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9A10E906BFD039DCF513926 /* TimePickerField.swift */; };
+		32C1A026D8113363E685FD6A /* SpotPriceVariationStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5A37BEFB55AB36448B8AFB5 /* SpotPriceVariationStep.swift */; };
 		334A02C478CF7B63C58A376A /* StripeApplePay in Frameworks */ = {isa = PBXBuildFile; productRef = EFD6004772316F38FF89D02C /* StripeApplePay */; };
 		336ED588D23B5F702C49257F /* ProfileStatsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F37F3CD542B4B76200AE7AE /* ProfileStatsStore.swift */; };
 		362A7E1F4D710DC24BE4A12C /* LottieView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C62328BAF7DE7328480EAF9 /* LottieView.swift */; };
@@ -51,6 +52,7 @@
 		52F36D48C8D895936C319C5F /* parking.png in Resources */ = {isa = PBXBuildFile; fileRef = DC1B2723E875C7128C9687CD /* parking.png */; };
 		53263F543ED69E31B489D2D5 /* SpotPlacementSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */; };
 		53A0D526B1C2D389C36E2A64 /* PricingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E3029710A8D3475494799E /* PricingService.swift */; };
+		57C85F324535B7150A6AB8AE /* BandPriceOverrideSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6F63AA41F2D5F12E98EC1DAA /* BandPriceOverrideSheet.swift */; };
 		5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */; };
 		642AF85B63EEA4DB11DEA032 /* ListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6DFB7D23F06D079D826635 /* ListingDetailView.swift */; };
 		659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CE3CB213405AF521294421 /* TunoApp.swift */; };
@@ -60,7 +62,6 @@
 		69B9A4A36285CD891EF163A1 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCA79AFEA0E6F8136582CC1 /* FlowLayout.swift */; };
 		6B7117AA9434A53E825A39A0 /* FavoritesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF4ECC50EF60CAE563B7D668 /* FavoritesService.swift */; };
 		6B9D27F1FAB9F57992BA3988 /* EmailVerifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BB2C75ED50A9F54DA87638 /* EmailVerifiedView.swift */; };
-		6C826D7E9B46A7DA4740DFA6 /* PriceRulesStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A9EC5E71200181A2554E2E6 /* PriceRulesStep.swift */; };
 		6CB4EB3DA766CB6BC5FC1B67 /* SpotDetailCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1213A1E7AC0AB0C6683A1A43 /* SpotDetailCard.swift */; };
 		6FBE494863C2B42EFAFE6C0E /* camping.png in Resources */ = {isa = PBXBuildFile; fileRef = EAB9785990D824D579D1AC18 /* camping.png */; };
 		707BCE8A8EA006E7F8604A34 /* AmenitiesStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE00FBD7C2654A066869B1E1 /* AmenitiesStep.swift */; };
@@ -138,7 +139,6 @@
 		00E476D769839A839AA8AD06 /* stand-out.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "stand-out.png"; sourceTree = "<group>"; };
 		01854C020C64868465F39BDC /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		04FEA73740940C702629F4D7 /* HostInntektCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostInntektCard.swift; sourceTree = "<group>"; };
-		0A9EC5E71200181A2554E2E6 /* PriceRulesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceRulesStep.swift; sourceTree = "<group>"; };
 		0B723EAA2CB71B866808AE9D /* welcome-tent.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "welcome-tent.json"; sourceTree = "<group>"; };
 		0E6DFB7D23F06D079D826635 /* ListingDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingDetailView.swift; sourceTree = "<group>"; };
 		0F76B3BFE9867FFEFA9DFEAB /* ForgotPasswordView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ForgotPasswordView.swift; sourceTree = "<group>"; };
@@ -191,6 +191,7 @@
 		69D03627A981C3C64EF47F06 /* PublicProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicProfileView.swift; sourceTree = "<group>"; };
 		6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingFlowView.swift; sourceTree = "<group>"; };
 		6D08232C248CE64924B19723 /* DescriptionStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStep.swift; sourceTree = "<group>"; };
+		6F63AA41F2D5F12E98EC1DAA /* BandPriceOverrideSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandPriceOverrideSheet.swift; sourceTree = "<group>"; };
 		6FFBF70DF9565FD913EA5D09 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		72853CC232D491F9F2AEC20B /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		728D58EED8EDC45FC329EE6F /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
@@ -253,6 +254,7 @@
 		F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextEditorWithCounter.swift; sourceTree = "<group>"; };
 		F20335764277C2E44F7825D2 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		F3BF694A798055824C4651A4 /* MessagesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesStep.swift; sourceTree = "<group>"; };
+		F5A37BEFB55AB36448B8AFB5 /* SpotPriceVariationStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotPriceVariationStep.swift; sourceTree = "<group>"; };
 		F65149FFDD665E73DD3401C9 /* ProfileSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSummaryCard.swift; sourceTree = "<group>"; };
 		F9A10E906BFD039DCF513926 /* TimePickerField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePickerField.swift; sourceTree = "<group>"; };
 		F9C68D73AEFE78CC1D1DEE15 /* EarningsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarningsView.swift; sourceTree = "<group>"; };
@@ -380,6 +382,7 @@
 		6587010B912F3F5B5BE19D5C /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				6F63AA41F2D5F12E98EC1DAA /* BandPriceOverrideSheet.swift */,
 				1C62328BAF7DE7328480EAF9 /* LottieView.swift */,
 				4FF267768B92B52734B7568A /* WizardNavBar.swift */,
 				411181AFF3AC2C69BF0D3CB4 /* WizardPricingCalendarView.swift */,
@@ -556,7 +559,6 @@
 				D04AE83B5E261BA41D246388 /* MarkSpotsStep.swift */,
 				F3BF694A798055824C4651A4 /* MessagesStep.swift */,
 				3357259B4CCDFE2FA9F1745C /* PhotosStep.swift */,
-				0A9EC5E71200181A2554E2E6 /* PriceRulesStep.swift */,
 				5B65DE53742FC3A764A59D8C /* PublishStep.swift */,
 				58A32E4837D41534ECFB0953 /* SpotAvailabilityStep.swift */,
 				5A9DFF0FBCEDEA70C1C84433 /* SpotCountStep.swift */,
@@ -565,6 +567,7 @@
 				BD05EFAAFF75CA5314B3B4EE /* SpotExtrasContent.swift */,
 				E526C4504EA007084624767F /* SpotExtrasStep.swift */,
 				B4FAE01C676255DD56E0570A /* SpotPriceStep.swift */,
+				F5A37BEFB55AB36448B8AFB5 /* SpotPriceVariationStep.swift */,
 				867091F53CF483B9DC6E3E33 /* WelcomeStep.swift */,
 			);
 			path = Steps;
@@ -692,6 +695,7 @@
 				707BCE8A8EA006E7F8604A34 /* AmenitiesStep.swift in Sources */,
 				F67F9C6B23D453F78B1C7ED9 /* AuthManager.swift in Sources */,
 				AA8A099FCB1C1DCDAFCCBA8E /* AuthPromptView.swift in Sources */,
+				57C85F324535B7150A6AB8AE /* BandPriceOverrideSheet.swift in Sources */,
 				B4419D7CD6BEB2EB57C94298 /* BecomeHostView.swift in Sources */,
 				8DE4BBDB474E278A300397DE /* BlockedSlots.swift in Sources */,
 				2AFF1FFBCA6063DF79A8E1CA /* BookingCalendarView.swift in Sources */,
@@ -753,7 +757,6 @@
 				481B700D9FEB3AFB038F6A9E /* PhotosStep.swift in Sources */,
 				B61A0EA246DD9BEF82475048 /* PlacesService.swift in Sources */,
 				062B9E29C1596367A0EFED27 /* PriceHistogram.swift in Sources */,
-				6C826D7E9B46A7DA4740DFA6 /* PriceRulesStep.swift in Sources */,
 				F648BF7042F00623CBB97B0E /* PricingRulesEditorView.swift in Sources */,
 				53A0D526B1C2D389C36E2A64 /* PricingService.swift in Sources */,
 				336ED588D23B5F702C49257F /* ProfileStatsStore.swift in Sources */,
@@ -778,6 +781,7 @@
 				8366B42E53C29B755B8EB7ED /* SpotExtrasStep.swift in Sources */,
 				53263F543ED69E31B489D2D5 /* SpotPlacementSheet.swift in Sources */,
 				D1350E52B346514BBFB120CA /* SpotPriceStep.swift in Sources */,
+				32C1A026D8113363E685FD6A /* SpotPriceVariationStep.swift in Sources */,
 				9AE9EF8B07B0FB00DF4149AF /* SupabaseService.swift in Sources */,
 				5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */,
 				C76237D5837392B271673FB3 /* Theme.swift in Sources */,
@@ -832,7 +836,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -932,7 +936,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 120;
+				CURRENT_PROJECT_VERSION = 121;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

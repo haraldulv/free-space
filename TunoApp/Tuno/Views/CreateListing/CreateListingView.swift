@@ -128,13 +128,13 @@ struct CreateListingView: View {
         case 5: SpotDetailsStep(form: form)
         case 6: SpotAvailabilityStep(form: form)
         case 7: SpotPriceStep(form: form)
-        case 8: SpotExtrasStep(form: form)
-        case 9: InstantBookingStep(form: form)
-        case 10: DescriptionStep(form: form)
-        case 11: PhotosStep(form: form)
-        case 12: AmenitiesStep(form: form)
-        case 13: MessagesStep(form: form)
-        case 14: PriceRulesStep(form: form)
+        case 8: SpotPriceVariationStep(form: form)
+        case 9: SpotExtrasStep(form: form)
+        case 10: InstantBookingStep(form: form)
+        case 11: DescriptionStep(form: form)
+        case 12: PhotosStep(form: form)
+        case 13: AmenitiesStep(form: form)
+        case 14: MessagesStep(form: form)
         case 15: CalendarStep(form: form)
         case 16: PublishStep(form: form)
         default: EmptyView()
@@ -316,7 +316,7 @@ struct CreateListingView: View {
                                 )
                             case .specificWeeks(let weeks):
                                 for week in weeks {
-                                    guard let range = PriceRulesStep.dateRangeForWeek(year: week.year, week: week.weekNum) else { continue }
+                                    guard let range = WizardPricingCalendarView.dateRangeForWeek(year: week.year, week: week.weekNum) else { continue }
                                     try? await PricingService.addHourlyBandRule(
                                         listingId: listing.id,
                                         dayMask: band.dayMask,
@@ -341,15 +341,6 @@ struct CreateListingView: View {
                         }
                     }
 
-                    // Listing-wide pris-overstyringer fra kalender-redigereren.
-                    for over in form.listingDateOverrides {
-                        try? await PricingService.setOverride(
-                            listingId: listing.id,
-                            date: over.date,
-                            price: over.price,
-                            spotId: nil
-                        )
-                    }
                     newListing = listing
                 }
                 form.isSubmitting = false
