@@ -12,7 +12,7 @@ struct WelcomeStep: View {
                     .foregroundStyle(.neutral900)
                     .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 40)
 
                 StepRow(
                     number: 1,
@@ -23,7 +23,7 @@ struct WelcomeStep: View {
 
                 Divider()
                     .background(Color.neutral200)
-                    .padding(.vertical, 24)
+                    .padding(.vertical, 32)
 
                 StepRow(
                     number: 2,
@@ -34,7 +34,7 @@ struct WelcomeStep: View {
 
                 Divider()
                     .background(Color.neutral200)
-                    .padding(.vertical, 24)
+                    .padding(.vertical, 32)
 
                 StepRow(
                     number: 3,
@@ -57,29 +57,30 @@ private struct StepRow: View {
     let iconName: String
 
     var body: some View {
-        HStack(alignment: .center, spacing: 16) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .firstTextBaseline, spacing: 14) {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(alignment: .firstTextBaseline, spacing: 12) {
                     Text("\(number)")
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.neutral900)
                     Text(title)
-                        .font(.system(size: 18, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.neutral900)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
                 Text(subtitle)
-                    .font(.system(size: 15))
+                    .font(.system(size: 14))
                     .foregroundStyle(.neutral600)
-                    .lineSpacing(3)
+                    .lineSpacing(2)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.leading, 26)
+                    .padding(.leading, 22)
             }
             Spacer(minLength: 12)
             Image(iconName)
                 .resizable()
                 .scaledToFit()
-                .frame(width: 96, height: 96)
+                .frame(width: 72, height: 72)
         }
     }
 }
