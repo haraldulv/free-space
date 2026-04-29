@@ -102,6 +102,14 @@ struct WizardPricingCalendarView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
+        .overlay(alignment: .topTrailing) {
+            if !selectedDates.isEmpty {
+                clearSelectionButton
+                    .padding(.top, 12)
+                    .padding(.trailing, 16)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
         .animation(.easeInOut(duration: 0.22), value: selectedDates.isEmpty)
         .sheet(item: $sheetTarget) { target in
             BandPriceOverrideSheet(
@@ -169,6 +177,26 @@ struct WizardPricingCalendarView: View {
         .padding(24)
     }
 
+    // MARK: - Floating rund "nullstill"-knapp
+
+    private var clearSelectionButton: some View {
+        Button {
+            selectedDates.removeAll()
+            rangeAnchor = nil
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.neutral800)
+                .frame(width: 40, height: 40)
+                .background(Color.white)
+                .clipShape(Circle())
+                .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+                .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Nullstill valg")
+    }
+
     // MARK: - Bottom action bar
 
     private var actionBar: some View {
@@ -178,12 +206,6 @@ struct WizardPricingCalendarView: View {
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(.neutral900)
                 Spacer()
-                Button("Tøm") {
-                    selectedDates.removeAll()
-                    rangeAnchor = nil
-                }
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.primary600)
             }
             .padding(.horizontal, 16)
 
