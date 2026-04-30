@@ -28,6 +28,26 @@ struct WizardPricingCalendarView: View {
 
     private var bands: [WizardPricingBand] { availability.bands }
 
+    /// Tildeler hvert bånd en "lane" (vertikalt nivå) basert på faktisk
+    /// dag-overlap. Bånd som ikke deler noen dag får samme lane → samme Y,
+    /// så de fortsetter visuelt på samme linje istedenfor å stables unødig.
+    private var bandLaneAssignment: [UUID: Int] {
+        var laneMasks: [Int] = []
+        var assignment: [UUID: Int] = [:]
+        for band in bands {
+            var lane = 0
+            while lane < laneMasks.count && (laneMasks[lane] & band.dayMask) != 0 {
+                lane += 1
+            }
+            if lane >= laneMasks.count {
+                laneMasks.append(0)
+            }
+            laneMasks[lane] |= band.dayMask
+            assignment[band.id] = lane
+        }
+        return assignment
+    }
+
     private var basePerHour: Int {
         form.spotMarkers.first(where: { $0.id == spotId })?.pricePerHour ?? 0
     }
@@ -341,8 +361,9 @@ struct WizardPricingCalendarView: View {
             let totalSpacing = cellSpacing * 6
             let cellWidth = max(0, (g.size.width - totalSpacing) / 7)
 
-            ForEach(Array(bands.enumerated()), id: \.element.id) { bandIdx, band in
+            ForEach(bands, id: \.id) { band in
                 let segs = bandSegments(mask: band.dayMask)
+                let lane = bandLaneAssignment[band.id] ?? 0
                 ForEach(segs.indices, id: \.self) { i in
                     let seg = segs[i]
                     let resolved = priceForBand(band, weekKey: week.key)
@@ -350,7 +371,7 @@ struct WizardPricingCalendarView: View {
                     let palette = bandPalette(for: band)
                     let xOffset = CGFloat(seg.start) * (cellWidth + cellSpacing)
                     let width = CGFloat(seg.end - seg.start + 1) * cellWidth + CGFloat(seg.end - seg.start) * cellSpacing
-                    let yOffset = bandStartY + CGFloat(bandIdx) * (bandHeight + bandSpacing)
+                    let yOffset = bandStartY + CGFloat(lane) * (bandHeight + bandSpacing)
 
                     HStack(spacing: 4) {
                         Spacer(minLength: 0)
