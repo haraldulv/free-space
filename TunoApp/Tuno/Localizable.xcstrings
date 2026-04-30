@@ -834,6 +834,9 @@
         }
       }
     },
+    "Båndet og pris-overstyringene som tilhører det fjernes." : {
+
+    },
     "Bankkonto" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4843,6 +4846,9 @@
         }
       }
     },
+    "Nytt bånd" : {
+
+    },
     "Om" : {
 
     },
@@ -6285,6 +6291,9 @@
         }
       }
     },
+    "Slett bånd" : {
+
+    },
     "Søk" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6507,6 +6516,9 @@
           }
         }
       }
+    },
+    "Tidspunkt" : {
+
     },
     "Til" : {
 

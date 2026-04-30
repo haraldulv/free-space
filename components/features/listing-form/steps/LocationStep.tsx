@@ -23,7 +23,7 @@ interface LocationStepProps {
   category: ListingCategory;
   defaultPrice: number;
   perSpotPricing: boolean;
-  priceUnit: "time" | "natt";
+  priceUnit: "time" | "natt" | "hour";
   checkinMessage?: string;
   perSpotCheckinMessage: boolean;
   checkoutMessage?: string;

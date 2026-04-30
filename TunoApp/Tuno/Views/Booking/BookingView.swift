@@ -173,6 +173,8 @@ struct BookingView: View {
     /// er .hour (eller listing-nivå er .hour). Mixed-mode er ikke støttet for booking;
     /// fallback til natt/døgn.
     private var effectiveBookingPriceUnit: PriceUnit {
+        // Parkering er per-time-only — døgn-rabatt-flow tar over senere.
+        if listing.category == .parking { return .hour }
         if !selectedSpots.isEmpty {
             let units = selectedSpots.compactMap { $0.priceUnit }
             if !units.isEmpty, units.allSatisfy({ $0 == .hour }) { return .hour }

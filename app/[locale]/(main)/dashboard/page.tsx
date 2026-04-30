@@ -672,7 +672,7 @@ export default function DashboardPage() {
                             <p className="text-xs text-neutral-500">{listing.location.city}, {listing.location.region}</p>
                             <p className="mt-1 text-sm">
                               <span className="font-semibold">{listing.price} kr</span>
-                              <span className="text-neutral-500"> / {listing.priceUnit === "time" ? tListing("hour") : tListing("night")}</span>
+                              <span className="text-neutral-500"> / {listing.priceUnit === "hour" ? tListing("hour") : tListing("night")}</span>
                             </p>
                           </div>
                         </div>

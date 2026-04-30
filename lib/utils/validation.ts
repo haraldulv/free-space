@@ -105,7 +105,7 @@ export const listingStep5Schema = z.object({
 
 export const listingStep6Schema = z.object({
   price: z.number().int().min(1, "Pris må være minst 1 kr"),
-  priceUnit: z.enum(["time", "natt"]),
+  priceUnit: z.enum(["time", "natt", "hour"]),
   instantBooking: z.boolean(),
 });
 

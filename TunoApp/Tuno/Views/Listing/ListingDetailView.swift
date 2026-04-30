@@ -542,7 +542,11 @@ struct ListingDetailView: View {
             ? spot.label!
             : "Plass \(index + 1)"
         let images = spot.images ?? []
-        let price = spot.price ?? listing.price ?? 0
+        let isParking = listing.category == .parking
+        let price = isParking
+            ? (spot.pricePerHour ?? spot.price ?? listing.pricePerHour ?? listing.price ?? 0)
+            : (spot.pricePerNight ?? spot.price ?? listing.pricePerNight ?? listing.price ?? 0)
+        let priceUnitLabel = isParking ? "/ time" : "/ natt"
         let extras = spot.extras ?? []
         let isOwnListing = listing.hostId?.lowercased() == authManager.currentUser?.id.uuidString.lowercased()
 
@@ -582,7 +586,7 @@ struct ListingDetailView: View {
                         Text("\(price) kr")
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(.neutral900)
-                        Text("/ natt")
+                        Text(priceUnitLabel)
                             .font(.system(size: 12))
                             .foregroundStyle(.neutral600)
                     }

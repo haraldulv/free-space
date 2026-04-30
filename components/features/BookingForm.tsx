@@ -212,7 +212,7 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
     router.push(`/book/${listing.id}?${params.toString()}`);
   };
 
-  const priceLabel = listing.priceUnit === "time" ? tListing("day") : tListing("night");
+  const priceLabel = listing.priceUnit === "hour" ? tListing("hour") : tListing("night");
   const hasListingExtras = (listing.extras || []).length > 0;
 
   const buttonDisabled =
@@ -389,7 +389,7 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
             <span>
               {hasSpotLevelPricing && selectedSpots.length > 0
                 ? t("spotsTimesNights", { spots: selectedSpots.length, nights })
-                : listing.priceUnit === "time"
+                : listing.priceUnit === "hour"
                   ? t("pricePerDayCalc", { price: listing.price, days: nights })
                   : t("pricePerNightCalc", { price: listing.price, nights })}
             </span>

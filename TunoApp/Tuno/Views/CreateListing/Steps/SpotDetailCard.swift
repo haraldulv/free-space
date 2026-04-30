@@ -121,8 +121,20 @@ struct SpotPriceContent: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            if form.category == .parking {
-                parkingDualPricing
+            if form.category == .parking, let s = spot {
+                // Parkering: kun per time. Døgn-rabatt-flow kommer i et eget steg.
+                BigPriceInput(
+                    price: Binding(
+                        get: { s.pricePerHour ?? 0 },
+                        set: { newValue in
+                            form.spotMarkers[index].pricePerHour = newValue
+                            form.spotMarkers[index].pricePerNight = nil
+                            form.spotMarkers[index].priceUnit = .hour
+                            form.spotMarkers[index].price = newValue
+                        }
+                    ),
+                    unitLabel: "time"
+                )
             } else if let s = spot {
                 // Camping: kun per natt
                 BigPriceInput(
@@ -139,140 +151,19 @@ struct SpotPriceContent: View {
             }
         }
         .onAppear {
-            // Default: parkering = per time aktivert (ingen pris satt = 0).
-            // pricePerHour != nil betyr "checked"; verdi 0 = brukeren må skrive pris.
+            // Sikre invariant for parkering: pricePerHour er settet pris-felt,
+            // pricePerNight er alltid nil. Eksisterende natt-pris ryddes også opp.
             guard form.spotMarkers.indices.contains(index) else { return }
             let s = form.spotMarkers[index]
-            if form.category == .parking, s.pricePerHour == nil, s.pricePerNight == nil {
-                form.spotMarkers[index].pricePerHour = 0
+            if form.category == .parking {
+                if s.pricePerHour == nil {
+                    form.spotMarkers[index].pricePerHour = 0
+                }
+                if s.pricePerNight != nil {
+                    form.spotMarkers[index].pricePerNight = nil
+                }
                 form.spotMarkers[index].priceUnit = .hour
             }
-        }
-    }
-
-    @ViewBuilder
-    private var parkingDualPricing: some View {
-        if let s = spot {
-            let hourEnabled = s.pricePerHour != nil
-            let nightEnabled = s.pricePerNight != nil
-            VStack(spacing: 14) {
-                pricingRow(
-                    label: "Per time",
-                    enabled: hourEnabled,
-                    price: Binding(
-                        get: { s.pricePerHour ?? 0 },
-                        set: { newValue in
-                            // Behold ikke-nil mens checkbox er på, selv om verdien er 0
-                            form.spotMarkers[index].pricePerHour = newValue
-                            updatePrimaryPriceUnit()
-                        }
-                    ),
-                    unitLabel: "time",
-                    onToggle: { isOn in
-                        if isOn {
-                            form.spotMarkers[index].pricePerHour = 0
-                        } else {
-                            form.spotMarkers[index].pricePerHour = nil
-                        }
-                        updatePrimaryPriceUnit()
-                    }
-                )
-                pricingRow(
-                    label: "Per døgn (24t)",
-                    enabled: nightEnabled,
-                    price: Binding(
-                        get: { s.pricePerNight ?? 0 },
-                        set: { newValue in
-                            form.spotMarkers[index].pricePerNight = newValue
-                            updatePrimaryPriceUnit()
-                        }
-                    ),
-                    unitLabel: "døgn",
-                    onToggle: { isOn in
-                        if isOn {
-                            form.spotMarkers[index].pricePerNight = 0
-                        } else {
-                            form.spotMarkers[index].pricePerNight = nil
-                        }
-                        updatePrimaryPriceUnit()
-                    }
-                )
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func pricingRow(
-        label: String,
-        enabled: Bool,
-        price: Binding<Int>,
-        unitLabel: String,
-        onToggle: @escaping (Bool) -> Void
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                Button(action: { onToggle(!enabled) }) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 6)
-                            .fill(enabled ? Color.primary600 : Color.white)
-                            .frame(width: 24, height: 24)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 6)
-                                    .stroke(enabled ? Color.primary600 : Color.neutral300, lineWidth: 2)
-                            )
-                        if enabled {
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 13, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                    }
-                }
-                .buttonStyle(.plain)
-                Text(label)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(enabled ? .neutral900 : .neutral500)
-                Spacer()
-            }
-            if enabled {
-                BigPriceInput(price: price, unitLabel: unitLabel)
-            } else {
-                disabledPriceCard(unitLabel: unitLabel)
-            }
-        }
-        .padding(16)
-        .background(enabled ? Color.primary50 : Color.neutral50)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .overlay(
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(enabled ? Color.primary200 : Color.neutral200, lineWidth: 1)
-        )
-    }
-
-    private func disabledPriceCard(unitLabel: String) -> some View {
-        HStack {
-            Spacer()
-            Text("Tap for å aktivere")
-                .font(.system(size: 13))
-                .foregroundStyle(.neutral400)
-            Spacer()
-        }
-        .frame(height: 60)
-    }
-
-    /// Primær pris-enhet på spot.priceUnit — peker på det som skal vises i søk.
-    /// Default = hour hvis hour er på (matcher screen-design "per time default").
-    private func updatePrimaryPriceUnit() {
-        guard form.spotMarkers.indices.contains(index) else { return }
-        let s = form.spotMarkers[index]
-        if let h = s.pricePerHour, h >= 0 {
-            // Per-time aktiv (selv om verdi er 0)
-            form.spotMarkers[index].priceUnit = .hour
-            form.spotMarkers[index].price = h > 0 ? h : (s.pricePerNight ?? 0)
-        } else if let n = s.pricePerNight, n >= 0 {
-            form.spotMarkers[index].priceUnit = form.category == .parking ? .time : .natt
-            form.spotMarkers[index].price = n
-        } else {
-            form.spotMarkers[index].price = nil
         }
     }
 }

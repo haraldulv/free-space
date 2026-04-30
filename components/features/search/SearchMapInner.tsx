@@ -357,7 +357,7 @@ export default function SearchMapInner({
     if (selectedListingId) {
       const listing = listings.find((l) => l.id === selectedListingId);
       if (listing) {
-        const unit = listing.priceUnit === "time" ? "dag" : "natt";
+        const unit = listing.priceUnit === "hour" ? "time" : "natt";
         const images = listing.images || [];
         let imgIndex = 0;
 

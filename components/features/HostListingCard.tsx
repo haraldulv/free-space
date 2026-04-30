@@ -79,7 +79,7 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
         </div>
         <div className="flex items-center gap-3 text-xs text-neutral-500">
           <span className="font-semibold text-neutral-900">
-            {getDisplayPriceText(listing)} kr / {listing.priceUnit === "time" ? tListing("hour") : tListing("night")}
+            {getDisplayPriceText(listing)} kr / {listing.priceUnit === "hour" ? tListing("hour") : tListing("night")}
           </span>
           <span className="flex items-center gap-0.5">
             <Users className="h-3 w-3" />

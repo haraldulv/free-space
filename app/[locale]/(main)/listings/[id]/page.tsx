@@ -104,7 +104,7 @@ export default async function ListingPage({
             longitude: listing.location.lng,
           },
         }),
-    priceRange: `${listing.price} NOK / ${listing.priceUnit === "time" ? "hour" : "night"}`,
+    priceRange: `${listing.price} NOK / ${listing.priceUnit === "hour" ? "hour" : "night"}`,
     ...(listing.reviewCount > 0
       ? {
           aggregateRating: {

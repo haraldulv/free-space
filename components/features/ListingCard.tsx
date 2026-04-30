@@ -10,7 +10,7 @@ interface ListingCardProps {
 
 export default function ListingCard({ listing }: ListingCardProps) {
   const t = useTranslations("listing");
-  const priceUnitLabel = listing.priceUnit === "time" ? t("day") : t("night");
+  const priceUnitLabel = listing.priceUnit === "hour" ? t("hour") : t("night");
   return (
     <Link href={`/listings/${listing.id}`} className="group block">
       <div className="overflow-hidden rounded-lg">

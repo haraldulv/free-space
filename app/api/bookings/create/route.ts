@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
     // Check availability
     const { data: listing } = await supabase
       .from("listings")
-      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, availability_mode")
+      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, availability_mode, category")
       .eq("id", listingId)
       .single();
 
@@ -170,6 +170,16 @@ export async function POST(request: NextRequest) {
 
     if (listing.host_id === user.id) {
       return NextResponse.json({ error: "Du kan ikke booke din egen annonse" }, { status: 400 });
+    }
+
+    // Parkering er per-time-only — døgn-rabatt-flow tar over senere.
+    // Avvis nightly-bookinger for parkering tidlig så vi ikke ender med
+    // gale prisberegninger eller ureachable nightly-paths.
+    if (listing.category === "parking" && !isHourly) {
+      return NextResponse.json(
+        { error: "Parkering må bookes per time. Velg start- og slutt-tidspunkt." },
+        { status: 400 },
+      );
     }
 
     // Rekalkulér totalen autoritativt server-side — klient sender ikke lenger beløp.

@@ -47,7 +47,7 @@ export default function SearchListingCard({
     }
   }, [isSelected]);
 
-  const priceUnitLabel = listing.priceUnit === "time" ? t("hour") : t("night");
+  const priceUnitLabel = listing.priceUnit === "hour" ? t("hour") : t("night");
 
   return (
     <div

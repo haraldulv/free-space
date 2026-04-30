@@ -385,11 +385,12 @@ final class ListingFormModel: ObservableObject {
         }.filter { $0 > 0 }
         let derivedListingPrice = primaryPrices.min() ?? 0
 
-        // Dual-pricing på listing-nivå: minste timepris og minste døgnpris (hvis satt på noen plasser)
+        // Dual-pricing på listing-nivå: minste timepris og minste døgnpris (hvis satt på noen plasser).
+        // Parkering er per-time-only — pricePerNight er alltid nil på listing-nivå.
         let hourPrices = spotMarkers.compactMap { $0.pricePerHour }.filter { $0 > 0 }
         let nightPrices = spotMarkers.compactMap { $0.pricePerNight }.filter { $0 > 0 }
         let derivedPricePerHour = hourPrices.min()
-        let derivedPricePerNight = nightPrices.min()
+        let derivedPricePerNight: Int? = category == .parking ? nil : nightPrices.min()
 
         let lengths = spotMarkers.compactMap { $0.vehicleMaxLength }.filter { $0 > 0 }
         let derivedMaxLength = lengths.max()

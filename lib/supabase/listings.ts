@@ -43,7 +43,7 @@ export interface CreateListingData {
   images: string[];
   amenities: Amenity[];
   price: number;
-  priceUnit: "time" | "natt";
+  priceUnit: "time" | "natt" | "hour";
   instantBooking: boolean;
   spotMarkers?: SpotMarker[];
   hideExactLocation?: boolean;

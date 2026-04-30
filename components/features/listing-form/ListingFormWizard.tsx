@@ -57,7 +57,7 @@ export default function ListingFormWizard({
     images: [],
     amenities: [],
     price: 0,
-    priceUnit: "time",
+    priceUnit: "hour",
     instantBooking: false,
     spotMarkers: [],
     hideExactLocation: false,
@@ -134,7 +134,7 @@ export default function ListingFormWizard({
             vehicleType={formData.vehicleType as VehicleType | undefined}
             onChange={(cat) => {
               updateField("category", cat);
-              updateField("priceUnit", cat === "parking" ? "time" : "natt");
+              updateField("priceUnit", cat === "parking" ? "hour" : "natt");
               updateField("amenities", []);
             }}
             onVehicleChange={(vt) => updateField("vehicleType", vt)}
