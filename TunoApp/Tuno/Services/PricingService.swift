@@ -510,4 +510,160 @@ enum PricingService {
         // 3) Base
         return HourlyPriceEntry(hourAt: stamp, price: baseHourlyPrice, source: "base")
     }
+
+    // MARK: - Duration discount (parkering, fase 3)
+    //
+    // Speiler lib/pricing.ts:applyDurationDiscount. Bruk i BookingView for å
+    // gi gjesten en pris-preview som matcher det server lander på.
+
+    struct DurationDiscount {
+        let total: Int
+        let baseTotal: Int
+        let savings: Int
+        let fullDays: Int
+        let months: Int
+        let weeks: Int
+        let days: Int
+    }
+
+    /// Beregn rabatt for hourly booking. Inputs er rules brukt for breakdown
+    /// (samme spot-filter), den ferdige breakdownen, og rabatt-prosentene.
+    /// `spotId` brukes til å re-anvende spot-filter på rules (matcher server).
+    static func applyDurationDiscount(
+        rules: [Rule],
+        breakdown: [HourlyPriceEntry],
+        discountDayPct: Int,
+        discountWeekPct: Int,
+        discountMonthPct: Int,
+        spotId: String?
+    ) -> DurationDiscount {
+        let baseTotal = breakdown.reduce(0) { $0 + $1.price }
+
+        if discountDayPct <= 0 && discountWeekPct <= 0 && discountMonthPct <= 0 {
+            return DurationDiscount(total: baseTotal, baseTotal: baseTotal, savings: 0, fullDays: 0, months: 0, weeks: 0, days: 0)
+        }
+
+        // Filtrer regler likt som server (spot_id IS NULL OR spot_id = target).
+        let filteredRules: [Rule]
+        if let target = spotId {
+            filteredRules = rules.filter { $0.spot_id == nil || $0.spot_id == target }
+        } else {
+            filteredRules = rules.filter { $0.spot_id == nil }
+        }
+        let hourlyRules = filteredRules.filter { $0.kind == "hourly" }
+
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+
+        let isoFmt = ISO8601DateFormatter()
+        isoFmt.timeZone = TimeZone(identifier: "Europe/Oslo")
+        isoFmt.formatOptions = [.withInternetDateTime]
+
+        // Grupper timer etter Oslo-dato.
+        var hoursByDate: [String: [(hour: Int, price: Int)]] = [:]
+        for entry in breakdown where entry.source != "unavailable" {
+            guard let date = isoFmt.date(from: entry.hourAt) else { continue }
+            let dayKey = format(date)
+            let h = cal.component(.hour, from: date)
+            hoursByDate[dayKey, default: []].append((hour: h, price: entry.price))
+        }
+
+        let dates = hoursByDate.keys.sorted()
+        var fullDayFlags: [Bool] = []
+
+        for dateIso in dates {
+            let bookedHours = Set((hoursByDate[dateIso] ?? []).map { $0.hour })
+            guard let date = parse(dateIso) else {
+                fullDayFlags.append(false)
+                continue
+            }
+            let bit = weekdayBit(date)
+
+            let bandsForDay = hourlyRules.filter { r in
+                guard let mask = r.day_mask, r.start_hour != nil, r.end_hour != nil else { return false }
+                if let sd = r.start_date, dateIso < sd { return false }
+                if let ed = r.end_date, dateIso > ed { return false }
+                return (mask & (1 << bit)) != 0
+            }
+
+            if bandsForDay.isEmpty {
+                fullDayFlags.append(false)
+                continue
+            }
+
+            var requiredHours: Set<Int> = []
+            for band in bandsForDay {
+                let startMin = (band.start_hour ?? 0) * 60 + (band.start_minute ?? 0)
+                let endMin = (band.end_hour ?? 0) * 60 + (band.end_minute ?? 0)
+                for h in 0..<24 {
+                    let hStart = h * 60
+                    let hEnd = hStart + 60
+                    if hStart >= startMin && hEnd <= endMin {
+                        requiredHours.insert(h)
+                    }
+                }
+            }
+
+            let isFull = !requiredHours.isEmpty && requiredHours.allSatisfy { bookedHours.contains($0) }
+            fullDayFlags.append(isFull)
+        }
+
+        // Stable rabatt over påfølgende strekninger.
+        var totalSavings: Double = 0
+        var totalFullDays = 0
+        var totalMonths = 0, totalWeeks = 0, totalDayCount = 0
+
+        let sumDay: (Int) -> Int = { idx in
+            (hoursByDate[dates[idx]] ?? []).reduce(0) { $0 + $1.price }
+        }
+
+        var runStart = -1
+        for i in 0...fullDayFlags.count {
+            let isFull = i < fullDayFlags.count && fullDayFlags[i]
+            if isFull && runStart == -1 {
+                runStart = i
+            } else if !isFull && runStart != -1 {
+                let runEnd = i - 1
+                let length = runEnd - runStart + 1
+                var cursor = runStart
+                var remaining = length
+
+                while remaining >= 30 {
+                    var monthBase = 0
+                    for j in 0..<30 { monthBase += sumDay(cursor + j) }
+                    totalSavings += Double(monthBase) * Double(discountMonthPct) / 100.0
+                    totalMonths += 1
+                    cursor += 30
+                    remaining -= 30
+                }
+                while remaining >= 7 {
+                    var weekBase = 0
+                    for j in 0..<7 { weekBase += sumDay(cursor + j) }
+                    totalSavings += Double(weekBase) * Double(discountWeekPct) / 100.0
+                    totalWeeks += 1
+                    cursor += 7
+                    remaining -= 7
+                }
+                while remaining > 0 {
+                    totalSavings += Double(sumDay(cursor)) * Double(discountDayPct) / 100.0
+                    totalDayCount += 1
+                    cursor += 1
+                    remaining -= 1
+                }
+                totalFullDays += length
+                runStart = -1
+            }
+        }
+
+        let savings = Int(totalSavings.rounded())
+        return DurationDiscount(
+            total: baseTotal - savings,
+            baseTotal: baseTotal,
+            savings: savings,
+            fullDays: totalFullDays,
+            months: totalMonths,
+            weeks: totalWeeks,
+            days: totalDayCount
+        )
+    }
 }

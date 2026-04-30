@@ -5,12 +5,14 @@ import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS } from "@/lib/config";
 import {
   getNightlyPricesWithServiceClient,
   applyPriceBreakdown,
-  getHourlyPricesWithServiceClient,
+  getHourlyPricesAndRulesWithServiceClient,
   applyHourlyPriceBreakdown,
   hourlyBreakdownHasUnavailable,
+  applyDurationDiscount,
   type NightlyPrice,
   type HourlyPrice,
   type AvailabilityMode,
+  type DurationDiscountResult,
 } from "@/lib/pricing";
 import type { SpotMarker, ListingExtra, SelectedExtras } from "@/types";
 
@@ -28,7 +30,7 @@ async function computeTotalWithBreakdown(args: {
   selectedExtras?: SelectedExtras;
   /** Listing availability mode. Brukes for å avvise hourly bookings utenfor bånd. */
   availabilityMode?: AvailabilityMode;
-}): Promise<{ total: number; breakdown: NightlyPrice[] | HourlyPrice[] | null; unavailable?: boolean }> {
+}): Promise<{ total: number; breakdown: NightlyPrice[] | HourlyPrice[] | null; unavailable?: boolean; discount?: DurationDiscountResult | null }> {
   const isHourly = !!(args.checkInAt && args.checkOutAt);
   const start = new Date(args.checkIn);
   const end = new Date(args.checkOut);
@@ -48,6 +50,7 @@ async function computeTotalWithBreakdown(args: {
 
   let baseTotal: number;
   let breakdown: NightlyPrice[] | HourlyPrice[] | null = null;
+  let discount: DurationDiscountResult | null = null;
 
   if (hasPerSpotPricing) {
     baseTotal = selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * units, 0);
@@ -56,7 +59,7 @@ async function computeTotalWithBreakdown(args: {
     // Per-spot scope: hvis kun én plass er valgt, send spotId så server filtrerer
     // bånd til den plassens regler (med fallback til listing-wide).
     const targetSpotId = args.selectedSpotIds?.length === 1 ? args.selectedSpotIds[0] : null;
-    const hourlyBreakdown = await getHourlyPricesWithServiceClient(
+    const { breakdown: hourlyBreakdown, rules } = await getHourlyPricesAndRulesWithServiceClient(
       {
         listingId: args.listingId,
         checkInAt: args.checkInAt!,
@@ -73,6 +76,26 @@ async function computeTotalWithBreakdown(args: {
       return { total: 0, breakdown, unavailable: true };
     }
     baseTotal = applyHourlyPriceBreakdown(hourlyBreakdown);
+
+    // Anvend duration-rabatt: hent valgt plass sine rabatt-prosenter (eller
+    // første spot som matcher hvis valgte ikke har egne).
+    const targetSpot = targetSpotId
+      ? selectedSpots.find((s) => s.id === targetSpotId)
+      : selectedSpots[0] ?? (args.spotMarkers || [])[0];
+    const dayPct = targetSpot?.discountDayPct ?? 0;
+    const weekPct = targetSpot?.discountWeekPct ?? 0;
+    const monthPct = targetSpot?.discountMonthPct ?? 0;
+    if (dayPct > 0 || weekPct > 0 || monthPct > 0) {
+      discount = applyDurationDiscount({
+        rules,
+        hourlyBreakdown,
+        discountDayPct: dayPct,
+        discountWeekPct: weekPct,
+        discountMonthPct: monthPct,
+        spotId: targetSpotId,
+      });
+      baseTotal = discount.total;
+    }
   } else {
     breakdown = await getNightlyPricesWithServiceClient(
       {
@@ -106,7 +129,7 @@ async function computeTotalWithBreakdown(args: {
 
   const subtotal = baseTotal + extrasTotal;
   const total = subtotal + Math.round(subtotal * SERVICE_FEE_RATE);
-  return { total, breakdown };
+  return { total, breakdown, discount };
 }
 
 const supabase = createClient(

@@ -143,6 +143,7 @@ struct BookingView: View {
     @State private var bookedDates: BookingService.BookedDates?
     @State private var nightlyPriceBreakdown: [NightlyPriceEntry] = []
     @State private var hourlyPriceBreakdown: [HourlyPriceEntry] = []
+    @State private var durationDiscount: PricingService.DurationDiscount?
     @State private var loadingBreakdown = false
 
     private var hasSpotLevelPricing: Bool {
@@ -193,6 +194,8 @@ struct BookingView: View {
         }
         if isHourly, !hourlyPriceBreakdown.isEmpty {
             // hourlyPriceBreakdown brukes for parkering per time (band-basert per-time-pris).
+            // Hvis duration-rabatt er aktiv, bruk total fra rabatt-objektet.
+            if let d = durationDiscount, d.savings > 0 { return d.total }
             return hourlyPriceBreakdown.reduce(0) { $0 + $1.price }
         }
         if !nightlyPriceBreakdown.isEmpty, !isHourly {
@@ -231,18 +234,43 @@ struct BookingView: View {
     private func loadHourlyPriceBreakdown() {
         guard let ci = checkIn, let co = checkOut, hours > 0, !hasSpotLevelPricing else {
             hourlyPriceBreakdown = []
+            durationDiscount = nil
             return
         }
         loadingBreakdown = true
         Task {
-            let breakdown = await PricingService.hourlyPriceBreakdown(
-                listingId: listing.id,
+            // Last regler + breakdown så vi kan kjøre duration-rabatt på samme datasett.
+            let rules = await PricingService.fetchRules(listingId: listing.id)
+            let overrides = await PricingService.fetchOverrides(listingId: listing.id)
+            let breakdown = PricingService.buildHourlyBreakdown(
+                from: ci,
+                to: co,
                 baseHourlyPrice: listing.price ?? 0,
-                start: ci,
-                end: co,
+                rules: rules,
+                overrides: overrides,
             )
+
+            // Beregn rabatt for valgt plass (eller første plass om ingen valgt).
+            let targetSpot = selectedSpots.first ?? listing.spotMarkers?.first
+            let dayPct = targetSpot?.discountDayPct ?? 0
+            let weekPct = targetSpot?.discountWeekPct ?? 0
+            let monthPct = targetSpot?.discountMonthPct ?? 0
+
+            var discount: PricingService.DurationDiscount? = nil
+            if listing.category == .parking, dayPct > 0 || weekPct > 0 || monthPct > 0 {
+                discount = PricingService.applyDurationDiscount(
+                    rules: rules,
+                    breakdown: breakdown,
+                    discountDayPct: dayPct,
+                    discountWeekPct: weekPct,
+                    discountMonthPct: monthPct,
+                    spotId: targetSpot?.id
+                )
+            }
+
             await MainActor.run {
                 hourlyPriceBreakdown = breakdown
+                durationDiscount = discount
                 loadingBreakdown = false
             }
         }
@@ -923,6 +951,17 @@ struct BookingView: View {
                     Text("\(baseTotal) kr").font(.system(size: 14)).foregroundStyle(.neutral600)
                 }
             }
+            if let d = durationDiscount, d.savings > 0 {
+                HStack {
+                    Text(durationDiscountLabel(d))
+                        .font(.system(size: 13))
+                        .foregroundStyle(.primary700)
+                    Spacer()
+                    Text("−\(d.savings) kr")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.primary700)
+                }
+            }
             if listingExtrasTotal + spotExtrasTotal > 0 {
                 HStack {
                     Text("Tilleggstjenester").font(.system(size: 14)).foregroundStyle(.neutral600)
@@ -988,6 +1027,16 @@ struct BookingView: View {
         case "override": return "tilpasset"
         default: return "standard"
         }
+    }
+
+    /// "Rabatt: 1 måned + 5 døgn" — beskriver tier-stable.
+    private func durationDiscountLabel(_ d: PricingService.DurationDiscount) -> String {
+        var parts: [String] = []
+        if d.months > 0 { parts.append("\(d.months) måned\(d.months == 1 ? "" : "er")") }
+        if d.weeks > 0 { parts.append("\(d.weeks) uke\(d.weeks == 1 ? "" : "r")") }
+        if d.days > 0 { parts.append("\(d.days) døgn") }
+        let suffix = parts.isEmpty ? "fulle døgn" : parts.joined(separator: " + ")
+        return "Rabatt: \(suffix)"
     }
 
     private var baseLineLabel: String {

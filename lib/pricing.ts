@@ -323,6 +323,19 @@ export async function getHourlyPricesWithServiceClient(
   url: string,
   serviceKey: string,
 ): Promise<HourlyPrice[]> {
+  const { breakdown } = await getHourlyPricesAndRulesWithServiceClient(input, url, serviceKey);
+  return breakdown;
+}
+
+/**
+ * Som getHourlyPricesWithServiceClient men returnerer også rules så kallere
+ * kan kjøre etterprosesseringer (f.eks. applyDurationDiscount) uten å re-spørre.
+ */
+export async function getHourlyPricesAndRulesWithServiceClient(
+  input: ResolveHourlyInput,
+  url: string,
+  serviceKey: string,
+): Promise<{ breakdown: HourlyPrice[]; rules: PricingRule[] }> {
   const supabase = createServiceClient(url, serviceKey);
   const startDate = input.checkInAt.slice(0, 10);
   const endDate = input.checkOutAt.slice(0, 10);
@@ -343,7 +356,7 @@ export async function getHourlyPricesWithServiceClient(
   const rules: PricingRule[] = (rulesRes.data || []).map(rowToRule);
   const overrides: PricingOverride[] = (overridesRes.data || []).map(rowToOverride);
 
-  return buildHourlyBreakdown(input, rules, overrides);
+  return { breakdown: buildHourlyBreakdown(input, rules, overrides), rules };
 }
 
 function buildHourlyBreakdown(
@@ -413,4 +426,194 @@ function rowToOverride(row: Record<string, unknown>): PricingOverride {
 /** Hjelper: returner true hvis breakdown inneholder en time markert som unavailable. */
 export function hourlyBreakdownHasUnavailable(breakdown: HourlyPrice[]): boolean {
   return breakdown.some((h) => h.source === "unavailable");
+}
+
+// MARK: - Duration discount (parkering)
+//
+// Et "fullt døgn" defineres som at bookingen dekker hele dagens band-vindu —
+// alle hele timer som faller innenfor minst ett bånd den dagen må være med.
+// Påfølgende fulle døgn stables greedy: floor(N/30) måneder + floor(rest/7)
+// uker + rest enkelt-døgn. Hver tier får sin respektive rabatt-prosent på
+// timene som inngår. Booking-API kaller denne for å justere hourly-totalen
+// før service-fee.
+
+export interface DurationDiscountInput {
+  /** Hourly-regler for plassen (samme sett som ble brukt i breakdown). */
+  rules: PricingRule[];
+  /** Per-time-breakdown som ble bygget av buildHourlyBreakdown. */
+  hourlyBreakdown: HourlyPrice[];
+  /** Rabatt 0-100 for et fullt døgn. nil/0 = ingen rabatt. */
+  discountDayPct: number;
+  /** Rabatt 0-100 for 7 påfølgende fulle døgn. */
+  discountWeekPct: number;
+  /** Rabatt 0-100 for 30 påfølgende fulle døgn. */
+  discountMonthPct: number;
+  /** Spot som booking gjelder. Brukes for å filtrere regler riktig. */
+  spotId: string | null;
+}
+
+export interface DurationDiscountResult {
+  /** Total etter rabatt. */
+  total: number;
+  /** Original total uten rabatt. */
+  baseTotal: number;
+  /** Sparte beløp (kr). */
+  savings: number;
+  /** Antall fulle døgn i bookingen (sum over alle påfølgende-strekninger). */
+  fullDays: number;
+  /** Hvordan rabatten er stablet. */
+  tiers: { months: number; weeks: number; days: number };
+}
+
+export function applyDurationDiscount(input: DurationDiscountInput): DurationDiscountResult {
+  const { rules, hourlyBreakdown, discountDayPct, discountWeekPct, discountMonthPct, spotId } = input;
+  const baseTotal = applyHourlyPriceBreakdown(hourlyBreakdown);
+
+  // Ingen rabatt-prosent satt → returner uendret.
+  if (discountDayPct <= 0 && discountWeekPct <= 0 && discountMonthPct <= 0) {
+    return {
+      total: baseTotal,
+      baseTotal,
+      savings: 0,
+      fullDays: 0,
+      tiers: { months: 0, weeks: 0, days: 0 },
+    };
+  }
+
+  // Filtrer regler til samme sett som ble brukt i breakdown (spot-aware).
+  const filteredRules = spotId
+    ? rules.filter((r) => r.spotId === null || r.spotId === spotId)
+    : rules.filter((r) => r.spotId === null);
+  const hourlyRules = filteredRules.filter((r) => r.kind === "hourly");
+
+  // Grupper timer i breakdown etter Oslo-dato.
+  const hoursByDate = new Map<string, { hour: number; price: number }[]>();
+  for (const h of hourlyBreakdown) {
+    if (h.source === "unavailable") continue;
+    const { dateIso, hour } = osloHourParts(new Date(h.hourAt));
+    if (!hoursByDate.has(dateIso)) hoursByDate.set(dateIso, []);
+    hoursByDate.get(dateIso)!.push({ hour, price: h.price });
+  }
+
+  const dates = Array.from(hoursByDate.keys()).sort();
+  const fullDayFlags: boolean[] = [];
+
+  for (const dateIso of dates) {
+    const bookedHours = new Set(hoursByDate.get(dateIso)!.map((h) => h.hour));
+    const date = parseDate(dateIso);
+    const bit = weekdayBit(date);
+
+    const bandsForDay = hourlyRules.filter((r) => {
+      if (typeof r.dayMask !== "number") return false;
+      if (r.startHour === null || r.endHour === null) return false;
+      if (r.startDate && dateIso < r.startDate) return false;
+      if (r.endDate && dateIso > r.endDate) return false;
+      return (r.dayMask & (1 << bit)) !== 0;
+    });
+
+    if (bandsForDay.length === 0) {
+      fullDayFlags.push(false);
+      continue;
+    }
+
+    // For at dagen skal være "full døgn": alle hele timer som faller innenfor
+    // minst ett bånd den dagen må være booket.
+    const requiredHours = new Set<number>();
+    for (const band of bandsForDay) {
+      const startMin = band.startHour! * 60 + band.startMinute;
+      const endMin = band.endHour! * 60 + band.endMinute;
+      for (let h = 0; h < 24; h++) {
+        const hStart = h * 60;
+        const hEnd = hStart + 60;
+        if (hStart >= startMin && hEnd <= endMin) {
+          requiredHours.add(h);
+        }
+      }
+    }
+
+    const isFull = requiredHours.size > 0
+      && Array.from(requiredHours).every((h) => bookedHours.has(h));
+    fullDayFlags.push(isFull);
+  }
+
+  // Finn påfølgende-strekninger og stable rabatt greedy per strekning.
+  let totalSavings = 0;
+  let totalFullDays = 0;
+  const tiers = { months: 0, weeks: 0, days: 0 };
+
+  let runStart = -1;
+  for (let i = 0; i <= fullDayFlags.length; i++) {
+    const isFull = i < fullDayFlags.length && fullDayFlags[i];
+    if (isFull && runStart === -1) {
+      runStart = i;
+    } else if (!isFull && runStart !== -1) {
+      const runEnd = i - 1;
+      const result = applyTiersToRun(dates, hoursByDate, runStart, runEnd, {
+        day: discountDayPct,
+        week: discountWeekPct,
+        month: discountMonthPct,
+      });
+      totalSavings += result.savings;
+      totalFullDays += result.length;
+      tiers.months += result.months;
+      tiers.weeks += result.weeks;
+      tiers.days += result.days;
+      runStart = -1;
+    }
+  }
+
+  totalSavings = Math.round(totalSavings);
+
+  return {
+    total: baseTotal - totalSavings,
+    baseTotal,
+    savings: totalSavings,
+    fullDays: totalFullDays,
+    tiers,
+  };
+}
+
+function applyTiersToRun(
+  dates: string[],
+  hoursByDate: Map<string, { hour: number; price: number }[]>,
+  start: number,
+  end: number,
+  pct: { day: number; week: number; month: number },
+): { savings: number; length: number; months: number; weeks: number; days: number } {
+  const length = end - start + 1;
+  let cursor = start;
+  let remaining = length;
+  let savings = 0;
+  let months = 0, weeks = 0, days = 0;
+
+  const sumDay = (dateIdx: number): number => {
+    const date = dates[dateIdx];
+    const hours = hoursByDate.get(date) || [];
+    return hours.reduce((s, h) => s + h.price, 0);
+  };
+
+  while (remaining >= 30) {
+    let monthBase = 0;
+    for (let i = 0; i < 30; i++) monthBase += sumDay(cursor + i);
+    savings += monthBase * (pct.month / 100);
+    months += 1;
+    cursor += 30;
+    remaining -= 30;
+  }
+  while (remaining >= 7) {
+    let weekBase = 0;
+    for (let i = 0; i < 7; i++) weekBase += sumDay(cursor + i);
+    savings += weekBase * (pct.week / 100);
+    weeks += 1;
+    cursor += 7;
+    remaining -= 7;
+  }
+  while (remaining > 0) {
+    savings += sumDay(cursor) * (pct.day / 100);
+    days += 1;
+    cursor += 1;
+    remaining -= 1;
+  }
+
+  return { savings, length, months, weeks, days };
 }

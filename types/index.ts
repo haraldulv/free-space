@@ -133,6 +133,10 @@ export interface SpotMarker {
   label?: string;
   description?: string;
   price?: number;
+  /** Dual-pricing per plass — time-pris (kr/time). */
+  pricePerHour?: number;
+  /** Dual-pricing per plass — natt-pris (camping). */
+  pricePerNight?: number;
   vehicleMaxLength?: number;
   /** Multi-select biltyper — bruk denne fra build 61+. Singel `vehicleType` er backward-compat. */
   vehicleTypes?: VehicleType[];
@@ -144,6 +148,12 @@ export interface SpotMarker {
   blockedDates?: string[];
   checkinMessage?: string;
   images?: string[];
+  /** Rabatt (%) for fullt døgn (parkering). 0–100. */
+  discountDayPct?: number;
+  /** Rabatt (%) for 7 påfølgende fulle døgn. */
+  discountWeekPct?: number;
+  /** Rabatt (%) for 30 påfølgende fulle døgn. */
+  discountMonthPct?: number;
 }
 
 /** Returner effective vehicleTypes på en SpotMarker — håndterer backward-compat. */
