@@ -26,6 +26,7 @@ struct WizardPricingCalendarView: View {
     // Band-editor draft state
     @State private var draft: WizardPricingBand? = nil
     @State private var draftPriceValue: Int = 0
+    @State private var draftPriceText: String = ""
     @FocusState private var draftPriceFocused: Bool
     @State private var showDeleteConfirm: Bool = false
 
@@ -207,7 +208,10 @@ struct WizardPricingCalendarView: View {
             }
         }
         .onChange(of: draftPriceFocused) { _, focused in
-            if !focused {
+            if focused {
+                // Tøm feltet ved tap så bruker kan skrive ny pris direkte.
+                draftPriceText = ""
+            } else {
                 commitDraftPrice()
             }
         }
@@ -636,7 +640,7 @@ struct WizardPricingCalendarView: View {
     private var inlinePriceEditor: some View {
         HStack(spacing: 10) {
             Button {
-                stepPrice(by: -10)
+                stepPrice(by: -50)
             } label: {
                 Image(systemName: "minus")
                     .font(.system(size: 11, weight: .bold))
@@ -663,7 +667,7 @@ struct WizardPricingCalendarView: View {
             }
 
             Button {
-                stepPrice(by: 10)
+                stepPrice(by: 50)
             } label: {
                 Image(systemName: "plus")
                     .font(.system(size: 11, weight: .bold))
@@ -860,6 +864,7 @@ struct WizardPricingCalendarView: View {
     private func openBandEditor(_ band: WizardPricingBand) {
         draft = band
         draftPriceValue = band.price > 0 ? band.price : basePerHour
+        draftPriceText = "\(draftPriceValue)"
         // Rydd date-override-state for å unngå at den vises bak editoren.
         selectedDates.removeAll()
         rangeAnchor = nil
@@ -879,6 +884,7 @@ struct WizardPricingCalendarView: View {
         )
         draft = new
         draftPriceValue = basePerHour
+        draftPriceText = "\(draftPriceValue)"
         selectedDates.removeAll()
         rangeAnchor = nil
         mode = .bandCreate
@@ -886,7 +892,12 @@ struct WizardPricingCalendarView: View {
 
     private func commitDraftPrice() {
         guard var d = draft else { return }
-        d.price = max(0, draftPriceValue)
+        // Parse fra tekst-feltet i tilfelle bruker har skrevet noe nytt
+        let parsed = Int(draftPriceText) ?? draftPriceValue
+        let clamped = max(0, parsed)
+        draftPriceValue = clamped
+        draftPriceText = "\(clamped)"
+        d.price = clamped
         draft = d
         persistDraft()
     }
@@ -894,6 +905,7 @@ struct WizardPricingCalendarView: View {
     private func stepDraftPrice(by delta: Int) {
         let v = max(0, draftPriceValue + delta)
         draftPriceValue = v
+        draftPriceText = "\(v)"
         commitDraftPrice()
     }
 
@@ -1126,8 +1138,8 @@ struct WizardPricingCalendarView: View {
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
             HStack(spacing: 8) {
-                darkTimeWheel(label: "Fra", binding: bandStartBinding)
-                darkTimeWheel(label: "Til", binding: bandEndBinding)
+                darkTimeWheel(binding: bandStartBinding)
+                darkTimeWheel(binding: bandEndBinding)
             }
         }
     }
@@ -1151,57 +1163,54 @@ struct WizardPricingCalendarView: View {
     }
 
     @ViewBuilder
-    private func darkTimeWheel(label: String, binding: Binding<Int?>) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(label)
-                .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.7))
-
-            HStack(spacing: 0) {
-                Picker("", selection: Binding(
-                    get: { (binding.wrappedValue ?? 0) / 60 },
-                    set: { newH in
-                        let m = (binding.wrappedValue ?? 0) % 60
-                        binding.wrappedValue = newH * 60 + m
-                    }
-                )) {
-                    ForEach(0..<25, id: \.self) { h in
-                        Text(String(format: "%02d", h)).tag(h)
-                    }
+    private func darkTimeWheel(binding: Binding<Int?>) -> some View {
+        HStack(spacing: 0) {
+            Picker("", selection: Binding(
+                get: { (binding.wrappedValue ?? 0) / 60 },
+                set: { newH in
+                    let m = (binding.wrappedValue ?? 0) % 60
+                    binding.wrappedValue = newH * 60 + m
                 }
-                .pickerStyle(.wheel)
-                .frame(maxWidth: .infinity)
-                .frame(height: 96)
-                .clipped()
-
-                Text(":")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(.white)
-
-                Picker("", selection: Binding(
-                    get: { (binding.wrappedValue ?? 0) % 60 },
-                    set: { newM in
-                        let h = (binding.wrappedValue ?? 0) / 60
-                        binding.wrappedValue = h * 60 + newM
-                    }
-                )) {
-                    ForEach([0, 30], id: \.self) { m in
-                        Text(String(format: "%02d", m)).tag(m)
-                    }
+            )) {
+                ForEach(0..<25, id: \.self) { h in
+                    Text(String(format: "%02d", h))
+                        .foregroundStyle(Color.neutral900)
+                        .tag(h)
                 }
-                .pickerStyle(.wheel)
-                .frame(maxWidth: .infinity)
-                .frame(height: 96)
-                .clipped()
             }
-            .background(Color.white.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
-            )
-            .colorScheme(.dark)
+            .pickerStyle(.wheel)
+            .frame(maxWidth: .infinity)
+            .frame(height: 96)
+            .clipped()
+
+            Text(":")
+                .font(.system(size: 16, weight: .bold))
+                .foregroundStyle(Color.neutral500)
+
+            Picker("", selection: Binding(
+                get: { (binding.wrappedValue ?? 0) % 60 },
+                set: { newM in
+                    let h = (binding.wrappedValue ?? 0) / 60
+                    binding.wrappedValue = h * 60 + newM
+                }
+            )) {
+                ForEach([0, 30], id: \.self) { m in
+                    Text(String(format: "%02d", m))
+                        .foregroundStyle(Color.neutral900)
+                        .tag(m)
+                }
+            }
+            .pickerStyle(.wheel)
+            .frame(maxWidth: .infinity)
+            .frame(height: 96)
+            .clipped()
         }
+        .background(Color.white.opacity(0.95))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+        )
     }
 
     private var bandPriceCard: some View {
@@ -1211,18 +1220,18 @@ struct WizardPricingCalendarView: View {
                 .foregroundStyle(.white)
             HStack(spacing: 10) {
                 Button {
-                    stepDraftPrice(by: -10)
+                    stepDraftPrice(by: -50)
                 } label: {
                     Image(systemName: "minus")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 26, height: 26)
+                        .frame(width: 30, height: 30)
                         .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
                 }
                 .buttonStyle(.plain)
 
                 HStack(alignment: .firstTextBaseline, spacing: 3) {
-                    TextField("", value: $draftPriceValue, formatter: NumberFormatter())
+                    TextField("", text: $draftPriceText)
                         .focused($draftPriceFocused)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.center)
@@ -1237,12 +1246,12 @@ struct WizardPricingCalendarView: View {
                 .frame(maxWidth: .infinity)
 
                 Button {
-                    stepDraftPrice(by: 10)
+                    stepDraftPrice(by: 50)
                 } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 26, height: 26)
+                        .frame(width: 30, height: 30)
                         .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
                 }
                 .buttonStyle(.plain)
