@@ -486,6 +486,17 @@ export function applyDurationDiscount(input: DurationDiscountInput): DurationDis
     : rules.filter((r) => r.spotId === null);
   const hourlyRules = filteredRules.filter((r) => r.kind === "hourly");
 
+  // Plass uten bånd ("alltid ledig") — et døgn = 24 sammenhengende timer
+  // i bookingen, uavhengig av kalender-grenser.
+  if (hourlyRules.length === 0) {
+    return apply24HourBlockDiscount({
+      hourlyBreakdown,
+      discountDayPct,
+      discountWeekPct,
+      discountMonthPct,
+    });
+  }
+
   // Grupper timer i breakdown etter Oslo-dato.
   const hoursByDate = new Map<string, { hour: number; price: number }[]>();
   for (const h of hourlyBreakdown) {
@@ -569,6 +580,58 @@ export function applyDurationDiscount(input: DurationDiscountInput): DurationDis
     baseTotal,
     savings: totalSavings,
     fullDays: totalFullDays,
+    tiers,
+  };
+}
+
+/// 24-timers-blokk-rabatt for plasser uten bånd. Et "døgn" = 24 sammenhengende
+/// timer fra start av booking. Resten (siste < 24t) betales full pris.
+function apply24HourBlockDiscount(input: {
+  hourlyBreakdown: HourlyPrice[];
+  discountDayPct: number;
+  discountWeekPct: number;
+  discountMonthPct: number;
+}): DurationDiscountResult {
+  const usable = input.hourlyBreakdown.filter((h) => h.source !== "unavailable");
+  const baseTotal = usable.reduce((s, h) => s + h.price, 0);
+  const totalDays = Math.floor(usable.length / 24);
+
+  let cursor = 0;
+  let remaining = totalDays;
+  let savings = 0;
+  const tiers = { months: 0, weeks: 0, days: 0 };
+
+  while (remaining >= 30) {
+    let monthBase = 0;
+    for (let i = 0; i < 30 * 24; i++) monthBase += usable[cursor + i].price;
+    savings += monthBase * (input.discountMonthPct / 100);
+    tiers.months += 1;
+    cursor += 30 * 24;
+    remaining -= 30;
+  }
+  while (remaining >= 7) {
+    let weekBase = 0;
+    for (let i = 0; i < 7 * 24; i++) weekBase += usable[cursor + i].price;
+    savings += weekBase * (input.discountWeekPct / 100);
+    tiers.weeks += 1;
+    cursor += 7 * 24;
+    remaining -= 7;
+  }
+  while (remaining > 0) {
+    let dayBase = 0;
+    for (let i = 0; i < 24; i++) dayBase += usable[cursor + i].price;
+    savings += dayBase * (input.discountDayPct / 100);
+    tiers.days += 1;
+    cursor += 24;
+    remaining -= 1;
+  }
+
+  const rounded = Math.round(savings);
+  return {
+    total: baseTotal - rounded,
+    baseTotal,
+    savings: rounded,
+    fullDays: totalDays,
     tiers,
   };
 }

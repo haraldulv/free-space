@@ -552,6 +552,16 @@ enum PricingService {
         }
         let hourlyRules = filteredRules.filter { $0.kind == "hourly" }
 
+        // Alltid-ledig: et døgn = 24 sammenhengende timer.
+        if hourlyRules.isEmpty {
+            return apply24HourBlockDiscount(
+                breakdown: breakdown,
+                discountDayPct: discountDayPct,
+                discountWeekPct: discountWeekPct,
+                discountMonthPct: discountMonthPct
+            )
+        }
+
         var cal = Calendar(identifier: .gregorian)
         cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
 
@@ -664,6 +674,61 @@ enum PricingService {
             months: totalMonths,
             weeks: totalWeeks,
             days: totalDayCount
+        )
+    }
+
+    /// 24-timers-blokk-rabatt for plasser uten bånd. Et "døgn" = 24
+    /// sammenhengende timer fra start av booking. Resten (siste < 24t)
+    /// betales full pris.
+    private static func apply24HourBlockDiscount(
+        breakdown: [HourlyPriceEntry],
+        discountDayPct: Int,
+        discountWeekPct: Int,
+        discountMonthPct: Int
+    ) -> DurationDiscount {
+        let usable = breakdown.filter { $0.source != "unavailable" }
+        let baseTotal = usable.reduce(0) { $0 + $1.price }
+        let totalDays = usable.count / 24
+
+        var cursor = 0
+        var remaining = totalDays
+        var savings: Double = 0
+        var months = 0, weeks = 0, days = 0
+
+        while remaining >= 30 {
+            var monthBase = 0
+            for i in 0..<(30 * 24) { monthBase += usable[cursor + i].price }
+            savings += Double(monthBase) * Double(discountMonthPct) / 100.0
+            months += 1
+            cursor += 30 * 24
+            remaining -= 30
+        }
+        while remaining >= 7 {
+            var weekBase = 0
+            for i in 0..<(7 * 24) { weekBase += usable[cursor + i].price }
+            savings += Double(weekBase) * Double(discountWeekPct) / 100.0
+            weeks += 1
+            cursor += 7 * 24
+            remaining -= 7
+        }
+        while remaining > 0 {
+            var dayBase = 0
+            for i in 0..<24 { dayBase += usable[cursor + i].price }
+            savings += Double(dayBase) * Double(discountDayPct) / 100.0
+            days += 1
+            cursor += 24
+            remaining -= 1
+        }
+
+        let rounded = Int(savings.rounded())
+        return DurationDiscount(
+            total: baseTotal - rounded,
+            baseTotal: baseTotal,
+            savings: rounded,
+            fullDays: totalDays,
+            months: months,
+            weeks: weeks,
+            days: days
         )
     }
 }
