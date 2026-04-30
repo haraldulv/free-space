@@ -52,6 +52,7 @@
 		52F36D48C8D895936C319C5F /* parking.png in Resources */ = {isa = PBXBuildFile; fileRef = DC1B2723E875C7128C9687CD /* parking.png */; };
 		53263F543ED69E31B489D2D5 /* SpotPlacementSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */; };
 		53A0D526B1C2D389C36E2A64 /* PricingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56E3029710A8D3475494799E /* PricingService.swift */; };
+		549EF8AAA48741629909C0C3 /* SpotDiscountsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7874F6107D21DA391AC6BD /* SpotDiscountsStep.swift */; };
 		5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */; };
 		642AF85B63EEA4DB11DEA032 /* ListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6DFB7D23F06D079D826635 /* ListingDetailView.swift */; };
 		659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CE3CB213405AF521294421 /* TunoApp.swift */; };
@@ -183,6 +184,7 @@
 		5A9DFF0FBCEDEA70C1C84433 /* SpotCountStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotCountStep.swift; sourceTree = "<group>"; };
 		5B65DE53742FC3A764A59D8C /* PublishStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublishStep.swift; sourceTree = "<group>"; };
 		5C5065BE9CC3C749754F554F /* BookingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingsView.swift; sourceTree = "<group>"; };
+		5D7874F6107D21DA391AC6BD /* SpotDiscountsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotDiscountsStep.swift; sourceTree = "<group>"; };
 		5E4DD0720CB861E932C5AECA /* ImageDropDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDropDelegate.swift; sourceTree = "<group>"; };
 		633F2046F5DC659D1D443A25 /* SpotBlockedDatesSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotBlockedDatesSection.swift; sourceTree = "<group>"; };
 		64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingViewModel.swift; sourceTree = "<group>"; };
@@ -561,6 +563,7 @@
 				5A9DFF0FBCEDEA70C1C84433 /* SpotCountStep.swift */,
 				1213A1E7AC0AB0C6683A1A43 /* SpotDetailCard.swift */,
 				E168ECC061FD115C52320C1F /* SpotDetailsStep.swift */,
+				5D7874F6107D21DA391AC6BD /* SpotDiscountsStep.swift */,
 				BD05EFAAFF75CA5314B3B4EE /* SpotExtrasContent.swift */,
 				E526C4504EA007084624767F /* SpotExtrasStep.swift */,
 				B4FAE01C676255DD56E0570A /* SpotPriceStep.swift */,
@@ -773,6 +776,7 @@
 				E50042878D13F35711A857AD /* SpotCountStep.swift in Sources */,
 				6CB4EB3DA766CB6BC5FC1B67 /* SpotDetailCard.swift in Sources */,
 				D810CB11774F2D2C919200B8 /* SpotDetailsStep.swift in Sources */,
+				549EF8AAA48741629909C0C3 /* SpotDiscountsStep.swift in Sources */,
 				7988CA1D8A60D501E4D5532E /* SpotExtrasContent.swift in Sources */,
 				8366B42E53C29B755B8EB7ED /* SpotExtrasStep.swift in Sources */,
 				53263F543ED69E31B489D2D5 /* SpotPlacementSheet.swift in Sources */,
@@ -832,7 +836,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 135;
+				CURRENT_PROJECT_VERSION = 136;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -932,7 +936,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 135;
+				CURRENT_PROJECT_VERSION = 136;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

@@ -15,10 +15,11 @@ final class ListingFormModel: ObservableObject {
     @Published var isSubmitting = false
     @Published var error: String?
 
-    /// 17-stegs fullscreen-flow (0 Velkomst → 16 Klar).
+    /// 18-stegs fullscreen-flow (0 Velkomst → 17 Klar).
     /// Mini-wizard 5-9 (5 steg per plass): Kjøretøy → Tilgjengelighet → Pris
-    /// → Pris-variasjon → Tillegg.
-    let totalSteps = 17
+    /// → Pris-variasjon → Tillegg. Etter mini-wizard kommer Rabatter (10) for
+    /// parkering, deretter Booking (11) → Klar (17).
+    let totalSteps = 18
 
     // MARK: - Step 1: Category
     @Published var category: ListingCategory? = .camping
@@ -113,9 +114,9 @@ final class ListingFormModel: ObservableObject {
         spotMarkers.indices.contains(index) ? spotMarkers[index] : nil
     }
 
-    // MARK: - Step labels (for progress) — 17 steg
+    // MARK: - Step labels (for progress) — 18 steg
     var stepLabels: [String] {
-        ["Velkommen", "Kategori", "Adresse", "Plasser", "Marker", "Kjøretøy", "Tilgjengelighet", "Pris", "Prisvariasjon", "Tillegg", "Booking", "Beskrivelse", "Bilder", "Fasiliteter", "Meldinger", "Kalender", "Klar"]
+        ["Velkommen", "Kategori", "Adresse", "Plasser", "Marker", "Kjøretøy", "Tilgjengelighet", "Pris", "Prisvariasjon", "Tillegg", "Rabatter", "Booking", "Beskrivelse", "Bilder", "Fasiliteter", "Meldinger", "Kalender", "Klar"]
     }
 
     /// Tilgjengelighets-steget (6) er kun relevant for parkering.
@@ -132,7 +133,13 @@ final class ListingFormModel: ObservableObject {
         return availability(for: spotId).bands.isEmpty
     }
 
-    /// Kalender-steget (15) blokkerer datoer. For parkering er tilgjengelighet
+    /// Rabatter-steget (10) gir prosent-rabatt for døgn/uke/måned-bookinger.
+    /// Kun relevant for parkering — camping bruker en flat per-natt-pris.
+    var skipsRabatterStep: Bool {
+        category != .parking
+    }
+
+    /// Kalender-steget (16) blokkerer datoer. For parkering er tilgjengelighet
     /// allerede definert via tilgjengelighets-bånd, så vi hopper over.
     /// Camping bruker fortsatt CalendarStep til å blokkere spesifikke datoer.
     var skipsCalendarStep: Bool {
@@ -183,12 +190,16 @@ final class ListingFormModel: ObservableObject {
             // Mini-wizard Tillegg — alltid gyldig
             return nil
         case 10:
+            // Rabatter — alltid valid (alle tre er frivillige)
             return nil
         case 11:
+            // Instant booking — alltid valid
+            return nil
+        case 12:
             let trimmed = title.trimmingCharacters(in: .whitespaces)
             if trimmed.isEmpty { return "Skriv en tittel" }
             if trimmed.count > 80 { return "Tittel kan være maks 80 tegn" }
-        case 12:
+        case 13:
             if imageURLs.isEmpty { return "Legg til minst 1 bilde" }
         default: return nil
         }
@@ -205,8 +216,8 @@ final class ListingFormModel: ObservableObject {
     /// Visuell fremdrift 0..1. Mini-wizard utgjør 5 steg per plass.
     var displayProgress: Double {
         let spotCount = max(1, spotMarkers.count)
-        // 5 pre-mini (0–4) + 5*N mini + 7 post-mini (10 Booking → 16 Klar)
-        let totalVirtual = 12 + 5 * spotCount
+        // 5 pre-mini (0–4) + 5*N mini + 8 post-mini (10 Rabatter → 17 Klar)
+        let totalVirtual = 13 + 5 * spotCount
         let pos: Int
         if currentStep < 5 {
             pos = currentStep
@@ -245,8 +256,9 @@ final class ListingFormModel: ObservableObject {
                 }
                 return
             }
-            // Siste plass ferdig — gå til Booking (10)
-            withAnimation(.easeInOut(duration: 0.32)) { currentStep = 10 }
+            // Siste plass ferdig — gå til Rabatter (10), eller hopp til Booking (11) for camping.
+            let nextAfterMini = skipsRabatterStep ? 11 : 10
+            withAnimation(.easeInOut(duration: 0.32)) { currentStep = nextAfterMini }
             return
         }
 
@@ -256,9 +268,13 @@ final class ListingFormModel: ObservableObject {
                 if currentStepHasMiniWizard {
                     currentSpotIndex = 0
                 }
-                // Hopp over Kalender (15) for parkering
-                if currentStep == 15 && skipsCalendarStep {
-                    currentStep = 16
+                // Hopp over Rabatter (10) for camping
+                if currentStep == 10 && skipsRabatterStep {
+                    currentStep = 11
+                }
+                // Hopp over Kalender (16) for parkering
+                if currentStep == 16 && skipsCalendarStep {
+                    currentStep = 17
                 }
             }
         }
@@ -288,16 +304,20 @@ final class ListingFormModel: ObservableObject {
             return
         }
 
-        // Hopp over Kalender bakover for parkering
-        if currentStep == 16 && skipsCalendarStep {
-            withAnimation(.easeInOut(duration: 0.32)) { currentStep = 14 }
+        // Hopp over Kalender (16) bakover for parkering
+        if currentStep == 17 && skipsCalendarStep {
+            withAnimation(.easeInOut(duration: 0.32)) { currentStep = 15 }
             return
         }
 
         if currentStep > 0 {
             withAnimation(.easeInOut(duration: 0.32)) {
                 currentStep -= 1
-                // Bakover INN i mini-wizard fra Booking (10) → siste plass, Tillegg (9)
+                // Hopp over Rabatter (10) bakover for camping
+                if currentStep == 10 && skipsRabatterStep {
+                    currentStep = 9
+                }
+                // Bakover INN i mini-wizard fra Rabatter/Booking → siste plass, Tillegg (9)
                 if currentStepHasMiniWizard && !spotMarkers.isEmpty {
                     currentSpotIndex = spotMarkers.count - 1
                     currentStep = 9

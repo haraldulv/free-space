@@ -128,6 +128,12 @@ struct SpotMarker: Codable, Hashable {
     /// Bilder tagget til denne spesifikke plassen. URL-ene er delmengde av
     /// listing.images — ingen separat opplasting. Utleier tagger i wizard/edit.
     var images: [String]?
+    /// Rabatt (%) når booking dekker hele dagens band-vindu (ett "døgn"). 0–100. Default nil.
+    var discountDayPct: Int? = nil
+    /// Rabatt (%) for 7 påfølgende fulle døgn. 0–100. Default nil.
+    var discountWeekPct: Int? = nil
+    /// Rabatt (%) for 30 påfølgende fulle døgn. 0–100. Default nil.
+    var discountMonthPct: Int? = nil
 
     enum CodingKeys: String, CodingKey {
         case id, lat, lng, label, description, price, extras, images
@@ -139,6 +145,9 @@ struct SpotMarker: Codable, Hashable {
         case priceUnit = "priceUnit"
         case blockedDates = "blockedDates"
         case checkinMessage = "checkinMessage"
+        case discountDayPct = "discountDayPct"
+        case discountWeekPct = "discountWeekPct"
+        case discountMonthPct = "discountMonthPct"
     }
 
     /// Backward-compat: returner vehicleTypes hvis satt, ellers wrap singel vehicleType.
