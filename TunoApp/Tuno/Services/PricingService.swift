@@ -16,6 +16,10 @@ enum PricingService {
         let start_hour: Int?
         /// Hourly-bånd: time 1..24 (eksklusiv). NULL for weekend/season.
         let end_hour: Int?
+        /// Hourly-bånd: minutt 0 eller 30. Default 0.
+        let start_minute: Int?
+        /// Hourly-bånd: minutt 0 eller 30. Default 0.
+        let end_minute: Int?
         let price: Int
         /// Hvilken plass (SpotMarker.id) regelen gjelder. NULL = listing-wide.
         let spot_id: String?
@@ -38,6 +42,8 @@ enum PricingService {
         let end_date: String?
         let start_hour: Int?
         let end_hour: Int?
+        let start_minute: Int
+        let end_minute: Int
         let price: Int
         let spot_id: String?
     }
@@ -63,6 +69,8 @@ enum PricingService {
                 end_date: nil,
                 start_hour: nil,
                 end_hour: nil,
+                start_minute: 0,
+                end_minute: 0,
                 price: price,
                 spot_id: nil,
             )
@@ -88,6 +96,8 @@ enum PricingService {
             end_date: endDate,
             start_hour: nil,
             end_hour: nil,
+            start_minute: 0,
+            end_minute: 0,
             price: price,
             spot_id: nil,
         )
@@ -106,7 +116,9 @@ enum PricingService {
         listingId: String,
         dayMask: Int,
         startHour: Int,
+        startMinute: Int = 0,
         endHour: Int,
+        endMinute: Int = 0,
         price: Int,
         startDate: String? = nil,
         endDate: String? = nil,
@@ -120,6 +132,8 @@ enum PricingService {
             end_date: endDate,
             start_hour: startHour,
             end_hour: endHour,
+            start_minute: startMinute,
+            end_minute: endMinute,
             price: price,
             spot_id: spotId,
         )
@@ -475,7 +489,13 @@ enum PricingService {
             if let sd = r.start_date, dayKey < sd { return false }
             if let ed = r.end_date, dayKey > ed { return false }
             let dayMatches = (mask & (1 << bit)) != 0
-            let hourMatches = hour >= sh && hour < eh
+            // Booking-time tikker i hele timer; båndet kan være finere (halvtimer).
+            // Time h dekkes hvis hele [h*60, (h+1)*60) ligger innenfor båndet.
+            let bandStartMin = sh * 60 + (r.start_minute ?? 0)
+            let bandEndMin = eh * 60 + (r.end_minute ?? 0)
+            let hourStartMin = hour * 60
+            let hourEndMin = hourStartMin + 60
+            let hourMatches = hourStartMin >= bandStartMin && hourEndMin <= bandEndMin
             return dayMatches && hourMatches
         }
         let sorted = matching.sorted { a, b in

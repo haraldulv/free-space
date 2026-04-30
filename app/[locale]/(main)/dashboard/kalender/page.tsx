@@ -103,6 +103,8 @@ export default async function HostCalendarPage({
       endDate: (row.end_date as string | null) ?? null,
       startHour: (row.start_hour as number | null) ?? null,
       endHour: (row.end_hour as number | null) ?? null,
+      startMinute: (row.start_minute as number | null) ?? 0,
+      endMinute: (row.end_minute as number | null) ?? 0,
       price: row.price as number,
       spotId: (row.spot_id as string | null) ?? null,
     });

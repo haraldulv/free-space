@@ -5,15 +5,29 @@ import SwiftUI
 /// viser dato + bånd-bars (samme y-linje) + effektiv pris. Tap-anker for
 /// multi-select. Glassmorphism action-bar i bunn med Tilgjengelig-toggle og
 /// inline pris-editor.
+enum CalendarMode: Equatable {
+    case idle
+    case dateOverride
+    case bandEdit(UUID)
+    case bandCreate
+}
+
 struct WizardPricingCalendarView: View {
     @ObservedObject var form: ListingFormModel
     let spotId: String
 
+    @State private var mode: CalendarMode = .idle
     @State private var selectedDates: Set<String> = []
     @State private var rangeAnchor: String?
     @State private var hasScrolledToCurrent = false
     @State private var priceEditValue: Int = 0
     @FocusState private var priceEditFocused: Bool
+
+    // Band-editor draft state
+    @State private var draft: WizardPricingBand? = nil
+    @State private var draftPriceValue: Int = 0
+    @FocusState private var draftPriceFocused: Bool
+    @State private var showDeleteConfirm: Bool = false
 
     private let monthsAhead = 6
     private let cellHeight: CGFloat = 110
@@ -140,7 +154,7 @@ struct WizardPricingCalendarView: View {
         VStack(spacing: 0) {
             stickyWeekdayHeader
 
-            if bands.isEmpty {
+            if bands.isEmpty && mode == .idle {
                 emptyHint
             } else {
                 ScrollViewReader { proxy in
@@ -166,17 +180,46 @@ struct WizardPricingCalendarView: View {
                 }
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if mode == .idle {
+                fabAddBand
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 16)
+                    .transition(.scale.combined(with: .opacity))
+            }
+        }
         .safeAreaInset(edge: .bottom) {
-            if !selectedDates.isEmpty {
-                actionBar
+            switch mode {
+            case .idle:
+                EmptyView()
+            case .dateOverride:
+                dateOverrideActionBar
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            case .bandEdit, .bandCreate:
+                bandEditorActionBar
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .animation(.easeInOut(duration: 0.22), value: selectedDates.isEmpty)
+        .animation(.easeInOut(duration: 0.22), value: mode)
         .onChange(of: priceEditFocused) { _, focused in
             if !focused {
                 commitPriceEdit()
             }
+        }
+        .onChange(of: draftPriceFocused) { _, focused in
+            if !focused {
+                commitDraftPrice()
+            }
+        }
+        .confirmationDialog(
+            "Slett bånd?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Slett bånd", role: .destructive) { deleteEditingBand() }
+            Button("Avbryt", role: .cancel) {}
+        } message: {
+            Text("Båndet og pris-overstyringene som tilhører det fjernes.")
         }
     }
 
@@ -257,11 +300,12 @@ struct WizardPricingCalendarView: View {
             }
             .frame(height: cellHeight)
 
-            // 2. Bånd-bars i overlay (alltid samme y-koordinat innenfor uken)
+            // 2. Bånd-bars i overlay (alltid samme y-koordinat innenfor uken).
+            // Capsule-button konsumerer tap → åpner band-editor. Tomt område
+            // utenfor capsule lar dayCell-knappen under fortsatt motta tap.
             if !bands.isEmpty {
                 bandsOverlay(week: week)
                     .frame(height: cellHeight)
-                    .allowsHitTesting(false)
             }
         }
         .frame(height: cellHeight)
@@ -313,7 +357,10 @@ struct WizardPricingCalendarView: View {
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(.neutral500)
                             .padding(.bottom, 10)
-                    } else if !isPast, let price = priceInfo {
+                    } else if !isPast, let price = priceInfo, !(dayCoveredByBand(date) && !hasOverride) {
+                        // Hopp over bottom-pris hvis et bånd dekker dagen — prisen
+                        // står da på selve båndet. Date-overrides er fortsatt synlige
+                        // siden de vinner over bånd.
                         Text("\(price.amount) kr")
                             .font(.system(size: 11, weight: hasOverride || price.isOverride ? .bold : .medium))
                             .foregroundStyle(priceTextColor(
@@ -391,21 +438,26 @@ struct WizardPricingCalendarView: View {
                     let width = CGFloat(seg.end - seg.start + 1) * cellWidth + CGFloat(seg.end - seg.start) * cellSpacing
                     let yOffset = bandStartY + CGFloat(lane) * (bandHeight + bandSpacing)
 
-                    HStack(spacing: 4) {
-                        Spacer(minLength: 0)
-                        Text("\(resolved.price) kr")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(palette.text)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        Spacer(minLength: 0)
+                    Button {
+                        openBandEditor(band)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Spacer(minLength: 0)
+                            Text("\(resolved.price) kr")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(palette.text)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 6)
+                        .frame(width: max(0, width - 4), height: bandHeight)
+                        .background(
+                            Capsule()
+                                .fill(isOverride ? palette.bgOverride : palette.bgDefault)
+                        )
                     }
-                    .padding(.horizontal, 6)
-                    .frame(width: max(0, width - 4), height: bandHeight)
-                    .background(
-                        Capsule()
-                            .fill(isOverride ? palette.bgOverride : palette.bgDefault)
-                    )
+                    .buttonStyle(.plain)
                     .offset(x: xOffset + 2, y: yOffset)
                 }
             }
@@ -425,6 +477,16 @@ struct WizardPricingCalendarView: View {
         return palettes[idx]
     }
 
+    /// Sjekker om noen bånd dekker den gitte datoen (basert på ukedag-bit).
+    private func dayCoveredByBand(_ date: Date) -> Bool {
+        let weekday = Self.osloCalendar.component(.weekday, from: date)
+        let bit = (weekday + 5) % 7
+        for band in bands where (band.dayMask & (1 << bit)) != 0 {
+            return true
+        }
+        return false
+    }
+
     private func bandSegments(mask: Int) -> [(start: Int, end: Int)] {
         var result: [(Int, Int)] = []
         var inSeg = false
@@ -440,14 +502,13 @@ struct WizardPricingCalendarView: View {
 
     // MARK: - Bottom action bar (glassmorphism cards)
 
-    private var actionBar: some View {
+    private var dateOverrideActionBar: some View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
                 dateRangePill
                 Spacer()
                 Button {
-                    selectedDates.removeAll()
-                    rangeAnchor = nil
+                    closeActionBar()
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .bold))
@@ -467,6 +528,14 @@ struct WizardPricingCalendarView: View {
             .padding(.bottom, 12)
         }
         .padding(.top, 10)
+    }
+
+    /// Lukker den aktive action-baren og rydder draft/selection.
+    private func closeActionBar() {
+        selectedDates.removeAll()
+        rangeAnchor = nil
+        draft = nil
+        mode = .idle
     }
 
     private var dateRangePill: some View {
@@ -686,23 +755,33 @@ struct WizardPricingCalendarView: View {
 
     private func handleDayTap(iso: String, isPast: Bool) {
         guard !isPast else { return }
+        // Når i band-editor-modus: ignorer dag-tap (cellen er bakteppe).
+        if case .bandEdit = mode { return }
+        if case .bandCreate = mode { return }
+
         if let anchor = rangeAnchor {
             if anchor == iso {
                 selectedDates.remove(iso)
                 rangeAnchor = nil
+                if selectedDates.isEmpty { mode = .idle }
                 return
             }
             let range = isoRange(from: anchor, to: iso)
             for d in range { selectedDates.insert(d) }
             rangeAnchor = nil
+            mode = .dateOverride
             return
         }
         if selectedDates.contains(iso) {
             selectedDates.remove(iso)
-            if selectedDates.isEmpty { rangeAnchor = nil }
+            if selectedDates.isEmpty {
+                rangeAnchor = nil
+                mode = .idle
+            }
         } else {
             selectedDates.insert(iso)
             rangeAnchor = iso
+            mode = .dateOverride
         }
     }
 
@@ -774,6 +853,435 @@ struct WizardPricingCalendarView: View {
             }
         }
         form.setAvailability(avail, for: spotId)
+    }
+
+    // MARK: - Band-editor: state + handlers
+
+    private func openBandEditor(_ band: WizardPricingBand) {
+        draft = band
+        draftPriceValue = band.price > 0 ? band.price : basePerHour
+        // Rydd date-override-state for å unngå at den vises bak editoren.
+        selectedDates.removeAll()
+        rangeAnchor = nil
+        mode = .bandEdit(band.id)
+    }
+
+    private func openBandCreate() {
+        // Default-bånd: hverdager 09:00-17:00, basePerHour
+        let new = WizardPricingBand(
+            dayMask: 0b0011111,
+            startHour: 9,
+            startMinute: 0,
+            endHour: 17,
+            endMinute: 0,
+            price: basePerHour,
+            weekScope: .allWeeks
+        )
+        draft = new
+        draftPriceValue = basePerHour
+        selectedDates.removeAll()
+        rangeAnchor = nil
+        mode = .bandCreate
+    }
+
+    private func commitDraftPrice() {
+        guard var d = draft else { return }
+        d.price = max(0, draftPriceValue)
+        draft = d
+        persistDraft()
+    }
+
+    private func stepDraftPrice(by delta: Int) {
+        let v = max(0, draftPriceValue + delta)
+        draftPriceValue = v
+        commitDraftPrice()
+    }
+
+    /// Skriver draft til availability.bands (oppdaterer eksisterende eller appender ny).
+    private func persistDraft() {
+        guard let d = draft else { return }
+        var avail = availability
+        if let idx = avail.bands.firstIndex(where: { $0.id == d.id }) {
+            avail.bands[idx] = d
+        } else {
+            avail.bands.append(d)
+        }
+        form.setAvailability(avail, for: spotId)
+    }
+
+    private func deleteEditingBand() {
+        guard let d = draft else { return }
+        var avail = availability
+        avail.bands.removeAll { $0.id == d.id }
+        avail.bandPriceOverrides.removeAll { $0.bandId == d.id }
+        form.setAvailability(avail, for: spotId)
+        draft = nil
+        mode = .idle
+    }
+
+    /// Ukedags-bit toggle — blokkerer hvis det ville skapt overlap mot annet bånd.
+    private func toggleDraftDayBit(_ bit: Int) {
+        guard var d = draft else { return }
+        let mask = 1 << bit
+        let isOn = (d.dayMask & mask) != 0
+        if isOn {
+            // Ikke tillat null-mask (bånd må ha minst 1 dag).
+            let newMask = d.dayMask & ~mask
+            guard newMask != 0 else { return }
+            d.dayMask = newMask
+        } else {
+            d.dayMask |= mask
+            if wouldOverlap(d) { return }
+        }
+        draft = d
+        persistDraft()
+    }
+
+    private func setDraftStart(minutes: Int) {
+        guard var d = draft else { return }
+        let h = minutes / 60
+        let m = minutes % 60
+        let snapped = (m == 30) ? 30 : 0
+        d.startHour = h
+        d.startMinute = snapped
+        // Sikre start < end
+        if d.startMinutes >= d.endMinutes {
+            // Skyv slutt til neste hele time etter start
+            let candidate = d.startMinutes + 60
+            d.endHour = min(24, candidate / 60)
+            d.endMinute = 0
+        }
+        if wouldOverlap(d) { return }
+        draft = d
+        persistDraft()
+    }
+
+    private func setDraftEnd(minutes: Int) {
+        guard var d = draft else { return }
+        let h = minutes / 60
+        let m = minutes % 60
+        let snapped = (m == 30) ? 30 : 0
+        d.endHour = h
+        d.endMinute = snapped
+        if d.endMinutes <= d.startMinutes {
+            // Skyv start til 60 min før slutt
+            let candidate = max(0, d.endMinutes - 60)
+            d.startHour = candidate / 60
+            d.startMinute = (candidate % 60 == 30) ? 30 : 0
+        }
+        if wouldOverlap(d) { return }
+        draft = d
+        persistDraft()
+    }
+
+    /// Returnerer true hvis kandidat-båndet overlapper med et eksisterende bånd
+    /// (samme spot, ulik id, deler ukedag, og tidsintervaller krysser hverandre).
+    private func wouldOverlap(_ candidate: WizardPricingBand) -> Bool {
+        for other in availability.bands where other.id != candidate.id {
+            if bandsOverlap(candidate, other) { return true }
+        }
+        return false
+    }
+
+    private func bandsOverlap(_ a: WizardPricingBand, _ b: WizardPricingBand) -> Bool {
+        if (a.dayMask & b.dayMask) == 0 { return false }
+        return a.startMinutes < b.endMinutes && b.startMinutes < a.endMinutes
+    }
+
+    /// Hvis user toggler en ukedag PÅ — vil det skape overlap?
+    private func dayBitWouldOverlap(_ bit: Int) -> Bool {
+        guard var d = draft else { return false }
+        let mask = 1 << bit
+        if (d.dayMask & mask) != 0 { return false }   // allerede på, irrelevant
+        d.dayMask |= mask
+        return wouldOverlap(d)
+    }
+
+    // MARK: - Band-editor: UI
+
+    private var bandEditorActionBar: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                bandTitlePill
+                Spacer()
+                Button {
+                    closeActionBar()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 38, height: 38)
+                        .background(glassCircleBackground)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+
+            bandEditorCard
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+        }
+        .padding(.top, 10)
+    }
+
+    private var bandTitlePill: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "calendar.badge.clock")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(draft.map { "\(weekdaysShortLabel(mask: $0.dayMask)) · \($0.timeDisplayLabel)" } ?? "Nytt bånd")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(glassPillBackground)
+    }
+
+    private var bandEditorCard: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            weekdayStrip
+            HStack(alignment: .top, spacing: 12) {
+                bandTimeCard
+                    .frame(maxWidth: .infinity)
+                bandPriceCard
+                    .frame(maxWidth: .infinity)
+            }
+            if case .bandEdit = mode {
+                Button {
+                    showDeleteConfirm = true
+                } label: {
+                    Text("Slett bånd")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(hex: "#fca5a5"))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color(hex: "#fca5a5").opacity(0.5), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(glassCardBackground)
+    }
+
+    private var weekdayStrip: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<7, id: \.self) { bit in
+                let isOn = ((draft?.dayMask ?? 0) & (1 << bit)) != 0
+                let wouldOverlap = !isOn && dayBitWouldOverlap(bit)
+                Button {
+                    toggleDraftDayBit(bit)
+                } label: {
+                    Text(weekdayLetter(bit))
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(weekdayLetterColor(isOn: isOn, blocked: wouldOverlap))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 36)
+                        .background(weekdayBg(isOn: isOn, blocked: wouldOverlap))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(isOn ? Color.white : Color.white.opacity(0.18), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(wouldOverlap)
+                .opacity(wouldOverlap ? 0.4 : 1.0)
+            }
+        }
+    }
+
+    private func weekdayLetterColor(isOn: Bool, blocked: Bool) -> Color {
+        if blocked { return Color.white.opacity(0.4) }
+        return isOn ? Color.neutral900 : Color.white
+    }
+
+    private func weekdayBg(isOn: Bool, blocked: Bool) -> Color {
+        if blocked { return Color.white.opacity(0.04) }
+        return isOn ? Color.white : Color.white.opacity(0.08)
+    }
+
+    private func weekdayLetter(_ bit: Int) -> String {
+        ["M", "T", "O", "T", "F", "L", "S"][bit]
+    }
+
+    private func weekdaysShortLabel(mask: Int) -> String {
+        var parts: [String] = []
+        for bit in 0..<7 where (mask & (1 << bit)) != 0 {
+            parts.append(["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"][bit])
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    private var bandTimeCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tidspunkt")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+            HStack(spacing: 8) {
+                darkTimeWheel(label: "Fra", binding: bandStartBinding)
+                darkTimeWheel(label: "Til", binding: bandEndBinding)
+            }
+        }
+    }
+
+    private var bandStartBinding: Binding<Int?> {
+        Binding(
+            get: { draft.map { $0.startMinutes } },
+            set: { newValue in
+                if let v = newValue { setDraftStart(minutes: v) }
+            }
+        )
+    }
+
+    private var bandEndBinding: Binding<Int?> {
+        Binding(
+            get: { draft.map { $0.endMinutes } },
+            set: { newValue in
+                if let v = newValue { setDraftEnd(minutes: v) }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private func darkTimeWheel(label: String, binding: Binding<Int?>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.7))
+
+            HStack(spacing: 0) {
+                Picker("", selection: Binding(
+                    get: { (binding.wrappedValue ?? 0) / 60 },
+                    set: { newH in
+                        let m = (binding.wrappedValue ?? 0) % 60
+                        binding.wrappedValue = newH * 60 + m
+                    }
+                )) {
+                    ForEach(0..<25, id: \.self) { h in
+                        Text(String(format: "%02d", h)).tag(h)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+                .frame(height: 96)
+                .clipped()
+
+                Text(":")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+
+                Picker("", selection: Binding(
+                    get: { (binding.wrappedValue ?? 0) % 60 },
+                    set: { newM in
+                        let h = (binding.wrappedValue ?? 0) / 60
+                        binding.wrappedValue = h * 60 + newM
+                    }
+                )) {
+                    ForEach([0, 30], id: \.self) { m in
+                        Text(String(format: "%02d", m)).tag(m)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+                .frame(height: 96)
+                .clipped()
+            }
+            .background(Color.white.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
+            .colorScheme(.dark)
+        }
+    }
+
+    private var bandPriceCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Pris per time")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+            HStack(spacing: 10) {
+                Button {
+                    stepDraftPrice(by: -10)
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
+                }
+                .buttonStyle(.plain)
+
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    TextField("", value: $draftPriceValue, formatter: NumberFormatter())
+                        .focused($draftPriceFocused)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(.white)
+                        .fixedSize()
+                        .frame(minWidth: 36)
+                    Text("kr")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                }
+                .frame(maxWidth: .infinity)
+
+                Button {
+                    stepDraftPrice(by: 10)
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
+                }
+                .buttonStyle(.plain)
+            }
+            .frame(height: 96)
+            .frame(maxWidth: .infinity)
+            .background(Color.white.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
+        }
+    }
+
+    // MARK: - FAB "+ Nytt bånd"
+
+    private var fabAddBand: some View {
+        Button {
+            openBandCreate()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 14, weight: .bold))
+                Text("Nytt bånd")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(
+                Capsule()
+                    .fill(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+                    .overlay(Capsule().fill(Color.black.opacity(0.55)))
+                    .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Måned-uker-helper

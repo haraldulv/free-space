@@ -31,6 +31,10 @@ export interface PricingRule {
   startHour: number | null;
   /** Hourly bånd: time 1..24 (eksklusiv). NULL ellers. */
   endHour: number | null;
+  /** Hourly bånd: minutt 0 eller 30. Default 0. */
+  startMinute: number;
+  /** Hourly bånd: minutt 0 eller 30. Default 0. */
+  endMinute: number;
   price: number;
   /** Hvilken plass (SpotMarker.id) regelen gjelder. NULL = listing-wide. */
   spotId: string | null;
@@ -260,7 +264,13 @@ export function resolveHourlyPrice(
     if (r.startDate && dateIso < r.startDate) return false;
     if (r.endDate && dateIso > r.endDate) return false;
     const dayMatches = (r.dayMask & (1 << bit)) !== 0;
-    const hourMatches = hour >= r.startHour && hour < r.endHour;
+    // Booking-time tikker i hele timer; båndet kan være finere (halvtimer).
+    // Time h dekkes hvis hele intervallet [h*60, (h+1)*60) ligger innenfor båndet.
+    const bandStartMin = r.startHour * 60 + r.startMinute;
+    const bandEndMin = r.endHour * 60 + r.endMinute;
+    const hourStartMin = hour * 60;
+    const hourEndMin = hourStartMin + 60;
+    const hourMatches = hourStartMin >= bandStartMin && hourEndMin <= bandEndMin;
     return dayMatches && hourMatches;
   });
   matchingBands.sort((a, b) => {
@@ -384,6 +394,8 @@ function rowToRule(row: Record<string, unknown>): PricingRule {
     endDate: (row.end_date as string | null) ?? null,
     startHour: (row.start_hour as number | null) ?? null,
     endHour: (row.end_hour as number | null) ?? null,
+    startMinute: (row.start_minute as number | null) ?? 0,
+    endMinute: (row.end_minute as number | null) ?? 0,
     price: row.price as number,
     spotId: (row.spot_id as string | null) ?? null,
   };

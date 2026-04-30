@@ -199,17 +199,44 @@ struct WizardPricingBand: Identifiable, Hashable {
     let id: UUID
     var dayMask: Int
     var startHour: Int
+    /// Minutt 0 eller 30. Default 0.
+    var startMinute: Int
     var endHour: Int
+    /// Minutt 0 eller 30. Default 0.
+    var endMinute: Int
     var price: Int
     var weekScope: WeekScope
 
-    init(id: UUID = UUID(), dayMask: Int, startHour: Int, endHour: Int, price: Int, weekScope: WeekScope = .allWeeks) {
+    init(
+        id: UUID = UUID(),
+        dayMask: Int,
+        startHour: Int,
+        startMinute: Int = 0,
+        endHour: Int,
+        endMinute: Int = 0,
+        price: Int,
+        weekScope: WeekScope = .allWeeks
+    ) {
         self.id = id
         self.dayMask = dayMask
         self.startHour = startHour
+        self.startMinute = startMinute
         self.endHour = endHour
+        self.endMinute = endMinute
         self.price = price
         self.weekScope = weekScope
+    }
+
+    /// Total minutter siden midnatt for start.
+    var startMinutes: Int { startHour * 60 + startMinute }
+    /// Total minutter siden midnatt for slutt.
+    var endMinutes: Int { endHour * 60 + endMinute }
+
+    /// "09:30 – 17:00".
+    var timeDisplayLabel: String {
+        let s = String(format: "%02d:%02d", startHour, startMinute)
+        let e = String(format: "%02d:%02d", endHour, endMinute)
+        return "\(s) – \(e)"
     }
 }
 
