@@ -1081,15 +1081,17 @@ struct WizardPricingCalendarView: View {
 
     private var bandEditorCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            weekdayStrip
-            // Tidspunkt full bredde øverst (4 sub-wheels trenger plass).
-            // Rad 2: Pris + Farge — Farge er kompakt single-swatch.
-            bandTimeCard
-            HStack(alignment: .top, spacing: 10) {
-                bandPriceCard
+            // Rad 1: ukedager + farge-swatch (uten "Farge"-label).
+            HStack(spacing: 6) {
+                weekdayStrip
+                inlineColorSwatch
+            }
+            // Rad 2: Tidspunkt (full-bredde wheels) + Pris.
+            HStack(alignment: .bottom, spacing: 10) {
+                bandTimeCard
                     .frame(maxWidth: .infinity)
-                compactBandColorPicker
-                    .frame(width: 110)
+                bandPriceCard
+                    .frame(width: 130)
             }
             if case .bandEdit = mode {
                 Button {
@@ -1113,40 +1115,33 @@ struct WizardPricingCalendarView: View {
         .background(glassCardBackground)
     }
 
-    /// Kompakt farge-velger: viser kun aktiv farge som single-swatch. Tap
-    /// åpner en popover med alle 5 swatches. Velger man en, setter
-    /// draft.colorIndex og lukker popoveren.
-    private var compactBandColorPicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Farge")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-            Button {
-                showColorPalette = true
-            } label: {
-                ZStack {
-                    Circle()
-                        .fill(activePaletteColor)
-                        .frame(width: 30, height: 30)
-                    Circle()
-                        .stroke(Color.white.opacity(0.55), lineWidth: 1.5)
-                        .frame(width: 30, height: 30)
-                }
-                .frame(maxWidth: .infinity)
-                .frame(height: 96)
-                .background(Color.white.opacity(0.06))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
-                )
+    /// Lite farge-swatch som ligger ved siden av ukedags-knappene. Tap åpner
+    /// fargepalett-sheet. Subtil hvit checkmark i bunn-høyre indikerer valgt.
+    private var inlineColorSwatch: some View {
+        Button {
+            showColorPalette = true
+        } label: {
+            ZStack(alignment: .bottomTrailing) {
+                Circle()
+                    .fill(activePaletteColor)
+                    .frame(width: 36, height: 36)
+                    .overlay(
+                        Circle().stroke(Color.white.opacity(0.55), lineWidth: 1.5)
+                    )
+                Image(systemName: "checkmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(activePaletteColor)
+                    .frame(width: 14, height: 14)
+                    .background(Circle().fill(Color.white))
+                    .offset(x: 4, y: 4)
             }
-            .buttonStyle(.plain)
-            .sheet(isPresented: $showColorPalette) {
-                colorPaletteSheet
-                    .presentationDetents([.height(140)])
-                    .presentationDragIndicator(.visible)
-            }
+            .frame(width: 40, height: 36)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showColorPalette) {
+            colorPaletteSheet
+                .presentationDetents([.height(160)])
+                .presentationDragIndicator(.visible)
         }
     }
 
