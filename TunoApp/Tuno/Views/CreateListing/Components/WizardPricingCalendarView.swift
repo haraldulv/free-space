@@ -20,7 +20,18 @@ struct WizardPricingCalendarView: View {
     private let cellSpacing: CGFloat = 6
     private let bandHeight: CGFloat = 22
     private let bandSpacing: CGFloat = 3
-    private let bandStartY: CGFloat = 32
+
+    /// Antall lanes som faktisk er i bruk (= max lane + 1).
+    private var totalLanes: Int {
+        (bandLaneAssignment.values.max() ?? -1) + 1
+    }
+
+    /// Y-koordinat for bånd-stacken slik at den er vertikalt sentrert
+    /// på dag-cellen.
+    private var bandStartY: CGFloat {
+        let stackHeight = CGFloat(totalLanes) * bandHeight + CGFloat(max(0, totalLanes - 1)) * bandSpacing
+        return (cellHeight - stackHeight) / 2
+    }
 
     private var availability: WizardSpotAvailability {
         form.availability(for: spotId)
@@ -361,8 +372,15 @@ struct WizardPricingCalendarView: View {
             let totalSpacing = cellSpacing * 6
             let cellWidth = max(0, (g.size.width - totalSpacing) / 7)
 
+            // Maske som bare har bits satt for celler som faktisk tilhører
+            // måneden (delvise uker har nil-celler i forrige/neste måned).
+            let validMask = (0..<7).reduce(0) { acc, col in
+                week.days[col] != nil ? acc | (1 << col) : acc
+            }
+
             ForEach(bands, id: \.id) { band in
-                let segs = bandSegments(mask: band.dayMask)
+                let effectiveMask = band.dayMask & validMask
+                let segs = bandSegments(mask: effectiveMask)
                 let lane = bandLaneAssignment[band.id] ?? 0
                 ForEach(segs.indices, id: \.self) { i in
                     let seg = segs[i]
