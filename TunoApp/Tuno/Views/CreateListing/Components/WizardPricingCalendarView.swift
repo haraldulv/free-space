@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Pris-variasjon-kalender per plass — Airbnb-inspirert fullskjerm-design.
 /// Sticky ukedag-header øverst. Multi-måned grid med store dato-celler som
@@ -29,6 +30,8 @@ struct WizardPricingCalendarView: View {
     @State private var draftPriceText: String = ""
     @FocusState private var draftPriceFocused: Bool
     @State private var showDeleteConfirm: Bool = false
+    /// Når true vises hele palett-raden i stedet for kompakt single-swatch.
+    @State private var showColorPalette: Bool = false
 
     private let monthsAhead = 6
     private let cellHeight: CGFloat = 110
@@ -1077,14 +1080,18 @@ struct WizardPricingCalendarView: View {
     }
 
     private var bandEditorCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 12) {
             weekdayStrip
-            bandTimeCard
-            HStack(alignment: .top, spacing: 12) {
+            // Tidspunkt + Pris + Farge på én rad. Tidspunkt får mest plass
+            // siden den har 4 sub-wheels; Pris er kompakt og Farge er
+            // single-swatch som ekspanderer i popover på tap.
+            HStack(alignment: .top, spacing: 8) {
+                bandTimeCard
+                    .frame(maxWidth: .infinity)
                 bandPriceCard
-                    .frame(maxWidth: .infinity)
-                bandColorPicker
-                    .frame(maxWidth: .infinity)
+                    .frame(width: 130)
+                compactBandColorPicker
+                    .frame(width: 64)
             }
             if case .bandEdit = mode {
                 Button {
@@ -1108,48 +1115,77 @@ struct WizardPricingCalendarView: View {
         .background(glassCardBackground)
     }
 
-    /// Farge-velger for båndet — 5 swatches matchet med bandPalettes-indekser.
-    /// Tap setter draft.colorIndex og oppdaterer kalender-bånd umiddelbart.
-    private var bandColorPicker: some View {
+    /// Kompakt farge-velger: viser kun aktiv farge som single-swatch. Tap
+    /// åpner en popover med alle 5 swatches. Velger man en, setter
+    /// draft.colorIndex og lukker popoveren.
+    private var compactBandColorPicker: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Farge")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
-            HStack(spacing: 10) {
-                ForEach(0..<Self.bandPalettes.count, id: \.self) { idx in
-                    let palette = Self.bandPalettes[idx]
-                    let selected = (draft?.colorIndex ?? -1) == idx
-                    Button {
-                        setDraftColor(idx)
-                    } label: {
-                        ZStack {
+            Button {
+                showColorPalette = true
+            } label: {
+                ZStack {
+                    Circle()
+                        .fill(activePaletteColor)
+                        .frame(width: 30, height: 30)
+                    Circle()
+                        .stroke(Color.white.opacity(0.55), lineWidth: 1.5)
+                        .frame(width: 30, height: 30)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 96)
+                .background(Color.white.opacity(0.06))
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(Color.white.opacity(0.18), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .popover(isPresented: $showColorPalette) {
+                colorPaletteSheet
+                    .presentationCompactAdaptation(.popover)
+            }
+        }
+    }
+
+    private var activePaletteColor: Color {
+        let idx = draft?.colorIndex ?? 0
+        let safe = max(0, min(Self.bandPalettes.count - 1, idx))
+        return Self.bandPalettes[safe].bgOverride
+    }
+
+    /// Popover-innhold: 5 swatches i en rad. Tap velger farge og lukker.
+    private var colorPaletteSheet: some View {
+        HStack(spacing: 14) {
+            ForEach(0..<Self.bandPalettes.count, id: \.self) { idx in
+                let palette = Self.bandPalettes[idx]
+                let selected = (draft?.colorIndex ?? -1) == idx
+                Button {
+                    setDraftColor(idx)
+                    showColorPalette = false
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(palette.bgOverride)
+                            .frame(width: 36, height: 36)
+                        if selected {
                             Circle()
-                                .fill(palette.bgOverride)
-                                .frame(width: 32, height: 32)
-                            Circle()
-                                .stroke(Color.white, lineWidth: selected ? 2.5 : 0)
-                                .frame(width: 32, height: 32)
-                            if selected {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundStyle(.white)
-                            }
+                                .stroke(Color.neutral900, lineWidth: 2.5)
+                                .frame(width: 36, height: 36)
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.white)
                         }
                     }
-                    .buttonStyle(.plain)
                 }
-                Spacer(minLength: 0)
+                .buttonStyle(.plain)
             }
-            .frame(height: 96)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 12)
-            .background(Color.white.opacity(0.08))
-            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
-            )
         }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
     }
 
     private var weekdayStrip: some View {
@@ -1233,52 +1269,44 @@ struct WizardPricingCalendarView: View {
 
     @ViewBuilder
     private func darkTimeWheel(binding: Binding<Int?>) -> some View {
+        // To smale UIPickerView-wheels med transparent bg + hvit tekst.
+        // Inkluderer halvtime-snap (0/30) på minutt-wheelen.
         HStack(spacing: 0) {
-            Picker("", selection: Binding(
-                get: { (binding.wrappedValue ?? 0) / 60 },
-                set: { newH in
-                    let m = (binding.wrappedValue ?? 0) % 60
-                    binding.wrappedValue = newH * 60 + m
-                }
-            )) {
-                ForEach(0..<25, id: \.self) { h in
-                    Text(String(format: "%02d", h))
-                        .foregroundStyle(Color.neutral900)
-                        .tag(h)
-                }
-            }
-            .pickerStyle(.wheel)
+            DarkWheelPicker(
+                value: Binding(
+                    get: { (binding.wrappedValue ?? 0) / 60 },
+                    set: { newH in
+                        let m = (binding.wrappedValue ?? 0) % 60
+                        binding.wrappedValue = newH * 60 + m
+                    }
+                ),
+                values: Array(0...24)
+            )
             .frame(maxWidth: .infinity)
             .frame(height: 96)
-            .clipped()
 
             Text(":")
                 .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(Color.neutral500)
+                .foregroundStyle(.white)
 
-            Picker("", selection: Binding(
-                get: { (binding.wrappedValue ?? 0) % 60 },
-                set: { newM in
-                    let h = (binding.wrappedValue ?? 0) / 60
-                    binding.wrappedValue = h * 60 + newM
-                }
-            )) {
-                ForEach([0, 30], id: \.self) { m in
-                    Text(String(format: "%02d", m))
-                        .foregroundStyle(Color.neutral900)
-                        .tag(m)
-                }
-            }
-            .pickerStyle(.wheel)
+            DarkWheelPicker(
+                value: Binding(
+                    get: { (binding.wrappedValue ?? 0) % 60 },
+                    set: { newM in
+                        let h = (binding.wrappedValue ?? 0) / 60
+                        binding.wrappedValue = h * 60 + newM
+                    }
+                ),
+                values: [0, 30]
+            )
             .frame(maxWidth: .infinity)
             .frame(height: 96)
-            .clipped()
         }
-        .background(Color.white.opacity(0.95))
+        .background(Color.white.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                .stroke(Color.white.opacity(0.18), lineWidth: 1)
         )
     }
 
@@ -1287,29 +1315,30 @@ struct WizardPricingCalendarView: View {
             Text("Pris per time")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
-            HStack(spacing: 10) {
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            HStack(spacing: 6) {
                 Button {
                     stepDraftPrice(by: -50)
                 } label: {
                     Image(systemName: "minus")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 24, height: 24)
                         .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
                 }
                 .buttonStyle(.plain)
 
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
                     TextField("", text: $draftPriceText)
                         .focused($draftPriceFocused)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.center)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.white)
-                        .fixedSize()
-                        .frame(minWidth: 36)
+                        .frame(minWidth: 28)
                     Text("kr")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.7))
                 }
                 .frame(maxWidth: .infinity)
@@ -1318,9 +1347,9 @@ struct WizardPricingCalendarView: View {
                     stepDraftPrice(by: 50)
                 } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 24, height: 24)
                         .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
                 }
                 .buttonStyle(.plain)
@@ -1434,5 +1463,58 @@ extension WizardPricingCalendarView {
         f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
         f.locale = Locale(identifier: "en_US_POSIX")
         return (f.string(from: monday), f.string(from: sunday))
+    }
+}
+
+/// Mørk wheel-picker bygd på UIPickerView med eksplisitt hvit tekst.
+/// SwiftUI Picker(.wheel) respekterer ikke colorScheme(.dark) for inner Text,
+/// så vi må gå via UIKit for å få riktig kontrast i den mørke glass-cardet.
+struct DarkWheelPicker: UIViewRepresentable {
+    @Binding var value: Int
+    let values: [Int]
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    func makeUIView(context: Context) -> UIPickerView {
+        let picker = UIPickerView()
+        picker.dataSource = context.coordinator
+        picker.delegate = context.coordinator
+        picker.backgroundColor = .clear
+        return picker
+    }
+
+    func updateUIView(_ picker: UIPickerView, context: Context) {
+        context.coordinator.parent = self
+        if let row = values.firstIndex(of: value), picker.selectedRow(inComponent: 0) != row {
+            picker.selectRow(row, inComponent: 0, animated: false)
+        }
+    }
+
+    final class Coordinator: NSObject, UIPickerViewDataSource, UIPickerViewDelegate {
+        var parent: DarkWheelPicker
+        init(_ parent: DarkWheelPicker) { self.parent = parent }
+
+        func numberOfComponents(in pickerView: UIPickerView) -> Int { 1 }
+        func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+            parent.values.count
+        }
+
+        func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
+            let v = parent.values[row]
+            return NSAttributedString(
+                string: String(format: "%02d", v),
+                attributes: [
+                    .foregroundColor: UIColor.white,
+                    .font: UIFont.systemFont(ofSize: 22, weight: .semibold),
+                ]
+            )
+        }
+
+        func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
+            let newValue = parent.values[row]
+            if parent.value != newValue {
+                parent.value = newValue
+            }
+        }
     }
 }

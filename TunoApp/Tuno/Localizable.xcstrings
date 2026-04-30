@@ -56,7 +56,7 @@
         }
       }
     },
-    "/ natt" : {
+    "%" : {
 
     },
     "%@" : {
@@ -522,6 +522,9 @@
       }
     },
     "× %@ plasser" : {
+
+    },
+    "−%@ kr" : {
 
     },
     "1" : {
@@ -2015,6 +2018,9 @@
         }
       }
     },
+    "Farge" : {
+
+    },
     "Fasiliteter" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2065,6 +2071,9 @@
           }
         }
       }
+    },
+    "Felles for alle plasser" : {
+
     },
     "Felles tillegg" : {
       "extractionState" : "manual",
@@ -5590,6 +5599,9 @@
         }
       }
     },
+    "Rabatten gjelder kun fulle døgn — booking innenfor enkelt-timer betales full timepris. En 35-dagers-booking blir 1 måned + 5 døgn-rabatter." : {
+
+    },
     "Rediger annonse" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6489,9 +6501,6 @@
       }
     },
     "Tag bildene til riktig plass" : {
-
-    },
-    "Tap for å aktivere" : {
 
     },
     "Tap for å plassere" : {

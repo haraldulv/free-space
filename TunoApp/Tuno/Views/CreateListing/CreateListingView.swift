@@ -210,13 +210,16 @@ struct CreateListingView: View {
         ToolbarItem(placement: .topBarLeading) {
             // True native iOS toolbar dismiss — plain xmark glyph, ingen sirkel.
             // Matcher det Apple bruker i Mail/Settings/etc. når man lukker en modal.
-            Button(action: { showCancelAlert = true }) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.neutral700)
-                    .frame(width: 32, height: 32)
+            // Skjules i fullscreenStep (kalender-editor) for å gi mer plass.
+            if !form.fullscreenStep {
+                Button(action: { showCancelAlert = true }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral700)
+                        .frame(width: 32, height: 32)
+                }
+                .accessibilityLabel("Avbryt")
             }
-            .accessibilityLabel("Avbryt")
         }
     }
 
