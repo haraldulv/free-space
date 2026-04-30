@@ -1145,10 +1145,16 @@ struct WizardPricingCalendarView: View {
         }
     }
 
+    /// Aktiv palette-farge for swatch + bånd. Bruker valgt indeks hvis satt,
+    /// ellers samme id-hash-fallback som bandPalette(for:) — slik at swatch
+    /// alltid matcher fargen båndet faktisk har på kalenderen.
     private var activePaletteColor: Color {
-        let idx = draft?.colorIndex ?? 0
-        let safe = max(0, min(Self.bandPalettes.count - 1, idx))
-        return Self.bandPalettes[safe].bgOverride
+        guard let d = draft else { return Self.bandPalettes[0].bgOverride }
+        if let idx = d.colorIndex, Self.bandPalettes.indices.contains(idx) {
+            return Self.bandPalettes[idx].bgOverride
+        }
+        let idx = abs(d.id.hashValue) % Self.bandPalettes.count
+        return Self.bandPalettes[idx].bgOverride
     }
 
     /// Sheet-innhold: 5 swatches i en rad. Tap velger farge og lukker.
@@ -1315,30 +1321,33 @@ struct WizardPricingCalendarView: View {
             Text("Pris per time")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
-            HStack(spacing: 10) {
+                .lineLimit(1)
+            HStack(spacing: 6) {
                 Button {
                     stepDraftPrice(by: -50)
                 } label: {
                     Image(systemName: "minus")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 26, height: 26)
                         .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
                 }
                 .buttonStyle(.plain)
 
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
                     TextField("", text: $draftPriceText)
                         .focused($draftPriceFocused)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.center)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.white)
-                        .fixedSize()
-                        .frame(minWidth: 36)
+                        .lineLimit(1)
+                        .frame(minWidth: 28, maxWidth: 60)
                     Text("kr")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.7))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
                 .frame(maxWidth: .infinity)
 
@@ -1346,13 +1355,14 @@ struct WizardPricingCalendarView: View {
                     stepDraftPrice(by: 50)
                 } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 30, height: 30)
+                        .frame(width: 26, height: 26)
                         .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
                 }
                 .buttonStyle(.plain)
             }
+            .padding(.horizontal, 8)
             .frame(height: 96)
             .frame(maxWidth: .infinity)
             .background(Color.white.opacity(0.08))
@@ -1508,7 +1518,7 @@ struct DarkWheelPicker: UIViewRepresentable {
                 string: String(format: "%02d", v),
                 attributes: [
                     .foregroundColor: UIColor.white,
-                    .font: UIFont.systemFont(ofSize: 22, weight: .semibold),
+                    .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
                 ]
             )
         }
