@@ -772,7 +772,10 @@ struct WizardPricingCalendarView: View {
                 return ResolvedPrice(price: o.price, scope: .allWeeks)
             }
         }
-        return ResolvedPrice(price: basePerHour, scope: nil)
+        // Bånd-egen pris vinner over spot-base. Hvis båndet ikke har eksplisitt
+        // pris (0/unset), fall tilbake til spot.basePerHour.
+        let bandPrice = band.price > 0 ? band.price : basePerHour
+        return ResolvedPrice(price: bandPrice, scope: nil)
     }
 
     // MARK: - Tap-handling (multi-select tap-anker)
@@ -1145,16 +1148,16 @@ struct WizardPricingCalendarView: View {
         }
     }
 
-    /// Aktiv palette-farge for swatch + bånd. Bruker valgt indeks hvis satt,
-    /// ellers samme id-hash-fallback som bandPalette(for:) — slik at swatch
-    /// alltid matcher fargen båndet faktisk har på kalenderen.
+    /// Aktiv palette-farge for swatch. Bruker samme `bgDefault` som båndet
+    /// rendrer med (pastell-tonen) så swatch matcher visuelt. Override-tonen
+    /// (bgOverride) brukes bare på selve båndet når det er en uke-override.
     private var activePaletteColor: Color {
-        guard let d = draft else { return Self.bandPalettes[0].bgOverride }
+        guard let d = draft else { return Self.bandPalettes[0].bgDefault }
         if let idx = d.colorIndex, Self.bandPalettes.indices.contains(idx) {
-            return Self.bandPalettes[idx].bgOverride
+            return Self.bandPalettes[idx].bgDefault
         }
         let idx = abs(d.id.hashValue) % Self.bandPalettes.count
-        return Self.bandPalettes[idx].bgOverride
+        return Self.bandPalettes[idx].bgDefault
     }
 
     /// Sheet-innhold: 5 swatches i en rad. Tap velger farge og lukker.
@@ -1173,7 +1176,7 @@ struct WizardPricingCalendarView: View {
                     } label: {
                         ZStack {
                             Circle()
-                                .fill(palette.bgOverride)
+                                .fill(palette.bgDefault)
                                 .frame(width: 44, height: 44)
                             if selected {
                                 Circle()
@@ -1181,7 +1184,7 @@ struct WizardPricingCalendarView: View {
                                     .frame(width: 44, height: 44)
                                 Image(systemName: "checkmark")
                                     .font(.system(size: 16, weight: .bold))
-                                    .foregroundStyle(.white)
+                                    .foregroundStyle(.neutral900)
                             }
                         }
                     }
@@ -1206,13 +1209,17 @@ struct WizardPricingCalendarView: View {
                         .font(.system(size: 13, weight: .bold))
                         .foregroundStyle(weekdayLetterColor(isOn: isOn, blocked: wouldOverlap))
                         .frame(maxWidth: .infinity)
-                        .frame(height: 36)
+                        .frame(height: 40)
                         .background(weekdayBg(isOn: isOn, blocked: wouldOverlap))
                         .overlay(
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
                                 .stroke(isOn ? Color.white : Color.white.opacity(0.18), lineWidth: 1)
                         )
                         .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        // Sikre at hele 40pt-rektangelet er tap-target, ikke
+                        // bare bokstaven. Uten dette blir hit-shape Text-glyf
+                        // → taps under bokstaven faller gjennom til wheel.
+                        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                 }
                 .buttonStyle(.plain)
                 .disabled(wouldOverlap)

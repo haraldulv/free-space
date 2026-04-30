@@ -294,8 +294,11 @@ struct CreateListingView: View {
                         guard let spotId = spot.id else { continue }
                         let avail = form.availability(for: spotId)
                         let basePerHour = spot.pricePerHour ?? 0
-                        // 1) Default-bånd-rader (per allWeeks default-pris)
+                        // 1) Default-bånd-rader (per allWeeks default-pris).
+                        // Bruk bandets egen pris hvis satt — det lar verten ha
+                        // ulike priser per bånd (f.eks. dag/kveld/natt).
                         for band in avail.bands {
+                            let bandBasePrice = band.price > 0 ? band.price : basePerHour
                             try? await PricingService.addHourlyBandRule(
                                 listingId: listing.id,
                                 dayMask: band.dayMask,
@@ -303,7 +306,7 @@ struct CreateListingView: View {
                                 startMinute: band.startMinute,
                                 endHour: band.endHour,
                                 endMinute: band.endMinute,
-                                price: basePerHour,
+                                price: bandBasePrice,
                                 startDate: nil,
                                 endDate: nil,
                                 spotId: spotId,
