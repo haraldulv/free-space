@@ -38,6 +38,8 @@ export interface PricingRule {
   price: number;
   /** Hvilken plass (SpotMarker.id) regelen gjelder. NULL = listing-wide. */
   spotId: string | null;
+  /** Utleier-valgt farge-indeks (0-4 i palett). NULL = derives fra rule.id-hash. */
+  colorIndex: number | null;
 }
 
 export interface PricingOverride {
@@ -411,6 +413,7 @@ function rowToRule(row: Record<string, unknown>): PricingRule {
     endMinute: (row.end_minute as number | null) ?? 0,
     price: row.price as number,
     spotId: (row.spot_id as string | null) ?? null,
+    colorIndex: (row.color_index as number | null) ?? null,
   };
 }
 

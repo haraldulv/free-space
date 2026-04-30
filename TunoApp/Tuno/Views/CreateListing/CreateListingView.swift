@@ -303,7 +303,8 @@ struct CreateListingView: View {
                                 price: basePerHour,
                                 startDate: nil,
                                 endDate: nil,
-                                spotId: spotId
+                                spotId: spotId,
+                                colorIndex: band.colorIndex
                             )
                         }
                         // 2) Override-bånd-rader: én rad per uke i scope

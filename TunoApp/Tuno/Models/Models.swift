@@ -215,6 +215,8 @@ struct WizardPricingBand: Identifiable, Hashable {
     var endMinute: Int
     var price: Int
     var weekScope: WeekScope
+    /// Utleier-valgt farge-indeks (0-4 i palett). nil = derives fra id-hash.
+    var colorIndex: Int? = nil
 
     init(
         id: UUID = UUID(),
@@ -224,7 +226,8 @@ struct WizardPricingBand: Identifiable, Hashable {
         endHour: Int,
         endMinute: Int = 0,
         price: Int,
-        weekScope: WeekScope = .allWeeks
+        weekScope: WeekScope = .allWeeks,
+        colorIndex: Int? = nil
     ) {
         self.id = id
         self.dayMask = dayMask
@@ -234,6 +237,7 @@ struct WizardPricingBand: Identifiable, Hashable {
         self.endMinute = endMinute
         self.price = price
         self.weekScope = weekScope
+        self.colorIndex = colorIndex
     }
 
     /// Total minutter siden midnatt for start.

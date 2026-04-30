@@ -107,6 +107,7 @@ export default async function HostCalendarPage({
       endMinute: (row.end_minute as number | null) ?? 0,
       price: row.price as number,
       spotId: (row.spot_id as string | null) ?? null,
+      colorIndex: (row.color_index as number | null) ?? null,
     });
   }
 

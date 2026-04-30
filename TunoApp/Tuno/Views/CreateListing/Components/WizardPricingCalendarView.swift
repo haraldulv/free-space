@@ -468,15 +468,22 @@ struct WizardPricingCalendarView: View {
         }
     }
 
-    /// Dempede pastell-paletter basert på bånd-id-hash. Override = mettet for å skille seg ut.
+    /// 5 pastell-paletter. Indeks 0-4 brukes både i bandColorPicker og bandPalette.
+    static let bandPalettes: [BandPalette] = [
+        BandPalette(bgDefault: Color(hex: "#86d9b1").opacity(0.85), bgOverride: Color(hex: "#46c185"), border: .clear, text: .white),
+        BandPalette(bgDefault: Color(hex: "#c4b5fd").opacity(0.85), bgOverride: Color(hex: "#8b5cf6"), border: .clear, text: .white),
+        BandPalette(bgDefault: Color(hex: "#fdba74").opacity(0.85), bgOverride: Color(hex: "#f97316"), border: .clear, text: .white),
+        BandPalette(bgDefault: Color(hex: "#93c5fd").opacity(0.85), bgOverride: Color(hex: "#3b82f6"), border: .clear, text: .white),
+        BandPalette(bgDefault: Color(hex: "#f9a8d4").opacity(0.85), bgOverride: Color(hex: "#ec4899"), border: .clear, text: .white),
+    ]
+
+    /// Returner palett for et bånd. Bruker utleier-valgt colorIndex hvis satt,
+    /// ellers derives fra id-hash som fallback.
     private func bandPalette(for band: WizardPricingBand) -> BandPalette {
-        let palettes: [BandPalette] = [
-            BandPalette(bgDefault: Color(hex: "#86d9b1").opacity(0.85), bgOverride: Color(hex: "#46c185"), border: .clear, text: .white),
-            BandPalette(bgDefault: Color(hex: "#c4b5fd").opacity(0.85), bgOverride: Color(hex: "#8b5cf6"), border: .clear, text: .white),
-            BandPalette(bgDefault: Color(hex: "#fdba74").opacity(0.85), bgOverride: Color(hex: "#f97316"), border: .clear, text: .white),
-            BandPalette(bgDefault: Color(hex: "#93c5fd").opacity(0.85), bgOverride: Color(hex: "#3b82f6"), border: .clear, text: .white),
-            BandPalette(bgDefault: Color(hex: "#f9a8d4").opacity(0.85), bgOverride: Color(hex: "#ec4899"), border: .clear, text: .white),
-        ]
+        let palettes = Self.bandPalettes
+        if let chosen = band.colorIndex, palettes.indices.contains(chosen) {
+            return palettes[chosen]
+        }
         let idx = abs(band.id.hashValue) % palettes.count
         return palettes[idx]
     }
@@ -535,11 +542,21 @@ struct WizardPricingCalendarView: View {
     }
 
     /// Lukker den aktive action-baren og rydder draft/selection.
+    /// Force-committer evt. pending pris-tekst før draft fjernes så ingen
+    /// endringer går tapt når vert tapper X eller utenfor.
     private func closeActionBar() {
+        if draft != nil {
+            commitDraftPrice()
+        }
+        if priceEditFocused {
+            commitPriceEdit()
+        }
         selectedDates.removeAll()
         rangeAnchor = nil
         draft = nil
         mode = .idle
+        priceEditFocused = false
+        draftPriceFocused = false
     }
 
     private var dateRangePill: some View {
@@ -968,6 +985,13 @@ struct WizardPricingCalendarView: View {
         persistDraft()
     }
 
+    private func setDraftColor(_ index: Int) {
+        guard var d = draft else { return }
+        d.colorIndex = index
+        draft = d
+        persistDraft()
+    }
+
     private func setDraftEnd(minutes: Int) {
         guard var d = draft else { return }
         let h = minutes / 60
@@ -1055,10 +1079,11 @@ struct WizardPricingCalendarView: View {
     private var bandEditorCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             weekdayStrip
+            bandTimeCard
             HStack(alignment: .top, spacing: 12) {
-                bandTimeCard
-                    .frame(maxWidth: .infinity)
                 bandPriceCard
+                    .frame(maxWidth: .infinity)
+                bandColorPicker
                     .frame(maxWidth: .infinity)
             }
             if case .bandEdit = mode {
@@ -1081,6 +1106,50 @@ struct WizardPricingCalendarView: View {
         .padding(14)
         .frame(maxWidth: .infinity)
         .background(glassCardBackground)
+    }
+
+    /// Farge-velger for båndet — 5 swatches matchet med bandPalettes-indekser.
+    /// Tap setter draft.colorIndex og oppdaterer kalender-bånd umiddelbart.
+    private var bandColorPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Farge")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+            HStack(spacing: 10) {
+                ForEach(0..<Self.bandPalettes.count, id: \.self) { idx in
+                    let palette = Self.bandPalettes[idx]
+                    let selected = (draft?.colorIndex ?? -1) == idx
+                    Button {
+                        setDraftColor(idx)
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(palette.bgOverride)
+                                .frame(width: 32, height: 32)
+                            Circle()
+                                .stroke(Color.white, lineWidth: selected ? 2.5 : 0)
+                                .frame(width: 32, height: 32)
+                            if selected {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(height: 96)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .background(Color.white.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
+        }
     }
 
     private var weekdayStrip: some View {

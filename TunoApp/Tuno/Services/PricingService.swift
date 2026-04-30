@@ -23,6 +23,8 @@ enum PricingService {
         let price: Int
         /// Hvilken plass (SpotMarker.id) regelen gjelder. NULL = listing-wide.
         let spot_id: String?
+        /// Utleier-valgt farge-indeks (0-4). NULL = derives fra id-hash.
+        let color_index: Int?
     }
 
     struct Override: Codable, Identifiable, Hashable {
@@ -46,6 +48,7 @@ enum PricingService {
         let end_minute: Int
         let price: Int
         let spot_id: String?
+        let color_index: Int?
     }
 
     // MARK: - CRUD mot regler
@@ -73,6 +76,7 @@ enum PricingService {
                 end_minute: 0,
                 price: price,
                 spot_id: nil,
+                color_index: nil,
             )
             try await supabase
                 .from("listing_pricing_rules")
@@ -100,6 +104,7 @@ enum PricingService {
             end_minute: 0,
             price: price,
             spot_id: nil,
+            color_index: nil,
         )
         try await supabase
             .from("listing_pricing_rules")
@@ -122,7 +127,8 @@ enum PricingService {
         price: Int,
         startDate: String? = nil,
         endDate: String? = nil,
-        spotId: String? = nil
+        spotId: String? = nil,
+        colorIndex: Int? = nil
     ) async throws {
         let rule = NewRule(
             listing_id: listingId,
@@ -136,6 +142,7 @@ enum PricingService {
             end_minute: endMinute,
             price: price,
             spot_id: spotId,
+            color_index: colorIndex,
         )
         try await supabase
             .from("listing_pricing_rules")
