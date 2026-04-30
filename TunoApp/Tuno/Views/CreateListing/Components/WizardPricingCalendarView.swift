@@ -1082,16 +1082,14 @@ struct WizardPricingCalendarView: View {
     private var bandEditorCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             weekdayStrip
-            // Tidspunkt + Pris + Farge på én rad. Tidspunkt får mest plass
-            // siden den har 4 sub-wheels; Pris er kompakt og Farge er
-            // single-swatch som ekspanderer i popover på tap.
-            HStack(alignment: .top, spacing: 8) {
-                bandTimeCard
-                    .frame(maxWidth: .infinity)
+            // Tidspunkt full bredde øverst (4 sub-wheels trenger plass).
+            // Rad 2: Pris + Farge — Farge er kompakt single-swatch.
+            bandTimeCard
+            HStack(alignment: .top, spacing: 10) {
                 bandPriceCard
-                    .frame(width: 130)
+                    .frame(maxWidth: .infinity)
                 compactBandColorPicker
-                    .frame(width: 64)
+                    .frame(width: 110)
             }
             if case .bandEdit = mode {
                 Button {
@@ -1144,9 +1142,10 @@ struct WizardPricingCalendarView: View {
                 )
             }
             .buttonStyle(.plain)
-            .popover(isPresented: $showColorPalette) {
+            .sheet(isPresented: $showColorPalette) {
                 colorPaletteSheet
-                    .presentationCompactAdaptation(.popover)
+                    .presentationDetents([.height(140)])
+                    .presentationDragIndicator(.visible)
             }
         }
     }
@@ -1157,35 +1156,41 @@ struct WizardPricingCalendarView: View {
         return Self.bandPalettes[safe].bgOverride
     }
 
-    /// Popover-innhold: 5 swatches i en rad. Tap velger farge og lukker.
+    /// Sheet-innhold: 5 swatches i en rad. Tap velger farge og lukker.
     private var colorPaletteSheet: some View {
-        HStack(spacing: 14) {
-            ForEach(0..<Self.bandPalettes.count, id: \.self) { idx in
-                let palette = Self.bandPalettes[idx]
-                let selected = (draft?.colorIndex ?? -1) == idx
-                Button {
-                    setDraftColor(idx)
-                    showColorPalette = false
-                } label: {
-                    ZStack {
-                        Circle()
-                            .fill(palette.bgOverride)
-                            .frame(width: 36, height: 36)
-                        if selected {
+        VStack(spacing: 14) {
+            Text("Farge")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.neutral900)
+            HStack(spacing: 18) {
+                ForEach(0..<Self.bandPalettes.count, id: \.self) { idx in
+                    let palette = Self.bandPalettes[idx]
+                    let selected = (draft?.colorIndex ?? -1) == idx
+                    Button {
+                        setDraftColor(idx)
+                        showColorPalette = false
+                    } label: {
+                        ZStack {
                             Circle()
-                                .stroke(Color.neutral900, lineWidth: 2.5)
-                                .frame(width: 36, height: 36)
-                            Image(systemName: "checkmark")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.white)
+                                .fill(palette.bgOverride)
+                                .frame(width: 44, height: 44)
+                            if selected {
+                                Circle()
+                                    .stroke(Color.neutral900, lineWidth: 2.5)
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(.white)
+                            }
                         }
                     }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 14)
+        .padding(.top, 16)
+        .frame(maxWidth: .infinity)
     }
 
     private var weekdayStrip: some View {
@@ -1315,30 +1320,29 @@ struct WizardPricingCalendarView: View {
             Text("Pris per time")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-            HStack(spacing: 6) {
+            HStack(spacing: 10) {
                 Button {
                     stepDraftPrice(by: -50)
                 } label: {
                     Image(systemName: "minus")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 30, height: 30)
                         .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
                 }
                 .buttonStyle(.plain)
 
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                HStack(alignment: .firstTextBaseline, spacing: 3) {
                     TextField("", text: $draftPriceText)
                         .focused($draftPriceFocused)
                         .keyboardType(.numberPad)
                         .multilineTextAlignment(.center)
-                        .font(.system(size: 18, weight: .bold))
+                        .font(.system(size: 22, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(minWidth: 28)
+                        .fixedSize()
+                        .frame(minWidth: 36)
                     Text("kr")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.white.opacity(0.7))
                 }
                 .frame(maxWidth: .infinity)
@@ -1347,9 +1351,9 @@ struct WizardPricingCalendarView: View {
                     stepDraftPrice(by: 50)
                 } label: {
                     Image(systemName: "plus")
-                        .font(.system(size: 10, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)
-                        .frame(width: 24, height: 24)
+                        .frame(width: 30, height: 30)
                         .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
                 }
                 .buttonStyle(.plain)
@@ -1480,6 +1484,10 @@ struct DarkWheelPicker: UIViewRepresentable {
         picker.dataSource = context.coordinator
         picker.delegate = context.coordinator
         picker.backgroundColor = .clear
+        // Sett lave kompresjons-prioriteter så SwiftUI kan gi den vilkårlig
+        // bredde uten å trigge negative-dimensjon-feil i UIKit-runtime.
+        picker.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        picker.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         return picker
     }
 
