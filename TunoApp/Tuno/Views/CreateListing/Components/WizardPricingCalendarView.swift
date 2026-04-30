@@ -1512,15 +1512,29 @@ struct DarkWheelPicker: UIViewRepresentable {
             parent.values.count
         }
 
-        func pickerView(_ pickerView: UIPickerView, attributedTitleForRow row: Int, forComponent component: Int) -> NSAttributedString? {
-            let v = parent.values[row]
-            return NSAttributedString(
-                string: String(format: "%02d", v),
-                attributes: [
-                    .foregroundColor: UIColor.white,
-                    .font: UIFont.systemFont(ofSize: 18, weight: .semibold),
-                ]
-            )
+        /// La rad-bredden følge picker-bredden så vi ikke får default-padding
+        /// som klipper "00" til "C" i smale celler.
+        func pickerView(_ pickerView: UIPickerView, widthForComponent component: Int) -> CGFloat {
+            max(40, pickerView.bounds.width)
+        }
+
+        func pickerView(_ pickerView: UIPickerView, rowHeightForComponent component: Int) -> CGFloat {
+            32
+        }
+
+        func pickerView(_ pickerView: UIPickerView, viewForRow row: Int, forComponent component: Int, reusing view: UIView?) -> UIView {
+            // Bruk en egen UILabel istedenfor attributedTitle. Dette er mer
+            // pålitelig på smale celler — UILabel respekterer textAlignment
+            // og clipsToBounds, og vi kan styre adjustsFontSizeToFitWidth.
+            let label = (view as? UILabel) ?? UILabel()
+            label.text = String(format: "%02d", parent.values[row])
+            label.font = UIFont.systemFont(ofSize: 17, weight: .semibold)
+            label.textColor = .white
+            label.textAlignment = .center
+            label.adjustsFontSizeToFitWidth = true
+            label.minimumScaleFactor = 0.6
+            label.baselineAdjustment = .alignCenters
+            return label
         }
 
         func pickerView(_ pickerView: UIPickerView, didSelectRow row: Int, inComponent component: Int) {
