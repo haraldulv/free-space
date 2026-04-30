@@ -32,6 +32,10 @@ struct WizardPricingCalendarView: View {
     @State private var showDeleteConfirm: Bool = false
     /// Når true vises hele palett-raden i stedet for kompakt single-swatch.
     @State private var showColorPalette: Bool = false
+    /// Tikker som bumpes når en wheel-endring rejectes (overlap). Trigger
+    /// SwiftUI re-render slik at DarkWheelPicker.updateUIView reverterer
+    /// visuelt til den gyldige verdien fra draft.
+    @State private var wheelRevertTick: Int = 0
 
     private let monthsAhead = 6
     private let cellHeight: CGFloat = 110
@@ -155,31 +159,32 @@ struct WizardPricingCalendarView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        // Touch wheelRevertTick så body re-evalueres når en wheel-endring
+        // rejectes — det får DarkWheelPicker til å reverter visuelt.
+        let _ = wheelRevertTick
+        return VStack(spacing: 0) {
             stickyWeekdayHeader
 
-            if bands.isEmpty && mode == .idle {
-                emptyHint
-            } else {
-                ScrollViewReader { proxy in
-                    ScrollView {
-                        LazyVStack(spacing: 18) {
-                            ForEach(visibleMonths, id: \.self) { monthStart in
-                                monthSection(monthStart)
-                            }
+            // Kalender-grid vises alltid — også når det ikke er bånd, så vert
+            // kan legge til via "+ Nytt bånd"-FAB-en.
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(spacing: 18) {
+                        ForEach(visibleMonths, id: \.self) { monthStart in
+                            monthSection(monthStart)
                         }
-                        .padding(.top, 8)
                     }
-                    .onAppear {
-                        guard !hasScrolledToCurrent else { return }
-                        if let target = currentWeekRowId {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                proxy.scrollTo(target, anchor: .top)
-                                hasScrolledToCurrent = true
-                            }
-                        } else {
+                    .padding(.top, 8)
+                }
+                .onAppear {
+                    guard !hasScrolledToCurrent else { return }
+                    if let target = currentWeekRowId {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            proxy.scrollTo(target, anchor: .top)
                             hasScrolledToCurrent = true
                         }
+                    } else {
+                        hasScrolledToCurrent = true
                     }
                 }
             }
@@ -966,7 +971,10 @@ struct WizardPricingCalendarView: View {
             d.dayMask = newMask
         } else {
             d.dayMask |= mask
-            if wouldOverlap(d) { return }
+            if wouldOverlap(d) {
+                wheelRevertTick &+= 1
+                return
+            }
         }
         draft = d
         persistDraft()
@@ -986,7 +994,10 @@ struct WizardPricingCalendarView: View {
             d.endHour = min(24, candidate / 60)
             d.endMinute = 0
         }
-        if wouldOverlap(d) { return }
+        if wouldOverlap(d) {
+            wheelRevertTick &+= 1
+            return
+        }
         draft = d
         persistDraft()
     }
@@ -1011,7 +1022,10 @@ struct WizardPricingCalendarView: View {
             d.startHour = candidate / 60
             d.startMinute = (candidate % 60 == 30) ? 30 : 0
         }
-        if wouldOverlap(d) { return }
+        if wouldOverlap(d) {
+            wheelRevertTick &+= 1
+            return
+        }
         draft = d
         persistDraft()
     }
