@@ -725,6 +725,9 @@ struct BookingListing: Codable {
     let title: String
     let city: String
     let images: [String]
+    let address: String?
+    let lat: Double?
+    let lng: Double?
 }
 
 enum BookingStatus: String, Codable {

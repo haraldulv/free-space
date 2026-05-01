@@ -5,6 +5,7 @@ struct BookingsView: View {
     @State private var bookings: [Booking] = []
     @State private var isLoading = true
     @State private var showLogin = false
+    @State private var activeTab: BookingTab = .upcoming
 
     var body: some View {
         Group {
@@ -16,31 +17,8 @@ struct BookingsView: View {
                 )
             } else if isLoading {
                 ProgressView()
-            } else if bookings.isEmpty {
-                VStack(spacing: 12) {
-                    Image(systemName: "calendar")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.neutral300)
-                    Text("Ingen bestillinger")
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.neutral500)
-                    Text("Bestillingene dine vil vises her")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.neutral400)
-                }
             } else {
-                ScrollView {
-                    LazyVStack(spacing: 16) {
-                        ForEach(bookings) { booking in
-                            BookingCard(booking: booking, onCancelled: { updated in
-                                if let idx = bookings.firstIndex(where: { $0.id == updated.id }) {
-                                    bookings[idx] = updated
-                                }
-                            })
-                        }
-                    }
-                    .padding(16)
-                }
+                contentWithTabs
             }
         }
         .navigationTitle("Bestillinger")
@@ -52,6 +30,87 @@ struct BookingsView: View {
         }
     }
 
+    private var contentWithTabs: some View {
+        VStack(spacing: 0) {
+            tabBar
+            Divider().opacity(0.4)
+            ScrollView {
+                LazyVStack(spacing: 16) {
+                    let visible = filteredBookings
+                    if visible.isEmpty {
+                        emptyState
+                            .padding(.top, 80)
+                    } else {
+                        ForEach(visible) { booking in
+                            BookingCard(booking: booking, onCancelled: { updated in
+                                if let idx = bookings.firstIndex(where: { $0.id == updated.id }) {
+                                    bookings[idx] = updated
+                                }
+                            })
+                        }
+                    }
+                }
+                .padding(16)
+            }
+        }
+    }
+
+    private var tabBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(BookingTab.allCases, id: \.self) { tab in
+                    let count = bookings.filter { tab.matches($0) }.count
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.18)) { activeTab = tab }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(tab.title)
+                                .font(.system(size: 14, weight: activeTab == tab ? .semibold : .medium))
+                            if count > 0 {
+                                Text("\(count)")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 1)
+                                    .background(activeTab == tab ? Color.white.opacity(0.25) : Color.neutral200.opacity(0.6))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                        .foregroundStyle(activeTab == tab ? .white : .neutral800)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(activeTab == tab ? Color.primary600 : Color.neutral50)
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(activeTab == tab ? Color.primary600 : Color.neutral200, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+        }
+    }
+
+    private var filteredBookings: [Booking] {
+        bookings.filter { activeTab.matches($0) }
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        VStack(spacing: 14) {
+            Image(systemName: activeTab.emptyIcon)
+                .font(.system(size: 44, weight: .light))
+                .foregroundStyle(.neutral300)
+            Text(activeTab.emptyTitle)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.neutral700)
+            Text(activeTab.emptySubtitle)
+                .font(.system(size: 14))
+                .foregroundStyle(.neutral500)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 32)
+        }
+    }
+
     private func loadBookings() async {
         guard let userId = authManager.currentUser?.id else {
             isLoading = false
@@ -60,7 +119,7 @@ struct BookingsView: View {
         do {
             bookings = try await supabase
                 .from("bookings")
-                .select("*, listing:listings(id, title, city, images)")
+                .select("*, listing:listings(id, title, city, images, address, lat, lng)")
                 .eq("user_id", value: userId.uuidString)
                 .order("created_at", ascending: false)
                 .execute()
@@ -71,6 +130,70 @@ struct BookingsView: View {
         isLoading = false
     }
 }
+
+// MARK: - Tabs
+
+enum BookingTab: CaseIterable {
+    case upcoming, ongoing, past, cancelled
+
+    var title: String {
+        switch self {
+        case .upcoming: return "Kommende"
+        case .ongoing: return "Pågående"
+        case .past: return "Tidligere"
+        case .cancelled: return "Avlyst"
+        }
+    }
+
+    var emptyIcon: String {
+        switch self {
+        case .upcoming: return "calendar.badge.plus"
+        case .ongoing: return "clock"
+        case .past: return "clock.arrow.circlepath"
+        case .cancelled: return "xmark.circle"
+        }
+    }
+
+    var emptyTitle: String {
+        switch self {
+        case .upcoming: return "Ingen kommende bestillinger"
+        case .ongoing: return "Ingenting pågående akkurat nå"
+        case .past: return "Ingen tidligere opphold"
+        case .cancelled: return "Ingen avlyste bestillinger"
+        }
+    }
+
+    var emptySubtitle: String {
+        switch self {
+        case .upcoming: return "Plassene du booker, dukker opp her."
+        case .ongoing: return "Pågående opphold viser seg her mens du er på plassen."
+        case .past: return "Når du har sjekket ut, lagres bestillingene her."
+        case .cancelled: return "Avlyste bestillinger arkiveres her."
+        }
+    }
+
+    func matches(_ booking: Booking) -> Bool {
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        let start = fmt.date(from: booking.checkIn) ?? today
+        let end = fmt.date(from: booking.checkOut) ?? today
+
+        switch self {
+        case .cancelled:
+            return booking.status == .cancelled
+        case .upcoming:
+            return booking.status != .cancelled && start > today
+        case .ongoing:
+            return booking.status != .cancelled && start <= today && end >= today
+        case .past:
+            return booking.status != .cancelled && end < today
+        }
+    }
+}
+
+// MARK: - BookingCard
 
 struct BookingCard: View {
     let booking: Booking
@@ -84,6 +207,7 @@ struct BookingCard: View {
     @State private var cancelError: String?
     @State private var openingChat = false
     @State private var chatConversationId: String?
+    @State private var navigateToListing = false
     @State private var reviewRating: Int = 0
     @State private var reviewComment: String = ""
     @State private var reviewSubmitting = false
@@ -107,193 +231,41 @@ struct BookingCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if let listing = booking.listing {
-                HStack(spacing: 12) {
-                    AsyncImage(url: URL(string: listing.images.first ?? "")) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        default:
-                            Rectangle().fill(Color.neutral100)
-                        }
-                    }
-                    .frame(width: 70, height: 70)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(listing.title)
-                            .font(.system(size: 15, weight: .semibold))
-                            .lineLimit(1)
-                        Text(listing.city)
-                            .font(.system(size: 13))
-                            .foregroundStyle(.neutral500)
-                    }
-
-                    Spacer()
+        VStack(alignment: .leading, spacing: 0) {
+            heroSection
+            VStack(alignment: .leading, spacing: 16) {
+                titleSection
+                Divider().opacity(0.5)
+                datesSection
+                if let listing = booking.listing, listing.address != nil || listing.city.isEmpty == false {
+                    locationSection(listing: listing)
                 }
-            }
-
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(booking.checkIn) → \(booking.checkOut)")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral600)
-                    if let t = booking.checkInTimeSnapshot {
-                        Text("Innsjekk fra \(t)")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.neutral400)
-                    }
-                    Text("\(booking.totalPrice) kr")
-                        .font(.system(size: 15, weight: .bold))
+                priceSection
+                if booking.status == .cancelled, let refund = booking.refundAmount, refund > 0 {
+                    refundedBadge(amount: refund)
                 }
-
-                Spacer()
-
-                StatusBadge(status: booking.status)
-            }
-
-            if let breakdown = booking.priceBreakdown, !breakdown.isEmpty {
-                let groups = groupBreakdownForBookingsView(breakdown)
-                if groups.count > 1 {
-                    VStack(alignment: .leading, spacing: 3) {
-                        ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
-                            HStack {
-                                Text("\(g.price) kr × \(g.count) \(g.count == 1 ? "natt" : "netter")")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.neutral600)
-                                + Text(" (\(bookingPriceSourceLabel(g.source)))")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.neutral400)
-                                Spacer()
-                                Text("\(g.price * g.count) kr")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(.neutral600)
-                            }
-                        }
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.neutral50)
-                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                Divider().opacity(0.5)
+                ctaRow
+                if canReview {
+                    Divider().opacity(0.5)
+                    reviewSection
                 }
-            }
-
-            if booking.status == .cancelled, let refund = booking.refundAmount, refund > 0 {
-                HStack(spacing: 6) {
-                    Image(systemName: "arrow.uturn.backward.circle.fill")
-                        .foregroundStyle(.orange)
-                        .font(.system(size: 14))
-                    Text("Refundert \(refund) kr")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.neutral600)
-                }
-            }
-
-            HStack(spacing: 16) {
-                Button {
-                    Task { await openChatWithHost() }
-                } label: {
+                if reviewSubmitted || hasExistingReview == true {
                     HStack(spacing: 6) {
-                        if openingChat {
-                            ProgressView().scaleEffect(0.7)
-                        } else {
-                            Image(systemName: "bubble.left.and.bubble.right.fill")
-                                .font(.system(size: 13))
-                        }
-                        Text("Send melding til utleier")
-                            .font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundStyle(Color.primary600)
-                }
-                .disabled(openingChat)
-
-                Spacer()
-            }
-
-            if canReview {
-                reviewSection
-            }
-
-            if reviewSubmitted || hasExistingReview == true {
-                HStack(spacing: 6) {
-                    Image(systemName: "star.fill").foregroundStyle(.yellow).font(.system(size: 12))
-                    Text("Anmeldelse sendt")
-                        .font(.system(size: 13)).foregroundStyle(.neutral500)
-                }
-            }
-
-            if canCancel {
-                if !showCancelConfirm {
-                    Button {
-                        Task { await loadPreview() }
-                        showCancelConfirm = true
-                    } label: {
-                        Text("Kanseller bestilling")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.red)
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: 10) {
-                        if let text = previewText {
-                            HStack(alignment: .top, spacing: 8) {
-                                Image(systemName: "info.circle.fill")
-                                    .foregroundStyle(.orange)
-                                    .font(.system(size: 16))
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(text)
-                                        .font(.system(size: 13, weight: .medium))
-                                    if let amt = previewAmount {
-                                        Text("Refusjon: \(amt) kr av \(booking.totalPrice) kr")
-                                            .font(.system(size: 13))
-                                            .foregroundStyle(.neutral500)
-                                    }
-                                }
-                            }
-                            .padding(10)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.orange.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                        }
-
-                        if let err = cancelError {
-                            Text(err)
-                                .font(.system(size: 13))
-                                .foregroundStyle(.red)
-                        }
-
-                        HStack(spacing: 12) {
-                            Button {
-                                Task { await performCancel() }
-                            } label: {
-                                Text(cancelling ? "Kansellerer..." : "Bekreft kansellering")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .padding(.horizontal, 16)
-                                    .padding(.vertical, 8)
-                                    .background(Color.red)
-                                    .clipShape(Capsule())
-                            }
-                            .disabled(cancelling)
-
-                            Button("Avbryt") {
-                                showCancelConfirm = false
-                                previewText = nil
-                                previewAmount = nil
-                                cancelError = nil
-                            }
-                            .font(.system(size: 14))
-                            .foregroundStyle(.neutral500)
-                        }
+                        Image(systemName: "star.fill").foregroundStyle(.yellow).font(.system(size: 12))
+                        Text("Anmeldelse sendt")
+                            .font(.system(size: 13)).foregroundStyle(.neutral500)
                     }
                 }
+                if showCancelConfirm { cancelConfirmSection }
             }
+            .padding(16)
         }
-        .padding(16)
-        .background(.white)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
-        .opacity(booking.status == .cancelled ? 0.6 : 1)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.6), lineWidth: 1))
+        .shadow(color: .black.opacity(0.05), radius: 10, y: 3)
+        .opacity(booking.status == .cancelled ? 0.75 : 1)
         .navigationDestination(item: $chatConversationId) { id in
             ChatView(
                 conversationId: id,
@@ -303,11 +275,284 @@ struct BookingCard: View {
                 listingImage: booking.listing?.images.first
             )
         }
+        .navigationDestination(isPresented: $navigateToListing) {
+            if let id = booking.listing?.id {
+                ListingDetailView(listingId: id)
+            } else {
+                EmptyView()
+            }
+        }
         .task {
             if isPastCheckout && booking.status == .confirmed {
                 await checkExistingReview()
             }
         }
+    }
+
+    @ViewBuilder
+    private var heroSection: some View {
+        if let listing = booking.listing {
+            ZStack(alignment: .topTrailing) {
+                CachedAsyncImage(url: URL(string: listing.images.first ?? "")) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle().fill(Color.neutral100)
+                }
+                .frame(height: 160)
+                .frame(maxWidth: .infinity)
+                .clipped()
+                StatusBadge(status: booking.status)
+                    .padding(12)
+            }
+        }
+    }
+
+    private var titleSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            if let listing = booking.listing {
+                Text(listing.title)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .lineLimit(2)
+                Text(listing.city)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral500)
+            }
+        }
+    }
+
+    private var datesSection: some View {
+        HStack(alignment: .top, spacing: 16) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Innsjekk")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                Text(formatDateLong(booking.checkIn))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                if let t = booking.checkInTimeSnapshot {
+                    Text("Fra \(t)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral500)
+                }
+            }
+            Image(systemName: "arrow.right")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.neutral400)
+                .padding(.top, 18)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Utsjekk")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                Text(formatDateLong(booking.checkOut))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                if let t = booking.checkOutTimeSnapshot {
+                    Text("Innen \(t)")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral500)
+                }
+            }
+            Spacer()
+        }
+    }
+
+    @ViewBuilder
+    private func locationSection(listing: BookingListing) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "mappin.and.ellipse")
+                .font(.system(size: 14))
+                .foregroundStyle(.primary600)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                if let addr = listing.address, !addr.isEmpty {
+                    Text(addr)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.neutral800)
+                        .lineLimit(2)
+                }
+                if let lat = listing.lat, let lng = listing.lng {
+                    Button {
+                        openInAppleMaps(lat: lat, lng: lng, name: listing.title)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("Få veibeskrivelse")
+                            Image(systemName: "arrow.up.right.square")
+                        }
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.primary600)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Spacer()
+        }
+    }
+
+    @ViewBuilder
+    private var priceSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Total")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral800)
+                Spacer()
+                Text("\(booking.totalPrice) kr")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.neutral900)
+            }
+            if let breakdown = booking.priceBreakdown, !breakdown.isEmpty {
+                let groups = groupBreakdownForBookingsView(breakdown)
+                if groups.count > 1 {
+                    VStack(alignment: .leading, spacing: 3) {
+                        ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
+                            HStack {
+                                Text("\(g.price) kr × \(g.count) \(g.count == 1 ? "natt" : "netter") (\(bookingPriceSourceLabel(g.source)))")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.neutral500)
+                                Spacer()
+                                Text("\(g.price * g.count) kr")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.neutral500)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func refundedBadge(amount: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "arrow.uturn.backward.circle.fill")
+                .foregroundStyle(.orange)
+                .font(.system(size: 14))
+            Text("Refundert \(amount) kr")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral700)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.orange.opacity(0.1))
+        .clipShape(Capsule())
+    }
+
+    private var ctaRow: some View {
+        HStack(spacing: 8) {
+            ctaButton(label: "Vis annonse", icon: "eye") {
+                if booking.listing?.id != nil { navigateToListing = true }
+            }
+            ctaButton(label: openingChat ? "Åpner..." : "Kontakt utleier", icon: "bubble.left.and.bubble.right.fill", loading: openingChat) {
+                Task { await openChatWithHost() }
+            }
+            if canCancel {
+                ctaButton(label: "Avbestill", icon: "xmark.circle", destructive: true) {
+                    Task { await loadPreview() }
+                    showCancelConfirm = true
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func ctaButton(label: String, icon: String, destructive: Bool = false, loading: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            VStack(spacing: 4) {
+                if loading {
+                    ProgressView().scaleEffect(0.7).frame(height: 16)
+                } else {
+                    Image(systemName: icon)
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(height: 16)
+                }
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(destructive ? .red : .neutral800)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .background(Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.neutral200, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(loading)
+    }
+
+    @ViewBuilder
+    private var cancelConfirmSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if let text = previewText {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "info.circle.fill")
+                        .foregroundStyle(.orange)
+                        .font(.system(size: 16))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(text)
+                            .font(.system(size: 13, weight: .medium))
+                        if let amt = previewAmount {
+                            Text("Refusjon: \(amt) kr av \(booking.totalPrice) kr")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.neutral500)
+                        }
+                    }
+                }
+                .padding(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.orange.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+            if let err = cancelError {
+                Text(err)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.red)
+            }
+            HStack(spacing: 12) {
+                Button {
+                    Task { await performCancel() }
+                } label: {
+                    Text(cancelling ? "Kansellerer..." : "Bekreft kansellering")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(Color.red)
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .disabled(cancelling)
+                Button("Tilbake") {
+                    showCancelConfirm = false
+                    previewText = nil
+                    previewAmount = nil
+                    cancelError = nil
+                }
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.neutral500)
+                .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private func openInAppleMaps(lat: Double, lng: Double, name: String) {
+        let encoded = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "Plass"
+        if let url = URL(string: "https://maps.apple.com/?ll=\(lat),\(lng)&q=\(encoded)") {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    private func formatDateLong(_ iso: String) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        guard let date = f.date(from: iso) else { return iso }
+        let out = DateFormatter()
+        out.dateFormat = "d. MMM"
+        out.locale = Locale(identifier: "nb_NO")
+        return out.string(from: date)
     }
 
     private func openChatWithHost() async {
@@ -325,7 +570,6 @@ struct BookingCard: View {
 
     private var reviewSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Divider().padding(.vertical, 2)
             Text("Hvordan var oppholdet?")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.neutral900)
@@ -499,10 +743,12 @@ struct StatusBadge: View {
         Text(label)
             .font(.system(size: 12, weight: .semibold))
             .padding(.horizontal, 10)
-            .padding(.vertical, 4)
+            .padding(.vertical, 5)
             .background(bgColor)
             .foregroundStyle(textColor)
             .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.white.opacity(0.6), lineWidth: 1))
+            .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
     }
 
     private var label: String {
@@ -516,17 +762,13 @@ struct StatusBadge: View {
 
     private var bgColor: Color {
         switch status {
-        case .pending, .requested: return .orange.opacity(0.15)
-        case .confirmed: return .green.opacity(0.15)
-        case .cancelled: return .red.opacity(0.15)
+        case .pending, .requested: return .orange
+        case .confirmed: return .primary600
+        case .cancelled: return .neutral500
         }
     }
 
     private var textColor: Color {
-        switch status {
-        case .pending, .requested: return .orange
-        case .confirmed: return .green
-        case .cancelled: return .red
-        }
+        Color.white
     }
 }
