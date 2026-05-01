@@ -2914,9 +2914,6 @@
         }
       }
     },
-    "Hvilke plasser?" : {
-
-    },
     "Hvilken kjøretøytype passer?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5145,6 +5142,9 @@
           }
         }
       }
+    },
+    "Periode" : {
+
     },
     "Personbil" : {
       "extractionState" : "manual",
