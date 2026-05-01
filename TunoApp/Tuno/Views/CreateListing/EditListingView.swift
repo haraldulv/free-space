@@ -156,12 +156,20 @@ struct EditListingView: View {
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
-                    if savedMessage { dismiss() }
-                    else { showBackAlert = true }
+                    if focusedTab != nil {
+                        // Fokusert single-tab-modus (push fra EditListingRootView):
+                        // bare gå tilbake — ingen alert. Endringer lagres ved trykk
+                        // på "Lagre endringer"-knappen i bunn.
+                        dismiss()
+                    } else if savedMessage {
+                        dismiss()
+                    } else {
+                        showBackAlert = true
+                    }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "chevron.left")
-                        Text(savedMessage ? "Ferdig" : "Avbryt")
+                        Text(focusedTab != nil ? "Tilbake" : (savedMessage ? "Ferdig" : "Avbryt"))
                     }
                     .foregroundStyle(Color.primary600)
                 }

@@ -1,13 +1,12 @@
 import SwiftUI
 
-/// Camping-versjon av wizardens kalender. Gjenbruker måneds-grid-stilen fra
-/// `WizardPricingCalendarView`, men "bånd" er sesongperioder med dato-range
-/// (start_date / end_date) i stedet for time-range. Brukes både i camping-
-/// wizardens pris-variasjon-steg og i Profile-kalenderen for camping.
+/// Camping-versjon av bånd-kalenderen. Visuelt IDENTISK med
+/// `WizardPricingCalendarView` (samme cellHeight, weekday-header, FAB,
+/// color-picker, dag-celler med pris under) — kun bånd-meningen og editor-
+/// sheet er ulike: bånd er sesongperioder med dato-range og per-natt-pris.
 ///
-/// Bånd vises som streker som spenner over dagene innenfor [startDate, endDate]
-/// (filtrert på dayMask hvis satt). Tap på et bånd åpner editor-sheet; FAB-
-/// knappen lager nytt bånd.
+/// Brukes i camping-wizardens pris-variasjon-steg og i Profile-kalenderen for
+/// camping-listings.
 struct WizardSeasonalCalendarView: View {
     @ObservedObject var form: ListingFormModel
     let spotId: String
@@ -16,9 +15,11 @@ struct WizardSeasonalCalendarView: View {
     @State private var showCreateSheet: Bool = false
     @State private var hasScrolledToCurrent = false
 
-    private let monthsAhead = 11
-    private let cellHeight: CGFloat = 64
-    private let bandHeight: CGFloat = 18
+    // Match parking-kalenderens konstanter eksakt.
+    private let monthsAhead = 6
+    private let cellHeight: CGFloat = 110
+    private let cellSpacing: CGFloat = 6
+    private let bandHeight: CGFloat = 22
     private let bandSpacing: CGFloat = 3
 
     private var availability: WizardSpotAvailability { form.availability(for: spotId) }
@@ -27,9 +28,8 @@ struct WizardSeasonalCalendarView: View {
     }
 
     private var basePerNight: Int {
-        form.spotMarkers.first(where: { $0.id == spotId })?.pricePerNight
-            ?? form.spotMarkers.first(where: { $0.id == spotId })?.price
-            ?? 0
+        let spot = form.spotMarkers.first(where: { $0.id == spotId })
+        return spot?.pricePerNight ?? spot?.price ?? 0
     }
 
     private static var osloCalendar: Calendar {
@@ -63,23 +63,42 @@ struct WizardSeasonalCalendarView: View {
         }
     }
 
-    /// Fargepalett (matcher parking-kalenderen).
-    private static let bandPalette: [Color] = [
-        Color(red: 0.20, green: 0.74, blue: 0.49),  // grønn (Tuno)
-        Color(red: 0.62, green: 0.51, blue: 0.96),  // lavendel
-        Color(red: 1.00, green: 0.65, blue: 0.20),  // oransje
-        Color(red: 0.27, green: 0.58, blue: 0.96),  // blå
-        Color(red: 0.95, green: 0.45, blue: 0.65),  // rosa
-    ]
+    /// Lane-allokering for bånd: ikke-overlappende dato-ranger deler lane.
+    private var bandLaneAssignment: [UUID: Int] {
+        var laneRanges: [[(start: String, end: String)]] = []
+        var assignment: [UUID: Int] = [:]
+        for band in bands {
+            guard let bStart = band.startDate, let bEnd = band.endDate else { continue }
+            var lane = 0
+            while lane < laneRanges.count {
+                let conflict = laneRanges[lane].contains { range in
+                    !(bEnd < range.start || bStart > range.end)
+                }
+                if !conflict { break }
+                lane += 1
+            }
+            if lane >= laneRanges.count {
+                laneRanges.append([])
+            }
+            laneRanges[lane].append((bStart, bEnd))
+            assignment[band.id] = lane
+        }
+        return assignment
+    }
 
-    private func colorFor(_ band: WizardPricingBand) -> Color {
-        let idx = band.colorIndex ?? abs(band.id.hashValue) % Self.bandPalette.count
-        return Self.bandPalette[idx % Self.bandPalette.count]
+    private var totalLanes: Int {
+        (bandLaneAssignment.values.max() ?? -1) + 1
+    }
+
+    private var bandStartY: CGFloat {
+        let stackHeight = CGFloat(totalLanes) * bandHeight + CGFloat(max(0, totalLanes - 1)) * bandSpacing
+        return (cellHeight - stackHeight) / 2
     }
 
     var body: some View {
         VStack(spacing: 0) {
             stickyWeekdayHeader
+
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 18) {
@@ -114,7 +133,7 @@ struct WizardSeasonalCalendarView: View {
         }
     }
 
-    // MARK: - Sticky weekday header
+    // MARK: - Sticky weekday header (matcher parking eksakt)
 
     private var stickyWeekdayHeader: some View {
         VStack(spacing: 0) {
@@ -143,201 +162,229 @@ struct WizardSeasonalCalendarView: View {
                 .foregroundStyle(.neutral900)
                 .padding(.horizontal, 20)
 
-            monthGrid(monthStart)
-        }
-    }
-
-    private func monthGrid(_ monthStart: Date) -> some View {
-        let cal = Self.osloCalendar
-        let weeks = weeksInMonth(monthStart)
-        return VStack(spacing: 6) {
-            ForEach(Array(weeks.enumerated()), id: \.offset) { _, week in
-                weekRow(week, monthStart: monthStart, cal: cal)
-            }
-        }
-        .padding(.horizontal, 12)
-    }
-
-    private func weekRow(_ week: [Date?], monthStart: Date, cal: Calendar) -> some View {
-        // Lay-out: HStack med 7 celler. Bånd som dekker N påfølgende celler tegnes
-        // som overlay over cellene.
-        ZStack(alignment: .topLeading) {
-            HStack(spacing: 0) {
-                ForEach(Array(week.enumerated()), id: \.offset) { _, date in
-                    dayCell(date, monthStart: monthStart, cal: cal)
+            VStack(spacing: cellSpacing) {
+                ForEach(weeksFor(monthStart), id: \.id) { week in
+                    weekRow(week)
                 }
             }
-            // Bånd-overlay
-            ForEach(bandsThatTouchWeek(week)) { band in
-                bandStripeOverlay(band, week: week)
+            .padding(.horizontal, 12)
+        }
+    }
+
+    @ViewBuilder
+    private func weekRow(_ week: WeekRow) -> some View {
+        ZStack(alignment: .topLeading) {
+            HStack(spacing: cellSpacing) {
+                ForEach(0..<7, id: \.self) { col in
+                    if let date = week.days[col] {
+                        dayCell(date: date)
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Color.clear.frame(maxWidth: .infinity)
+                    }
+                }
             }
+            .frame(height: cellHeight)
+
+            if !bands.isEmpty {
+                bandsOverlay(week: week).frame(height: cellHeight)
+            }
+        }
+        .frame(height: cellHeight)
+        .id(week.id)
+    }
+
+    // MARK: - Day cell (matcher parking-kalenderen eksakt visuelt)
+
+    @ViewBuilder
+    private func dayCell(date: Date) -> some View {
+        let day = Self.osloCalendar.component(.day, from: date)
+        let startOfToday = Self.osloCalendar.startOfDay(for: Date())
+        let isPast = Self.osloCalendar.startOfDay(for: date) < startOfToday
+        let priceForDay = priceForDate(date)
+        let dayCovered = bandCoversDay(date)
+
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.white)
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(isPast ? Color.neutral100 : Color.neutral200, lineWidth: 1)
+
+            VStack(spacing: 0) {
+                Text("\(day)")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(isPast ? Color.neutral300 : Color.neutral900)
+                    .padding(.top, 8)
+
+                Spacer(minLength: 0)
+
+                // Skjul pris under hvis et bånd dekker dagen — prisen står
+                // da på selve båndet (samme som parking).
+                if !isPast && !dayCovered, priceForDay > 0 {
+                    Text("\(priceForDay) kr")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.neutral500)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.bottom, 10)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(height: cellHeight)
     }
 
-    private func dayCell(_ date: Date?, monthStart: Date, cal: Calendar) -> some View {
-        let inMonth = date.map { cal.isDate($0, equalTo: monthStart, toGranularity: .month) } ?? false
-        let day = date.map { cal.component(.day, from: $0) } ?? 0
-        return VStack {
-            if let _ = date, inMonth {
-                Text("\(day)")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(isToday(date) ? Color.primary600 : .neutral800)
-                    .padding(.top, 6)
+    /// Effektiv per-natt-pris for en dato. Sjekker bånd som dekker datoen;
+    /// hvis ingen, returnerer base.
+    private func priceForDate(_ date: Date) -> Int {
+        let iso = Self.isoFormatter.string(from: date)
+        for band in bands {
+            guard let bStart = band.startDate, let bEnd = band.endDate else { continue }
+            if iso >= bStart && iso <= bEnd && bandDayMaskMatches(band, date: date) {
+                return band.price
             }
-            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, minHeight: cellHeight)
+        return basePerNight
     }
 
-    private func isToday(_ date: Date?) -> Bool {
-        guard let date else { return false }
-        let cal = Self.osloCalendar
-        return cal.isDateInToday(date)
+    /// True hvis et bånd dekker dagen (basert på dato-range + dayMask).
+    private func bandCoversDay(_ date: Date) -> Bool {
+        let iso = Self.isoFormatter.string(from: date)
+        return bands.contains { band in
+            guard let bStart = band.startDate, let bEnd = band.endDate else { return false }
+            return iso >= bStart && iso <= bEnd && bandDayMaskMatches(band, date: date)
+        }
     }
 
-    /// Tegner en horisontal stripe for bånd over dagene som matcher i denne uken.
-    /// Bånd som spenner over flere uker rendres separat i hver uke (med kantende
-    /// rounding på den uken båndet starter/slutter).
+    private func bandDayMaskMatches(_ band: WizardPricingBand, date: Date) -> Bool {
+        if band.dayMask == 0 { return true }
+        let weekday = Self.osloCalendar.component(.weekday, from: date)
+        let bit = (weekday + 5) % 7  // ma=0 ... sø=6
+        return (band.dayMask & (1 << bit)) != 0
+    }
+
+    // MARK: - Bånd-overlay (rendres over dag-celler i ZStack)
+
     @ViewBuilder
-    private func bandStripeOverlay(_ band: WizardPricingBand, week: [Date?]) -> some View {
-        let segments = bandSegmentsInWeek(band, week: week)
-        ForEach(Array(segments.enumerated()), id: \.offset) { idx, segment in
-            let lane = laneFor(band: band)
-            let yOffset = CGFloat(lane) * (bandHeight + bandSpacing) + 26
-            GeometryReader { geo in
-                let cellW = geo.size.width / 7
-                let x = CGFloat(segment.startCol) * cellW
-                let w = CGFloat(segment.endCol - segment.startCol + 1) * cellW
+    private func bandsOverlay(week: WeekRow) -> some View {
+        GeometryReader { g in
+            let totalSpacing = cellSpacing * 6
+            let cellWidth = max(0, (g.size.width - totalSpacing) / 7)
 
-                Button {
-                    editingBand = band
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("\(band.price) kr")
-                            .font(.system(size: 10, weight: .bold))
-                            .foregroundStyle(.white)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
+            ForEach(bands, id: \.id) { band in
+                let segs = bandSegmentsInWeek(band, week: week)
+                let lane = bandLaneAssignment[band.id] ?? 0
+                ForEach(segs.indices, id: \.self) { i in
+                    let seg = segs[i]
+                    let palette = bandPalette(for: band)
+                    let xOffset = CGFloat(seg.start) * (cellWidth + cellSpacing)
+                    let width = CGFloat(seg.end - seg.start + 1) * cellWidth + CGFloat(seg.end - seg.start) * cellSpacing
+                    let yOffset = bandStartY + CGFloat(lane) * (bandHeight + bandSpacing)
+
+                    Button {
+                        editingBand = band
+                    } label: {
+                        HStack(spacing: 4) {
+                            Spacer(minLength: 0)
+                            Text("\(band.price) kr")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundStyle(palette.text)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 6)
+                        .frame(width: max(0, width - 4), height: bandHeight)
+                        .background(Capsule().fill(palette.bgDefault))
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 6)
-                    .frame(width: max(0, w - 4), height: bandHeight)
-                    .background(colorFor(band))
-                    .clipShape(RoundedRectangle(cornerRadius: 4))
-                    .position(x: x + w / 2, y: yOffset + bandHeight / 2)
+                    .buttonStyle(.plain)
+                    .offset(x: xOffset + 2, y: yOffset)
                 }
-                .buttonStyle(.plain)
-                .id("\(band.id)-\(idx)")
-            }
-            .frame(height: cellHeight)
-            .allowsHitTesting(true)
-        }
-    }
-
-    /// Bestemmer en stabil "lane" per bånd så overlapper ikke kolliderer.
-    private func laneFor(band: WizardPricingBand) -> Int {
-        var laneMasks: [(start: String, end: String)] = []
-        for b in bands {
-            if b.id == band.id {
-                return laneMasks.firstIndex { existing in
-                    !rangesOverlap(existing, (b.startDate ?? "", b.endDate ?? ""))
-                } ?? laneMasks.count
-            }
-            // Tildel midlertidig lane
-            if let lane = laneMasks.firstIndex(where: { existing in
-                !rangesOverlap(existing, (b.startDate ?? "", b.endDate ?? ""))
-            }) {
-                laneMasks[lane] = (b.startDate ?? "", b.endDate ?? "")
-            } else {
-                laneMasks.append((b.startDate ?? "", b.endDate ?? ""))
             }
         }
-        return 0
     }
 
-    private func rangesOverlap(_ a: (start: String, end: String), _ b: (start: String, end: String)) -> Bool {
-        return !(a.end < b.start || b.end < a.start)
-    }
-
-    private struct WeekSegment {
-        let startCol: Int
-        let endCol: Int
-    }
-
-    private func bandSegmentsInWeek(_ band: WizardPricingBand, week: [Date?]) -> [WeekSegment] {
+    /// Bestem hvilke kolonner i uken båndet dekker (kontinuerlige segmenter).
+    private func bandSegmentsInWeek(_ band: WizardPricingBand, week: WeekRow) -> [(start: Int, end: Int)] {
         guard let bStart = band.startDate, let bEnd = band.endDate else { return [] }
-        var segments: [WeekSegment] = []
+        var segments: [(Int, Int)] = []
         var currentStart: Int? = nil
 
-        for (col, dateOpt) in week.enumerated() {
-            guard let date = dateOpt else {
+        for col in 0..<7 {
+            guard let date = week.days[col] else {
                 if let s = currentStart {
-                    segments.append(WeekSegment(startCol: s, endCol: col - 1))
+                    segments.append((s, col - 1))
                     currentStart = nil
                 }
                 continue
             }
             let iso = Self.isoFormatter.string(from: date)
-            let withinRange = iso >= bStart && iso <= bEnd
-            let dayMatchesMask: Bool = {
-                if band.dayMask == 0 { return true }  // 0 = alle dager
-                let cal = Self.osloCalendar
-                let wd = cal.component(.weekday, from: date)
-                let bit = wd == 1 ? 6 : wd - 2  // ma=0 ... sø=6
-                return (band.dayMask & (1 << bit)) != 0
-            }()
-            let included = withinRange && dayMatchesMask
-
+            let included = iso >= bStart && iso <= bEnd && bandDayMaskMatches(band, date: date)
             if included {
                 if currentStart == nil { currentStart = col }
             } else {
                 if let s = currentStart {
-                    segments.append(WeekSegment(startCol: s, endCol: col - 1))
+                    segments.append((s, col - 1))
                     currentStart = nil
                 }
             }
         }
         if let s = currentStart {
-            segments.append(WeekSegment(startCol: s, endCol: 6))
+            segments.append((s, 6))
         }
         return segments
     }
 
-    private func bandsThatTouchWeek(_ week: [Date?]) -> [WizardPricingBand] {
-        let dates = week.compactMap { $0 }
-        guard let first = dates.first, let last = dates.last else { return [] }
-        let firstISO = Self.isoFormatter.string(from: first)
-        let lastISO = Self.isoFormatter.string(from: last)
-        return bands.filter { band in
-            guard let bStart = band.startDate, let bEnd = band.endDate else { return false }
-            return !(bEnd < firstISO || bStart > lastISO)
+    // MARK: - Palette (matcher parking eksakt)
+
+    private func bandPalette(for band: WizardPricingBand) -> BandPalette {
+        let palettes = WizardPricingCalendarView.bandPalettes
+        if let chosen = band.colorIndex, palettes.indices.contains(chosen) {
+            return palettes[chosen]
         }
+        let idx = abs(band.id.hashValue) % palettes.count
+        return palettes[idx]
     }
 
-    private func weeksInMonth(_ monthStart: Date) -> [[Date?]] {
+    // MARK: - Weeks-for-month helper (samme som parking)
+
+    private struct WeekRow: Identifiable {
+        let id: String
+        let days: [Date?]
+        let key: WeekKey
+    }
+
+    private func weeksFor(_ monthStart: Date) -> [WeekRow] {
         let cal = Self.osloCalendar
         guard let monthInterval = cal.dateInterval(of: .month, for: monthStart) else { return [] }
         let monthEnd = cal.date(byAdding: .day, value: -1, to: monthInterval.end) ?? monthInterval.start
-        guard let firstWeek = cal.dateInterval(of: .weekOfMonth, for: monthInterval.start) else { return [] }
 
-        var weeks: [[Date?]] = []
-        var weekStart = firstWeek.start
+        var rows: [WeekRow] = []
+        guard let firstWeekStart = cal.dateInterval(of: .weekOfYear, for: monthInterval.start)?.start else { return [] }
+
+        var weekStart = firstWeekStart
         while weekStart < monthInterval.end {
-            var week: [Date?] = []
+            var days: [Date?] = []
             for offset in 0..<7 {
                 let d = cal.date(byAdding: .day, value: offset, to: weekStart) ?? weekStart
                 let inMonth = d >= monthInterval.start && d <= monthEnd
-                week.append(inMonth ? d : nil)
+                days.append(inMonth ? d : nil)
             }
-            weeks.append(week)
+
+            let yearWeek = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: weekStart)
+            let year = yearWeek.yearForWeekOfYear ?? 2026
+            let week = yearWeek.weekOfYear ?? 1
+            let key = WeekKey(year: year, weekNum: week)
+            let id = "\(monthStart.timeIntervalSince1970)-\(year)-\(week)"
+            rows.append(WeekRow(id: id, days: days, key: key))
+
             guard let next = cal.date(byAdding: .day, value: 7, to: weekStart) else { break }
             weekStart = next
         }
-        return weeks
+        return rows
     }
 
-    // MARK: - FAB
+    // MARK: - FAB (matcher parking eksakt)
 
     private var fabAddBand: some View {
         Button {
@@ -346,15 +393,15 @@ struct WizardSeasonalCalendarView: View {
             HStack(spacing: 6) {
                 Image(systemName: "plus")
                     .font(.system(size: 14, weight: .bold))
-                Text("Nytt sesong-bånd")
+                Text("Nytt bånd")
                     .font(.system(size: 13, weight: .semibold))
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.primary600)
+            .background(Color.neutral900)
             .clipShape(Capsule())
-            .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
+            .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
         }
         .buttonStyle(.plain)
     }
@@ -366,7 +413,7 @@ struct WizardSeasonalCalendarView: View {
         return WizardPricingBand(
             dayMask: 0,
             price: basePerNight > 0 ? basePerNight : 500,
-            colorIndex: bands.count % Self.bandPalette.count,
+            colorIndex: bands.count % WizardPricingCalendarView.bandPalettes.count,
             startDate: Self.isoFormatter.string(from: start),
             endDate: Self.isoFormatter.string(from: end)
         )
@@ -378,7 +425,7 @@ struct WizardSeasonalCalendarView: View {
         SeasonBandEditor(
             initial: initial,
             isEditing: isEditing,
-            palette: Self.bandPalette,
+            palette: WizardPricingCalendarView.bandPalettes,
             onSave: { saved in
                 var avail = form.availability(for: spotId)
                 if let idx = avail.bands.firstIndex(where: { $0.id == saved.id }) {
@@ -410,7 +457,7 @@ struct WizardSeasonalCalendarView: View {
 private struct SeasonBandEditor: View {
     let initial: WizardPricingBand
     let isEditing: Bool
-    let palette: [Color]
+    let palette: [BandPalette]
     let onSave: (WizardPricingBand) -> Void
     let onDelete: ((UUID) -> Void)?
     let onCancel: () -> Void
@@ -439,8 +486,8 @@ private struct SeasonBandEditor: View {
         var dayMask: Int {
             switch self {
             case .all: return 0
-            case .weekendsOnly: return (1 << 4) | (1 << 5) | (1 << 6)  // fr, lø, sø
-            case .weekdaysOnly: return (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3)  // ma-to
+            case .weekendsOnly: return (1 << 4) | (1 << 5) | (1 << 6)
+            case .weekdaysOnly: return (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3)
             }
         }
 
@@ -448,14 +495,14 @@ private struct SeasonBandEditor: View {
             if dayMask == 0 { return .all }
             if dayMask == (1 << 4) | (1 << 5) | (1 << 6) { return .weekendsOnly }
             if dayMask == (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) { return .weekdaysOnly }
-            return .all  // fallback
+            return .all
         }
     }
 
     init(
         initial: WizardPricingBand,
         isEditing: Bool,
-        palette: [Color],
+        palette: [BandPalette],
         onSave: @escaping (WizardPricingBand) -> Void,
         onDelete: ((UUID) -> Void)?,
         onCancel: @escaping () -> Void
@@ -521,7 +568,7 @@ private struct SeasonBandEditor: View {
                                 colorIndex = idx
                             } label: {
                                 Circle()
-                                    .fill(palette[idx])
+                                    .fill(palette[idx].bgDefault)
                                     .frame(width: 32, height: 32)
                                     .overlay {
                                         if colorIndex == idx {
@@ -585,7 +632,6 @@ private struct SeasonBandEditor: View {
         band.price = price
         band.dayMask = dayMaskChoice.dayMask
         band.colorIndex = colorIndex
-        // Sett start/end-time til døgn-grenser så server-pricing skiller season fra hourly.
         band.startHour = 0
         band.startMinute = 0
         band.endHour = 24

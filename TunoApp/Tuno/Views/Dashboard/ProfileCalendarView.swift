@@ -47,6 +47,8 @@ struct ProfileCalendarView: View {
         return Array(selectedSpotIds)
     }
 
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         Group {
             if isLoading {
@@ -55,8 +57,11 @@ struct ProfileCalendarView: View {
                 content
             }
         }
-        .navigationTitle("Kalender")
-        .navigationBarTitleDisplayMode(.inline)
+        // Fullscreen-stil: skjul navigation-bar slik at kalenderen får
+        // hele skjermen og weekday-headeren låses helt øverst (matcher
+        // wizardens pris-variasjon-steg).
+        .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
         .task { await load() }
         .onChange(of: form.availabilityBySpotId) { _, _ in scheduleSave() }
         .onChange(of: form.spotMarkers) { _, _ in scheduleBlockedSave() }
@@ -64,48 +69,50 @@ struct ProfileCalendarView: View {
 
     @ViewBuilder
     private var content: some View {
-        VStack(spacing: 0) {
-            header
-            if spots.count > 1 {
-                spotPicker
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 4)
-            }
-            if let id = canonicalSpotId {
-                if listing.category == .camping {
-                    WizardSeasonalCalendarView(form: form, spotId: id)
+        ZStack(alignment: .topLeading) {
+            VStack(spacing: 0) {
+                if spots.count > 1 {
+                    spotPicker
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 4)
                 } else {
-                    WizardPricingCalendarView(form: form, spotId: id)
+                    Spacer().frame(height: 8)
                 }
-            } else {
-                emptyState
-            }
-        }
-    }
-
-    // MARK: - Header (status + tittel)
-
-    private var header: some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(listing.internalName ?? listing.title)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                    .lineLimit(1)
-                if let city = listing.city {
-                    Text(city)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
+                if let id = canonicalSpotId {
+                    if listing.category == .camping {
+                        WizardSeasonalCalendarView(form: form, spotId: id)
+                    } else {
+                        WizardPricingCalendarView(form: form, spotId: id)
+                    }
+                } else {
+                    emptyState
                 }
             }
-            Spacer()
-            saveIndicator
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 12)
-        .background(Color.white)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.neutral200).frame(height: 0.5)
+            .padding(.top, 56)  // plass til "X"-knappen øverst
+
+            // Top-overlay: "X"-knapp (top-leading) + save-status (top-trailing)
+            HStack(alignment: .center) {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Color.white))
+                        .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Lukk")
+
+                Spacer()
+
+                saveIndicator
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
         }
     }
 

@@ -1777,6 +1777,9 @@
         }
       }
     },
+    "Eksemplet bruker timepris %@. Faktisk total varierer med pris-bånd." : {
+
+    },
     "Elbil-lading" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4895,6 +4898,9 @@
     "Nytt bånd" : {
 
     },
+    "Nytt sesong-bånd" : {
+
+    },
     "Om" : {
 
     },
@@ -5549,6 +5555,9 @@
 
     },
     "Pris-bånd er felles for alle plasser. Endringer gjøres på plass 1." : {
+
+    },
+    "Pris-eksempler etter rabatt" : {
 
     },
     "Prisenhet" : {
@@ -6382,6 +6391,9 @@
           }
         }
       }
+    },
+    "Spart %@" : {
+
     },
     "Språk" : {
       "localizations" : {
