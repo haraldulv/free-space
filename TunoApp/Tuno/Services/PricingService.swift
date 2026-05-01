@@ -738,4 +738,29 @@ enum PricingService {
             days: days
         )
     }
+
+    // MARK: - Service-fee split (speiler lib/config.ts)
+    //
+    // Tunos plattform-gebyr legges på TOPPEN av host-prisen. Når host setter
+    // 1000 kr per natt → gjest betaler 1100 kr → host får 1000 kr → Tuno får 100 kr.
+
+    static let serviceFeeRate: Double = 0.10
+
+    /// Gebyret når brukeren har satt en host-pris (subtotal). Avrundet heltall NOK.
+    static func feeFromSubtotal(_ subtotal: Int) -> Int {
+        Int((Double(subtotal) * serviceFeeRate).rounded())
+    }
+
+    /// Gjestens totalpris gitt host-prisen.
+    static func guestPriceFromSubtotal(_ subtotal: Int) -> Int {
+        subtotal + feeFromSubtotal(subtotal)
+    }
+
+    /// Splitter en gjeste-totalpris til (hostShare, fee). Brukes når vi
+    /// allerede har totalen og må vise ut gebyret. Speiler `splitHostAndFee`
+    /// i `lib/config.ts`.
+    static func splitHostAndFee(totalPriceNok: Int) -> (hostShare: Int, fee: Int) {
+        let fee = Int((Double(totalPriceNok) * serviceFeeRate / (1 + serviceFeeRate)).rounded())
+        return (hostShare: totalPriceNok - fee, fee: fee)
+    }
 }

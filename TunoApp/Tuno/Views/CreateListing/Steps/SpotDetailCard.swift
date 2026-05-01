@@ -135,6 +135,7 @@ struct SpotPriceContent: View {
                     ),
                     unitLabel: "time"
                 )
+                FeeBreakdownCard(subtotal: s.pricePerHour ?? 0, unitLabel: "time")
             } else if let s = spot {
                 // Camping: kun per natt
                 BigPriceInput(
@@ -148,6 +149,7 @@ struct SpotPriceContent: View {
                     ),
                     unitLabel: PriceUnit.natt.displayName
                 )
+                FeeBreakdownCard(subtotal: s.pricePerNight ?? s.price ?? 0, unitLabel: PriceUnit.natt.displayName)
             }
         }
         .onAppear {
@@ -165,6 +167,80 @@ struct SpotPriceContent: View {
                 form.spotMarkers[index].priceUnit = .hour
             }
         }
+    }
+}
+
+// MARK: - FeeBreakdownCard
+//
+// Airbnb-stil oppsummering som viser host-pris, gjest-fee, gjestens totalpris
+// og host-utbetaling. Forutsetter at SERVICE_FEE legges på TOPPEN av host-prisen
+// (samme logikk som lib/config.ts → splitHostAndFee).
+
+struct FeeBreakdownCard: View {
+    let subtotal: Int
+    let unitLabel: String
+
+    private var fee: Int { PricingService.feeFromSubtotal(subtotal) }
+    private var guestPrice: Int { subtotal + fee }
+
+    var body: some View {
+        VStack(spacing: 10) {
+            VStack(spacing: 0) {
+                row(label: "Grunnpris", value: subtotal, bold: false)
+                Divider().padding(.vertical, 10)
+                row(label: "Tjenestegebyr for gjester", value: fee, bold: false)
+                Divider().padding(.vertical, 10)
+                row(label: "Gjestens pris per \(unitLabel)", value: guestPrice, bold: true)
+            }
+            .padding(16)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.neutral200.opacity(0.7), lineWidth: 1)
+            )
+
+            HStack {
+                Text("Du tjener")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Spacer()
+                Text(formatKr(subtotal))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
+            .background(Color.primary50.opacity(0.5))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.neutral200.opacity(0.5), lineWidth: 1)
+            )
+        }
+        .opacity(subtotal > 0 ? 1 : 0.5)
+        .animation(.easeInOut(duration: 0.2), value: subtotal)
+    }
+
+    @ViewBuilder
+    private func row(label: String, value: Int, bold: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(label)
+                .font(.system(size: 14, weight: bold ? .semibold : .regular))
+                .foregroundStyle(.neutral900)
+            Spacer()
+            Text(formatKr(value))
+                .font(.system(size: 14, weight: bold ? .semibold : .regular))
+                .foregroundStyle(.neutral900)
+        }
+    }
+
+    private func formatKr(_ value: Int) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.groupingSeparator = " "
+        f.maximumFractionDigits = 0
+        return "\(f.string(from: NSNumber(value: value)) ?? "\(value)") kr"
     }
 }
 
