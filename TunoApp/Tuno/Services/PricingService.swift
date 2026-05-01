@@ -257,6 +257,228 @@ enum PricingService {
         }
     }
 
+    // MARK: - Load/Save WizardSpotAvailability (per-spot)
+    //
+    // Brukes av Profile-kalenderen for å gjenbruke wizardens bånd-editor.
+    // Lagring er delete-all-for-spot + reinsert. Det er enklere enn diff-
+    // basert oppdatering og rules-volumet per spot er lite.
+
+    /// Last alle bånd + overrides for én plass og oversett til
+    /// WizardSpotAvailability slik wizardens bånd-editor forventer.
+    static func loadAvailability(listingId: String, spotId: String) async -> WizardSpotAvailability {
+        var avail = WizardSpotAvailability()
+        avail.alwaysAvailable = false
+
+        let rules = await fetchRulesForSpot(listingId: listingId, spotId: spotId, kind: "hourly")
+        let overrides = await fetchOverridesForSpot(listingId: listingId, spotId: spotId)
+
+        // Grupper rules: defaults (start_date == nil) er bånd, override-rader
+        // (start_date != nil) er bandPriceOverrides knyttet til samme bånd-id.
+        // Vi matcher override-rader til default-bånd ved å se etter samme
+        // (dayMask, startHour, startMinute, endHour, endMinute).
+        var bands: [WizardPricingBand] = []
+        var overridesPerBand: [UUID: [WizardBandPriceOverride]] = [:]
+
+        for rule in rules where rule.start_date == nil && rule.end_date == nil {
+            guard let startHour = rule.start_hour, let endHour = rule.end_hour else { continue }
+            let band = WizardPricingBand(
+                dayMask: rule.day_mask ?? 0,
+                startHour: startHour,
+                startMinute: rule.start_minute ?? 0,
+                endHour: endHour,
+                endMinute: rule.end_minute ?? 0,
+                price: rule.price,
+                weekScope: .allWeeks,
+                colorIndex: rule.color_index
+            )
+            bands.append(band)
+        }
+
+        // Andre rader (med start_date) er overrides — match til band ved bånd-form.
+        for rule in rules where rule.start_date != nil || rule.end_date != nil {
+            guard let startHour = rule.start_hour, let endHour = rule.end_hour else { continue }
+            let dayMask = rule.day_mask ?? 0
+            let startMinute = rule.start_minute ?? 0
+            let endMinute = rule.end_minute ?? 0
+            // Finn bandet denne overrides matcher (samme dayMask + tider).
+            guard let band = bands.first(where: {
+                $0.dayMask == dayMask
+                && $0.startHour == startHour
+                && $0.startMinute == startMinute
+                && $0.endHour == endHour
+                && $0.endMinute == endMinute
+            }) else { continue }
+
+            // Determine weekScope from start_date / end_date.
+            let scope: WeekScope
+            if let s = rule.start_date, let _ = rule.end_date,
+               let week = isoWeekFromRange(start: s) {
+                scope = .specificWeeks([week])
+            } else {
+                scope = .allWeeks
+            }
+
+            let override = WizardBandPriceOverride(bandId: band.id, weekScope: scope, price: rule.price)
+            overridesPerBand[band.id, default: []].append(override)
+        }
+
+        avail.bands = bands
+        avail.bandPriceOverrides = overridesPerBand.values.flatMap { $0 }
+
+        avail.dateOverrides = overrides.map {
+            WizardDateOverride(date: $0.date, price: $0.price)
+        }
+        return avail
+    }
+
+    /// Slett alle bånd + overrides for én plass, og persisterer det nye
+    /// settet. Kalles fra Profile-kalenderen ved save.
+    @MainActor
+    static func saveAvailability(
+        listingId: String,
+        spotId: String,
+        _ avail: WizardSpotAvailability,
+        basePerHour: Int
+    ) async throws {
+        // 1) Slett eksisterende rules for spotId (kun hourly — andre kinds
+        //    håndteres av andre flows).
+        try await supabase
+            .from("listing_pricing_rules")
+            .delete()
+            .eq("listing_id", value: listingId)
+            .eq("spot_id", value: spotId)
+            .eq("kind", value: "hourly")
+            .execute()
+
+        // 2) Slett eksisterende overrides for spotId.
+        try await supabase
+            .from("listing_pricing_overrides")
+            .delete()
+            .eq("listing_id", value: listingId)
+            .eq("spot_id", value: spotId)
+            .execute()
+
+        // 3) Re-insert: default-bånd-rader.
+        for band in avail.bands {
+            let bandBasePrice = band.price > 0 ? band.price : basePerHour
+            try? await addHourlyBandRule(
+                listingId: listingId,
+                dayMask: band.dayMask,
+                startHour: band.startHour,
+                startMinute: band.startMinute,
+                endHour: band.endHour,
+                endMinute: band.endMinute,
+                price: bandBasePrice,
+                startDate: nil,
+                endDate: nil,
+                spotId: spotId,
+                colorIndex: band.colorIndex
+            )
+        }
+
+        // 4) Override-bånd-rader (per uke i scope).
+        for override in avail.bandPriceOverrides {
+            guard let band = avail.bands.first(where: { $0.id == override.bandId }) else { continue }
+            switch override.weekScope {
+            case .allWeeks:
+                try? await addHourlyBandRule(
+                    listingId: listingId,
+                    dayMask: band.dayMask,
+                    startHour: band.startHour,
+                    startMinute: band.startMinute,
+                    endHour: band.endHour,
+                    endMinute: band.endMinute,
+                    price: override.price,
+                    startDate: nil,
+                    endDate: nil,
+                    spotId: spotId
+                )
+            case .specificWeeks(let weeks):
+                for week in weeks {
+                    guard let range = WizardPricingCalendarView.dateRangeForWeek(year: week.year, week: week.weekNum) else { continue }
+                    try? await addHourlyBandRule(
+                        listingId: listingId,
+                        dayMask: band.dayMask,
+                        startHour: band.startHour,
+                        startMinute: band.startMinute,
+                        endHour: band.endHour,
+                        endMinute: band.endMinute,
+                        price: override.price,
+                        startDate: range.start,
+                        endDate: range.end,
+                        spotId: spotId
+                    )
+                }
+            }
+        }
+
+        // 5) Date-overrides.
+        for dateOverride in avail.dateOverrides {
+            try? await setOverride(
+                listingId: listingId,
+                date: dateOverride.date,
+                price: dateOverride.price,
+                spotId: spotId
+            )
+        }
+    }
+
+    /// Hent rules filtrert på spot_id (NULL ⇒ listing-wide).
+    private static func fetchRulesForSpot(listingId: String, spotId: String?, kind: String?) async -> [Rule] {
+        do {
+            var query = supabase
+                .from("listing_pricing_rules")
+                .select()
+                .eq("listing_id", value: listingId)
+            if let spotId {
+                query = query.eq("spot_id", value: spotId)
+            } else {
+                query = query.is("spot_id", value: nil as Bool?)
+            }
+            if let kind {
+                query = query.eq("kind", value: kind)
+            }
+            let rules: [Rule] = try await query.execute().value
+            return rules
+        } catch {
+            return []
+        }
+    }
+
+    /// Hent overrides filtrert på spot_id.
+    private static func fetchOverridesForSpot(listingId: String, spotId: String?) async -> [Override] {
+        do {
+            var query = supabase
+                .from("listing_pricing_overrides")
+                .select()
+                .eq("listing_id", value: listingId)
+            if let spotId {
+                query = query.eq("spot_id", value: spotId)
+            } else {
+                query = query.is("spot_id", value: nil as Bool?)
+            }
+            let overrides: [Override] = try await query.execute().value
+            return overrides
+        } catch {
+            return []
+        }
+    }
+
+    /// Forsøk å gjenfinne ISO-uke fra en startdato. Returnerer nil hvis dato-
+    /// strengen ikke kan parses.
+    private static func isoWeekFromRange(start: String) -> WeekKey? {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        guard let startDate = f.date(from: start) else { return nil }
+        var cal = Calendar(identifier: .iso8601)
+        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+        cal.firstWeekday = 2
+        cal.minimumDaysInFirstWeek = 4
+        let comps = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: startDate)
+        guard let year = comps.yearForWeekOfYear, let week = comps.weekOfYear else { return nil }
+        return WeekKey(year: year, weekNum: week)
+    }
+
     /// Helg-maske: fredag (bit 4), lørdag (bit 5), søndag (bit 6).
     static let weekendDayMask = (1 << 4) | (1 << 5) | (1 << 6)
 

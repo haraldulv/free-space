@@ -27,13 +27,13 @@ struct CalendarRootView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if listings.count == 1, let only = listings.first {
-                HostCalendarView(listing: only)
+                ProfileCalendarView(listing: only)
             } else {
                 List {
                     Section {
                         ForEach(listings) { listing in
                             NavigationLink {
-                                HostCalendarView(listing: listing)
+                                ProfileCalendarView(listing: listing)
                             } label: {
                                 HStack(spacing: 12) {
                                     AsyncImage(url: URL(string: listing.images?.first ?? "")) { phase in
