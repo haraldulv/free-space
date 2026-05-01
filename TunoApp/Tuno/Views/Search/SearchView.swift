@@ -87,6 +87,7 @@ struct SearchView: View {
     @State private var checkOut: Date?
     @State private var startMinutes: Int?
     @State private var endMinutes: Int?
+    @State private var flexibility: Int = 0
     @State private var vehicles: Set<VehicleType> = [.motorhome]
     @State private var bookingPref: BookingPreference = .all
     @State private var filters = SearchFilters()
@@ -144,6 +145,7 @@ struct SearchView: View {
                     checkOut: $checkOut,
                     startMinutes: $startMinutes,
                     endMinutes: $endMinutes,
+                    flexibility: $flexibility,
                     bookingPref: $bookingPref,
                     vehicles: $vehicles,
                     placesService: placesService,
@@ -505,7 +507,8 @@ struct SearchView: View {
             checkIn: checkIn.map { df.string(from: $0) },
             checkOut: checkOut.map { df.string(from: $0) },
             amenities: amenitiesArg,
-            instantOnly: filters.bookingPreference == .directOnly
+            instantOnly: filters.bookingPreference == .directOnly,
+            flexibilityDays: flexibility
         )
     }
 

@@ -138,7 +138,8 @@ final class ListingService: ObservableObject {
         checkIn: String? = nil,
         checkOut: String? = nil,
         amenities: Set<AmenityType>? = nil,
-        instantOnly: Bool = false
+        instantOnly: Bool = false,
+        flexibilityDays: Int = 0
     ) async {
         isLoading = true
         do {
@@ -186,8 +187,15 @@ final class ListingService: ObservableObject {
                 listings = listings.filter { listing in
                     guard let blocked = listing.blockedDates, !blocked.isEmpty else { return true }
                     let blockedSet = Set(blocked)
-                    let dates = dateRange(from: checkIn, to: checkOut)
-                    return dates.allSatisfy { !blockedSet.isFullDayBlocked($0) }
+                    // Med fleksibilitet: vi godtar listingen hvis det finnes ≥1 ledig
+                    // start-dato i [checkIn-flex, checkIn+flex] der hele oppholdet
+                    // [start, start+nights] er ledig. Eksakt søk er flex=0.
+                    let candidateStarts = shiftedStartDates(checkIn: checkIn, flexibilityDays: flexibilityDays)
+                    let nights = nightsBetween(checkIn: checkIn, checkOut: checkOut)
+                    return candidateStarts.contains { startISO in
+                        let dates = dateRange(fromISO: startISO, nights: nights)
+                        return dates.allSatisfy { !blockedSet.isFullDayBlocked($0) }
+                    }
                 }
             }
 
@@ -319,4 +327,45 @@ private func dateRange(from start: String, to end: String) -> [String] {
         current = Calendar.current.date(byAdding: .day, value: 1, to: current)!
     }
     return dates
+}
+
+/// Antall netter mellom to datoer (checkOut - checkIn).
+private func nightsBetween(checkIn: String, checkOut: String) -> Int {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy-MM-dd"
+    guard let i = f.date(from: checkIn), let o = f.date(from: checkOut) else { return 0 }
+    return Calendar.current.dateComponents([.day], from: i, to: o).day ?? 0
+}
+
+/// Genererer alle kandidat-startdatoer i [checkIn-flex, checkIn+flex].
+/// Eksakt søk (flex=0) returnerer kun original-checkIn.
+private func shiftedStartDates(checkIn: String, flexibilityDays: Int) -> [String] {
+    let f = DateFormatter()
+    f.dateFormat = "yyyy-MM-dd"
+    guard let base = f.date(from: checkIn) else { return [checkIn] }
+    let cal = Calendar.current
+    var dates: [String] = []
+    for offset in -flexibilityDays...flexibilityDays {
+        if let shifted = cal.date(byAdding: .day, value: offset, to: base) {
+            dates.append(f.string(from: shifted))
+        }
+    }
+    return dates
+}
+
+/// Genererer dato-strenger fra en startdato over N netter (start, start+1, …, start+N-1).
+/// Den første natten er checkIn; checkOut er ikke inkludert.
+private func dateRange(fromISO start: String, nights: Int) -> [String] {
+    guard nights > 0 else { return [start] }
+    let f = DateFormatter()
+    f.dateFormat = "yyyy-MM-dd"
+    guard let base = f.date(from: start) else { return [start] }
+    let cal = Calendar.current
+    var out: [String] = []
+    for offset in 0..<nights {
+        if let shifted = cal.date(byAdding: .day, value: offset, to: base) {
+            out.append(f.string(from: shifted))
+        }
+    }
+    return out
 }
