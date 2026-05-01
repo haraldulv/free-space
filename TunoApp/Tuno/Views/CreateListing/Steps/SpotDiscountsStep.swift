@@ -100,6 +100,11 @@ struct SpotDiscountsStep: View {
                 discountRow(label: "1 uke", caption: "7 påfølgende fulle døgn", percent: binding.week)
                 discountRow(label: "1 måned", caption: "30 påfølgende fulle døgn", percent: binding.month)
             }
+
+            DiscountPreviewCard(
+                hourlyRate: representativeHourlyRate,
+                trio: binding.wrappedValue
+            )
         }
         .padding(18)
         .background(Color.white)
@@ -108,6 +113,12 @@ struct SpotDiscountsStep: View {
             RoundedRectangle(cornerRadius: 18)
                 .stroke(Color.neutral200, lineWidth: 1)
         )
+    }
+
+    /// Representativ timepris for forhåndsvisning. Bruker første spot i delt-
+    /// modus, eller den valgte spot i per-plass-modus.
+    private var representativeHourlyRate: Int {
+        form.spotMarkers.first?.pricePerHour ?? 0
     }
 
     @ViewBuilder
@@ -211,6 +222,87 @@ struct DiscountTrio: Equatable {
     var day: Int? = nil
     var week: Int? = nil
     var month: Int? = nil
+
+    /// True hvis minst én rabatt er satt (>0).
+    var hasAny: Bool {
+        (day ?? 0) > 0 || (week ?? 0) > 0 || (month ?? 0) > 0
+    }
+}
+
+/// Lite preview-kort som viser hva en booking koster med og uten rabatten,
+/// for 1 døgn (24 t), 1 uke (7 d) og 1 måned (30 d). Skjules helt når ingen
+/// rabatt er satt, så steget ikke skummer over for verten som vil hoppe over.
+private struct DiscountPreviewCard: View {
+    let hourlyRate: Int
+    let trio: DiscountTrio
+
+    var body: some View {
+        if trio.hasAny && hourlyRate > 0 {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 6) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.primary600)
+                    Text("Pris-eksempler etter rabatt")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.neutral600)
+                }
+                if let pct = trio.day, pct > 0 {
+                    previewRow(label: "1 døgn", hours: 24, pct: pct)
+                }
+                if let pct = trio.week, pct > 0 {
+                    previewRow(label: "1 uke", hours: 24 * 7, pct: pct)
+                }
+                if let pct = trio.month, pct > 0 {
+                    previewRow(label: "1 måned", hours: 24 * 30, pct: pct)
+                }
+                Text("Eksemplet bruker timepris \(formatKr(hourlyRate)). Faktisk total varierer med pris-bånd.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral500)
+                    .padding(.top, 2)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.primary50.opacity(0.6))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    @ViewBuilder
+    private func previewRow(label: String, hours: Int, pct: Int) -> some View {
+        let baseTotal = hourlyRate * hours
+        let discounted = Int((Double(baseTotal) * (1.0 - Double(pct) / 100.0)).rounded())
+        let savings = baseTotal - discounted
+
+        HStack(alignment: .firstTextBaseline) {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral800)
+            Spacer()
+            VStack(alignment: .trailing, spacing: 1) {
+                HStack(spacing: 6) {
+                    Text(formatKr(baseTotal))
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral400)
+                        .strikethrough()
+                    Text(formatKr(discounted))
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.neutral900)
+                }
+                Text("Spart \(formatKr(savings))")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.primary700)
+            }
+        }
+    }
+
+    private func formatKr(_ value: Int) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.groupingSeparator = " "
+        f.maximumFractionDigits = 0
+        return "\(f.string(from: NSNumber(value: value)) ?? "\(value)") kr"
+    }
 }
 
 /// Numerisk %-input med suffix og tøm-på-tap.

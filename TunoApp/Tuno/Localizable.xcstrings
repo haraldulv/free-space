@@ -216,6 +216,16 @@
         }
       }
     },
+    "%@ kr × %@ %@ (%@)" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ kr × %2$@ %3$@ (%4$@)"
+          }
+        }
+      }
+    },
     "%@ kr per %@" : {
       "localizations" : {
         "nb" : {
@@ -714,6 +724,9 @@
       }
     },
     "Annonsen er publisert!" : {
+
+    },
+    "Annonsen mangler plass-data" : {
 
     },
     "Annonsens standardpris er %@ kr/%@. Legg til helg-pris eller sesong-regler som overstyrer." : {
@@ -1616,6 +1629,9 @@
         }
       }
     },
+    "Du tjener" : {
+
+    },
     "Du vil motta en bekreftelse snart." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2001,6 +2017,9 @@
         }
       }
     },
+    "Få veibeskrivelse" : {
+
+    },
     "Fant ikke annonsen" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2071,6 +2090,9 @@
           }
         }
       }
+    },
+    "Felles bånd for alle plasser" : {
+
     },
     "Felles for alle plasser" : {
 
@@ -2450,6 +2472,9 @@
     "Fra" : {
 
     },
+    "Fra %@" : {
+
+    },
     "Fra %@ — velg utsjekk" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2540,6 +2565,9 @@
           }
         }
       }
+    },
+    "Gå til Rediger annonse → Plasser for å sette opp plasser før du administrerer kalenderen." : {
+
     },
     "Gå tilbake og legg til tilgjengelighets-bånd hvis du vil variere prisen." : {
 
@@ -2882,6 +2910,9 @@
           }
         }
       }
+    },
+    "Hvilke plasser?" : {
+
     },
     "Hvilken kjøretøytype passer?" : {
       "extractionState" : "manual",
@@ -3262,6 +3293,9 @@
     "Ingen varslinger ennå" : {
 
     },
+    "Innen %@" : {
+
+    },
     "Innsjekk" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3278,9 +3312,6 @@
           }
         }
       }
-    },
-    "Innsjekk fra %@" : {
-
     },
     "Innstillinger" : {
       "extractionState" : "manual",
@@ -3354,6 +3385,9 @@
       }
     },
     "Internnavn" : {
+
+    },
+    "Jeg er fleksibel" : {
 
     },
     "Jeg godtar og fortsetter" : {
@@ -3960,6 +3994,9 @@
 
     },
     "Lagrer …" : {
+
+    },
+    "Lagrer..." : {
 
     },
     "Lagret" : {
@@ -5211,6 +5248,9 @@
         }
       }
     },
+    "Plass %@ bruker fellesbåndene" : {
+
+    },
     "Plass %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5506,6 +5546,9 @@
       }
     },
     "Pris per time" : {
+
+    },
+    "Pris-bånd er felles for alle plasser. Endringer gjøres på plass 1." : {
 
     },
     "Prisenhet" : {
@@ -6725,6 +6768,9 @@
           }
         }
       }
+    },
+    "Total" : {
+
     },
     "Total pris i NOK" : {
 
