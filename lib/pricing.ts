@@ -74,6 +74,11 @@ function parseDate(iso: string): Date {
 /**
  * Server-autoritativ prising: gitt en dato og satt av regler/overrides/base,
  * returner pris + kilde. Presedens: override > sesong > helg > base.
+ *
+ * Sesong-bånd støtter:
+ *   - dato-range (startDate–endDate, inklusiv begge ender)
+ *   - valgfri day_mask (NULL eller 0 = alle ukedager; ellers bit-maske)
+ *   - spot_id (per-plass) vinner over listing-wide
  */
 export function resolveNightlyPrice(
   date: Date,
@@ -82,24 +87,33 @@ export function resolveNightlyPrice(
   overrides: PricingOverride[],
 ): { price: number; source: PriceSource } {
   const iso = formatDate(date);
+  const bit = weekdayBit(date);
 
-  // 1) Override
-  const override = overrides.find((o) => o.date === iso);
+  // 1) Override (spot-spesifikk vinner over listing-wide)
+  const matchingOverrides = overrides
+    .filter((o) => o.date === iso)
+    .sort((a, b) => (b.spotId ? 1 : 0) - (a.spotId ? 1 : 0));
+  const override = matchingOverrides[0];
   if (override) return { price: override.price, source: "override" };
 
-  // 2) Sesong (velg første matchende — ingen overlap forventet)
-  const seasonRule = rules.find(
-    (r) =>
-      r.kind === "season" &&
-      r.startDate &&
-      r.endDate &&
-      iso >= r.startDate &&
-      iso <= r.endDate,
-  );
+  // 2) Sesong-bånd (camping). Kandidater: kind=season, dato innenfor range,
+  //    day_mask matcher (NULL/0 = alle dager). Sortert: spot-spesifikk vinner.
+  const seasonCandidates = rules
+    .filter((r) => {
+      if (r.kind !== "season") return false;
+      if (!r.startDate || !r.endDate) return false;
+      if (iso < r.startDate || iso > r.endDate) return false;
+      // dayMask null eller 0 = alle dager. Ellers må bit matche.
+      if (typeof r.dayMask === "number" && r.dayMask !== 0) {
+        if ((r.dayMask & (1 << bit)) === 0) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => (b.spotId ? 1 : 0) - (a.spotId ? 1 : 0));
+  const seasonRule = seasonCandidates[0];
   if (seasonRule) return { price: seasonRule.price, source: "season" };
 
   // 3) Helg (dag-maske)
-  const bit = weekdayBit(date);
   const weekendRule = rules.find(
     (r) => r.kind === "weekend" && typeof r.dayMask === "number" && (r.dayMask & (1 << bit)) !== 0,
   );

@@ -140,9 +140,13 @@ final class ListingFormModel: ObservableObject {
         category != .parking
     }
 
-    /// Pris-variasjon-steget (8) er per plass. Hopper over for camping og
-    /// for parkering-plasser uten bånd (alltid ledig — ingenting å variere).
+    /// Pris-variasjon-steget (8) er per plass.
+    /// - Parkering: hopper over kun hvis plassen ikke har bånd (alltid ledig).
+    /// - Camping: aktivert — viser sesong-bånd-kalender (WizardSeasonalCalendarView).
     func skipsPriceVariationStep(forSpotIndex idx: Int) -> Bool {
+        if category == .camping {
+            return false  // camping bruker sesong-bånd
+        }
         if category != .parking { return true }
         guard let spotId = spotMarkers[safe: idx]?.id else { return true }
         return availability(for: spotId).bands.isEmpty

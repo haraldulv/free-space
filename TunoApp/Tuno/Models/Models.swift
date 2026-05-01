@@ -217,17 +217,25 @@ struct WizardPricingBand: Identifiable, Hashable {
     var weekScope: WeekScope
     /// Utleier-valgt farge-indeks (0-4 i palett). nil = derives fra id-hash.
     var colorIndex: Int? = nil
+    /// Sesongbånd (camping): startdato i ISO-format "yyyy-MM-dd". Null for
+    /// hourly/parking-bånd. Når satt sammen med endDate definerer båndet en
+    /// dato-range i stedet for en time-range.
+    var startDate: String? = nil
+    /// Sesongbånd (camping): sluttdato (inklusiv) i ISO-format. Se startDate.
+    var endDate: String? = nil
 
     init(
         id: UUID = UUID(),
         dayMask: Int,
-        startHour: Int,
+        startHour: Int = 0,
         startMinute: Int = 0,
-        endHour: Int,
+        endHour: Int = 24,
         endMinute: Int = 0,
         price: Int,
         weekScope: WeekScope = .allWeeks,
-        colorIndex: Int? = nil
+        colorIndex: Int? = nil,
+        startDate: String? = nil,
+        endDate: String? = nil
     ) {
         self.id = id
         self.dayMask = dayMask
@@ -238,6 +246,8 @@ struct WizardPricingBand: Identifiable, Hashable {
         self.price = price
         self.weekScope = weekScope
         self.colorIndex = colorIndex
+        self.startDate = startDate
+        self.endDate = endDate
     }
 
     /// Total minutter siden midnatt for start.
@@ -245,11 +255,28 @@ struct WizardPricingBand: Identifiable, Hashable {
     /// Total minutter siden midnatt for slutt.
     var endMinutes: Int { endHour * 60 + endMinute }
 
-    /// "09:30 – 17:00".
+    /// True hvis båndet er et sesongbånd (camping). Bestemmes av om startDate
+    /// er satt — sesongbånd har dato-range, ikke time-range.
+    var isSeasonal: Bool { startDate != nil }
+
+    /// "09:30 – 17:00" (hourly) eller "1. juni – 31. aug" (seasonal).
     var timeDisplayLabel: String {
+        if isSeasonal, let start = startDate, let end = endDate {
+            return "\(formatSeasonal(start)) – \(formatSeasonal(end))"
+        }
         let s = String(format: "%02d:%02d", startHour, startMinute)
         let e = String(format: "%02d:%02d", endHour, endMinute)
         return "\(s) – \(e)"
+    }
+
+    private func formatSeasonal(_ iso: String) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        guard let date = f.date(from: iso) else { return iso }
+        let out = DateFormatter()
+        out.dateFormat = "d. MMM"
+        out.locale = Locale(identifier: "nb_NO")
+        return out.string(from: date)
     }
 }
 

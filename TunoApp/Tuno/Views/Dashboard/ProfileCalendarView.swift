@@ -51,8 +51,6 @@ struct ProfileCalendarView: View {
         Group {
             if isLoading {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if listing.category == .camping {
-                campingFallback
             } else {
                 content
             }
@@ -74,17 +72,15 @@ struct ProfileCalendarView: View {
                     .padding(.bottom, 4)
             }
             if let id = canonicalSpotId {
-                WizardPricingCalendarView(form: form, spotId: id)
+                if listing.category == .camping {
+                    WizardSeasonalCalendarView(form: form, spotId: id)
+                } else {
+                    WizardPricingCalendarView(form: form, spotId: id)
+                }
             } else {
                 emptyState
             }
         }
-    }
-
-    /// Camping bruker fortsatt den gamle blocked-dates-baserte kalenderen.
-    /// Sesong-bånd-modus kommer i Bolk 6.2.
-    private var campingFallback: some View {
-        HostCalendarView(listing: listing)
     }
 
     // MARK: - Header (status + tittel)

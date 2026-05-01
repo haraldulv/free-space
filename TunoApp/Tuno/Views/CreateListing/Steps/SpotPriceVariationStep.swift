@@ -63,7 +63,9 @@ struct SpotPriceVariationStep: View {
                 askChoiceCard(
                     icon: "checkmark.circle.fill",
                     title: "Nei, fast pris",
-                    subtitle: "Bruk samme pris hele uken og hopp videre.",
+                    subtitle: form.category == .camping
+                        ? "Bruk samme pris hele året og hopp videre."
+                        : "Bruk samme pris hele uken og hopp videre.",
                     accent: .neutral900
                 ) {
                     var avail = form.availability(for: spotId)
@@ -78,7 +80,9 @@ struct SpotPriceVariationStep: View {
                 askChoiceCard(
                     icon: "chart.bar.fill",
                     title: "Ja, varier prisen",
-                    subtitle: "Sett ulike priser for tidsbånd og spesifikke uker.",
+                    subtitle: form.category == .camping
+                        ? "Sett ulike priser for sesongene (sommer, helger osv.)."
+                        : "Sett ulike priser for tidsbånd og spesifikke uker.",
                     accent: .primary600
                 ) {
                     phasePerSpot[spotId] = .editing
@@ -214,16 +218,22 @@ struct SpotPriceVariationStep: View {
         // Full-skjerm: ingen header, ingen "Tilbake til fast pris"-pille.
         // Kalenderen tar all plass. Wizard-progress-bar skjules via
         // form.fullscreenStep. Brukeren går tilbake via WizardNavBar nederst.
-        WizardPricingCalendarView(form: form, spotId: spotId)
-            .onAppear { form.fullscreenStep = true }
-            .onDisappear {
-                form.fullscreenStep = false
-                // Felles-modus: synk bandene fra spot 0 til alle andre når
-                // editing-fasen forsvinner (brukeren gikk videre eller tilbake).
-                if form.pricingBandsSharedAcrossSpots && form.spotMarkers.count > 1 && index == 0 {
-                    form.syncFirstSpotAvailabilityToAll()
-                }
+        Group {
+            if form.category == .camping {
+                WizardSeasonalCalendarView(form: form, spotId: spotId)
+            } else {
+                WizardPricingCalendarView(form: form, spotId: spotId)
             }
+        }
+        .onAppear { form.fullscreenStep = true }
+        .onDisappear {
+            form.fullscreenStep = false
+            // Felles-modus: synk bandene fra spot 0 til alle andre når
+            // editing-fasen forsvinner (brukeren gikk videre eller tilbake).
+            if form.pricingBandsSharedAcrossSpots && form.spotMarkers.count > 1 && index == 0 {
+                form.syncFirstSpotAvailabilityToAll()
+            }
+        }
     }
 }
 

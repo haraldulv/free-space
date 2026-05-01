@@ -85,7 +85,7 @@ enum PricingService {
         }
     }
 
-    /// Legg til en sesong-regel.
+    /// Legg til en sesong-regel (legacy — behold for bakoverkompatibilitet).
     static func addSeasonRule(
         listingId: String,
         startDate: String,
@@ -105,6 +105,39 @@ enum PricingService {
             price: price,
             spot_id: nil,
             color_index: nil,
+        )
+        try await supabase
+            .from("listing_pricing_rules")
+            .insert(rule)
+            .execute()
+    }
+
+    /// Legg til et camping-sesongbånd (per natt). Båndet treffer en natt hvis
+    /// datoen er innenfor [startDate, endDate] OG ukedagen er i `dayMask`.
+    /// `dayMask` = NULL betyr alle ukedager (typisk for sommer-pris hele uka).
+    /// `spotId` = NULL er listing-wide; ellers per-plass.
+    static func addSeasonBandRule(
+        listingId: String,
+        dayMask: Int?,
+        startDate: String,
+        endDate: String,
+        price: Int,
+        spotId: String? = nil,
+        colorIndex: Int? = nil
+    ) async throws {
+        let rule = NewRule(
+            listing_id: listingId,
+            kind: "season",
+            day_mask: dayMask,
+            start_date: startDate,
+            end_date: endDate,
+            start_hour: nil,
+            end_hour: nil,
+            start_minute: 0,
+            end_minute: 0,
+            price: price,
+            spot_id: spotId,
+            color_index: colorIndex,
         )
         try await supabase
             .from("listing_pricing_rules")
@@ -269,17 +302,15 @@ enum PricingService {
         var avail = WizardSpotAvailability()
         avail.alwaysAvailable = false
 
-        let rules = await fetchRulesForSpot(listingId: listingId, spotId: spotId, kind: "hourly")
+        let hourlyRules = await fetchRulesForSpot(listingId: listingId, spotId: spotId, kind: "hourly")
+        let seasonRules = await fetchRulesForSpot(listingId: listingId, spotId: spotId, kind: "season")
         let overrides = await fetchOverridesForSpot(listingId: listingId, spotId: spotId)
 
-        // Grupper rules: defaults (start_date == nil) er bånd, override-rader
-        // (start_date != nil) er bandPriceOverrides knyttet til samme bånd-id.
-        // Vi matcher override-rader til default-bånd ved å se etter samme
-        // (dayMask, startHour, startMinute, endHour, endMinute).
         var bands: [WizardPricingBand] = []
         var overridesPerBand: [UUID: [WizardBandPriceOverride]] = [:]
 
-        for rule in rules where rule.start_date == nil && rule.end_date == nil {
+        // 1) Hourly default-bånd (start_date == nil)
+        for rule in hourlyRules where rule.start_date == nil && rule.end_date == nil {
             guard let startHour = rule.start_hour, let endHour = rule.end_hour else { continue }
             let band = WizardPricingBand(
                 dayMask: rule.day_mask ?? 0,
@@ -294,13 +325,12 @@ enum PricingService {
             bands.append(band)
         }
 
-        // Andre rader (med start_date) er overrides — match til band ved bånd-form.
-        for rule in rules where rule.start_date != nil || rule.end_date != nil {
+        // 2) Hourly override-rader (med start_date) → bandPriceOverrides
+        for rule in hourlyRules where rule.start_date != nil || rule.end_date != nil {
             guard let startHour = rule.start_hour, let endHour = rule.end_hour else { continue }
             let dayMask = rule.day_mask ?? 0
             let startMinute = rule.start_minute ?? 0
             let endMinute = rule.end_minute ?? 0
-            // Finn bandet denne overrides matcher (samme dayMask + tider).
             guard let band = bands.first(where: {
                 $0.dayMask == dayMask
                 && $0.startHour == startHour
@@ -309,7 +339,6 @@ enum PricingService {
                 && $0.endMinute == endMinute
             }) else { continue }
 
-            // Determine weekScope from start_date / end_date.
             let scope: WeekScope
             if let s = rule.start_date, let _ = rule.end_date,
                let week = isoWeekFromRange(start: s) {
@@ -320,6 +349,24 @@ enum PricingService {
 
             let override = WizardBandPriceOverride(bandId: band.id, weekScope: scope, price: rule.price)
             overridesPerBand[band.id, default: []].append(override)
+        }
+
+        // 3) Sesong-bånd (camping) — én WizardPricingBand per season-rule
+        for rule in seasonRules {
+            guard let bStart = rule.start_date, let bEnd = rule.end_date else { continue }
+            let band = WizardPricingBand(
+                dayMask: rule.day_mask ?? 0,
+                startHour: 0,
+                startMinute: 0,
+                endHour: 24,
+                endMinute: 0,
+                price: rule.price,
+                weekScope: .allWeeks,
+                colorIndex: rule.color_index,
+                startDate: bStart,
+                endDate: bEnd
+            )
+            bands.append(band)
         }
 
         avail.bands = bands
@@ -340,14 +387,13 @@ enum PricingService {
         _ avail: WizardSpotAvailability,
         basePerHour: Int
     ) async throws {
-        // 1) Slett eksisterende rules for spotId (kun hourly — andre kinds
-        //    håndteres av andre flows).
+        // 1) Slett eksisterende hourly + season rules for spotId.
         try await supabase
             .from("listing_pricing_rules")
             .delete()
             .eq("listing_id", value: listingId)
             .eq("spot_id", value: spotId)
-            .eq("kind", value: "hourly")
+            .in("kind", values: ["hourly", "season"])
             .execute()
 
         // 2) Slett eksisterende overrides for spotId.
@@ -358,22 +404,34 @@ enum PricingService {
             .eq("spot_id", value: spotId)
             .execute()
 
-        // 3) Re-insert: default-bånd-rader.
+        // 3) Re-insert: default-bånd-rader (hourly OG seasonal).
         for band in avail.bands {
             let bandBasePrice = band.price > 0 ? band.price : basePerHour
-            try? await addHourlyBandRule(
-                listingId: listingId,
-                dayMask: band.dayMask,
-                startHour: band.startHour,
-                startMinute: band.startMinute,
-                endHour: band.endHour,
-                endMinute: band.endMinute,
-                price: bandBasePrice,
-                startDate: nil,
-                endDate: nil,
-                spotId: spotId,
-                colorIndex: band.colorIndex
-            )
+            if band.isSeasonal, let bStart = band.startDate, let bEnd = band.endDate {
+                try? await addSeasonBandRule(
+                    listingId: listingId,
+                    dayMask: band.dayMask == 0 ? nil : band.dayMask,
+                    startDate: bStart,
+                    endDate: bEnd,
+                    price: bandBasePrice,
+                    spotId: spotId,
+                    colorIndex: band.colorIndex
+                )
+            } else {
+                try? await addHourlyBandRule(
+                    listingId: listingId,
+                    dayMask: band.dayMask,
+                    startHour: band.startHour,
+                    startMinute: band.startMinute,
+                    endHour: band.endHour,
+                    endMinute: band.endMinute,
+                    price: bandBasePrice,
+                    startDate: nil,
+                    endDate: nil,
+                    spotId: spotId,
+                    colorIndex: band.colorIndex
+                )
+            }
         }
 
         // 4) Override-bånd-rader (per uke i scope).

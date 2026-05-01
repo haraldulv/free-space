@@ -291,22 +291,37 @@ struct CreateListingView: View {
                         let basePerHour = spot.pricePerHour ?? 0
                         // 1) Default-bånd-rader (per allWeeks default-pris).
                         // Bruk bandets egen pris hvis satt — det lar verten ha
-                        // ulike priser per bånd (f.eks. dag/kveld/natt).
+                        // ulike priser per bånd (f.eks. dag/kveld/natt eller
+                        // sommer/vinter for camping).
                         for band in avail.bands {
                             let bandBasePrice = band.price > 0 ? band.price : basePerHour
-                            try? await PricingService.addHourlyBandRule(
-                                listingId: listing.id,
-                                dayMask: band.dayMask,
-                                startHour: band.startHour,
-                                startMinute: band.startMinute,
-                                endHour: band.endHour,
-                                endMinute: band.endMinute,
-                                price: bandBasePrice,
-                                startDate: nil,
-                                endDate: nil,
-                                spotId: spotId,
-                                colorIndex: band.colorIndex
-                            )
+                            if band.isSeasonal, let bStart = band.startDate, let bEnd = band.endDate {
+                                // Camping-sesongbånd → kind='season'
+                                try? await PricingService.addSeasonBandRule(
+                                    listingId: listing.id,
+                                    dayMask: band.dayMask == 0 ? nil : band.dayMask,
+                                    startDate: bStart,
+                                    endDate: bEnd,
+                                    price: bandBasePrice,
+                                    spotId: spotId,
+                                    colorIndex: band.colorIndex
+                                )
+                            } else {
+                                // Parking-time-bånd → kind='hourly'
+                                try? await PricingService.addHourlyBandRule(
+                                    listingId: listing.id,
+                                    dayMask: band.dayMask,
+                                    startHour: band.startHour,
+                                    startMinute: band.startMinute,
+                                    endHour: band.endHour,
+                                    endMinute: band.endMinute,
+                                    price: bandBasePrice,
+                                    startDate: nil,
+                                    endDate: nil,
+                                    spotId: spotId,
+                                    colorIndex: band.colorIndex
+                                )
+                            }
                         }
                         // 2) Override-bånd-rader: én rad per uke i scope
                         for override in avail.bandPriceOverrides {
