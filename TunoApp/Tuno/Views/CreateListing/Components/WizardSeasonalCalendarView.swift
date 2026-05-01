@@ -20,10 +20,17 @@ struct WizardSeasonalCalendarView: View {
     @State private var showEndPicker: Bool = false
     @State private var hasScrolledToCurrent = false
 
+    // Date-override state (matcher parking-kalenderen)
+    @State private var selectedDates: Set<String> = []
+    @State private var rangeAnchor: String? = nil
+    @State private var priceEditValue: Int = 0
+    @FocusState private var priceEditFocused: Bool
+
     enum SeasonalMode: Equatable {
         case idle
         case bandCreate
         case bandEdit(UUID)
+        case dateOverride
     }
 
     // Match parking-kalenderens konstanter eksakt.
@@ -153,6 +160,9 @@ struct WizardSeasonalCalendarView: View {
             case .bandCreate, .bandEdit:
                 bandEditorActionBar
                     .transition(.move(edge: .bottom).combined(with: .opacity))
+            case .dateOverride:
+                dateOverrideActionBar
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .animation(.easeInOut(duration: 0.22), value: mode)
@@ -161,6 +171,11 @@ struct WizardSeasonalCalendarView: View {
                 draftPriceText = ""
             } else {
                 commitDraftPrice()
+            }
+        }
+        .onChange(of: priceEditFocused) { _, focused in
+            if !focused {
+                applyDateOverride(price: priceEditValue)
             }
         }
         .confirmationDialog(
@@ -238,38 +253,119 @@ struct WizardSeasonalCalendarView: View {
 
     @ViewBuilder
     private func dayCell(date: Date) -> some View {
+        let iso = Self.isoFormatter.string(from: date)
         let day = Self.osloCalendar.component(.day, from: date)
         let startOfToday = Self.osloCalendar.startOfDay(for: Date())
         let isPast = Self.osloCalendar.startOfDay(for: date) < startOfToday
+        let isSelected = selectedDates.contains(iso)
+        let isAnchor = rangeAnchor == iso
+        let isBlocked = blockedDatesSet.contains(iso)
+        let hasOverride = dateOverridesMap[iso] != nil
         let priceForDay = priceForDate(date)
         let dayCovered = bandCoversDay(date)
 
-        ZStack {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.white)
-            RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isPast ? Color.neutral100 : Color.neutral200, lineWidth: 1)
+        Button {
+            handleDayTap(iso: iso, isPast: isPast)
+        } label: {
+            ZStack {
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(cellBackground(
+                        isPast: isPast,
+                        isSelected: isSelected,
+                        isAnchor: isAnchor,
+                        isBlocked: isBlocked,
+                        hasOverride: hasOverride
+                    ))
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(
+                        cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast, isBlocked: isBlocked),
+                        lineWidth: isAnchor ? 2 : (isSelected || isBlocked ? 1.5 : 1)
+                    )
 
-            VStack(spacing: 0) {
-                Text("\(day)")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(isPast ? Color.neutral300 : Color.neutral900)
-                    .padding(.top, 8)
+                VStack(spacing: 0) {
+                    Text("\(day)")
+                        .font(.system(size: 16, weight: (isSelected || isAnchor) ? .bold : .semibold))
+                        .foregroundStyle(cellText(isPast: isPast, isBlocked: isBlocked))
+                        .padding(.top, 8)
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
 
-                if !isPast && !dayCovered, priceForDay > 0 {
-                    Text("\(priceForDay) kr")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(Color.neutral500)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .padding(.bottom, 10)
+                    if isBlocked {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(.neutral500)
+                            .padding(.bottom, 10)
+                    } else if !isPast, let override = dateOverridesMap[iso] {
+                        // Override vinner over bånd og base.
+                        Text("\(override) kr")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(Color.primary700)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .padding(.bottom, 10)
+                    } else if !isPast && !dayCovered, priceForDay > 0 {
+                        // Bånd dekker ikke dagen → vis base-pris.
+                        Text("\(priceForDay) kr")
+                            .font(.system(size: 11, weight: (isSelected || isAnchor) ? .semibold : .medium))
+                            .foregroundStyle(priceTextColor(
+                                isSelected: isSelected,
+                                isAnchor: isAnchor,
+                                isOverride: false
+                            ))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .padding(.bottom, 10)
+                    }
                 }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(height: cellHeight)
         }
-        .frame(height: cellHeight)
+        .buttonStyle(.plain)
+        .disabled(isPast)
+    }
+
+    // MARK: - Cell styling (matcher parking)
+
+    private func cellBackground(isPast: Bool, isSelected: Bool, isAnchor: Bool, isBlocked: Bool, hasOverride: Bool) -> Color {
+        if isAnchor { return Color.primary600.opacity(0.18) }
+        if isSelected { return Color.primary600.opacity(0.10) }
+        if isBlocked { return Color.neutral100 }
+        if hasOverride { return Color(hex: "#ecfdf5") }
+        return Color.white
+    }
+
+    private func cellBorder(isSelected: Bool, isAnchor: Bool, isPast: Bool, isBlocked: Bool) -> Color {
+        if isAnchor { return Color.primary600 }
+        if isSelected { return Color.primary500 }
+        if isBlocked { return Color.neutral300 }
+        if isPast { return Color.neutral100 }
+        return Color.neutral200
+    }
+
+    private func cellText(isPast: Bool, isBlocked: Bool) -> Color {
+        if isPast { return Color.neutral300 }
+        if isBlocked { return Color.neutral400 }
+        return Color.neutral900
+    }
+
+    private func priceTextColor(isSelected: Bool, isAnchor: Bool, isOverride: Bool) -> Color {
+        if isOverride { return Color.primary700 }
+        if isSelected || isAnchor { return Color.primary700 }
+        return Color.neutral500
+    }
+
+    private var blockedDatesSet: Set<String> {
+        let spot = form.spotMarkers.first(where: { $0.id == spotId })
+        return Set(spot?.blockedDates ?? [])
+    }
+
+    private var dateOverridesMap: [String: Int] {
+        Dictionary(uniqueKeysWithValues: availability.dateOverrides.map { ($0.date, $0.price) })
+    }
+
+    private var spotIndex: Int? {
+        form.spotMarkers.firstIndex(where: { $0.id == spotId })
     }
 
     private func priceForDate(_ date: Date) -> Int {
@@ -948,5 +1044,274 @@ struct WizardSeasonalCalendarView: View {
         if !draftPriceFocused {
             draftPriceText = "\(d.price)"
         }
+    }
+
+    // MARK: - Date-override: tap-handling (kopi av parking-pattern)
+
+    private func handleDayTap(iso: String, isPast: Bool) {
+        guard !isPast else { return }
+        // Når i band-editor-modus: ignorer dag-tap (cellen er bakteppe).
+        if case .bandEdit = mode { return }
+        if case .bandCreate = mode { return }
+
+        if let anchor = rangeAnchor {
+            if anchor == iso {
+                selectedDates.remove(iso)
+                rangeAnchor = nil
+                if selectedDates.isEmpty { mode = .idle }
+                return
+            }
+            let range = isoRange(from: anchor, to: iso)
+            for d in range { selectedDates.insert(d) }
+            rangeAnchor = nil
+            mode = .dateOverride
+            syncPriceEditFromSelection()
+            return
+        }
+        if selectedDates.contains(iso) {
+            selectedDates.remove(iso)
+            if selectedDates.isEmpty {
+                rangeAnchor = nil
+                mode = .idle
+            }
+        } else {
+            selectedDates.insert(iso)
+            rangeAnchor = iso
+            mode = .dateOverride
+            syncPriceEditFromSelection()
+        }
+    }
+
+    private func isoRange(from start: String, to end: String) -> [String] {
+        let lo = min(start, end)
+        let hi = max(start, end)
+        guard let loDate = Self.isoFormatter.date(from: lo),
+              let hiDate = Self.isoFormatter.date(from: hi) else { return [start, end] }
+        let cal = Self.osloCalendar
+        var result: [String] = []
+        var cursor = loDate
+        while cursor <= hiDate {
+            result.append(Self.isoFormatter.string(from: cursor))
+            guard let next = cal.date(byAdding: .day, value: 1, to: cursor) else { break }
+            cursor = next
+        }
+        return result
+    }
+
+    // MARK: - Date-override action bar
+
+    private var dateOverrideActionBar: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                dateRangePill
+                Spacer()
+                Button {
+                    closeDateOverrideBar()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 38, height: 38)
+                        .background(glassCircleBackground)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+
+            HStack(alignment: .top, spacing: 10) {
+                availabilityCard
+                priceCard
+            }
+            .padding(.horizontal, 12)
+            .padding(.bottom, 12)
+        }
+        .padding(.top, 10)
+    }
+
+    private var dateRangePill: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "calendar")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(formatDateRange())
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(glassPillBackground)
+    }
+
+    private func formatDateRange() -> String {
+        guard !selectedDates.isEmpty else { return "" }
+        let sorted = selectedDates.sorted()
+        guard let first = sorted.first.flatMap({ Self.isoFormatter.date(from: $0) }),
+              let last = sorted.last.flatMap({ Self.isoFormatter.date(from: $0) }) else {
+            return ""
+        }
+        if first == last {
+            return Self.shortDateFormatter.string(from: first)
+        }
+        return "\(Self.shortDateFormatter.string(from: first)) – \(Self.shortDateFormatter.string(from: last))"
+    }
+
+    private var availabilityCard: some View {
+        let blocked = blockedDatesSet
+        let allBlocked = !selectedDates.isEmpty && selectedDates.allSatisfy { blocked.contains($0) }
+        let allOpen = !allBlocked
+
+        return Button {
+            toggleBlockSelected()
+        } label: {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 6) {
+                    Text("Tilgjengelig")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.white)
+                    Circle()
+                        .fill(allOpen ? Color(hex: "#22c55e") : Color(hex: "#ef4444"))
+                        .frame(width: 7, height: 7)
+                }
+                Spacer(minLength: 0)
+                ZStack(alignment: allOpen ? .trailing : .leading) {
+                    Capsule()
+                        .fill(Color.white.opacity(0.16))
+                        .frame(width: 76, height: 32)
+                    Capsule()
+                        .fill(Color.white)
+                        .frame(width: 36, height: 28)
+                        .padding(.horizontal, 2)
+                        .overlay(
+                            Image(systemName: allOpen ? "checkmark" : "xmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.neutral900)
+                        )
+                }
+                .animation(.spring(response: 0.32, dampingFraction: 0.85), value: allOpen)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .frame(height: 130)
+            .background(glassCardBackground)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var priceCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Pris per natt")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+
+            Spacer(minLength: 0)
+
+            inlinePriceEditor
+
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 130)
+        .background(glassCardBackground)
+    }
+
+    private var inlinePriceEditor: some View {
+        HStack(spacing: 10) {
+            Button {
+                stepPrice(by: -50)
+            } label: {
+                Image(systemName: "minus")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 26, height: 26)
+                    .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
+            }
+            .buttonStyle(.plain)
+
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                TextField("", value: $priceEditValue, formatter: NumberFormatter())
+                    .focused($priceEditFocused)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.center)
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundStyle(.white)
+                    .fixedSize()
+                    .frame(minWidth: 40)
+                Text("kr")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+            }
+
+            Button {
+                stepPrice(by: 50)
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .frame(width: 26, height: 26)
+                    .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Date-override actions
+
+    private func toggleBlockSelected() {
+        guard let idx = spotIndex else { return }
+        let existing = Set(form.spotMarkers[idx].blockedDates ?? [])
+        let allBlocked = selectedDates.allSatisfy { existing.contains($0) }
+        var updated = existing
+        if allBlocked {
+            updated.subtract(selectedDates)
+        } else {
+            updated.formUnion(selectedDates)
+        }
+        form.spotMarkers[idx].blockedDates = updated.isEmpty ? nil : Array(updated).sorted()
+    }
+
+    private func syncPriceEditFromSelection() {
+        let prices = selectedDates.compactMap { iso -> Int? in
+            guard let date = Self.isoFormatter.date(from: iso) else { return nil }
+            return priceForDate(date)
+        }
+        if let first = prices.first, first > 0 {
+            priceEditValue = first
+        } else {
+            priceEditValue = basePerNight
+        }
+    }
+
+    private func stepPrice(by delta: Int) {
+        let newValue = max(0, priceEditValue + delta)
+        priceEditValue = newValue
+        applyDateOverride(price: newValue)
+    }
+
+    private func applyDateOverride(price: Int) {
+        var avail = availability
+        if price <= 0 || price == basePerNight {
+            // Fjern overstyring hvis prisen er null eller lik base
+            avail.dateOverrides.removeAll { selectedDates.contains($0.date) }
+        } else {
+            for date in selectedDates {
+                if let i = avail.dateOverrides.firstIndex(where: { $0.date == date }) {
+                    avail.dateOverrides[i].price = price
+                } else {
+                    avail.dateOverrides.append(WizardDateOverride(date: date, price: price))
+                }
+            }
+        }
+        form.setAvailability(avail, for: spotId)
+    }
+
+    private func closeDateOverrideBar() {
+        if priceEditFocused {
+            applyDateOverride(price: priceEditValue)
+        }
+        selectedDates.removeAll()
+        rangeAnchor = nil
+        priceEditFocused = false
+        mode = .idle
     }
 }
