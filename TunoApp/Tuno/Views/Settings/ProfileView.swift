@@ -682,7 +682,7 @@ struct MyListingsView: View {
                 List {
                     ForEach(listings) { listing in
                         NavigationLink {
-                            EditListingView(listing: listing, onSaved: { updated in
+                            EditListingRootView(listing: listing, onSaved: { updated in
                                 if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
                                     listings[idx] = updated
                                 }

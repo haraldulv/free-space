@@ -4,8 +4,19 @@ import PhotosUI
 struct EditListingView: View {
     let listing: Listing
     var onSaved: ((Listing) -> Void)? = nil
+    /// Hvis satt: hopp direkte til den taben og skjul tab-baren — gir
+    /// en fokusert "ett-emne-redigering"-side når brukeren navigerer hit
+    /// fra section-list-rooten (EditListingRootView).
+    let focusedTab: EditListingTab?
+
+    init(listing: Listing, focusedTab: EditListingTab? = nil, onSaved: ((Listing) -> Void)? = nil) {
+        self.listing = listing
+        self.focusedTab = focusedTab
+        self.onSaved = onSaved
+        _selectedTab = State(initialValue: focusedTab?.rawValue ?? 0)
+    }
     @Environment(\.dismiss) private var dismiss
-    @State private var selectedTab = 0
+    @State private var selectedTab: Int
     @State private var isSaving = false
     @State private var savedMessage = false
     @State private var error: String?
@@ -56,32 +67,34 @@ struct EditListingView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // Tab bar
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 0) {
-                    ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
-                        Button {
-                            withAnimation { selectedTab = index }
-                        } label: {
-                            Text(tab)
-                                .font(.system(size: 14, weight: selectedTab == index ? .semibold : .regular))
-                                .foregroundStyle(selectedTab == index ? .primary600 : .neutral500)
-                                .padding(.horizontal, 16)
-                                .padding(.vertical, 10)
-                        }
-                        .overlay(alignment: .bottom) {
-                            if selectedTab == index {
-                                Rectangle()
-                                    .fill(Color.primary600)
-                                    .frame(height: 2)
+            // Tab bar — skjult når vi er i fokusert single-tab-modus.
+            if focusedTab == nil {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 0) {
+                        ForEach(Array(tabs.enumerated()), id: \.offset) { index, tab in
+                            Button {
+                                withAnimation { selectedTab = index }
+                            } label: {
+                                Text(tab)
+                                    .font(.system(size: 14, weight: selectedTab == index ? .semibold : .regular))
+                                    .foregroundStyle(selectedTab == index ? .primary600 : .neutral500)
+                                    .padding(.horizontal, 16)
+                                    .padding(.vertical, 10)
+                            }
+                            .overlay(alignment: .bottom) {
+                                if selectedTab == index {
+                                    Rectangle()
+                                        .fill(Color.primary600)
+                                        .frame(height: 2)
+                                }
                             }
                         }
                     }
                 }
-            }
-            .background(Color.white)
-            .overlay(alignment: .bottom) {
-                Rectangle().fill(Color.neutral200).frame(height: 1)
+                .background(Color.white)
+                .overlay(alignment: .bottom) {
+                    Rectangle().fill(Color.neutral200).frame(height: 1)
+                }
             }
 
             // Error/success banner
@@ -137,7 +150,7 @@ struct EditListingView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboardVisible = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboardVisible = false }
-        .navigationTitle("Rediger annonse")
+        .navigationTitle(focusedTab?.displayTitle ?? "Rediger annonse")
         .navigationBarTitleDisplayMode(.inline)
         .navigationBarBackButtonHidden(true)
         .toolbar {
@@ -1387,6 +1400,166 @@ struct EditListingView: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Tab enum + section-list root
+
+enum EditListingTab: Int, CaseIterable, Identifiable, Hashable {
+    case details = 0
+    case spots = 1
+    case photos = 2
+    case amenities = 3
+    case availability = 4
+
+    var id: Int { rawValue }
+
+    var displayTitle: String {
+        switch self {
+        case .details: return "Detaljer"
+        case .spots: return "Plasser"
+        case .photos: return "Bilder"
+        case .amenities: return "Fasiliteter"
+        case .availability: return "Tilgjengelighet"
+        }
+    }
+
+    var icon: String {
+        switch self {
+        case .details: return "doc.text"
+        case .spots: return "mappin.and.ellipse"
+        case .photos: return "photo.on.rectangle.angled"
+        case .amenities: return "wand.and.stars"
+        case .availability: return "calendar"
+        }
+    }
+
+    func summary(listing: Listing) -> String {
+        switch self {
+        case .details:
+            let title = listing.title
+            return title.isEmpty ? "Tittel og beskrivelse" : title
+        case .spots:
+            let n = listing.spotMarkers?.count ?? listing.spots ?? 1
+            return "\(n) \(n == 1 ? "plass" : "plasser")"
+        case .photos:
+            let n = listing.images?.count ?? 0
+            return n == 0 ? "Ingen bilder" : "\(n) \(n == 1 ? "bilde" : "bilder")"
+        case .amenities:
+            let n = listing.amenities?.count ?? 0
+            return n == 0 ? "Ingen valgt" : "\(n) valgt"
+        case .availability:
+            let blocked = listing.blockedDates?.count ?? 0
+            return blocked == 0 ? "Alle datoer åpne" : "\(blocked) blokkert"
+        }
+    }
+}
+
+/// Section-list-rooten for "Rediger annonse" — Airbnb-stil med rader
+/// som pusher til EditListingView med riktig tab fokusert. Mer luftig
+/// og mindre cramped enn den gamle 5-tab-strukturen.
+struct EditListingRootView: View {
+    let listing: Listing
+    var onSaved: ((Listing) -> Void)? = nil
+    @State private var current: Listing
+    @Environment(\.dismiss) private var dismiss
+
+    init(listing: Listing, onSaved: ((Listing) -> Void)? = nil) {
+        self.listing = listing
+        self.onSaved = onSaved
+        _current = State(initialValue: listing)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                heroCard
+                VStack(spacing: 0) {
+                    ForEach(Array(EditListingTab.allCases.enumerated()), id: \.offset) { idx, tab in
+                        NavigationLink {
+                            EditListingView(listing: current, focusedTab: tab) { updated in
+                                current = updated
+                                onSaved?(updated)
+                            }
+                        } label: {
+                            row(tab: tab)
+                        }
+                        .buttonStyle(.plain)
+                        if idx < EditListingTab.allCases.count - 1 {
+                            Divider().padding(.leading, 60).opacity(0.5)
+                        }
+                    }
+                }
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.6), lineWidth: 1))
+            }
+            .padding(16)
+        }
+        .background(Color.neutral50)
+        .navigationTitle("Rediger annonse")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var heroCard: some View {
+        ZStack(alignment: .bottomLeading) {
+            CachedAsyncImage(url: URL(string: current.images?.first ?? "")) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Rectangle().fill(Color.neutral100)
+            }
+            .frame(height: 180)
+            .frame(maxWidth: .infinity)
+            .clipped()
+
+            LinearGradient(
+                colors: [Color.black.opacity(0), Color.black.opacity(0.55)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 180)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(current.title.isEmpty ? "Uten tittel" : current.title)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                Text(current.city ?? "")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.85))
+            }
+            .padding(16)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func row(tab: EditListingTab) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.primary50)
+                    .frame(width: 40, height: 40)
+                Image(systemName: tab.icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.primary600)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(tab.displayTitle)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text(tab.summary(listing: current))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral400)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .contentShape(Rectangle())
     }
 }
 
