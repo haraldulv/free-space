@@ -114,11 +114,11 @@ enum PricingService {
 
     /// Legg til et camping-sesongbånd (per natt). Båndet treffer en natt hvis
     /// datoen er innenfor [startDate, endDate] OG ukedagen er i `dayMask`.
-    /// `dayMask` = NULL betyr alle ukedager (typisk for sommer-pris hele uka).
+    /// `dayMask` = 0 betyr alle ukedager (server tolker 0 som "ingen filter").
     /// `spotId` = NULL er listing-wide; ellers per-plass.
     static func addSeasonBandRule(
         listingId: String,
-        dayMask: Int?,
+        dayMask: Int,
         startDate: String,
         endDate: String,
         price: Int,
@@ -408,9 +408,11 @@ enum PricingService {
         for band in avail.bands {
             let bandBasePrice = band.price > 0 ? band.price : basePerHour
             if band.isSeasonal, let bStart = band.startDate, let bEnd = band.endDate {
+                // Send dayMask=0 (alle dager) i stedet for NULL — unngår
+                // avhengighet til migration-pricing-rules-seasonal.sql.
                 try? await addSeasonBandRule(
                     listingId: listingId,
-                    dayMask: band.dayMask == 0 ? nil : band.dayMask,
+                    dayMask: band.dayMask,
                     startDate: bStart,
                     endDate: bEnd,
                     price: bandBasePrice,

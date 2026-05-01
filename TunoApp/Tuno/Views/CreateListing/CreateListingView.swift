@@ -296,10 +296,14 @@ struct CreateListingView: View {
                         for band in avail.bands {
                             let bandBasePrice = band.price > 0 ? band.price : basePerHour
                             if band.isSeasonal, let bStart = band.startDate, let bEnd = band.endDate {
-                                // Camping-sesongbånd → kind='season'
+                                // Camping-sesongbånd → kind='season'.
+                                // dayMask=0 betyr "alle dager" (server tolker 0 som
+                                // ingen filter). Sender 0 i stedet for NULL slik at
+                                // vi unngår å avhenge av en migration som relakser
+                                // NOT NULL-constraintet.
                                 try? await PricingService.addSeasonBandRule(
                                     listingId: listing.id,
-                                    dayMask: band.dayMask == 0 ? nil : band.dayMask,
+                                    dayMask: band.dayMask,
                                     startDate: bStart,
                                     endDate: bEnd,
                                     price: bandBasePrice,
