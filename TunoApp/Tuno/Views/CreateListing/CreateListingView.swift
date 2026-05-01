@@ -74,8 +74,8 @@ struct CreateListingView: View {
 
     /// Vises i stedet for navBar når tastaturet er åpent. SwiftUI sin
     /// `.toolbar(placement: .keyboard)` rendrer ikke pålitelig på numberPad,
-    /// så vi bygger vår egen "Ferdig"-bar som ligger over tastaturet via
-    /// safeAreaInset.
+    /// så vi bygger vår egen "Ferdig"-knapp som ligger over tastaturet via
+    /// safeAreaInset. Floating sirkel uten bakgrunnsboks.
     private var keyboardDoneBar: some View {
         HStack {
             Spacer()
@@ -88,17 +88,12 @@ struct CreateListingView: View {
                     .frame(width: 44, height: 44)
                     .background(Color.primary600)
                     .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+                    .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
             }
             .accessibilityLabel("Skjul tastatur")
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(
-            Color(UIColor.systemBackground)
-                .opacity(0.95)
-                .ignoresSafeArea()
-        )
+        .padding(.trailing, 16)
+        .padding(.bottom, 8)
     }
 
     @ViewBuilder

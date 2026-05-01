@@ -332,8 +332,10 @@ struct WhereSheet: View {
             onUseMyLocation()
             query = "I nærheten"
             typing = "I nærheten"
-            // "I nærheten" lukker hele sheet og søker direkte (Airbnb-paritet)
-            onSearch()
+            // Auto-hopp til Når-steget slik som de andre destinasjons-handlerne.
+            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                activeStep = .når
+            }
         } label: {
             HStack(spacing: 14) {
                 ZStack {
