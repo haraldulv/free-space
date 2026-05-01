@@ -1,19 +1,30 @@
 import SwiftUI
 
 /// Camping-versjon av bånd-kalenderen. Visuelt IDENTISK med
-/// `WizardPricingCalendarView` (samme cellHeight, weekday-header, FAB,
-/// color-picker, dag-celler med pris under) — kun bånd-meningen og editor-
-/// sheet er ulike: bånd er sesongperioder med dato-range og per-natt-pris.
-///
-/// Brukes i camping-wizardens pris-variasjon-steg og i Profile-kalenderen for
-/// camping-listings.
+/// `WizardPricingCalendarView` — samme cellHeight, weekday-header, FAB,
+/// color-picker, dag-celler med pris under, og samme mørke glass-card-stil i
+/// editor-action-baren. Eneste forskjell: bånd er sesongperioder med dato-
+/// range (start_date / end_date) i stedet for time-range, og editor-baren
+/// viser to dato-pillen i stedet for time-wheels.
 struct WizardSeasonalCalendarView: View {
     @ObservedObject var form: ListingFormModel
     let spotId: String
 
-    @State private var editingBand: WizardPricingBand? = nil
-    @State private var showCreateSheet: Bool = false
+    @State private var mode: SeasonalMode = .idle
+    @State private var draft: WizardPricingBand? = nil
+    @State private var draftPriceText: String = ""
+    @FocusState private var draftPriceFocused: Bool
+    @State private var showDeleteConfirm: Bool = false
+    @State private var showColorPalette: Bool = false
+    @State private var showStartPicker: Bool = false
+    @State private var showEndPicker: Bool = false
     @State private var hasScrolledToCurrent = false
+
+    enum SeasonalMode: Equatable {
+        case idle
+        case bandCreate
+        case bandEdit(UUID)
+    }
 
     // Match parking-kalenderens konstanter eksakt.
     private let monthsAhead = 6
@@ -50,6 +61,13 @@ struct WizardSeasonalCalendarView: View {
     private static let monthNameFormatter: DateFormatter = {
         let f = DateFormatter()
         f.dateFormat = "LLLL yyyy"
+        f.locale = Locale(identifier: "nb_NO")
+        return f
+    }()
+
+    private static let shortDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "d. MMM"
         f.locale = Locale(identifier: "nb_NO")
         return f
     }()
@@ -107,7 +125,7 @@ struct WizardSeasonalCalendarView: View {
                         }
                     }
                     .padding(.top, 8)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 220)  // plass for action-bar
                 }
                 .onAppear {
                     guard !hasScrolledToCurrent else { return }
@@ -121,19 +139,43 @@ struct WizardSeasonalCalendarView: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            fabAddBand
-                .padding(.trailing, 16)
-                .padding(.bottom, 16)
+            if mode == .idle {
+                fabAddBand
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 16)
+                    .transition(.scale.combined(with: .opacity))
+            }
         }
-        .sheet(isPresented: $showCreateSheet) {
-            seasonBandEditorSheet(initial: defaultNewBand(), isEditing: false)
+        .safeAreaInset(edge: .bottom) {
+            switch mode {
+            case .idle:
+                EmptyView()
+            case .bandCreate, .bandEdit:
+                bandEditorActionBar
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
         }
-        .sheet(item: $editingBand) { band in
-            seasonBandEditorSheet(initial: band, isEditing: true)
+        .animation(.easeInOut(duration: 0.22), value: mode)
+        .onChange(of: draftPriceFocused) { _, focused in
+            if focused {
+                draftPriceText = ""
+            } else {
+                commitDraftPrice()
+            }
+        }
+        .confirmationDialog(
+            "Slett bånd?",
+            isPresented: $showDeleteConfirm,
+            titleVisibility: .visible
+        ) {
+            Button("Slett bånd", role: .destructive) { deleteEditingBand() }
+            Button("Avbryt", role: .cancel) {}
+        } message: {
+            Text("Båndet og pris-overstyringene som tilhører det fjernes.")
         }
     }
 
-    // MARK: - Sticky weekday header (matcher parking eksakt)
+    // MARK: - Sticky weekday header
 
     private var stickyWeekdayHeader: some View {
         VStack(spacing: 0) {
@@ -194,8 +236,6 @@ struct WizardSeasonalCalendarView: View {
         .id(week.id)
     }
 
-    // MARK: - Day cell (matcher parking-kalenderen eksakt visuelt)
-
     @ViewBuilder
     private func dayCell(date: Date) -> some View {
         let day = Self.osloCalendar.component(.day, from: date)
@@ -218,8 +258,6 @@ struct WizardSeasonalCalendarView: View {
 
                 Spacer(minLength: 0)
 
-                // Skjul pris under hvis et bånd dekker dagen — prisen står
-                // da på selve båndet (samme som parking).
                 if !isPast && !dayCovered, priceForDay > 0 {
                     Text("\(priceForDay) kr")
                         .font(.system(size: 11, weight: .medium))
@@ -234,8 +272,6 @@ struct WizardSeasonalCalendarView: View {
         .frame(height: cellHeight)
     }
 
-    /// Effektiv per-natt-pris for en dato. Sjekker bånd som dekker datoen;
-    /// hvis ingen, returnerer base.
     private func priceForDate(_ date: Date) -> Int {
         let iso = Self.isoFormatter.string(from: date)
         for band in bands {
@@ -247,7 +283,6 @@ struct WizardSeasonalCalendarView: View {
         return basePerNight
     }
 
-    /// True hvis et bånd dekker dagen (basert på dato-range + dayMask).
     private func bandCoversDay(_ date: Date) -> Bool {
         let iso = Self.isoFormatter.string(from: date)
         return bands.contains { band in
@@ -259,11 +294,11 @@ struct WizardSeasonalCalendarView: View {
     private func bandDayMaskMatches(_ band: WizardPricingBand, date: Date) -> Bool {
         if band.dayMask == 0 { return true }
         let weekday = Self.osloCalendar.component(.weekday, from: date)
-        let bit = (weekday + 5) % 7  // ma=0 ... sø=6
+        let bit = (weekday + 5) % 7
         return (band.dayMask & (1 << bit)) != 0
     }
 
-    // MARK: - Bånd-overlay (rendres over dag-celler i ZStack)
+    // MARK: - Bånd-overlay
 
     @ViewBuilder
     private func bandsOverlay(week: WeekRow) -> some View {
@@ -282,7 +317,7 @@ struct WizardSeasonalCalendarView: View {
                     let yOffset = bandStartY + CGFloat(lane) * (bandHeight + bandSpacing)
 
                     Button {
-                        editingBand = band
+                        openBandEdit(band)
                     } label: {
                         HStack(spacing: 4) {
                             Spacer(minLength: 0)
@@ -304,7 +339,6 @@ struct WizardSeasonalCalendarView: View {
         }
     }
 
-    /// Bestem hvilke kolonner i uken båndet dekker (kontinuerlige segmenter).
     private func bandSegmentsInWeek(_ band: WizardPricingBand, week: WeekRow) -> [(start: Int, end: Int)] {
         guard let bStart = band.startDate, let bEnd = band.endDate else { return [] }
         var segments: [(Int, Int)] = []
@@ -335,8 +369,6 @@ struct WizardSeasonalCalendarView: View {
         return segments
     }
 
-    // MARK: - Palette (matcher parking eksakt)
-
     private func bandPalette(for band: WizardPricingBand) -> BandPalette {
         let palettes = WizardPricingCalendarView.bandPalettes
         if let chosen = band.colorIndex, palettes.indices.contains(chosen) {
@@ -346,12 +378,11 @@ struct WizardSeasonalCalendarView: View {
         return palettes[idx]
     }
 
-    // MARK: - Weeks-for-month helper (samme som parking)
+    // MARK: - Weeks-for-month
 
     private struct WeekRow: Identifiable {
         let id: String
         let days: [Date?]
-        let key: WeekKey
     }
 
     private func weeksFor(_ monthStart: Date) -> [WeekRow] {
@@ -370,13 +401,8 @@ struct WizardSeasonalCalendarView: View {
                 let inMonth = d >= monthInterval.start && d <= monthEnd
                 days.append(inMonth ? d : nil)
             }
-
-            let yearWeek = cal.dateComponents([.yearForWeekOfYear, .weekOfYear], from: weekStart)
-            let year = yearWeek.yearForWeekOfYear ?? 2026
-            let week = yearWeek.weekOfYear ?? 1
-            let key = WeekKey(year: year, weekNum: week)
-            let id = "\(monthStart.timeIntervalSince1970)-\(year)-\(week)"
-            rows.append(WeekRow(id: id, days: days, key: key))
+            let id = "\(monthStart.timeIntervalSince1970)-\(weekStart.timeIntervalSince1970)"
+            rows.append(WeekRow(id: id, days: days))
 
             guard let next = cal.date(byAdding: .day, value: 7, to: weekStart) else { break }
             weekStart = next
@@ -384,258 +410,543 @@ struct WizardSeasonalCalendarView: View {
         return rows
     }
 
-    // MARK: - FAB (matcher parking eksakt)
+    // MARK: - FAB
 
     private var fabAddBand: some View {
         Button {
-            showCreateSheet = true
+            openBandCreate()
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 Image(systemName: "plus")
                     .font(.system(size: 14, weight: .bold))
                 Text("Nytt bånd")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.system(size: 14, weight: .semibold))
             }
             .foregroundStyle(.white)
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
-            .background(Color.neutral900)
-            .clipShape(Capsule())
-            .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+            .background(
+                Capsule()
+                    .fill(Color.neutral900)
+                    .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
+            )
         }
         .buttonStyle(.plain)
     }
 
-    private func defaultNewBand() -> WizardPricingBand {
+    // MARK: - Band editor action bar (mørk glass-stil — matcher parking)
+
+    private var bandEditorActionBar: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 10) {
+                bandTitlePill
+                Spacer()
+                Button {
+                    closeActionBar()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 38, height: 38)
+                        .background(glassCircleBackground)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+
+            bandEditorCard
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+        }
+        .padding(.top, 10)
+    }
+
+    private var bandTitlePill: some View {
+        let label: String = {
+            guard let d = draft, let s = d.startDate, let e = d.endDate,
+                  let sd = Self.isoFormatter.date(from: s),
+                  let ed = Self.isoFormatter.date(from: e) else {
+                return "Nytt bånd"
+            }
+            return "\(weekdaysShortLabel(mask: d.dayMask)) · \(Self.shortDateFormatter.string(from: sd)) – \(Self.shortDateFormatter.string(from: ed))"
+        }()
+        return HStack(spacing: 6) {
+            Image(systemName: "calendar")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.white)
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(glassPillBackground)
+    }
+
+    private var bandEditorCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Rad 1: ukedager + farge-swatch
+            HStack(spacing: 6) {
+                weekdayStrip
+                inlineColorSwatch
+            }
+            // Rad 2: Periode (to dato-knapper) + Pris
+            HStack(alignment: .bottom, spacing: 10) {
+                bandDateCard
+                    .frame(maxWidth: .infinity)
+                bandPriceCard
+                    .frame(width: 130)
+            }
+            if case .bandEdit = mode {
+                Button {
+                    showDeleteConfirm = true
+                } label: {
+                    Text("Slett bånd")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color(hex: "#fca5a5"))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .stroke(Color(hex: "#fca5a5").opacity(0.5), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(glassCardBackground)
+    }
+
+    // MARK: - Color swatch + palette
+
+    private var inlineColorSwatch: some View {
+        Button {
+            showColorPalette = true
+        } label: {
+            ZStack(alignment: .bottomTrailing) {
+                Circle()
+                    .fill(activePaletteColor)
+                    .frame(width: 36, height: 36)
+                    .overlay(Circle().stroke(Color.white.opacity(0.55), lineWidth: 1.5))
+                Image(systemName: "checkmark")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(activePaletteColor)
+                    .frame(width: 14, height: 14)
+                    .background(Circle().fill(Color.white))
+                    .offset(x: 4, y: 4)
+            }
+            .frame(width: 40, height: 36)
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: $showColorPalette) {
+            colorPaletteSheet
+                .presentationDetents([.height(160)])
+                .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var activePaletteColor: Color {
+        let palettes = WizardPricingCalendarView.bandPalettes
+        guard let d = draft else { return palettes[0].bgDefault }
+        if let idx = d.colorIndex, palettes.indices.contains(idx) {
+            return palettes[idx].bgDefault
+        }
+        let idx = abs(d.id.hashValue) % palettes.count
+        return palettes[idx].bgDefault
+    }
+
+    private var colorPaletteSheet: some View {
+        let palettes = WizardPricingCalendarView.bandPalettes
+        return VStack(spacing: 14) {
+            Text("Farge")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.neutral900)
+            HStack(spacing: 18) {
+                ForEach(0..<palettes.count, id: \.self) { idx in
+                    let palette = palettes[idx]
+                    let selected = (draft?.colorIndex ?? -1) == idx
+                    Button {
+                        setDraftColor(idx)
+                        showColorPalette = false
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(palette.bgDefault)
+                                .frame(width: 44, height: 44)
+                            if selected {
+                                Circle()
+                                    .stroke(Color.neutral900, lineWidth: 2.5)
+                                    .frame(width: 44, height: 44)
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: 16, weight: .bold))
+                                    .foregroundStyle(.neutral900)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.top, 16)
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Weekday strip (matcher parking)
+
+    private var weekdayStrip: some View {
+        HStack(spacing: 6) {
+            ForEach(0..<7, id: \.self) { bit in
+                let mask = draft?.dayMask ?? 0
+                // dayMask=0 betyr "alle dager" — vis alle som "på" visuelt.
+                let isOn = mask == 0 || (mask & (1 << bit)) != 0
+                Button {
+                    toggleDraftDayBit(bit)
+                } label: {
+                    Text(weekdayLetter(bit))
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(isOn ? Color.neutral900 : Color.white)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 40)
+                        .background(isOn ? Color.white : Color.white.opacity(0.08))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .stroke(isOn ? Color.white : Color.white.opacity(0.18), lineWidth: 1)
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .contentShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func weekdayLetter(_ bit: Int) -> String {
+        ["M", "T", "O", "T", "F", "L", "S"][bit]
+    }
+
+    private func weekdaysShortLabel(mask: Int) -> String {
+        if mask == 0 { return "Alle dager" }
+        var parts: [String] = []
+        for bit in 0..<7 where (mask & (1 << bit)) != 0 {
+            parts.append(["Ma", "Ti", "On", "To", "Fr", "Lø", "Sø"][bit])
+        }
+        return parts.joined(separator: ", ")
+    }
+
+    // MARK: - Date card (to dato-knapper i mørk-stil)
+
+    private var bandDateCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Periode")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+            HStack(spacing: 8) {
+                datePickerButton(
+                    title: "Fra",
+                    binding: bandStartDateBinding,
+                    isPresented: $showStartPicker,
+                    range: nil
+                )
+                datePickerButton(
+                    title: "Til",
+                    binding: bandEndDateBinding,
+                    isPresented: $showEndPicker,
+                    range: bandStartDateBinding.wrappedValue...
+                )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func datePickerButton(
+        title: String,
+        binding: Binding<Date>,
+        isPresented: Binding<Bool>,
+        range: PartialRangeFrom<Date>?
+    ) -> some View {
+        Button {
+            isPresented.wrappedValue = true
+        } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.7))
+                Text(Self.shortDateFormatter.string(from: binding.wrappedValue))
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 10)
+            .frame(height: 96)
+            .background(Color.white.opacity(0.06))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .sheet(isPresented: isPresented) {
+            datePickerSheet(
+                title: title,
+                binding: binding,
+                range: range,
+                isPresented: isPresented
+            )
+        }
+    }
+
+    @ViewBuilder
+    private func datePickerSheet(
+        title: String,
+        binding: Binding<Date>,
+        range: PartialRangeFrom<Date>?,
+        isPresented: Binding<Bool>
+    ) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(title)
+                    .font(.system(size: 16, weight: .semibold))
+                Spacer()
+                Button("Ferdig") { isPresented.wrappedValue = false }
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.primary600)
+            }
+            .padding(20)
+            Group {
+                if let range = range {
+                    DatePicker("", selection: binding, in: range, displayedComponents: .date)
+                } else {
+                    DatePicker("", selection: binding, displayedComponents: .date)
+                }
+            }
+            .datePickerStyle(.graphical)
+            .labelsHidden()
+            .environment(\.locale, Locale(identifier: "nb_NO"))
+            .environment(\.calendar, Self.osloCalendar)
+            .padding(.horizontal, 16)
+            Spacer(minLength: 0)
+        }
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
+    }
+
+    private var bandStartDateBinding: Binding<Date> {
+        Binding(
+            get: {
+                draft?.startDate.flatMap { Self.isoFormatter.date(from: $0) } ?? Date()
+            },
+            set: { newValue in
+                let iso = Self.isoFormatter.string(from: newValue)
+                if var d = draft {
+                    d.startDate = iso
+                    // Hold endDate >= startDate
+                    if let endStr = d.endDate, let endDate = Self.isoFormatter.date(from: endStr), endDate < newValue {
+                        d.endDate = iso
+                    }
+                    draft = d
+                }
+            }
+        )
+    }
+
+    private var bandEndDateBinding: Binding<Date> {
+        Binding(
+            get: {
+                draft?.endDate.flatMap { Self.isoFormatter.date(from: $0) } ?? Date()
+            },
+            set: { newValue in
+                if var d = draft {
+                    d.endDate = Self.isoFormatter.string(from: newValue)
+                    draft = d
+                }
+            }
+        )
+    }
+
+    // MARK: - Price card (matcher parking)
+
+    private var bandPriceCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Pris per natt")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+                .lineLimit(1)
+            HStack(spacing: 6) {
+                Button {
+                    stepDraftPrice(by: -50)
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
+                }
+                .buttonStyle(.plain)
+
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    TextField("", text: $draftPriceText)
+                        .focused($draftPriceFocused)
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.center)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .frame(minWidth: 28, maxWidth: 60)
+                    Text("kr")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+                }
+                .frame(maxWidth: .infinity)
+
+                Button {
+                    stepDraftPrice(by: 50)
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 26, height: 26)
+                        .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 8)
+            .frame(height: 96)
+            .frame(maxWidth: .infinity)
+            .background(Color.white.opacity(0.08))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
+        }
+    }
+
+    // MARK: - Glass backgrounds (kopi av parking)
+
+    private var glassPillBackground: some View {
+        Capsule()
+            .fill(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .overlay(Capsule().fill(Color.black.opacity(0.55)))
+            .overlay(Capsule().stroke(Color.white.opacity(0.18), lineWidth: 1))
+    }
+
+    private var glassCircleBackground: some View {
+        Circle()
+            .fill(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .overlay(Circle().fill(Color.black.opacity(0.55)))
+            .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
+    }
+
+    private var glassCardBackground: some View {
+        RoundedRectangle(cornerRadius: 18, style: .continuous)
+            .fill(.ultraThinMaterial)
+            .environment(\.colorScheme, .dark)
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.black.opacity(0.55))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .stroke(Color.white.opacity(0.18), lineWidth: 1)
+            )
+    }
+
+    // MARK: - Mode helpers
+
+    private func openBandCreate() {
         let cal = Self.osloCalendar
         let start = Date()
         let end = cal.date(byAdding: .day, value: 13, to: start) ?? start
-        return WizardPricingBand(
+        let newBand = WizardPricingBand(
             dayMask: 0,
             price: basePerNight > 0 ? basePerNight : 500,
             colorIndex: bands.count % WizardPricingCalendarView.bandPalettes.count,
             startDate: Self.isoFormatter.string(from: start),
             endDate: Self.isoFormatter.string(from: end)
         )
+        draft = newBand
+        draftPriceText = "\(newBand.price)"
+        mode = .bandCreate
     }
 
-    // MARK: - Editor sheet
-
-    private func seasonBandEditorSheet(initial: WizardPricingBand, isEditing: Bool) -> some View {
-        SeasonBandEditor(
-            initial: initial,
-            isEditing: isEditing,
-            palette: WizardPricingCalendarView.bandPalettes,
-            onSave: { saved in
-                var avail = form.availability(for: spotId)
-                if let idx = avail.bands.firstIndex(where: { $0.id == saved.id }) {
-                    avail.bands[idx] = saved
-                } else {
-                    avail.bands.append(saved)
-                }
-                form.setAvailability(avail, for: spotId)
-                showCreateSheet = false
-                editingBand = nil
-            },
-            onDelete: isEditing ? { id in
-                var avail = form.availability(for: spotId)
-                avail.bands.removeAll { $0.id == id }
-                avail.bandPriceOverrides.removeAll { $0.bandId == id }
-                form.setAvailability(avail, for: spotId)
-                editingBand = nil
-            } : nil,
-            onCancel: {
-                showCreateSheet = false
-                editingBand = nil
-            }
-        )
+    private func openBandEdit(_ band: WizardPricingBand) {
+        draft = band
+        draftPriceText = "\(band.price)"
+        mode = .bandEdit(band.id)
     }
-}
 
-// MARK: - Season-bånd editor (sheet-content)
-
-private struct SeasonBandEditor: View {
-    let initial: WizardPricingBand
-    let isEditing: Bool
-    let palette: [BandPalette]
-    let onSave: (WizardPricingBand) -> Void
-    let onDelete: ((UUID) -> Void)?
-    let onCancel: () -> Void
-
-    @State private var startDate: Date
-    @State private var endDate: Date
-    @State private var price: Int
-    @State private var priceText: String
-    @State private var dayMaskChoice: DayMaskChoice
-    @State private var colorIndex: Int
-    @State private var showDeleteConfirm = false
-
-    enum DayMaskChoice: Int, CaseIterable {
-        case all = 0
-        case weekendsOnly = 1
-        case weekdaysOnly = 2
-
-        var label: String {
-            switch self {
-            case .all: return "Alle dager"
-            case .weekendsOnly: return "Kun helger"
-            case .weekdaysOnly: return "Kun ukedager"
+    private func closeActionBar() {
+        // Lagre draft til availability
+        if let d = draft {
+            commitDraftPrice()
+            var avail = form.availability(for: spotId)
+            if let updated = draft, let idx = avail.bands.firstIndex(where: { $0.id == d.id }) {
+                avail.bands[idx] = updated
+            } else if let updated = draft {
+                avail.bands.append(updated)
             }
+            form.setAvailability(avail, for: spotId)
         }
-
-        var dayMask: Int {
-            switch self {
-            case .all: return 0
-            case .weekendsOnly: return (1 << 4) | (1 << 5) | (1 << 6)
-            case .weekdaysOnly: return (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3)
-            }
-        }
-
-        static func from(dayMask: Int) -> DayMaskChoice {
-            if dayMask == 0 { return .all }
-            if dayMask == (1 << 4) | (1 << 5) | (1 << 6) { return .weekendsOnly }
-            if dayMask == (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) { return .weekdaysOnly }
-            return .all
-        }
+        draft = nil
+        draftPriceFocused = false
+        mode = .idle
     }
 
-    init(
-        initial: WizardPricingBand,
-        isEditing: Bool,
-        palette: [BandPalette],
-        onSave: @escaping (WizardPricingBand) -> Void,
-        onDelete: ((UUID) -> Void)?,
-        onCancel: @escaping () -> Void
-    ) {
-        self.initial = initial
-        self.isEditing = isEditing
-        self.palette = palette
-        self.onSave = onSave
-        self.onDelete = onDelete
-        self.onCancel = onCancel
-
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        let start = (initial.startDate.flatMap { f.date(from: $0) }) ?? Date()
-        let end = (initial.endDate.flatMap { f.date(from: $0) }) ?? Date()
-        _startDate = State(initialValue: start)
-        _endDate = State(initialValue: end)
-        _price = State(initialValue: initial.price)
-        _priceText = State(initialValue: "\(initial.price)")
-        _dayMaskChoice = State(initialValue: DayMaskChoice.from(dayMask: initial.dayMask))
-        _colorIndex = State(initialValue: initial.colorIndex ?? 0)
+    private func deleteEditingBand() {
+        guard case .bandEdit(let id) = mode else { return }
+        var avail = form.availability(for: spotId)
+        avail.bands.removeAll { $0.id == id }
+        avail.bandPriceOverrides.removeAll { $0.bandId == id }
+        form.setAvailability(avail, for: spotId)
+        draft = nil
+        mode = .idle
     }
 
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Periode") {
-                    DatePicker("Fra", selection: $startDate, displayedComponents: .date)
-                        .environment(\.locale, Locale(identifier: "nb_NO"))
-                    DatePicker("Til", selection: $endDate, in: startDate..., displayedComponents: .date)
-                        .environment(\.locale, Locale(identifier: "nb_NO"))
-                }
-
-                Section("Hvilke dager?") {
-                    Picker("Dager", selection: $dayMaskChoice) {
-                        ForEach(DayMaskChoice.allCases, id: \.self) { choice in
-                            Text(choice.label).tag(choice)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                }
-
-                Section("Pris per natt") {
-                    HStack {
-                        TextField("0", text: $priceText)
-                            .keyboardType(.numberPad)
-                            .font(.system(size: 22, weight: .bold))
-                            .onChange(of: priceText) { _, new in
-                                let cleaned = new.filter(\.isNumber)
-                                if cleaned != new { priceText = cleaned }
-                                price = Int(cleaned) ?? 0
-                            }
-                        Text("kr")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(.neutral500)
-                    }
-                }
-
-                Section("Farge") {
-                    HStack(spacing: 12) {
-                        ForEach(0..<palette.count, id: \.self) { idx in
-                            Button {
-                                colorIndex = idx
-                            } label: {
-                                Circle()
-                                    .fill(palette[idx].bgDefault)
-                                    .frame(width: 32, height: 32)
-                                    .overlay {
-                                        if colorIndex == idx {
-                                            Image(systemName: "checkmark")
-                                                .font(.system(size: 14, weight: .bold))
-                                                .foregroundStyle(.white)
-                                        }
-                                    }
-                                    .overlay(
-                                        Circle().stroke(colorIndex == idx ? Color.neutral900 : Color.clear, lineWidth: 2)
-                                    )
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-
-                if isEditing, let onDelete {
-                    Section {
-                        Button(role: .destructive) {
-                            showDeleteConfirm = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "trash")
-                                Text("Slett bånd")
-                            }
-                        }
-                        .confirmationDialog("Slett bånd?", isPresented: $showDeleteConfirm) {
-                            Button("Slett", role: .destructive) {
-                                onDelete(initial.id)
-                            }
-                            Button("Avbryt", role: .cancel) {}
-                        }
-                    }
-                }
-            }
-            .navigationTitle(isEditing ? "Rediger bånd" : "Nytt bånd")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Avbryt", action: onCancel)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Lagre") {
-                        save()
-                    }
-                    .disabled(price <= 0)
-                }
-            }
+    private func toggleDraftDayBit(_ bit: Int) {
+        guard var d = draft else { return }
+        let mask = d.dayMask
+        if mask == 0 {
+            // "alle" → toggle: skru AV den ene biten (alle bortsett fra denne)
+            d.dayMask = (~(1 << bit)) & 0b1111111  // 7 bits
+        } else {
+            let toggled = mask ^ (1 << bit)
+            // Hvis alle 7 bits er på → tilbake til "alle dager" (0)
+            d.dayMask = (toggled == 0b1111111) ? 0 : toggled
         }
-        .presentationDetents([.medium, .large])
+        draft = d
     }
 
-    private func save() {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        var band = initial
-        band.startDate = f.string(from: startDate)
-        band.endDate = f.string(from: endDate)
-        band.price = price
-        band.dayMask = dayMaskChoice.dayMask
-        band.colorIndex = colorIndex
-        band.startHour = 0
-        band.startMinute = 0
-        band.endHour = 24
-        band.endMinute = 0
-        onSave(band)
+    private func setDraftColor(_ idx: Int) {
+        guard var d = draft else { return }
+        d.colorIndex = idx
+        draft = d
+    }
+
+    private func stepDraftPrice(by delta: Int) {
+        guard var d = draft else { return }
+        d.price = max(0, d.price + delta)
+        draft = d
+        draftPriceText = "\(d.price)"
+    }
+
+    private func commitDraftPrice() {
+        guard var d = draft else { return }
+        let parsed = Int(draftPriceText.filter(\.isNumber)) ?? 0
+        d.price = max(0, parsed)
+        draft = d
+        if !draftPriceFocused {
+            draftPriceText = "\(d.price)"
+        }
     }
 }

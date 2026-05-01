@@ -71,14 +71,7 @@ struct ProfileCalendarView: View {
     private var content: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
-                if spots.count > 1 {
-                    spotPicker
-                        .padding(.horizontal, 16)
-                        .padding(.top, 8)
-                        .padding(.bottom, 4)
-                } else {
-                    Spacer().frame(height: 8)
-                }
+                Spacer().frame(height: 56)  // plass til topbar
                 if let id = canonicalSpotId {
                     if listing.category == .camping {
                         WizardSeasonalCalendarView(form: form, spotId: id)
@@ -89,10 +82,10 @@ struct ProfileCalendarView: View {
                     emptyState
                 }
             }
-            .padding(.top, 56)  // plass til "X"-knappen øverst
 
-            // Top-overlay: "X"-knapp (top-leading) + save-status (top-trailing)
-            HStack(alignment: .center) {
+            // Top-overlay: "X" + spot-pill + save-status — alle i én rad,
+            // kompakt for å ikke ta plass fra kalenderen.
+            HStack(alignment: .center, spacing: 10) {
                 Button {
                     dismiss()
                 } label: {
@@ -106,6 +99,10 @@ struct ProfileCalendarView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Lukk")
+
+                if spots.count > 1 {
+                    spotPickerPill
+                }
 
                 Spacer()
 
@@ -143,75 +140,67 @@ struct ProfileCalendarView: View {
         }
     }
 
-    // MARK: - Multi-spot picker
+    // MARK: - Spot-picker (kompakt pill med dropdown-meny)
 
-    private var spotPicker: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Hvilke plasser?")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.neutral500)
-                .padding(.horizontal, 4)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    chipAll
-                    ForEach(Array(spots.enumerated()), id: \.offset) { idx, spot in
-                        if let id = spot.id {
-                            chip(label: spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
-                                 ? spot.label!
-                                 : "Plass \(idx + 1)",
-                                 spotId: id)
+    /// Sammendrag av valgte plasser: "Alle plasser" eller "Plass 1, Plass 3"
+    /// eller "2 av 4 plasser" for mange. Vises i pill-en.
+    private var spotPickerSummary: String {
+        if selectedSpotIds.isEmpty { return "Alle plasser" }
+        let labels: [String] = spots.enumerated().compactMap { idx, spot in
+            guard let id = spot.id, selectedSpotIds.contains(id) else { return nil }
+            return spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+                ? spot.label!
+                : "Plass \(idx + 1)"
+        }
+        if labels.count <= 2 { return labels.joined(separator: ", ") }
+        return "\(labels.count) av \(spots.count) plasser"
+    }
+
+    private var spotPickerPill: some View {
+        Menu {
+            Button {
+                selectedSpotIds = []
+            } label: {
+                Label("Alle plasser", systemImage: selectedSpotIds.isEmpty ? "checkmark" : "rectangle.3.group.fill")
+            }
+            Divider()
+            ForEach(Array(spots.enumerated()), id: \.offset) { idx, spot in
+                if let id = spot.id {
+                    let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+                        ? spot.label!
+                        : "Plass \(idx + 1)"
+                    Button {
+                        if selectedSpotIds.contains(id) {
+                            selectedSpotIds.remove(id)
+                        } else {
+                            selectedSpotIds.insert(id)
+                        }
+                    } label: {
+                        if selectedSpotIds.contains(id) {
+                            Label(label, systemImage: "checkmark")
+                        } else {
+                            Text(label)
                         }
                     }
                 }
-                .padding(.horizontal, 4)
-                .padding(.vertical, 6)
-            }
-        }
-    }
-
-    private var chipAll: some View {
-        let active = selectedSpotIds.isEmpty
-        return Button {
-            withAnimation(.easeInOut(duration: 0.18)) {
-                selectedSpotIds = []
             }
         } label: {
-            chipLabel(text: "Alle plasser", active: active, icon: "rectangle.3.group.fill")
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func chip(label: String, spotId: String) -> some View {
-        let active = selectedSpotIds.contains(spotId)
-        return Button {
-            withAnimation(.easeInOut(duration: 0.18)) {
-                if active {
-                    selectedSpotIds.remove(spotId)
-                } else {
-                    selectedSpotIds.insert(spotId)
-                }
-            }
-        } label: {
-            chipLabel(text: label, active: active, icon: nil)
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func chipLabel(text: String, active: Bool, icon: String?) -> some View {
-        HStack(spacing: 6) {
-            if let icon {
-                Image(systemName: icon)
+            HStack(spacing: 6) {
+                Image(systemName: "mappin.and.ellipse")
                     .font(.system(size: 11, weight: .semibold))
+                Text(spotPickerSummary)
+                    .font(.system(size: 13, weight: .semibold))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 10, weight: .bold))
             }
-            Text(text)
-                .font(.system(size: 13, weight: active ? .semibold : .medium))
+            .foregroundStyle(.neutral900)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(Capsule().fill(Color.white))
+            .overlay(Capsule().stroke(Color.neutral200, lineWidth: 1))
+            .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
         }
-        .foregroundStyle(active ? .white : .neutral800)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(active ? Color.primary600 : Color.neutral50)
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(active ? Color.primary600 : Color.neutral200, lineWidth: 1))
     }
 
     private var emptyState: some View {
