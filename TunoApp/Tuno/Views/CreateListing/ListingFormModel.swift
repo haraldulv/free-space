@@ -49,6 +49,21 @@ final class ListingFormModel: ObservableObject {
     /// Per-plass tilgjengelighet og pris-variasjon (form-state). Nøkkel = SpotMarker.id.
     /// Lagres ikke i SpotMarker — settes om til listing_pricing_rules + overrides ved publisering.
     @Published var availabilityBySpotId: [String: WizardSpotAvailability] = [:]
+    /// Felles pris-bånd på tvers av plasser. Når true: bånd som settes på spot 0
+    /// kopieres til alle andre spots ved goNext. Default på.
+    @Published var pricingBandsSharedAcrossSpots: Bool = true
+
+    /// Kopier spot 0's availability til alle andre spots. Brukes når
+    /// pricingBandsSharedAcrossSpots er på, etter brukeren har redigert bånd.
+    func syncFirstSpotAvailabilityToAll() {
+        guard let firstId = spotMarkers.first?.id else { return }
+        let template = availability(for: firstId)
+        for spot in spotMarkers.dropFirst() {
+            if let id = spot.id {
+                availabilityBySpotId[id] = template
+            }
+        }
+    }
 
     // MARK: - Step 11: Bilder
     @Published var selectedPhotos: [PhotosPickerItem] = []
