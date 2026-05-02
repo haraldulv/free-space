@@ -13,11 +13,35 @@ struct RegisterView: View {
     @State private var showVerificationAlert = false
     @State private var termsAccepted = false
     @State private var termsError = ""
+    @State private var showSuccess = false
     @FocusState private var focusedField: Field?
 
     enum Field { case name, email, password }
 
     var body: some View {
+        ZStack {
+            mainContent
+            if showSuccess {
+                AuthSuccessOverlay(displayName: authManager.displayName, isNewAccount: true)
+                    .zIndex(10)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showSuccess)
+        .onChange(of: authManager.isAuthenticated) { _, isAuth in
+            // E-post/passord-flyten er allerede håndtert via showVerificationAlert
+            // (brukeren må verifisere før isAuthenticated blir true). Dette
+            // dekker Apple/Google-flyten der vi går rett til signedIn.
+            guard isAuth, !showSuccess else { return }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            showSuccess = true
+            Task {
+                try? await Task.sleep(nanoseconds: 1_400_000_000)
+                dismiss()
+            }
+        }
+    }
+
+    private var mainContent: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 20) {

@@ -63,6 +63,7 @@
 		69B9A4A36285CD891EF163A1 /* FlowLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = AFCA79AFEA0E6F8136582CC1 /* FlowLayout.swift */; };
 		6B7117AA9434A53E825A39A0 /* FavoritesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF4ECC50EF60CAE563B7D668 /* FavoritesService.swift */; };
 		6B9D27F1FAB9F57992BA3988 /* EmailVerifiedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BB2C75ED50A9F54DA87638 /* EmailVerifiedView.swift */; };
+		6C57CB4C5085FA6E29E824A1 /* AuthSuccessOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72756B03A81BE14067ACE290 /* AuthSuccessOverlay.swift */; };
 		6CB4EB3DA766CB6BC5FC1B67 /* SpotDetailCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1213A1E7AC0AB0C6683A1A43 /* SpotDetailCard.swift */; };
 		6FBE494863C2B42EFAFE6C0E /* camping.png in Resources */ = {isa = PBXBuildFile; fileRef = EAB9785990D824D579D1AC18 /* camping.png */; };
 		707BCE8A8EA006E7F8604A34 /* AmenitiesStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE00FBD7C2654A066869B1E1 /* AmenitiesStep.swift */; };
@@ -195,6 +196,7 @@
 		6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingFlowView.swift; sourceTree = "<group>"; };
 		6D08232C248CE64924B19723 /* DescriptionStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStep.swift; sourceTree = "<group>"; };
 		6FFBF70DF9565FD913EA5D09 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
+		72756B03A81BE14067ACE290 /* AuthSuccessOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthSuccessOverlay.swift; sourceTree = "<group>"; };
 		72853CC232D491F9F2AEC20B /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		728D58EED8EDC45FC329EE6F /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
 		73BB47DB7ED9FBB036BC353A /* MessagesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesListView.swift; sourceTree = "<group>"; };
@@ -376,6 +378,7 @@
 		5594C1BF423A5D70CCD1EED6 /* Auth */ = {
 			isa = PBXGroup;
 			children = (
+				72756B03A81BE14067ACE290 /* AuthSuccessOverlay.swift */,
 				D3BB2C75ED50A9F54DA87638 /* EmailVerifiedView.swift */,
 				0F76B3BFE9867FFEFA9DFEAB /* ForgotPasswordView.swift */,
 				F20335764277C2E44F7825D2 /* LoginView.swift */,
@@ -701,6 +704,7 @@
 				707BCE8A8EA006E7F8604A34 /* AmenitiesStep.swift in Sources */,
 				F67F9C6B23D453F78B1C7ED9 /* AuthManager.swift in Sources */,
 				AA8A099FCB1C1DCDAFCCBA8E /* AuthPromptView.swift in Sources */,
+				6C57CB4C5085FA6E29E824A1 /* AuthSuccessOverlay.swift in Sources */,
 				B4419D7CD6BEB2EB57C94298 /* BecomeHostView.swift in Sources */,
 				8DE4BBDB474E278A300397DE /* BlockedSlots.swift in Sources */,
 				2AFF1FFBCA6063DF79A8E1CA /* BookingCalendarView.swift in Sources */,

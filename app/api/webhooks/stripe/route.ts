@@ -258,7 +258,13 @@ export async function POST(request: NextRequest) {
 
   if (event.type === "account.updated") {
     const account = event.data.object;
-    if (account.charges_enabled) {
+    // Krev BÅDE charges_enabled og payouts_enabled før vi anser onboarding
+    // som fullført. Tidligere markerte vi `complete=true` så snart charges_enabled
+    // var sann, men det førte til at hosts som ikke hadde lagt inn bank
+    // (eller hadde åpne identity-krav) likevel ble markert som ferdig.
+    // Resultat: vi ruter bookinger til dem og pengene blir liggende i
+    // Stripe-balansen uten å bli utbetalt.
+    if (account.charges_enabled && account.payouts_enabled) {
       // Sjekk om dette er overgangen false → true så vi kan trigge push
       // én gang. Subsekvente account.updated-events (eksempel: nye
       // requirements-felter) skal ikke spamme brukeren.
@@ -282,6 +288,26 @@ export async function POST(request: NextRequest) {
           "Stripe har bekreftet kontoen din. Du kan nå opprette annonser og motta utbetalinger.",
           { type: "stripe_onboarding_complete" },
         );
+      }
+    } else if (account.charges_enabled && !account.payouts_enabled) {
+      // Charges OK men payouts blokkert. Vanligste årsak: bank ikke lagt
+      // til, eller currently_due krever ID-dokument. Varsle hosten så de
+      // vet hva som mangler — eller så blir pengene liggende i Stripe.
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("stripe_account_id", account.id)
+        .maybeSingle();
+      if (profile?.id) {
+        const dueCount = account.requirements?.currently_due?.length ?? 0;
+        if (dueCount > 0) {
+          await sendPushToUser(
+            profile.id,
+            "Handling kreves for utbetaling",
+            "Stripe trenger mer informasjon før vi kan utbetale til deg. Åpne Tuno → Innstillinger.",
+            { type: "stripe_action_required" },
+          ).catch((err) => console.error("[Push] action_required failed:", err));
+        }
       }
     }
   }

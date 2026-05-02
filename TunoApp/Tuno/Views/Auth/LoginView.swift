@@ -10,8 +10,29 @@ struct LoginView: View {
     @State private var isLoading = false
     @State private var showRegister = false
     @State private var showForgotPassword = false
+    @State private var showSuccess = false
 
     var body: some View {
+        ZStack {
+            mainContent
+            if showSuccess {
+                AuthSuccessOverlay(displayName: authManager.displayName, isNewAccount: false)
+                    .zIndex(10)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: showSuccess)
+        .onChange(of: authManager.isAuthenticated) { _, isAuth in
+            guard isAuth, !showSuccess else { return }
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+            showSuccess = true
+            Task {
+                try? await Task.sleep(nanoseconds: 1_400_000_000)
+                dismiss()
+            }
+        }
+    }
+
+    private var mainContent: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 32) {
