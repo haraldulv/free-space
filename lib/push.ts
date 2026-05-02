@@ -4,7 +4,10 @@ import { SignJWT, importPKCS8 } from "jose";
 const APNS_HOST = process.env.APNS_PRODUCTION === "true"
   ? "api.push.apple.com"
   : "api.sandbox.push.apple.com";
-const BUNDLE_ID = "no.tuno.app";
+// Bundle ID må matche iOS-app-buildet som mottar pushene. Prod-Vercel
+// bruker no.tuno.app (default), staging-Vercel setter APNS_BUNDLE_ID
+// til no.tuno.app.staging. Apple avviser pushen hvis dette ikke matcher.
+const BUNDLE_ID = process.env.APNS_BUNDLE_ID || "no.tuno.app";
 
 let cachedToken: { token: string; expires: number } | null = null;
 

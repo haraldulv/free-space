@@ -7,6 +7,15 @@ options:
   createIntermediateGroups: true
   defaultConfig: Release
 
+# To build-configs per environment. Debug/Release for prod, Debug-Staging/
+# Release-Staging for staging-build (peker mot staging-Supabase + Stripe-test).
+# Per-config-overrides settes på targets.Tuno.settings.configs.<config> nedenfor.
+configs:
+  Debug: debug
+  Release: release
+  Debug-Staging: debug
+  Release-Staging: release
+
 settings:
   base:
     SWIFT_VERSION: "6.0"
@@ -41,6 +50,19 @@ schemes:
       disableMainThreadChecker: true
       diagnosticOptions:
         mainThreadChecker: false
+    archive:
+      config: Release
+  Tuno-Staging:
+    build:
+      targets:
+        Tuno: all
+    run:
+      config: Debug-Staging
+      disableMainThreadChecker: true
+      diagnosticOptions:
+        mainThreadChecker: false
+    archive:
+      config: Release-Staging
 
 targets:
   Tuno:
@@ -50,23 +72,31 @@ targets:
       - path: Tuno
         excludes:
           - "Resources/**/README.md"
-    entitlements:
-      path: Tuno/Tuno.entitlements
-      properties:
-        com.apple.developer.applesignin:
-          - Default
-        com.apple.developer.in-app-payments:
-          - merchant.no.tuno.app
-        com.apple.developer.associated-domains:
-          - applinks:tuno.no
-          - applinks:www.tuno.no
-        aps-environment: production
+    # Entitlements-filer (Tuno.entitlements + Tuno-Staging.entitlements)
+    # er hand-skrevne og pekes til via CODE_SIGN_ENTITLEMENTS per config
+    # nedenfor. Vi lar IKKE xcodegen generere/overskrive dem.
     settings:
       base:
         INFOPLIST_FILE: Tuno/Info.plist
-        PRODUCT_BUNDLE_IDENTIFIER: no.tuno.app
-        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-        CODE_SIGN_ENTITLEMENTS: Tuno/Tuno.entitlements
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: no.tuno.app
+          ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+          CODE_SIGN_ENTITLEMENTS: Tuno/Tuno.entitlements
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: no.tuno.app
+          ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+          CODE_SIGN_ENTITLEMENTS: Tuno/Tuno.entitlements
+        Debug-Staging:
+          PRODUCT_BUNDLE_IDENTIFIER: no.tuno.app.staging
+          ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon-Staging
+          CODE_SIGN_ENTITLEMENTS: Tuno/Tuno-Staging.entitlements
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: STAGING DEBUG
+        Release-Staging:
+          PRODUCT_BUNDLE_IDENTIFIER: no.tuno.app.staging
+          ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon-Staging
+          CODE_SIGN_ENTITLEMENTS: Tuno/Tuno-Staging.entitlements
+          SWIFT_ACTIVE_COMPILATION_CONDITIONS: STAGING
     dependencies:
       - package: Supabase
         product: Supabase
