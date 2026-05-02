@@ -75,6 +75,7 @@
 		79F6757D7436EF3EEF1EEAC2 /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5065BE9CC3C749754F554F /* BookingsView.swift */; };
 		7AF18FF996F0B291CFB71478 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDD24B1220789582C10AF6F /* ChatView.swift */; };
 		80D0258D5D4F3DF9EBC406F5 /* MarkSpotsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04AE83B5E261BA41D246388 /* MarkSpotsStep.swift */; };
+		8225D7A59A196A15D1387988 /* PayoutsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D6665556989227BEA372A6 /* PayoutsService.swift */; };
 		826D4094CB6C79BB766161D3 /* PublicProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69D03627A981C3C64EF47F06 /* PublicProfileView.swift */; };
 		8366B42E53C29B755B8EB7ED /* SpotExtrasStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = E526C4504EA007084624767F /* SpotExtrasStep.swift */; };
 		87D3139C0104F4350A1AAC1B /* empty-spots.json in Resources */ = {isa = PBXBuildFile; fileRef = 425E4953E02A6C131CFEB198 /* empty-spots.json */; };
@@ -208,6 +209,7 @@
 		8372F9628ACCC2AB21993B03 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		83B043C9DBACDB46B61E6148 /* ListingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingCard.swift; sourceTree = "<group>"; };
 		867091F53CF483B9DC6E3E33 /* WelcomeStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeStep.swift; sourceTree = "<group>"; };
+		86D6665556989227BEA372A6 /* PayoutsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayoutsService.swift; sourceTree = "<group>"; };
 		8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotPlacementSheet.swift; sourceTree = "<group>"; };
 		8912249569F172B1FAC73845 /* PersonnummerHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonnummerHelper.swift; sourceTree = "<group>"; };
 		8BA98D1AD8A6E41FE60C2C91 /* CategoryStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryStep.swift; sourceTree = "<group>"; };
@@ -321,6 +323,7 @@
 				E9E57AB4DC338617AB61C3E7 /* ListingService.swift */,
 				653B4F2F1D411111416483A4 /* LocalizationManager.swift */,
 				5416B142A121192B7EDCA9A2 /* LocationManager.swift */,
+				86D6665556989227BEA372A6 /* PayoutsService.swift */,
 				3CB173E040FBC726599E7A89 /* PlacesService.swift */,
 				56E3029710A8D3475494799E /* PricingService.swift */,
 				9F37F3CD542B4B76200AE7AE /* ProfileStatsStore.swift */,
@@ -762,6 +765,7 @@
 				4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */,
 				F5C607CAFB1A650AC022C486 /* MotorhomeIcon.swift in Sources */,
 				B2A276C68ACCEB05DBF4F7DB /* NotificationsView.swift in Sources */,
+				8225D7A59A196A15D1387988 /* PayoutsService.swift in Sources */,
 				DF4CB397EEC21B6155822A74 /* PersonnummerHelper.swift in Sources */,
 				481B700D9FEB3AFB038F6A9E /* PhotosStep.swift in Sources */,
 				B61A0EA246DD9BEF82475048 /* PlacesService.swift in Sources */,

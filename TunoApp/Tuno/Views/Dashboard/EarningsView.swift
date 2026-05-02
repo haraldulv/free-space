@@ -4,6 +4,7 @@ private let SERVICE_FEE = 0.10
 
 struct EarningsView: View {
     @EnvironmentObject var authManager: AuthManager
+    @StateObject private var payoutsService = PayoutsService()
     @State private var bookings: [Booking] = []
     @State private var listings: [Listing] = []
     @State private var isLoading = true
@@ -62,6 +63,7 @@ struct EarningsView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         statCards
+                        payoutsSection
                         monthlyChart
                         listingBreakdown
                         recentBookings
@@ -73,6 +75,11 @@ struct EarningsView: View {
         .navigationTitle("Inntekter")
         .task {
             await loadData()
+            await payoutsService.load()
+        }
+        .refreshable {
+            await loadData()
+            await payoutsService.load()
         }
     }
 
@@ -109,6 +116,217 @@ struct EarningsView: View {
                 label: "Aktive annonser",
                 value: "\(activeListings)"
             )
+        }
+    }
+
+    // MARK: - Payouts (live fra Stripe)
+
+    @ViewBuilder
+    private var payoutsSection: some View {
+        if let status = payoutsService.status, status.has_stripe_account {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 6) {
+                    Image(systemName: "banknote.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.primary600)
+                    Text("Utbetalinger")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.neutral700)
+                }
+
+                payoutsBalanceRow(status)
+
+                if !status.account_status!.payouts_enabled {
+                    payoutsBlockedBanner(status.account_status!)
+                }
+
+                if let bank = defaultBank(status.external_accounts) {
+                    HStack(spacing: 8) {
+                        Image(systemName: "building.columns.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.neutral500)
+                        Text("Til bank •••• \(bank.last4 ?? "—")")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral600)
+                        Spacer()
+                        if let schedule = status.account_status?.payout_schedule {
+                            Text(scheduleLabel(schedule))
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.neutral500)
+                        }
+                    }
+                    .padding(.vertical, 6)
+                } else {
+                    HStack(spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.orange)
+                        Text("Ingen bank-konto registrert. Pengene blir liggende til du legger inn IBAN.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.orange)
+                    }
+                    .padding(.vertical, 6)
+                }
+
+                if status.payouts.isEmpty {
+                    Text("Ingen utbetalinger ennå. Når en gjest har vært innom plassen din i 24 timer, sender vi pengene til Stripe — og Stripe utbetaler videre til banken din.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                        .padding(.vertical, 6)
+                } else {
+                    ForEach(status.payouts) { payout in
+                        payoutRow(payout)
+                        if payout.id != status.payouts.last?.id {
+                            Divider()
+                        }
+                    }
+                }
+            }
+            .padding(16)
+            .background(.white)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
+        } else if payoutsService.isLoading {
+            HStack {
+                ProgressView()
+                Text("Henter utbetalingsstatus...")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(20)
+        }
+    }
+
+    private func payoutsBalanceRow(_ status: HostPayoutStatus) -> some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tilgjengelig")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral500)
+                Text("\(formatKr(Int((status.balance?.available_nok ?? 0).rounded()))) kr")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.neutral900)
+            }
+            Spacer()
+            VStack(alignment: .trailing, spacing: 2) {
+                Text("På vei inn")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral500)
+                Text("\(formatKr(Int((status.balance?.pending_nok ?? 0).rounded()))) kr")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.neutral900)
+            }
+        }
+        .padding(12)
+        .background(Color.primary50)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    @ViewBuilder
+    private func payoutsBlockedBanner(_ acc: HostAccountStatus) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Utbetaling er pauset")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text(blockedReasonText(acc))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral600)
+            }
+            Spacer()
+        }
+        .padding(12)
+        .background(Color.orange.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func blockedReasonText(_ acc: HostAccountStatus) -> String {
+        if !acc.currently_due.isEmpty {
+            return "Stripe trenger: \(acc.currently_due.joined(separator: ", "))"
+        }
+        if let reason = acc.disabled_reason, !reason.isEmpty {
+            return "Stripe-melding: \(reason)"
+        }
+        return "Sjekk innstillinger for å løse opp."
+    }
+
+    private func payoutRow(_ p: HostPayout) -> some View {
+        HStack(spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(payoutTint(p.status).opacity(0.15))
+                    .frame(width: 36, height: 36)
+                Image(systemName: payoutIcon(p.status))
+                    .font(.system(size: 14))
+                    .foregroundStyle(payoutTint(p.status))
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(p.statusLabel)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text(payoutSubtitle(p))
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral500)
+            }
+            Spacer()
+            Text("\(formatKr(Int(p.amount_nok.rounded()))) kr")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(.neutral900)
+        }
+        .padding(.vertical, 6)
+    }
+
+    private func payoutSubtitle(_ p: HostPayout) -> String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "nb_NO")
+        f.dateFormat = "d. MMM"
+        if p.status == "paid" {
+            return "Utbetalt \(f.string(from: p.arrivalDate))"
+        }
+        if p.status == "in_transit" || p.status == "pending" {
+            return "Ventet \(f.string(from: p.arrivalDate))"
+        }
+        if p.status == "failed", let msg = p.failure_message {
+            return msg
+        }
+        return f.string(from: p.createdDate)
+    }
+
+    private func payoutTint(_ status: String) -> Color {
+        switch status {
+        case "paid": return Color.primary600
+        case "pending", "in_transit": return .orange
+        case "failed", "canceled": return .red
+        default: return .neutral500
+        }
+    }
+
+    private func payoutIcon(_ status: String) -> String {
+        switch status {
+        case "paid": return "checkmark.circle.fill"
+        case "pending": return "clock.fill"
+        case "in_transit": return "arrow.right.circle.fill"
+        case "failed": return "xmark.circle.fill"
+        case "canceled": return "minus.circle.fill"
+        default: return "circle.fill"
+        }
+    }
+
+    private func defaultBank(_ accounts: [HostExternalAccount]) -> HostExternalAccount? {
+        accounts.first(where: { $0.default_for_currency }) ?? accounts.first
+    }
+
+    private func scheduleLabel(_ s: String) -> String {
+        switch s {
+        case "daily": return "Daglig"
+        case "weekly": return "Ukentlig"
+        case "monthly": return "Månedlig"
+        case "manual": return "Manuell"
+        default: return s.capitalized
         }
     }
 
