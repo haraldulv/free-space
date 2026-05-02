@@ -303,6 +303,12 @@ final class ListingService: ObservableObject {
 
 // MARK: - Helpers
 
+/// Avstand mellom to koordinater i kilometer. Public så ListingCard og
+/// andre views kan vise "X km fra deg" uten å duplisere matten.
+func haversineDistanceKm(lat1: Double, lng1: Double, lat2: Double, lng2: Double) -> Double {
+    haversineDistance(lat1: lat1, lng1: lng1, lat2: lat2, lng2: lng2)
+}
+
 private func haversineDistance(lat1: Double, lng1: Double, lat2: Double, lng2: Double) -> Double {
     let R = 6371.0 // Earth radius in km
     let dLat = (lat2 - lat1) * .pi / 180

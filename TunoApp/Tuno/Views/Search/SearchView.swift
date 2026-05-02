@@ -97,6 +97,11 @@ struct SearchView: View {
     @State private var searchLat: Double?
     @State private var searchLng: Double?
     @State private var searchZoom: Float?
+    /// Brukerens valgte søkesenter — IKKE oppdatert ved kart-panning eller
+    /// carousel-swipe. Brukes som referanse-koordinat for "X km fra deg"-
+    /// avstand på listing-kort, så avstanden ikke endrer seg under brukeren.
+    @State private var originLat: Double?
+    @State private var originLng: Double?
     @State private var navigationPath = NavigationPath()
     @State private var selectedListingIndex: Int? = nil
     @State private var hasInitialLocation = false
@@ -209,7 +214,9 @@ struct SearchView: View {
                         onFavorite: toggleFavorite,
                         onSelect: { listing in
                             navigationPath.append(listing)
-                        }
+                        },
+                        referenceLat: originLat,
+                        referenceLng: originLng
                     )
                     .zIndex(1)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -364,7 +371,9 @@ struct SearchView: View {
                         }
                     },
                     isFavorited: { id in favoritesService.favoriteIds.contains(id) },
-                    onFavoriteToggle: toggleFavorite
+                    onFavoriteToggle: toggleFavorite,
+                    referenceLat: originLat,
+                    referenceLng: originLng
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .padding(.bottom, 12)
@@ -447,6 +456,8 @@ struct SearchView: View {
         searchLat = lat
         searchLng = lng
         searchZoom = zoom
+        originLat = lat
+        originLng = lng
         lastSearchedCenter = CLLocationCoordinate2D(latitude: lat, longitude: lng)
         showSearchHere = false
     }

@@ -12,6 +12,8 @@ struct MapBottomCardCarousel: View {
     let onClose: () -> Void
     let isFavorited: (String) -> Bool
     let onFavoriteToggle: (String) -> Void
+    var referenceLat: Double? = nil
+    var referenceLng: Double? = nil
 
     var body: some View {
         TabView(selection: $selectedIndex) {
@@ -21,7 +23,9 @@ struct MapBottomCardCarousel: View {
                     isFavorited: isFavorited(listing.id),
                     onTap: { onTap(listing) },
                     onClose: onClose,
-                    onFavoriteToggle: { onFavoriteToggle(listing.id) }
+                    onFavoriteToggle: { onFavoriteToggle(listing.id) },
+                    referenceLat: referenceLat,
+                    referenceLng: referenceLng
                 )
                 .padding(.horizontal, 12)
                 .tag(index)
@@ -41,8 +45,24 @@ struct MapListingBigCard: View {
     let onTap: () -> Void
     let onClose: () -> Void
     let onFavoriteToggle: () -> Void
+    var referenceLat: Double? = nil
+    var referenceLng: Double? = nil
 
     @State private var imageIndex: Int = 0
+
+    private var distanceLabel: String? {
+        guard let refLat = referenceLat, let refLng = referenceLng,
+              let lat = listing.lat, let lng = listing.lng else { return nil }
+        let km = haversineDistanceKm(lat1: refLat, lng1: refLng, lat2: lat, lng2: lng)
+        if km < 1 {
+            let m = Int((km * 1000).rounded())
+            return "\(m) m unna"
+        }
+        if km < 10 {
+            return String(format: "%.1f km unna", km).replacingOccurrences(of: ".", with: ",")
+        }
+        return "\(Int(km.rounded())) km unna"
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -161,10 +181,14 @@ struct MapListingBigCard: View {
             }
 
             HStack(spacing: 6) {
-                if let spots = listing.spots, spots > 1 {
-                    Text("\(spots) plasser")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
+                if let label = distanceLabel {
+                    HStack(spacing: 3) {
+                        Image(systemName: "location.fill")
+                            .font(.system(size: 10))
+                        Text(label)
+                            .font(.system(size: 12))
+                    }
+                    .foregroundStyle(.neutral500)
                 }
                 if listing.instantBooking == true {
                     HStack(spacing: 3) {

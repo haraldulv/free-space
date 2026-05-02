@@ -11,6 +11,8 @@ struct BottomListDrawer: View {
     let isFavorited: (String) -> Bool
     let onFavorite: (String) -> Void
     let onSelect: (Listing) -> Void
+    var referenceLat: Double? = nil
+    var referenceLng: Double? = nil
 
     @State private var isExpanded = false
     @State private var dragTranslation: CGFloat = 0
@@ -91,7 +93,9 @@ struct BottomListDrawer: View {
                                 ListingCard(
                                     listing: listing,
                                     isFavorited: isFavorited(listing.id),
-                                    onFavoriteToggle: { _ in onFavorite(listing.id) }
+                                    onFavoriteToggle: { _ in onFavorite(listing.id) },
+                                    referenceLat: referenceLat,
+                                    referenceLng: referenceLng
                                 )
                             }
                             .buttonStyle(.plain)

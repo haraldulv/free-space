@@ -5,10 +5,28 @@ struct ListingCard: View {
     var isFavorited: Bool = false
     var onFavoriteToggle: ((Bool) -> Void)? = nil
     var compact: Bool = false
+    /// Referansekoordinat brukt til å regne ut avstand "X km fra deg".
+    /// Sett til søkesenter når brukeren har angitt sted, ellers nil.
+    var referenceLat: Double? = nil
+    var referenceLng: Double? = nil
 
     @State private var imageIndex = 0
 
     private var images: [String] { listing.images ?? [] }
+
+    private var distanceLabel: String? {
+        guard let refLat = referenceLat, let refLng = referenceLng,
+              let lat = listing.lat, let lng = listing.lng else { return nil }
+        let km = haversineDistanceKm(lat1: refLat, lng1: refLng, lat2: lat, lng2: lng)
+        if km < 1 {
+            let m = Int((km * 1000).rounded())
+            return "\(m) m unna"
+        }
+        if km < 10 {
+            return String(format: "%.1f km unna", km).replacingOccurrences(of: ".", with: ",")
+        }
+        return "\(Int(km.rounded())) km unna"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -180,11 +198,11 @@ struct ListingCard: View {
 
                     Spacer()
 
-                    if (listing.spots ?? 1) > 1 {
+                    if let label = distanceLabel {
                         HStack(spacing: 3) {
-                            Image(systemName: "car.fill")
+                            Image(systemName: "location.fill")
                                 .font(.system(size: 10))
-                            Text("\(listing.spots ?? 1)p")
+                            Text(label)
                                 .font(.system(size: 11, weight: .medium))
                         }
                         .foregroundStyle(.neutral500)
