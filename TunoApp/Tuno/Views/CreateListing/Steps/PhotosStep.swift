@@ -197,6 +197,24 @@ struct PhotosStep: View {
                     .onDrag {
                         draggedURL = url
                         return NSItemProvider(object: url as NSString)
+                    } preview: {
+                        // Eksplisitt preview-størrelse. Uten dette tegnet
+                        // SwiftUI portrait-bilder med sin intrinsic aspect
+                        // ratio som drag-preview — bildene "vokste" og dekket
+                        // halve skjermen mens man dro. Med en hardkodet
+                        // 140×130-thumbnail får brukeren samme preview-shape
+                        // uavhengig av om bildet er liggende eller stående.
+                        AsyncImage(url: URL(string: url)) { phase in
+                            switch phase {
+                            case .success(let image):
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            default:
+                                Color.neutral100
+                            }
+                        }
+                        .frame(width: 140, height: 130)
+                        .clipped()
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .onDrop(of: [.text], delegate: ImageDropDelegate(
                         item: url,

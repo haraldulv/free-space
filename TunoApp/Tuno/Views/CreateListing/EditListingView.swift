@@ -942,6 +942,22 @@ struct EditListingView: View {
                                 .onDrag {
                                     draggedImageURL = url
                                     return NSItemProvider(object: url as NSString)
+                                } preview: {
+                                    // Eksplisitt drag-preview-størrelse, samme
+                                    // grunn som i PhotosStep — uten dette blir
+                                    // portrett-bilder vist i intrinsic ratio
+                                    // og dekker halve skjermen under dragging.
+                                    AsyncImage(url: URL(string: url)) { phase in
+                                        switch phase {
+                                        case .success(let image):
+                                            image.resizable().aspectRatio(contentMode: .fill)
+                                        default:
+                                            Color.neutral100
+                                        }
+                                    }
+                                    .frame(width: 110, height: 100)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
                                 .onDrop(of: [.text], delegate: ImageDropDelegate(
                                     item: url,
