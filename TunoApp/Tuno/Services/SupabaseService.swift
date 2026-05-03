@@ -10,8 +10,8 @@ import Supabase
 /// docs/staging.md).
 enum AppConfig {
     #if STAGING
-    static let supabaseURL = URL(string: "https://STAGING-REF.supabase.co")!
-    static let supabaseAnonKey = "STAGING_ANON_KEY_PLACEHOLDER"
+    static let supabaseURL = URL(string: "https://qqtgmcxzyuquunsxoqog.supabase.co")!
+    static let supabaseAnonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFxdGdtY3h6eXVxdXVuc3hvcW9nIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc3OTY4MzQsImV4cCI6MjA5MzM3MjgzNH0.3GiqYGGtVitINtRccUbEfE5wEd8wz70BdQUwwEvQ1gw"
     static let siteURL = "https://staging.tuno.no"
     #else
     static let supabaseURL = URL(string: "https://mqyeptwrfrhwxtysccnp.supabase.co")!
