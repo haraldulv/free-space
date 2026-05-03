@@ -26,34 +26,23 @@ struct ProfileView: View {
         VStack(spacing: 0) {
             Spacer()
 
-            // Lekent ikon-hero — matcher Tuno-stil med store grønne sirkler
-            ZStack {
-                Circle()
-                    .fill(Color.primary50)
-                    .frame(width: 140, height: 140)
-                Image(systemName: "person.crop.circle.fill")
-                    .font(.system(size: 72))
-                    .foregroundStyle(.primary600)
-            }
-            .padding(.bottom, 24)
-
-            VStack(spacing: 8) {
+            VStack(spacing: 10) {
                 Text("Velkommen til Tuno")
-                    .font(.system(size: 26, weight: .bold))
+                    .font(.system(size: 30, weight: .bold))
                     .foregroundStyle(.neutral900)
 
-                Text("Logg inn for å bestille plasser eller leie ut din egen")
-                    .font(.system(size: 15))
+                Text("Logg inn for å bestille plasser eller leie ut din egen.")
+                    .font(.system(size: 16))
                     .foregroundStyle(.neutral500)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
             }
-            .padding(.bottom, 32)
+            .padding(.bottom, 36)
 
             VStack(spacing: 12) {
                 Button { showLogin = true } label: {
                     Text("Logg inn")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
@@ -62,8 +51,8 @@ struct ProfileView: View {
                 }
 
                 Button { showRegister = true } label: {
-                    Text("Opprett konto")
-                        .font(.system(size: 16, weight: .semibold))
+                    Text("Registrer deg")
+                        .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(.primary700)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 16)
