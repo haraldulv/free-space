@@ -104,6 +104,7 @@
 		C25D7B4AA951AAD25EF7FD36 /* HostOnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */; };
 		C34BE6B3922A411B534762E6 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = A2D7BAFCCFBB3E087B97786C /* GoogleMaps */; };
 		C4FE3857BD5551454054263A /* SpotAvailabilityStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A32E4837D41534ECFB0953 /* SpotAvailabilityStep.swift */; };
+		C60EB46DC9B8BF101F0AEA3B /* HostListingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 754B0C091C634057A5340BEF /* HostListingCard.swift */; };
 		C76237D5837392B271673FB3 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD96E8DCCD58804E7D8E5F9 /* Theme.swift */; };
 		CA48E2836B846266237AD524 /* ImageCropPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 537CD1B9259B6FDD9DBA8E37 /* ImageCropPicker.swift */; };
 		CB46F5F9050B9E87910DA0CD /* PublishStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B65DE53742FC3A764A59D8C /* PublishStep.swift */; };
@@ -201,6 +202,7 @@
 		72853CC232D491F9F2AEC20B /* MainTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainTabView.swift; sourceTree = "<group>"; };
 		728D58EED8EDC45FC329EE6F /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
 		73BB47DB7ED9FBB036BC353A /* MessagesListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesListView.swift; sourceTree = "<group>"; };
+		754B0C091C634057A5340BEF /* HostListingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostListingCard.swift; sourceTree = "<group>"; };
 		75CE3CB213405AF521294421 /* TunoApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TunoApp.swift; sourceTree = "<group>"; };
 		76509C97338D49F5D4C1B30B /* ProfileCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileCalendarView.swift; sourceTree = "<group>"; };
 		77A959B31DE4731320F9A990 /* HostRequestsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostRequestsView.swift; sourceTree = "<group>"; };
@@ -431,6 +433,7 @@
 				AFCA79AFEA0E6F8136582CC1 /* FlowLayout.swift */,
 				145471A0700B346EE653A3F5 /* GoogleMapView.swift */,
 				04FEA73740940C702629F4D7 /* HostInntektCard.swift */,
+				754B0C091C634057A5340BEF /* HostListingCard.swift */,
 				537CD1B9259B6FDD9DBA8E37 /* ImageCropPicker.swift */,
 				5E4DD0720CB861E932C5AECA /* ImageDropDelegate.swift */,
 				4706792C26101B180693BACF /* InputField.swift */,
@@ -738,6 +741,7 @@
 				4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */,
 				EBFDAB56C4A57DC22BF9DE08 /* HostCalendarView.swift in Sources */,
 				E12BD446142FEAEF21A97826 /* HostInntektCard.swift in Sources */,
+				C60EB46DC9B8BF101F0AEA3B /* HostListingCard.swift in Sources */,
 				E2A1050E2706124715259F67 /* HostListingStatsView.swift in Sources */,
 				C25D7B4AA951AAD25EF7FD36 /* HostOnboardingFlowView.swift in Sources */,
 				E280A497623DB50EB8DB28E0 /* HostOnboardingService.swift in Sources */,

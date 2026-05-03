@@ -650,107 +650,24 @@ struct EditProfileView: View {
 struct MyListingsView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var listings: [Listing] = []
+    /// Inntekt host har tjent siste 30 dager per listing-id. Hentes asynkront
+    /// etter listings, så kortene viser inntekt-banner når data er klart.
+    @State private var monthlyEarnings: [String: Int] = [:]
     @State private var isLoading = true
     @State private var showCreateListing = false
     @State private var deleteTarget: Listing?
     @State private var qrTarget: Listing?
+
+    private static let serviceFee = 0.10
 
     var body: some View {
         Group {
             if isLoading {
                 ProgressView()
             } else if listings.isEmpty {
-                VStack(spacing: 16) {
-                    Image(systemName: "house")
-                        .font(.system(size: 40))
-                        .foregroundStyle(.neutral300)
-                    Text("Du har ingen annonser ennå")
-                        .foregroundStyle(.neutral500)
-                    Button {
-                        showCreateListing = true
-                    } label: {
-                        Text("Opprett annonse")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 24)
-                            .padding(.vertical, 12)
-                            .background(Color.primary600)
-                            .clipShape(RoundedRectangle(cornerRadius: 10))
-                    }
-                }
+                emptyState
             } else {
-                List {
-                    ForEach(listings) { listing in
-                        NavigationLink {
-                            EditListingRootView(listing: listing, onSaved: { updated in
-                                if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
-                                    listings[idx] = updated
-                                }
-                            })
-                        } label: {
-                            HStack(spacing: 12) {
-                                AsyncImage(url: URL(string: listing.images?.first ?? "")) { phase in
-                                    switch phase {
-                                    case .success(let image):
-                                        image.resizable().aspectRatio(contentMode: .fill)
-                                    default:
-                                        Rectangle().fill(Color.neutral100)
-                                    }
-                                }
-                                .frame(width: 60, height: 60)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                                .opacity(listing.isActive == true ? 1 : 0.5)
-
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(listing.internalName ?? listing.title)
-                                        .font(.system(size: 15, weight: .medium))
-                                        .lineLimit(1)
-                                    if let internalName = listing.internalName, !internalName.isEmpty {
-                                        Text(listing.title)
-                                            .font(.system(size: 12))
-                                            .foregroundStyle(.neutral500)
-                                            .lineLimit(1)
-                                    }
-                                    HStack(spacing: 4) {
-                                        Circle()
-                                            .fill(listing.isActive == true ? Color.green : Color.neutral400)
-                                            .frame(width: 8, height: 8)
-                                        Text(listing.isActive == true ? "Aktiv" : "Inaktiv")
-                                            .font(.system(size: 13))
-                                            .foregroundStyle(.neutral500)
-                                    }
-                                    let range = listing.displayPriceRange
-                                    if range.max > 0 {
-                                        Text("\(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "natt")")
-                                            .font(.system(size: 13))
-                                            .foregroundStyle(.primary600)
-                                    }
-                                }
-
-                                Spacer()
-
-                                Button {
-                                    qrTarget = listing
-                                } label: {
-                                    Image(systemName: "qrcode")
-                                        .font(.system(size: 16))
-                                        .foregroundStyle(.neutral500)
-                                }
-                                .buttonStyle(.plain)
-                                // Inntekts-knapp fjernet — inntekter vises i
-                                // egen Inntekter-fane under Profil.
-                            }
-                        }
-                        .swipeActions(edge: .trailing) {
-                            Button(role: .destructive) {
-                                deleteTarget = listing
-                            } label: {
-                                Label("Slett", systemImage: "trash")
-                            }
-                        }
-                    }
-                }
-                .listStyle(.plain)
+                listingsScrollView
             }
         }
         .navigationTitle("Mine annonser")
@@ -789,6 +706,64 @@ struct MyListingsView: View {
         }
         .task {
             await loadListings()
+            await loadMonthlyEarnings()
+        }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 16) {
+            Image(systemName: "house")
+                .font(.system(size: 40))
+                .foregroundStyle(.neutral300)
+            Text("Du har ingen annonser ennå")
+                .foregroundStyle(.neutral500)
+            Button {
+                showCreateListing = true
+            } label: {
+                Text("Opprett annonse")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(Color.primary600)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+        }
+    }
+
+    private var listingsScrollView: some View {
+        ScrollView {
+            LazyVStack(spacing: 24) {
+                ForEach(listings) { listing in
+                    NavigationLink {
+                        EditListingRootView(listing: listing, onSaved: { updated in
+                            if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
+                                listings[idx] = updated
+                            }
+                        })
+                    } label: {
+                        HostListingCard(
+                            listing: listing,
+                            monthlyEarnings: monthlyEarnings[listing.id]
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .contextMenu {
+                        Button {
+                            qrTarget = listing
+                        } label: {
+                            Label("Vis QR-kode", systemImage: "qrcode")
+                        }
+                        Button(role: .destructive) {
+                            deleteTarget = listing
+                        } label: {
+                            Label("Slett annonse", systemImage: "trash")
+                        }
+                    }
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
         }
     }
 
@@ -810,6 +785,35 @@ struct MyListingsView: View {
             print("Failed to load listings: \(error)")
         }
         isLoading = false
+    }
+
+    /// Henter siste 30 dagers bookinger for verten og aggregerer inntekt
+    /// per listing-id (etter Tunos service-fee). Brukes til "Tjent X kr"-
+    /// banneren på hvert kort.
+    @MainActor
+    private func loadMonthlyEarnings() async {
+        guard let userId = authManager.currentUser?.id else { return }
+        let cutoff = ISO8601DateFormatter().string(from: Date().addingTimeInterval(-30 * 24 * 3600))
+        do {
+            let bookings: [Booking] = try await supabase
+                .from("bookings")
+                .select()
+                .eq("host_id", value: userId.uuidString.lowercased())
+                .eq("status", value: "confirmed")
+                .eq("payment_status", value: "paid")
+                .gte("created_at", value: cutoff)
+                .execute()
+                .value
+            var totals: [String: Int] = [:]
+            for booking in bookings {
+                let hostShare = Int(Double(booking.totalPrice) * (1 - Self.serviceFee))
+                totals[booking.listingId, default: 0] += hostShare
+            }
+            monthlyEarnings = totals
+        } catch {
+            // Stille feil — inntekt-banneren skjules bare når dataen mangler.
+            print("Failed to load monthly earnings: \(error)")
+        }
     }
 
     private func deleteListing(_ listing: Listing) {
