@@ -135,6 +135,20 @@ final class AuthManager: ObservableObject {
                 redirectTo: URL(string: "no.tuno.app://auth/callback"),
                 launchFlow: launchFlow
             )
+
+            // Google leverer fullt navn i user_metadata. Upsert profilen så
+            // verten får navn i appen istedenfor en e-post-prefiks.
+            if let user = try? await supabase.auth.session.user {
+                let metadata = user.userMetadata
+                let fullName = metadata["full_name"]?.stringValue
+                    ?? metadata["name"]?.stringValue
+                if let fullName, !fullName.isEmpty {
+                    try? await supabase.from("profiles").upsert([
+                        "id": user.id.uuidString.lowercased(),
+                        "full_name": fullName,
+                    ]).execute()
+                }
+            }
         } catch {
             self.error = "Google-innlogging feilet"
         }
