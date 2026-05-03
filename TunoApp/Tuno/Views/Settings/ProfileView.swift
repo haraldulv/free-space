@@ -10,7 +10,6 @@ struct ProfileView: View {
     @State private var showRegister = false
     @State private var navigateToHostRequests = false
     @State private var navigateToNotifications = false
-    @State private var showSelfProfile = false
     @State private var showBecomeHost = false
 
     var body: some View {
@@ -90,17 +89,21 @@ struct ProfileView: View {
 
     private var loggedInView: some View {
         ScrollView {
-            VStack(spacing: 16) {
-                ProfileSummaryCard(
-                    name: authManager.profile?.fullName ?? authManager.displayName,
-                    avatarUrl: authManager.profile?.avatarUrl,
-                    location: authManager.profile?.location,
-                    trips: profileStats.tripCount,
-                    reviews: profileStats.reviewCount,
-                    rating: profileStats.rating,
-                    isVerified: authManager.isHost && (authManager.profile?.stripeOnboardingComplete ?? false)
-                )
-                .onTapGesture { showSelfProfile = true }
+            VStack(spacing: 24) {
+                NavigationLink {
+                    EditProfileView()
+                } label: {
+                    ProfileSummaryCard(
+                        name: authManager.profile?.fullName ?? authManager.displayName,
+                        avatarUrl: authManager.profile?.avatarUrl,
+                        location: authManager.profile?.location,
+                        trips: profileStats.tripCount,
+                        reviews: profileStats.reviewCount,
+                        rating: profileStats.rating,
+                        isVerified: authManager.isHost && (authManager.profile?.stripeOnboardingComplete ?? false)
+                    )
+                }
+                .buttonStyle(.plain)
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
 
@@ -166,17 +169,6 @@ struct ProfileView: View {
         }
         .navigationDestination(isPresented: $navigateToNotifications) {
             NotificationsView()
-        }
-        .sheet(isPresented: $showSelfProfile) {
-            if let userId = authManager.currentUser?.id {
-                PublicProfileView(
-                    hostId: userId.uuidString.lowercased(),
-                    initialName: authManager.profile?.fullName,
-                    initialAvatar: authManager.profile?.avatarUrl,
-                    initialJoinedYear: authManager.profile?.joinedYear,
-                    initialListingsCount: nil
-                )
-            }
         }
         .alert("Logg ut", isPresented: $showLogoutConfirm) {
             Button("Logg ut", role: .destructive) {
@@ -304,18 +296,18 @@ struct ProfileView: View {
         Button {
             showLogoutConfirm = true
         } label: {
-            HStack(spacing: 14) {
+            HStack(spacing: 16) {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
-                    .font(.system(size: 15))
+                    .font(.system(size: 17))
                     .foregroundStyle(.red)
-                    .frame(width: 24)
+                    .frame(width: 28)
                 Text("Logg ut")
-                    .font(.system(size: 15))
+                    .font(.system(size: 17))
                     .foregroundStyle(.red)
                 Spacer()
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 18)
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
@@ -327,15 +319,15 @@ struct ProfileView: View {
     private func sectionHeader(_ title: String) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.neutral500)
                 .textCase(.uppercase)
                 .tracking(0.5)
             Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 14)
-        .padding(.bottom, 4)
+        .padding(.horizontal, 18)
+        .padding(.top, 18)
+        .padding(.bottom, 6)
     }
 
     @ViewBuilder
@@ -343,30 +335,30 @@ struct ProfileView: View {
         NavigationLink {
             destination
         } label: {
-            HStack(spacing: 14) {
+            HStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 15))
+                    .font(.system(size: 17))
                     .foregroundStyle(.neutral600)
-                    .frame(width: 24)
+                    .frame(width: 28)
                 Text(label)
-                    .font(.system(size: 15))
+                    .font(.system(size: 17))
                     .foregroundStyle(.neutral900)
                 Spacer()
                 if let badge {
                     Text(badge)
-                        .font(.system(size: 11, weight: .bold))
+                        .font(.system(size: 12, weight: .bold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 2)
+                        .padding(.horizontal, 9)
+                        .padding(.vertical, 3)
                         .background(Color.red)
                         .clipShape(Capsule())
                 }
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12))
+                    .font(.system(size: 13))
                     .foregroundStyle(.neutral400)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 16)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)

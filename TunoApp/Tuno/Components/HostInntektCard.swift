@@ -18,43 +18,73 @@ struct HostInntektCard: View {
 
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Image(systemName: "chart.line.uptrend.xyaxis")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("Inntekt")
                         .font(.system(size: 14, weight: .semibold))
+                    Text("Inntekt")
+                        .font(.system(size: 15, weight: .semibold))
                 }
-                .foregroundStyle(.neutral600)
+                .foregroundStyle(.primary700)
                 Text(monthName)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral600)
+                if let trend = trendLabel {
+                    HStack(spacing: 3) {
+                        Image(systemName: trend.isPositive ? "arrow.up.right" : "arrow.down.right")
+                            .font(.system(size: 10, weight: .bold))
+                        Text(trend.text)
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(trend.isPositive ? .green : .red)
+                    .padding(.top, 2)
+                }
             }
             .fixedSize()
 
             if !recentMonths.isEmpty {
                 miniChart
-                    .frame(height: 44)
+                    .frame(height: 56)
                     .frame(maxWidth: .infinity)
             } else {
                 Spacer()
             }
 
-            VStack(alignment: .trailing, spacing: 3) {
+            VStack(alignment: .trailing, spacing: 4) {
                 Text(formatKr(netIncome))
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 28, weight: .bold))
                     .foregroundStyle(.neutral900)
                 Text(bookingText)
-                    .font(.system(size: 11))
+                    .font(.system(size: 12))
                     .foregroundStyle(.neutral500)
             }
             .fixedSize()
         }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 18)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
+        .padding(.horizontal, 22)
+        .padding(.vertical, 22)
+        .background(
+            LinearGradient(
+                colors: [Color.primary50, Color.white],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        )
+        .clipShape(RoundedRectangle(cornerRadius: 20))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.primary200.opacity(0.6), lineWidth: 0.5))
+    }
+
+    /// Beregner endring fra forrige måned. Returnerer nil hvis vi mangler
+    /// minst to måneder med data eller forrige måned var 0 (kan ikke regne %).
+    private var trendLabel: (text: String, isPositive: Bool)? {
+        guard recentMonths.count >= 2 else { return nil }
+        let prev = recentMonths[recentMonths.count - 2].earnings
+        let curr = recentMonths.last?.earnings ?? netIncome
+        guard prev > 0 else { return nil }
+        let diff = curr - prev
+        let percent = Int((Double(abs(diff)) / Double(prev)) * 100)
+        let prevLabel = recentMonths[recentMonths.count - 2].shortLabel
+        let arrow = diff >= 0 ? "+" : "-"
+        return ("\(arrow)\(percent)% vs \(prevLabel)", diff >= 0)
     }
 
     private var miniChart: some View {

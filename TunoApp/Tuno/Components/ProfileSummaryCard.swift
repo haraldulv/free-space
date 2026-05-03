@@ -15,16 +15,21 @@ struct ProfileSummaryCard: View {
         name.split(separator: " ").first.map(String.init) ?? name
     }
 
+    private var hasRating: Bool {
+        if let rating, rating > 0, reviews > 0 { return true }
+        return false
+    }
+
     private var ratingDisplay: String {
-        if let rating, reviews > 0 {
+        if let rating, hasRating {
             return String(format: "%.1f", rating).replacingOccurrences(of: ".", with: ",")
         }
-        return "0"
+        return "Ny"
     }
 
     var body: some View {
         HStack(alignment: .center, spacing: 20) {
-            VStack(spacing: 10) {
+            VStack(spacing: 12) {
                 Group {
                     if let avatarUrl, let url = URL(string: avatarUrl) {
                         CachedAsyncImage(url: url) { image in
@@ -32,19 +37,19 @@ struct ProfileSummaryCard: View {
                         } placeholder: {
                             Circle().fill(Color.primary100).overlay(
                                 Text(String(firstName.prefix(1)).uppercased())
-                                    .font(.system(size: 28, weight: .semibold))
+                                    .font(.system(size: 36, weight: .semibold))
                                     .foregroundStyle(.primary600)
                             )
                         }
                     } else {
                         Circle().fill(Color.primary100).overlay(
                             Text(String(firstName.prefix(1)).uppercased())
-                                .font(.system(size: 28, weight: .semibold))
+                                .font(.system(size: 36, weight: .semibold))
                                 .foregroundStyle(.primary600)
                         )
                     }
                 }
-                .frame(width: 96, height: 96)
+                .frame(width: 120, height: 120)
                 .clipShape(Circle())
                 .overlay(alignment: .bottomTrailing) {
                     if isVerified {
@@ -55,12 +60,12 @@ struct ProfileSummaryCard: View {
 
                 VStack(spacing: 2) {
                     Text(firstName)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(.neutral900)
                         .lineLimit(1)
                     if let location, !location.isEmpty {
                         Text(location)
-                            .font(.system(size: 13))
+                            .font(.system(size: 14))
                             .foregroundStyle(.neutral500)
                             .lineLimit(1)
                     }
@@ -69,11 +74,15 @@ struct ProfileSummaryCard: View {
             .frame(maxWidth: .infinity)
 
             VStack(spacing: 0) {
-                statRow(value: "\(trips)", label: "Turer")
+                statRow(value: "\(trips)", label: trips == 1 ? "Booking" : "Bookinger")
                 Divider().padding(.vertical, 2)
                 statRow(value: "\(reviews)", label: reviews == 1 ? "Anmeldelse" : "Anmeldelser")
                 Divider().padding(.vertical, 2)
-                statRow(value: ratingDisplay, label: "Vurdering", icon: "star.fill")
+                statRow(
+                    value: ratingDisplay,
+                    label: "Vurdering",
+                    icon: hasRating ? "star.fill" : nil
+                )
             }
             .frame(maxWidth: .infinity)
         }
@@ -106,21 +115,21 @@ struct ProfileSummaryCard: View {
     @ViewBuilder
     private func statRow(value: String, label: String, icon: String? = nil) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 3) {
+            HStack(spacing: 4) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(.neutral900)
                 }
                 Text(value)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.neutral900)
             }
             Text(label)
-                .font(.system(size: 13))
+                .font(.system(size: 14))
                 .foregroundStyle(.neutral600)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 6)
+        .padding(.vertical, 8)
     }
 }
