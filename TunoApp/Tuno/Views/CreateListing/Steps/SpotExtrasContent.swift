@@ -195,6 +195,7 @@ struct SpotExtrasContent: View {
                             .foregroundStyle(.neutral900)
                         TextField("F.eks. Strøm 16A", text: $customName)
                             .textInputAutocapitalization(.sentences)
+                            .submitLabel(.done)
                             .padding(14)
                             .background(Color.neutral50)
                             .clipShape(RoundedRectangle(cornerRadius: 12))

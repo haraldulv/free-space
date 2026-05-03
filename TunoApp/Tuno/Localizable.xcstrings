@@ -283,6 +283,7 @@
       }
     },
     "%@ plasser" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -2834,6 +2835,9 @@
     "Helg-pris" : {
 
     },
+    "Henter utbetalingsstatus..." : {
+
+    },
     "Hjelp" : {
 
     },
@@ -3111,6 +3115,9 @@
     "Ingen bånd å variere prisen på" : {
 
     },
+    "Ingen bank-konto registrert. Pengene blir liggende til du legger inn IBAN." : {
+
+    },
     "Ingen bestillinger" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3289,6 +3296,9 @@
           }
         }
       }
+    },
+    "Ingen utbetalinger ennå. Når en gjest har vært innom plassen din i 24 timer, sender vi pengene til Stripe — og Stripe utbetaler videre til banken din." : {
+
     },
     "Ingen varslinger ennå" : {
 
@@ -5035,6 +5045,9 @@
         }
       }
     },
+    "På vei inn" : {
+
+    },
     "Parkering" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6584,6 +6597,9 @@
     "Til" : {
 
     },
+    "Til bank •••• %@" : {
+
+    },
     "Til Mine annonser" : {
 
     },
@@ -6978,6 +6994,12 @@
           }
         }
       }
+    },
+    "Utbetaling er pauset" : {
+
+    },
+    "Utbetalinger" : {
+
     },
     "Utforsk" : {
       "extractionState" : "manual",

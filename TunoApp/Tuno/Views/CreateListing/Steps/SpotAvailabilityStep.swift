@@ -46,8 +46,14 @@ struct SpotAvailabilityStep: View {
                 basePrice: 0,
                 prefill: wrap.prefill,
                 mode: .availability
-            ) { dayMask, startHour, endHour, _ in
-                addBand(dayMask: dayMask, startHour: startHour, endHour: endHour)
+            ) { dayMask, startHour, startMinute, endHour, endMinute, _ in
+                addBand(
+                    dayMask: dayMask,
+                    startHour: startHour,
+                    startMinute: startMinute,
+                    endHour: endHour,
+                    endMinute: endMinute
+                )
             }
         }
     }
@@ -148,10 +154,6 @@ struct SpotAvailabilityStep: View {
 
             // Hurtigvalg
             VStack(alignment: .leading, spacing: 8) {
-                Text("Legg til")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.neutral500)
-                    .textCase(.uppercase)
                 ForEach(prefills) { prefill in
                     Button {
                         sheetWrapper = PrefillSheetWrapper(prefill: prefill)
@@ -182,7 +184,7 @@ struct SpotAvailabilityStep: View {
                     HStack(spacing: 8) {
                         Image(systemName: "plus")
                             .font(.system(size: 14, weight: .bold))
-                        Text("Eget bånd")
+                        Text("Ny åpningstid")
                             .font(.system(size: 14, weight: .semibold))
                     }
                     .foregroundStyle(.primary700)
@@ -209,7 +211,7 @@ struct SpotAvailabilityStep: View {
                 Text(daysLabel(mask: band.dayMask))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.neutral900)
-                Text("\(twoDigit(band.startHour)):00 – \(twoDigit(band.endHour)):00")
+                Text(band.timeDisplayLabel)
                     .font(.system(size: 12))
                     .foregroundStyle(.neutral500)
             }
@@ -247,13 +249,15 @@ struct SpotAvailabilityStep: View {
         form.setAvailability(avail, for: id)
     }
 
-    private func addBand(dayMask: Int, startHour: Int, endHour: Int) {
+    private func addBand(dayMask: Int, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
         guard let id = spotId else { return }
         var avail = form.availability(for: id)
         avail.bands.append(WizardPricingBand(
             dayMask: dayMask,
             startHour: startHour,
+            startMinute: startMinute,
             endHour: endHour,
+            endMinute: endMinute,
             price: 0,
             weekScope: .allWeeks
         ))

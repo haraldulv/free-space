@@ -93,8 +93,17 @@ struct PricingRulesEditorView: View {
                 AddHourlyBandSheet(
                     basePrice: basePrice,
                     prefill: bandSheetPrefill,
-                ) { dayMask, startHour, endHour, price in
-                    Task { await addHourlyBand(dayMask: dayMask, startHour: startHour, endHour: endHour, price: price) }
+                ) { dayMask, startHour, startMinute, endHour, endMinute, price in
+                    Task {
+                        await addHourlyBand(
+                            dayMask: dayMask,
+                            startHour: startHour,
+                            startMinute: startMinute,
+                            endHour: endHour,
+                            endMinute: endMinute,
+                            price: price
+                        )
+                    }
                 }
             }
         }
@@ -472,7 +481,14 @@ struct PricingRulesEditorView: View {
         }
     }
 
-    private func addHourlyBand(dayMask: Int, startHour: Int, endHour: Int, price: Int) async {
+    private func addHourlyBand(
+        dayMask: Int,
+        startHour: Int,
+        startMinute: Int,
+        endHour: Int,
+        endMinute: Int,
+        price: Int
+    ) async {
         error = nil
         saving = true
         defer { saving = false }
@@ -481,7 +497,9 @@ struct PricingRulesEditorView: View {
                 listingId: listingId,
                 dayMask: dayMask,
                 startHour: startHour,
+                startMinute: startMinute,
                 endHour: endHour,
+                endMinute: endMinute,
                 price: price,
             )
             await load()
@@ -562,12 +580,13 @@ struct AddHourlyBandSheet: View {
     let basePrice: Int
     let prefill: BandPrefill?
     var mode: Mode = .pricing
-    let onSave: (_ dayMask: Int, _ startHour: Int, _ endHour: Int, _ price: Int) -> Void
+    let onSave: (_ dayMask: Int, _ startHour: Int, _ startMinute: Int, _ endHour: Int, _ endMinute: Int, _ price: Int) -> Void
 
     @Environment(\.dismiss) var dismiss
     @State private var selectedDays: Set<Int> = []
-    @State private var startHour: Int = 9
-    @State private var endHour: Int = 17
+    /// Total minutter siden midnatt. 0 = 00:00, 1440 = 24:00. Steg 30.
+    @State private var startMinutes: Int = 9 * 60
+    @State private var endMinutes: Int = 17 * 60
     @State private var priceText: String = ""
 
     private let dayNames = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"]
@@ -579,9 +598,9 @@ struct AddHourlyBandSheet: View {
     private var canSave: Bool {
         if mode == .pricing {
             guard let p = Int(priceText), p > 0 else { return false }
-            return !selectedDays.isEmpty && endHour > startHour
+            return !selectedDays.isEmpty && endMinutes > startMinutes
         }
-        return !selectedDays.isEmpty && endHour > startHour
+        return !selectedDays.isEmpty && endMinutes > startMinutes
     }
 
     var body: some View {
@@ -589,6 +608,7 @@ struct AddHourlyBandSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     daysSection
+                    quickButtonsSection
                     hoursSection
                     if mode == .pricing {
                         priceSection
@@ -596,7 +616,7 @@ struct AddHourlyBandSheet: View {
                 }
                 .padding(16)
             }
-            .navigationTitle(prefill?.label ?? (mode == .availability ? "Nytt åpningstid-bånd" : "Nytt bånd"))
+            .navigationTitle(prefill?.label ?? (mode == .availability ? "Ny åpningstid" : "Nytt bånd"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -605,7 +625,14 @@ struct AddHourlyBandSheet: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Lagre") {
                         let price = mode == .pricing ? (Int(priceText) ?? 0) : 0
-                        onSave(dayMask, startHour, endHour, price)
+                        onSave(
+                            dayMask,
+                            startMinutes / 60,
+                            startMinutes % 60,
+                            endMinutes / 60,
+                            endMinutes % 60,
+                            price
+                        )
                         dismiss()
                     }
                     .disabled(!canSave)
@@ -613,12 +640,14 @@ struct AddHourlyBandSheet: View {
                 }
             }
         }
+        .presentationDetents([.fraction(0.75), .large])
+        .presentationDragIndicator(.visible)
         .onAppear {
             if let prefill {
                 // Bygg Set fra dayMask
                 selectedDays = Set((0..<7).filter { (prefill.dayMask & (1 << $0)) != 0 })
-                startHour = prefill.startHour
-                endHour = prefill.endHour
+                startMinutes = prefill.startHour * 60
+                endMinutes = prefill.endHour * 60
             }
         }
     }
@@ -649,16 +678,56 @@ struct AddHourlyBandSheet: View {
         }
     }
 
+    /// Tre hurtigknapper som setter typiske tids-intervall i ett tap.
+    private var quickButtonsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Hurtigvalg")
+                .font(.system(size: 14, weight: .semibold))
+            HStack(spacing: 8) {
+                quickButton(label: "Hele døgnet", icon: "clock.fill", start: 0, end: 24 * 60)
+                quickButton(label: "I arbeidstiden", icon: "briefcase.fill", start: 8 * 60, end: 17 * 60)
+                quickButton(label: "Etter arbeidstid", icon: "moon.fill", start: 17 * 60, end: 23 * 60)
+            }
+        }
+    }
+
+    private func quickButton(label: String, icon: String, start: Int, end: Int) -> some View {
+        let active = startMinutes == start && endMinutes == end
+        return Button {
+            startMinutes = start
+            endMinutes = end
+        } label: {
+            VStack(spacing: 6) {
+                Image(systemName: icon)
+                    .font(.system(size: 16))
+                Text(label)
+                    .font(.system(size: 12, weight: .medium))
+                    .multilineTextAlignment(.center)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .padding(.horizontal, 6)
+            .foregroundStyle(active ? .white : .neutral700)
+            .background(active ? Color.primary600 : Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(active ? Color.primary600 : Color.neutral200, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private var hoursSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Klokkeslett")
                 .font(.system(size: 14, weight: .semibold))
             HStack(spacing: 16) {
-                HourWheelPicker(label: "Fra", hour: $startHour, range: 0...23)
-                    .onChange(of: startHour) { _, newVal in
-                        if endHour <= newVal { endHour = min(24, newVal + 1) }
+                BandTimeWheelPicker(label: "Fra", minutes: $startMinutes, range: 0...(24 * 60 - 30))
+                    .onChange(of: startMinutes) { _, newVal in
+                        if endMinutes <= newVal { endMinutes = min(24 * 60, newVal + 30) }
                     }
-                HourWheelPicker(label: "Til", hour: $endHour, range: max(1, startHour + 1)...24)
+                BandTimeWheelPicker(label: "Til", minutes: $endMinutes, range: max(30, startMinutes + 30)...(24 * 60))
             }
         }
     }
@@ -679,34 +748,41 @@ struct AddHourlyBandSheet: View {
             }
         }
     }
-
-    private func twoDigit(_ n: Int) -> String {
-        n < 10 ? "0\(n)" : "\(n)"
-    }
 }
 
-/// Rullehjul for klokketid (heltimer). Brukes i AddHourlyBandSheet.
-struct HourWheelPicker: View {
+/// Rullehjul for klokketid med 30-min presisjon. Binder Int (totalt minutter
+/// siden midnatt). Brukes i AddHourlyBandSheet.
+struct BandTimeWheelPicker: View {
     let label: String
-    @Binding var hour: Int
+    @Binding var minutes: Int
     let range: ClosedRange<Int>
+
+    private var values: [Int] {
+        stride(from: range.lowerBound, through: range.upperBound, by: 30).map { $0 }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label)
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.neutral500)
-            Picker("", selection: $hour) {
-                ForEach(Array(range), id: \.self) { h in
-                    Text(String(format: "%02d:00", h)).tag(h)
+            Picker("", selection: $minutes) {
+                ForEach(values, id: \.self) { m in
+                    Text(formatTime(m)).tag(m)
                 }
             }
             .pickerStyle(.wheel)
-            .frame(width: 100, height: 110)
+            .frame(width: 110, height: 110)
             .clipped()
             .background(Color.neutral50)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
         }
+    }
+
+    private func formatTime(_ m: Int) -> String {
+        let h = m / 60
+        let mm = m % 60
+        return String(format: "%02d:%02d", h, mm)
     }
 }
