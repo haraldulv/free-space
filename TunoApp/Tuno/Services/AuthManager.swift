@@ -136,17 +136,26 @@ final class AuthManager: ObservableObject {
                 launchFlow: launchFlow
             )
 
-            // Google leverer fullt navn i user_metadata. Upsert profilen så
-            // verten får navn i appen istedenfor en e-post-prefiks.
+            // Google leverer fullt navn + profilbilde i user_metadata.
+            // Upsert profilen så verten får navn + bilde i appen.
             if let user = try? await supabase.auth.session.user {
                 let metadata = user.userMetadata
                 let fullName = metadata["full_name"]?.stringValue
                     ?? metadata["name"]?.stringValue
+                let avatarURL = metadata["avatar_url"]?.stringValue
+                    ?? metadata["picture"]?.stringValue
                 if let fullName, !fullName.isEmpty {
-                    try? await supabase.from("profiles").upsert([
+                    var payload: [String: String] = [
                         "id": user.id.uuidString.lowercased(),
                         "full_name": fullName,
-                    ]).execute()
+                    ]
+                    if let avatarURL, !avatarURL.isEmpty {
+                        payload["avatar_url"] = avatarURL
+                    }
+                    try? await supabase.from("profiles").upsert(payload).execute()
+                    // Refresh in-memory profile fordi auth-listeneren
+                    // kjørte loadProfile() før vi rakk å upserte.
+                    await loadProfile()
                 }
             }
         } catch {
@@ -178,6 +187,9 @@ final class AuthManager: ObservableObject {
                         "id": user.id.uuidString,
                         "full_name": fullName,
                     ]).execute()
+                    // Refresh in-memory profile fordi auth-listeneren
+                    // kjørte loadProfile() før vi rakk å upserte.
+                    await loadProfile()
                 }
             }
         } catch {
