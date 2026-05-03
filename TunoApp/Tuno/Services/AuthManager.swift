@@ -96,7 +96,7 @@ final class AuthManager: ObservableObject {
                 // arbeid på klient: viser "Verifisert!"-melding +
                 // "Åpne Tuno-appen"-knapp som åpner appen via custom
                 // scheme + auto-trigger på iOS.
-                redirectTo: URL(string: "https://www.tuno.no/auth/verified")
+                redirectTo: URL(string: "\(AppConfig.siteURL)/auth/verified")
             )
 
             // Supabase returnerer ikke en eksplisitt feil hvis e-posten
