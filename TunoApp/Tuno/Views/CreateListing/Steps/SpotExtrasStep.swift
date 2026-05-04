@@ -11,6 +11,11 @@ struct SpotExtrasStep: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         spotHeader(index: index)
+                        if index > 0 {
+                            CopyFromPreviousSpotButton(label: "Bruk samme tillegg som plass \(index)") {
+                                copyExtrasFromPrevious(currentIndex: index)
+                            }
+                        }
                         SpotExtrasContent(form: form, index: index)
                     }
                     .padding(.horizontal, 24)
@@ -36,6 +41,15 @@ struct SpotExtrasStep: View {
                 .foregroundStyle(.neutral500)
                 .lineSpacing(2)
         }
+    }
+
+    private func copyExtrasFromPrevious(currentIndex: Int) {
+        let prev = currentIndex - 1
+        guard
+            form.spotMarkers.indices.contains(prev),
+            form.spotMarkers.indices.contains(currentIndex)
+        else { return }
+        form.spotMarkers[currentIndex].extras = form.spotMarkers[prev].extras
     }
 }
 

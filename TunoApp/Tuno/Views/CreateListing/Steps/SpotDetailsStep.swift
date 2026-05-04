@@ -11,6 +11,11 @@ struct SpotDetailsStep: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         spotHeader(index: index)
+                        if index > 0 {
+                            CopyFromPreviousSpotButton(label: "Bruk samme detaljer som plass \(index)") {
+                                copyFromPrevious(currentIndex: index)
+                            }
+                        }
                         SpotVehicleContent(form: form, index: index)
                     }
                     .padding(.horizontal, 24)
@@ -38,5 +43,17 @@ struct SpotDetailsStep: View {
                 .foregroundStyle(.neutral500)
                 .lineSpacing(2)
         }
+    }
+
+    private func copyFromPrevious(currentIndex: Int) {
+        let prev = currentIndex - 1
+        guard
+            form.spotMarkers.indices.contains(prev),
+            form.spotMarkers.indices.contains(currentIndex)
+        else { return }
+        let src = form.spotMarkers[prev]
+        form.spotMarkers[currentIndex].description = src.description
+        form.spotMarkers[currentIndex].vehicleType = src.vehicleType
+        form.spotMarkers[currentIndex].vehicleMaxLength = src.vehicleMaxLength
     }
 }

@@ -104,6 +104,7 @@
 		C20A38400F387BEF58A71667 /* HostRequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 77A959B31DE4731320F9A990 /* HostRequestsView.swift */; };
 		C25D7B4AA951AAD25EF7FD36 /* HostOnboardingFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */; };
 		C34BE6B3922A411B534762E6 /* GoogleMaps in Frameworks */ = {isa = PBXBuildFile; productRef = A2D7BAFCCFBB3E087B97786C /* GoogleMaps */; };
+		C3F9CCE3F4E545C318EF46A4 /* CopyFromPreviousSpotButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = E23C09D01ADF5D05EB1EEFBB /* CopyFromPreviousSpotButton.swift */; };
 		C4FE3857BD5551454054263A /* SpotAvailabilityStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A32E4837D41534ECFB0953 /* SpotAvailabilityStep.swift */; };
 		C60EB46DC9B8BF101F0AEA3B /* HostListingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 754B0C091C634057A5340BEF /* HostListingCard.swift */; };
 		C76237D5837392B271673FB3 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = DAD96E8DCCD58804E7D8E5F9 /* Theme.swift */; };
@@ -256,6 +257,7 @@
 		DF1A051046E94B7F1B495563 /* BandOverlap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandOverlap.swift; sourceTree = "<group>"; };
 		DF8A3195D726FC00B6EA4A3D /* InstantBookingStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantBookingStep.swift; sourceTree = "<group>"; };
 		E168ECC061FD115C52320C1F /* SpotDetailsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotDetailsStep.swift; sourceTree = "<group>"; };
+		E23C09D01ADF5D05EB1EEFBB /* CopyFromPreviousSpotButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyFromPreviousSpotButton.swift; sourceTree = "<group>"; };
 		E2C215EEFA3B9EF4585A8AE8 /* Tuno.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tuno.entitlements; sourceTree = "<group>"; };
 		E526C4504EA007084624767F /* SpotExtrasStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotExtrasStep.swift; sourceTree = "<group>"; };
 		E87B8810AD3DEB96DEDF5A94 /* LaunchScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchScreen.swift; sourceTree = "<group>"; };
@@ -576,6 +578,7 @@
 				CE00FBD7C2654A066869B1E1 /* AmenitiesStep.swift */,
 				EB9D8E4A793C78DF69B126D5 /* CalendarStep.swift */,
 				8BA98D1AD8A6E41FE60C2C91 /* CategoryStep.swift */,
+				E23C09D01ADF5D05EB1EEFBB /* CopyFromPreviousSpotButton.swift */,
 				6D08232C248CE64924B19723 /* DescriptionStep.swift */,
 				DF8A3195D726FC00B6EA4A3D /* InstantBookingStep.swift */,
 				D04AE83B5E261BA41D246388 /* MarkSpotsStep.swift */,
@@ -733,6 +736,7 @@
 				AA7B4CA530ABE701BE17F593 /* CategoryStep.swift in Sources */,
 				23E22E74F79A0D6B738FFD7F /* ChatService.swift in Sources */,
 				7AF18FF996F0B291CFB71478 /* ChatView.swift in Sources */,
+				C3F9CCE3F4E545C318EF46A4 /* CopyFromPreviousSpotButton.swift in Sources */,
 				414ACCF50897E595892BBE9B /* CreateListingView.swift in Sources */,
 				12663C1EA3152BC7C6440902 /* CustomTabBar.swift in Sources */,
 				1C32E4CA70F86F9BAF6C8EA2 /* DescriptionStep.swift in Sources */,

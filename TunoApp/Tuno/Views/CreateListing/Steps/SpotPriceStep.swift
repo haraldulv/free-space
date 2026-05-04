@@ -42,27 +42,9 @@ struct SpotPriceStep: View {
 
     @ViewBuilder
     private func copyFromPreviousButton(currentIndex: Int) -> some View {
-        let prevIndex = currentIndex - 1
-        Button {
+        CopyFromPreviousSpotButton(label: "Bruk samme pris som plass \(currentIndex)") {
             copyPriceFromPrevious(currentIndex: currentIndex)
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "doc.on.doc")
-                    .font(.system(size: 14, weight: .semibold))
-                Text("Bruk samme pris som plass \(prevIndex + 1)")
-                    .font(.system(size: 14, weight: .semibold))
-                Spacer()
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 12, weight: .bold))
-            }
-            .foregroundStyle(.primary700)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color.primary50)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary200, lineWidth: 1))
         }
-        .buttonStyle(.plain)
     }
 
     private func copyPriceFromPrevious(currentIndex: Int) {
