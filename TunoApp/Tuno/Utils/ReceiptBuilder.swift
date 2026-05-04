@@ -73,23 +73,19 @@ enum ReceiptBuilder {
 
     private static func formatTimestamp(_ iso: String?) -> String? {
         guard let iso else { return nil }
-        let f = ISO8601DateFormatter()
-        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        if let d = f.date(from: iso) {
-            return formatDate(DateFormatter().also { $0.dateFormat = "yyyy-MM-dd"; $0.timeZone = TimeZone(identifier: "Europe/Oslo") }.string(from: d))
-        }
-        let f2 = ISO8601DateFormatter()
-        f2.formatOptions = [.withInternetDateTime]
-        if let d = f2.date(from: iso) {
-            return formatDate(DateFormatter().also { $0.dateFormat = "yyyy-MM-dd"; $0.timeZone = TimeZone(identifier: "Europe/Oslo") }.string(from: d))
+        let parsers: [ISO8601DateFormatter] = [
+            { let f = ISO8601DateFormatter(); f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]; return f }(),
+            { let f = ISO8601DateFormatter(); f.formatOptions = [.withInternetDateTime]; return f }(),
+        ]
+        for f in parsers {
+            if let date = f.date(from: iso) {
+                let out = DateFormatter()
+                out.dateFormat = "d. MMM yyyy"
+                out.locale = Locale(identifier: "nb_NO")
+                out.timeZone = TimeZone(identifier: "Europe/Oslo")
+                return out.string(from: date)
+            }
         }
         return nil
-    }
-}
-
-private extension DateFormatter {
-    func also(_ block: (DateFormatter) -> Void) -> DateFormatter {
-        block(self)
-        return self
     }
 }
