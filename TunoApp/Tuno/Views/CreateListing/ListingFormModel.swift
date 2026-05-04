@@ -345,6 +345,19 @@ final class ListingFormModel: ObservableObject {
         }
     }
 
+    /// Hopp direkte til et bestemt steg. Brukes fra PublishStep for hurtignav.
+    /// `spotIndex` settes når mål-steget er en mini-wizard-step (5-9).
+    func goTo(step: Int, spotIndex: Int? = nil) {
+        guard step >= 0, step < totalSteps else { return }
+        error = nil
+        withAnimation(.easeInOut(duration: 0.32)) {
+            if let spotIndex, spotMarkers.indices.contains(spotIndex) {
+                currentSpotIndex = spotIndex
+            }
+            currentStep = step
+        }
+    }
+
     func skip() {
         // Brukes på MessagesStep ("Jeg tar det senere")
         skippedMessages = true

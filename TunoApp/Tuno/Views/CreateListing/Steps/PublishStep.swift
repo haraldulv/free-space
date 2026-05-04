@@ -113,24 +113,38 @@ struct PublishStep: View {
 
     private var summaryGrid: some View {
         VStack(spacing: 0) {
-            summaryRow(icon: "tent.fill", label: "Type", value: form.category?.displayName ?? "—")
+            summaryRow(icon: "tent.fill", label: "Type", value: form.category?.displayName ?? "—") {
+                form.goTo(step: 1)
+            }
             Divider().padding(.leading, 56)
             summaryRow(icon: "mappin.and.ellipse", label: "Plasser",
-                       value: form.spotMarkers.count == 1 ? "1 plass" : "\(form.spotMarkers.count) plasser")
+                       value: form.spotMarkers.count == 1 ? "1 plass" : "\(form.spotMarkers.count) plasser") {
+                form.goTo(step: 3)
+            }
             Divider().padding(.leading, 56)
-            summaryRow(icon: "tag.fill", label: "Pris", value: priceSummary)
+            summaryRow(icon: "tag.fill", label: "Pris", value: priceSummary) {
+                form.goTo(step: 7, spotIndex: 0)
+            }
             Divider().padding(.leading, 56)
             summaryRow(
                 icon: form.instantBooking ? "bolt.fill" : "hand.raised.fill",
                 label: "Booking",
                 value: form.instantBooking ? "Direktebooking" : "Godkjenn først"
-            )
+            ) {
+                form.goTo(step: 11)
+            }
             Divider().padding(.leading, 56)
             summaryRow(icon: "photo.stack", label: "Bilder",
-                       value: form.imageURLs.isEmpty ? "Ingen" : "\(form.imageURLs.count)")
-            Divider().padding(.leading, 56)
-            summaryRow(icon: "calendar", label: "Blokkerte datoer",
-                       value: form.blockedDates.isEmpty ? "Ingen" : "\(form.blockedDates.count)")
+                       value: form.imageURLs.isEmpty ? "Ingen" : "\(form.imageURLs.count)") {
+                form.goTo(step: 13)
+            }
+            if form.category == .camping {
+                Divider().padding(.leading, 56)
+                summaryRow(icon: "calendar", label: "Blokkerte datoer",
+                           value: form.blockedDates.isEmpty ? "Ingen" : "\(form.blockedDates.count)") {
+                    form.goTo(step: 16)
+                }
+            }
         }
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -145,25 +159,37 @@ struct PublishStep: View {
         return lo == hi ? "\(lo) kr/\(unitText)" : "\(lo)–\(hi) kr/\(unitText)"
     }
 
-    private func summaryRow(icon: String, label: String, value: String) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle().fill(Color.primary50).frame(width: 32, height: 32)
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.primary700)
+    private func summaryRow(icon: String, label: String, value: String, onTap: (() -> Void)? = nil) -> some View {
+        Button {
+            onTap?()
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(Color.primary50).frame(width: 32, height: 32)
+                    Image(systemName: icon)
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.primary700)
+                }
+                Text(label)
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral600)
+                Spacer()
+                Text(value)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .lineLimit(1)
+                if onTap != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.neutral400)
+                }
             }
-            Text(label)
-                .font(.system(size: 14))
-                .foregroundStyle(.neutral600)
-            Spacer()
-            Text(value)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.neutral900)
-                .lineLimit(1)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .contentShape(Rectangle())
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .buttonStyle(.plain)
+        .disabled(onTap == nil)
     }
 
     /// Per-plass oppsummering — én rad per plass med kjøretøytyper og pris.
@@ -178,7 +204,13 @@ struct PublishStep: View {
 
             VStack(spacing: 0) {
                 ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { index, spot in
-                    spotRow(index: index, spot: spot)
+                    Button {
+                        form.goTo(step: 5, spotIndex: index)
+                    } label: {
+                        spotRow(index: index, spot: spot)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
                     if index < form.spotMarkers.count - 1 {
                         Divider().padding(.leading, 56)
                     }
@@ -264,18 +296,24 @@ struct PublishStep: View {
                 .textCase(.uppercase)
                 .padding(.leading, 4)
 
-            FlowLayout(spacing: 8) {
-                ForEach(Array(form.selectedAmenities), id: \.self) { rawValue in
-                    if let amenity = AmenityType(rawValue: rawValue) {
-                        amenityChip(amenity)
+            Button {
+                form.goTo(step: 14)
+            } label: {
+                FlowLayout(spacing: 8) {
+                    ForEach(Array(form.selectedAmenities), id: \.self) { rawValue in
+                        if let amenity = AmenityType(rawValue: rawValue) {
+                            amenityChip(amenity)
+                        }
                     }
                 }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 1))
+                .contentShape(Rectangle())
             }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 1))
+            .buttonStyle(.plain)
         }
     }
 
