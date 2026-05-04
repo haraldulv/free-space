@@ -6,7 +6,9 @@
 -- Vi sletter bare profile + relatert data og signOut'er brukeren — det er
 -- tilstrekkelig for App Store-konformitet og webens nåværende oppførsel.
 
-CREATE POLICY IF NOT EXISTS "Users can delete own profile"
+DROP POLICY IF EXISTS "Users can delete own profile" ON public.profiles;
+
+CREATE POLICY "Users can delete own profile"
 ON public.profiles
 FOR DELETE
 TO authenticated

@@ -337,16 +337,6 @@
         }
       }
     },
-    "%@:00 – %@:00" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@:00 – %2$@:00"
-          }
-        }
-      }
-    },
     "%@/%@" : {
       "localizations" : {
         "nb" : {
@@ -980,6 +970,9 @@
       }
     },
     "Beregning" : {
+
+    },
+    "Beskriv plassen kort og velg hvilke kjøretøy som passer. Tenk på dybde, høyde og tilgjengelighet." : {
 
     },
     "Beskrivelse" : {
@@ -1739,9 +1732,6 @@
       }
     },
     "Egendefinerte tillegg" : {
-
-    },
-    "Eget bånd" : {
 
     },
     "Eksakt adresse deles etter bekreftet booking." : {
@@ -4251,7 +4241,7 @@
         }
       }
     },
-    "Logg inn for å bestille plasser eller leie ut din egen" : {
+    "Logg inn for å bestille plasser eller leie ut din egen." : {
 
     },
     "Logg inn for å se bestillingene dine" : {
@@ -4891,6 +4881,9 @@
           }
         }
       }
+    },
+    "Ny åpningstid" : {
+
     },
     "Ny gjest" : {
       "localizations" : {
@@ -6777,6 +6770,9 @@
         }
       }
     },
+    "Tjent %@ kr siste 30 dager" : {
+
+    },
     "Toalett" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7204,9 +7200,6 @@
       }
     },
     "Velg én eller flere typer kjøretøy som passer her." : {
-
-    },
-    "Velg én eller flere typer som passer, og evt. hvor stort kjøretøy plassen tar imot." : {
 
     },
     "Velg en kategori" : {
