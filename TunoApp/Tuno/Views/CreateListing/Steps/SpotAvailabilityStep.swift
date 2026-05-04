@@ -21,6 +21,16 @@ struct SpotAvailabilityStep: View {
         return form.availability(for: id)
     }
 
+    private var existingBandRanges: [BandRange] {
+        availability.bands.map { band in
+            BandRange(
+                dayMask: band.dayMask,
+                startMinutes: band.startMinutes,
+                endMinutes: band.endMinutes
+            )
+        }
+    }
+
     var body: some View {
         TabView(selection: $form.currentSpotIndex) {
             ForEach(Array(form.spotMarkers.indices), id: \.self) { index in
@@ -45,7 +55,8 @@ struct SpotAvailabilityStep: View {
             AddHourlyBandSheet(
                 basePrice: 0,
                 prefill: wrap.prefill,
-                mode: .availability
+                mode: .availability,
+                existingBands: existingBandRanges
             ) { dayMask, startHour, startMinute, endHour, endMinute, _ in
                 addBand(
                     dayMask: dayMask,

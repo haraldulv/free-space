@@ -38,6 +38,7 @@
 		336ED588D23B5F702C49257F /* ProfileStatsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F37F3CD542B4B76200AE7AE /* ProfileStatsStore.swift */; };
 		362A7E1F4D710DC24BE4A12C /* LottieView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C62328BAF7DE7328480EAF9 /* LottieView.swift */; };
 		367A9055909C4B33333782E3 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5416B142A121192B7EDCA9A2 /* LocationManager.swift */; };
+		3AB87FE9CF0DAE2029093E5C /* BandOverlap.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF1A051046E94B7F1B495563 /* BandOverlap.swift */; };
 		3F2C71CB33819E76B0A47700 /* MessagesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BB47DB7ED9FBB036BC353A /* MessagesListView.swift */; };
 		3F9B2D62042A08F8EAD36159 /* WizardNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF267768B92B52734B7568A /* WizardNavBar.swift */; };
 		400CCE6F1D6B0AF5A1699287 /* TunoCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308BCB9A59C6E33399015B98 /* TunoCalendar.swift */; };
@@ -250,6 +251,7 @@
 		DAD96E8DCCD58804E7D8E5F9 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		DB14096D1AEF4406960194CB /* BookingConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingConfirmationView.swift; sourceTree = "<group>"; };
 		DC1B2723E875C7128C9687CD /* parking.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = parking.png; sourceTree = "<group>"; };
+		DF1A051046E94B7F1B495563 /* BandOverlap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BandOverlap.swift; sourceTree = "<group>"; };
 		DF8A3195D726FC00B6EA4A3D /* InstantBookingStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstantBookingStep.swift; sourceTree = "<group>"; };
 		E168ECC061FD115C52320C1F /* SpotDetailsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotDetailsStep.swift; sourceTree = "<group>"; };
 		E2C215EEFA3B9EF4585A8AE8 /* Tuno.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tuno.entitlements; sourceTree = "<group>"; };
@@ -485,6 +487,7 @@
 		82B23470F5C240CA6640C63B /* Utils */ = {
 			isa = PBXGroup;
 			children = (
+				DF1A051046E94B7F1B495563 /* BandOverlap.swift */,
 				41E71E1C8EA6E28F59A76B9A /* BlockedSlots.swift */,
 				CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */,
 				8912249569F172B1FAC73845 /* PersonnummerHelper.swift */,
@@ -713,6 +716,7 @@
 				F67F9C6B23D453F78B1C7ED9 /* AuthManager.swift in Sources */,
 				AA8A099FCB1C1DCDAFCCBA8E /* AuthPromptView.swift in Sources */,
 				6C57CB4C5085FA6E29E824A1 /* AuthSuccessOverlay.swift in Sources */,
+				3AB87FE9CF0DAE2029093E5C /* BandOverlap.swift in Sources */,
 				B4419D7CD6BEB2EB57C94298 /* BecomeHostView.swift in Sources */,
 				8DE4BBDB474E278A300397DE /* BlockedSlots.swift in Sources */,
 				2AFF1FFBCA6063DF79A8E1CA /* BookingCalendarView.swift in Sources */,

@@ -54,6 +54,19 @@ struct PricingRulesEditorView: View {
             }
     }
 
+    private var existingBandRanges: [BandRange] {
+        hourlyBandRules.compactMap { rule -> BandRange? in
+            guard
+                let mask = rule.day_mask,
+                let sh = rule.start_hour,
+                let eh = rule.end_hour
+            else { return nil }
+            let sm = sh * 60 + (rule.start_minute ?? 0)
+            let em = eh * 60 + (rule.end_minute ?? 0)
+            return BandRange(dayMask: mask, startMinutes: sm, endMinutes: em)
+        }
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -93,6 +106,7 @@ struct PricingRulesEditorView: View {
                 AddHourlyBandSheet(
                     basePrice: basePrice,
                     prefill: bandSheetPrefill,
+                    existingBands: existingBandRanges,
                 ) { dayMask, startHour, startMinute, endHour, endMinute, price in
                     Task {
                         await addHourlyBand(
@@ -580,6 +594,9 @@ struct AddHourlyBandSheet: View {
     let basePrice: Int
     let prefill: BandPrefill?
     var mode: Mode = .pricing
+    /// Eksisterende bånd som det nye båndet ikke kan overlappe med. Tom array
+    /// skipper sjekk (bakoverkompatibel default).
+    var existingBands: [BandRange] = []
     let onSave: (_ dayMask: Int, _ startHour: Int, _ startMinute: Int, _ endHour: Int, _ endMinute: Int, _ price: Int) -> Void
 
     @Environment(\.dismiss) var dismiss
@@ -595,7 +612,14 @@ struct AddHourlyBandSheet: View {
         selectedDays.reduce(0) { $0 | (1 << $1) }
     }
 
+    private var conflict: BandRange? {
+        guard !selectedDays.isEmpty, endMinutes > startMinutes else { return nil }
+        let candidate = BandRange(dayMask: dayMask, startMinutes: startMinutes, endMinutes: endMinutes)
+        return BandOverlap.firstConflict(for: candidate, in: existingBands)
+    }
+
     private var canSave: Bool {
+        if conflict != nil { return false }
         if mode == .pricing {
             guard let p = Int(priceText), p > 0 else { return false }
             return !selectedDays.isEmpty && endMinutes > startMinutes
@@ -612,6 +636,9 @@ struct AddHourlyBandSheet: View {
                     hoursSection
                     if mode == .pricing {
                         priceSection
+                    }
+                    if let conflict {
+                        conflictBanner(conflict)
                     }
                 }
                 .padding(16)
@@ -747,6 +774,51 @@ struct AddHourlyBandSheet: View {
                 Spacer()
             }
         }
+    }
+
+    private func conflictBanner(_ conflict: BandRange) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(mode == .availability ? "Overlapper med eksisterende åpningstid" : "Overlapper med eksisterende bånd")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text(formatConflictDetail(conflict))
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral600)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(Color.orange.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.4), lineWidth: 1))
+    }
+
+    private func formatConflictDetail(_ band: BandRange) -> String {
+        let days = formatDayMaskShort(band.dayMask)
+        let s = formatMinutes(band.startMinutes)
+        let e = formatMinutes(band.endMinutes)
+        if let label = band.label, !label.isEmpty {
+            return "\(label): \(days) · \(s)–\(e)"
+        }
+        return "\(days) · \(s)–\(e)"
+    }
+
+    private func formatDayMaskShort(_ mask: Int) -> String {
+        let weekdaysMask = (1 << 0) | (1 << 1) | (1 << 2) | (1 << 3) | (1 << 4)
+        let weekendMask = (1 << 5) | (1 << 6)
+        if mask == (weekdaysMask | weekendMask) { return "Alle dager" }
+        if mask == weekdaysMask { return "Hverdager" }
+        if mask == weekendMask { return "Helg" }
+        let names = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"]
+        return (0..<7).compactMap { i in (mask & (1 << i)) != 0 ? names[i] : nil }.joined(separator: ", ")
+    }
+
+    private func formatMinutes(_ m: Int) -> String {
+        String(format: "%02d:%02d", m / 60, m % 60)
     }
 }
 
