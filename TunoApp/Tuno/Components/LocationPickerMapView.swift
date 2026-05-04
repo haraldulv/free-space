@@ -54,10 +54,18 @@ struct LocationPickerMapView: UIViewRepresentable {
             mapView.animate(to: camera)
         }
 
-        mapView.clear()
-        context.coordinator.mainMarker = nil
-        context.coordinator.spotMarkerMap.removeAll()
-        addMarkers(to: mapView, coordinator: context.coordinator)
+        // Bare re-bygg markers når noe relevant faktisk endret seg.
+        // Tidligere kjørte vi mapView.clear() ved hver SwiftUI re-render
+        // (også ved mapType-toggle), som plutselig fjernet pinner midt i
+        // en pågående drag — det er trolig "vis frem plassene"-buggen.
+        let signature = MarkerSignature(lat: lat, lng: lng, spots: spotMarkers)
+        if context.coordinator.lastSignature != signature {
+            context.coordinator.lastSignature = signature
+            mapView.clear()
+            context.coordinator.mainMarker = nil
+            context.coordinator.spotMarkerMap.removeAll()
+            addMarkers(to: mapView, coordinator: context.coordinator)
+        }
     }
 
     private func addMarkers(to mapView: GMSMapView, coordinator: Coordinator) {
@@ -101,11 +109,32 @@ struct LocationPickerMapView: UIViewRepresentable {
         return view
     }
 
+    /// Hash-friendly snapshot av posisjonene vi rendrer. Brukes for å unngå
+    /// unødvendige clear+re-add av GMSMarker i updateUIView.
+    struct MarkerSignature: Equatable {
+        let lat: Double
+        let lng: Double
+        let spots: [SpotKey]
+
+        struct SpotKey: Equatable {
+            let id: String?
+            let lat: Double
+            let lng: Double
+        }
+
+        init(lat: Double, lng: Double, spots: [SpotMarker]) {
+            self.lat = lat
+            self.lng = lng
+            self.spots = spots.map { SpotKey(id: $0.id, lat: $0.lat, lng: $0.lng) }
+        }
+    }
+
     class Coordinator: NSObject, GMSMapViewDelegate {
         weak var mapView: GMSMapView?
         var mainMarker: GMSMarker?
         var spotMarkerMap: [GMSMarker: Int] = [:]
         var lastTrigger: UUID?
+        var lastSignature: MarkerSignature?
 
         nonisolated(unsafe) var isSpotMode = false
         nonisolated(unsafe) var maxSpots = 0
