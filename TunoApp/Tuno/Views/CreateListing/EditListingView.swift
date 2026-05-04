@@ -62,8 +62,9 @@ struct EditListingView: View {
     @State private var selectedExtras: [ListingExtra] = []
     @State private var isActive: Bool = true
     @State private var draggedImageURL: String?
+    @State private var showFullCalendar = false
 
-    private let tabs = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Tilgjengelighet"]
+    private let tabs = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Kalender"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1074,14 +1075,55 @@ struct EditListingView: View {
     }
 
     private var availabilityTab: some View {
-        // Gjenbruker CalendarStep fra wizarden — samme visuelle stil.
-        // EditAvailabilityWrapper holder en @StateObject form-proxy slik at endringer
-        // i blockedDates faktisk persisterer mellom tab-bytter.
-        EditAvailabilityWrapper(
-            blockedDates: $blockedDates,
-            category: listing.category,
-            priceUnit: priceUnit
-        )
+        ScrollView {
+            VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Kalender og priser")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text("Blokker datoer, sett egen pris per dag og se bookinger per plass. Endringer lagres automatisk.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.neutral500)
+                        .lineSpacing(2)
+                }
+
+                Button {
+                    showFullCalendar = true
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "calendar")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.primary700)
+                            .frame(width: 36, height: 36)
+                            .background(Color.primary100)
+                            .clipShape(Circle())
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Åpne kalender")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(.neutral900)
+                            Text("Multi-spot, prisregler, blokkering")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral500)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.neutral400)
+                    }
+                    .padding(14)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(16)
+        }
+        .fullScreenCover(isPresented: $showFullCalendar) {
+            NavigationStack {
+                ProfileCalendarView(listing: listing)
+            }
+        }
     }
 
     // MARK: - Helpers
@@ -1444,7 +1486,7 @@ enum EditListingTab: Int, CaseIterable, Identifiable, Hashable {
         case .spots: return "Plasser"
         case .photos: return "Bilder"
         case .amenities: return "Fasiliteter"
-        case .availability: return "Tilgjengelighet"
+        case .availability: return "Kalender"
         }
     }
 
@@ -1634,23 +1676,3 @@ private struct UpdateListingInput: Encodable {
     }
 }
 
-/// Wrapper rundt CalendarStep som binder en parent's `Set<String>` blockedDates til
-/// en intern @StateObject form-proxy. Sync skjer to-veis via .onChange.
-private struct EditAvailabilityWrapper: View {
-    @Binding var blockedDates: Set<String>
-    let category: ListingCategory?
-    let priceUnit: PriceUnit
-    @StateObject private var form = ListingFormModel()
-
-    var body: some View {
-        CalendarStep(form: form)
-            .onAppear {
-                form.blockedDates = blockedDates
-                form.category = category
-                form.priceUnit = priceUnit
-            }
-            .onChange(of: form.blockedDates) { _, newValue in
-                blockedDates = newValue
-            }
-    }
-}
