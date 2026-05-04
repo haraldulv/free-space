@@ -466,7 +466,7 @@
     "stepImages": "Fotos",
     "stepAmenities": "Ausstattung",
     "stepExtras": "Gemeinsame Extras",
-    "stepDiscounts": "Rabatte",
+    "stepDiscounts": "Längerer Aufenthalt",
     "stepCalendar": "Kalender",
     "stepPublish": "Veröffentlichen",
     "publishing": "Wird veröffentlicht ...",
@@ -547,22 +547,22 @@
       "instantLabel": "Sofortbuchung",
       "instantDesc": "Gäste können Aufenthalte bis 7 Nächten sofort buchen. Längere Aufenthalte erfordern immer eine Bestätigung."
     },
-    "discounts": {
-      "title": "Rabatte für längere Aufenthalte",
-      "subtitle": "Belohne Gäste, die einen ganzen Tag, eine Woche oder einen Monat buchen. Lasse die Felder leer, wenn du keinen Rabatt geben möchtest.",
+    "longerStay": {
+      "title": "Längerer Aufenthalt",
+      "subtitle": "Lege einen Festpreis für einen ganzen Tag, eine Woche oder einen Monat fest. Lasse Felder leer, um eine Stufe zu überspringen.",
       "cardTitle": "Alle Stellplätze",
-      "cardSubtitle": "Verwende denselben Rabatt für alle deine Stellplätze.",
-      "dayLabel": "1 Tag",
-      "dayCaption": "Die volle Öffnungszeit des Tages",
-      "weekLabel": "1 Woche",
-      "weekCaption": "7 aufeinanderfolgende volle Tage",
-      "monthLabel": "1 Monat",
-      "monthCaption": "30 aufeinanderfolgende volle Tage",
-      "previewTitle": "Preisbeispiele nach Rabatt",
-      "savedAmount": "Gespart {amount} kr",
-      "previewFootnote": "Das Beispiel verwendet einen Stundenpreis von {rate} kr. Der tatsächliche Gesamtpreis variiert je nach Preisband.",
-      "info": "Der Rabatt gilt nur für volle Tage — Buchungen innerhalb einzelner Stunden werden zum vollen Stundenpreis berechnet. Eine 35-Tage-Buchung wird zu 1 Monat + 5 Tagesrabatten.",
-      "noSpotsYet": "Lege zuerst mindestens einen Stellplatz im Standort-Schritt an, bevor du Rabatte konfigurierst."
+      "cardSubtitle": "Verwende dieselben Preise für alle deine Stellplätze.",
+      "dailyLabel": "1 Tag",
+      "dailyCaption": "Preis für einen vollen Tag (24 Std.)",
+      "weeklyLabel": "1 Woche",
+      "weeklyCaption": "Preis für 7 aufeinanderfolgende volle Tage",
+      "monthlyLabel": "1 Monat",
+      "monthlyCaption": "Preis für 30 aufeinanderfolgende volle Tage",
+      "baselineHint": "Ohne Angebot: {amount} kr",
+      "previewTitle": "So sehen Angebote für Gäste aus",
+      "savedAmount": "Gast spart {amount} kr",
+      "info": "Angebote gelten nur für volle Zeiträume. Eine 35-Tage-Buchung wird als 1 Monat + 5 Tage berechnet. Verbleibende Stunden werden zum Standardpreis berechnet.",
+      "noSpotsYet": "Lege zuerst mindestens einen Stellplatz im Standort-Schritt an, bevor du Preise für längere Aufenthalte festlegst."
     },
     "availability": {
       "title": "Verfügbarkeit",
@@ -645,7 +645,7 @@
       "tabImages": "Fotos",
       "tabAmenities": "Ausstattung",
       "tabExtras": "Gemeinsame Extras",
-      "tabDiscounts": "Rabatte",
+      "tabDiscounts": "Längerer Aufenthalt",
       "tabAvailability": "Verfügbarkeit"
     },
     "location": {

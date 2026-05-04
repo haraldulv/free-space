@@ -466,7 +466,7 @@
     "stepImages": "Photos",
     "stepAmenities": "Amenities",
     "stepExtras": "Shared extras",
-    "stepDiscounts": "Discounts",
+    "stepDiscounts": "Longer stay",
     "stepCalendar": "Calendar",
     "stepPublish": "Publish",
     "publishing": "Publishing...",
@@ -547,22 +547,22 @@
       "instantLabel": "Instant book",
       "instantDesc": "Guests can book instantly for up to 7 nights. Longer stays always require approval."
     },
-    "discounts": {
-      "title": "Discounts for longer stays",
-      "subtitle": "Reward guests who book a full day, week or month. Leave fields empty if you don't want to offer a discount.",
+    "longerStay": {
+      "title": "Longer stay",
+      "subtitle": "Set a fixed price for a full day, week or month. Leave fields empty to skip a tier.",
       "cardTitle": "All spots",
-      "cardSubtitle": "Use the same discount for every spot you have.",
-      "dayLabel": "1 day",
-      "dayCaption": "The day's full opening hours",
-      "weekLabel": "1 week",
-      "weekCaption": "7 consecutive full days",
-      "monthLabel": "1 month",
-      "monthCaption": "30 consecutive full days",
-      "previewTitle": "Price examples after discount",
-      "savedAmount": "Saved {amount} kr",
-      "previewFootnote": "The example uses an hourly rate of {rate} kr. Actual totals vary with pricing bands.",
-      "info": "The discount only applies to full days — bookings within single hours pay the full hourly rate. A 35-day booking becomes 1 month + 5 day-discounts.",
-      "noSpotsYet": "Add at least one spot in the Location step before configuring discounts."
+      "cardSubtitle": "Use the same prices for every spot you have.",
+      "dailyLabel": "1 day",
+      "dailyCaption": "Price for a full day (24 h)",
+      "weeklyLabel": "1 week",
+      "weeklyCaption": "Price for 7 consecutive full days",
+      "monthlyLabel": "1 month",
+      "monthlyCaption": "Price for 30 consecutive full days",
+      "baselineHint": "Without offer: {amount} kr",
+      "previewTitle": "How offers look to the guest",
+      "savedAmount": "Guest saves {amount} kr",
+      "info": "Offers only apply to full periods. A 35-day booking is calculated as 1 month + 5 days. Remaining hours are billed at the standard rate.",
+      "noSpotsYet": "Add at least one spot in the Location step before configuring longer-stay prices."
     },
     "availability": {
       "title": "Availability",
@@ -645,7 +645,7 @@
       "tabImages": "Photos",
       "tabAmenities": "Amenities",
       "tabExtras": "Shared extras",
-      "tabDiscounts": "Discounts",
+      "tabDiscounts": "Longer stay",
       "tabAvailability": "Availability"
     },
     "location": {

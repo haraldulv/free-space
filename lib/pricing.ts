@@ -445,26 +445,65 @@ export function hourlyBreakdownHasUnavailable(breakdown: HourlyPrice[]): boolean
   return breakdown.some((h) => h.source === "unavailable");
 }
 
-// MARK: - Duration discount (parkering)
+// MARK: - Lengre opphold (parkering)
 //
 // Et "fullt døgn" defineres som at bookingen dekker hele dagens band-vindu —
 // alle hele timer som faller innenfor minst ett bånd den dagen må være med.
 // Påfølgende fulle døgn stables greedy: floor(N/30) måneder + floor(rest/7)
-// uker + rest enkelt-døgn. Hver tier får sin respektive rabatt-prosent på
-// timene som inngår. Booking-API kaller denne for å justere hourly-totalen
-// før service-fee.
+// uker + rest enkelt-døgn. Hver tier erstatter timene som inngår med en
+// fast pris (dailyPrice/weeklyPrice/monthlyPrice). Booking-API kaller
+// applyLongerStayPricing for å justere hourly-totalen før service-fee.
+//
+// Backward-compat: gamle annonser har discountDayPct/Week/MonthPct (%).
+// Disse konverteres til kr-priser on-the-fly i getEffectiveLongerStayPrices.
+
+/**
+ * Returner effektive "lengre opphold"-priser for en plass.
+ *
+ * Prioritet:
+ * 1. Nye kr-felter (dailyPrice, weeklyPrice, monthlyPrice) hvis satt.
+ * 2. Konvertering fra legacy %-felter (discountDayPct osv) basert på
+ *    estimert timepris × 24/168/720.
+ *
+ * `baseHourlyEstimate` er en best-guess timepris brukt KUN for å konvertere
+ * legacy %-verdier. Med kr-felter satt direkte ignoreres den.
+ */
+export function getEffectiveLongerStayPrices(
+  spot: {
+    dailyPrice?: number | null;
+    weeklyPrice?: number | null;
+    monthlyPrice?: number | null;
+    discountDayPct?: number | null;
+    discountWeekPct?: number | null;
+    discountMonthPct?: number | null;
+    pricePerHour?: number | null;
+    price?: number | null;
+  },
+  baseHourlyEstimate: number,
+): { dailyPrice: number; weeklyPrice: number; monthlyPrice: number } {
+  const hourly = spot.pricePerHour ?? spot.price ?? baseHourlyEstimate ?? 0;
+  const fromPct = (pct: number | null | undefined, hours: number): number => {
+    if (!pct || pct <= 0 || hourly <= 0) return 0;
+    return Math.round(hourly * hours * (1 - Math.min(100, pct) / 100));
+  };
+  return {
+    dailyPrice: spot.dailyPrice ?? fromPct(spot.discountDayPct, 24),
+    weeklyPrice: spot.weeklyPrice ?? fromPct(spot.discountWeekPct, 24 * 7),
+    monthlyPrice: spot.monthlyPrice ?? fromPct(spot.discountMonthPct, 24 * 30),
+  };
+}
 
 export interface DurationDiscountInput {
   /** Hourly-regler for plassen (samme sett som ble brukt i breakdown). */
   rules: PricingRule[];
   /** Per-time-breakdown som ble bygget av buildHourlyBreakdown. */
   hourlyBreakdown: HourlyPrice[];
-  /** Rabatt 0-100 for et fullt døgn. nil/0 = ingen rabatt. */
-  discountDayPct: number;
-  /** Rabatt 0-100 for 7 påfølgende fulle døgn. */
-  discountWeekPct: number;
-  /** Rabatt 0-100 for 30 påfølgende fulle døgn. */
-  discountMonthPct: number;
+  /** Pris (kr) for ett fullt døgn. 0 = ingen tilbud. */
+  dailyPrice: number;
+  /** Pris (kr) for 7 påfølgende fulle døgn. 0 = ingen tilbud. */
+  weeklyPrice: number;
+  /** Pris (kr) for 30 påfølgende fulle døgn. 0 = ingen tilbud. */
+  monthlyPrice: number;
   /** Spot som booking gjelder. Brukes for å filtrere regler riktig. */
   spotId: string | null;
 }
@@ -482,12 +521,17 @@ export interface DurationDiscountResult {
   tiers: { months: number; weeks: number; days: number };
 }
 
-export function applyDurationDiscount(input: DurationDiscountInput): DurationDiscountResult {
-  const { rules, hourlyBreakdown, discountDayPct, discountWeekPct, discountMonthPct, spotId } = input;
+/**
+ * Anvender "lengre opphold"-priser på en hourly-breakdown. Tier-pris er den
+ * faste kr-prisen som erstatter basisen for tier-perioden. "Sparer" =
+ * baseForTier - tierPris (kun positivt).
+ */
+export function applyLongerStayPricing(input: DurationDiscountInput): DurationDiscountResult {
+  const { rules, hourlyBreakdown, dailyPrice, weeklyPrice, monthlyPrice, spotId } = input;
   const baseTotal = applyHourlyPriceBreakdown(hourlyBreakdown);
 
-  // Ingen rabatt-prosent satt → returner uendret.
-  if (discountDayPct <= 0 && discountWeekPct <= 0 && discountMonthPct <= 0) {
+  // Ingen lengre-opphold-priser satt → returner uendret.
+  if (dailyPrice <= 0 && weeklyPrice <= 0 && monthlyPrice <= 0) {
     return {
       total: baseTotal,
       baseTotal,
@@ -506,11 +550,11 @@ export function applyDurationDiscount(input: DurationDiscountInput): DurationDis
   // Plass uten bånd ("alltid ledig") — et døgn = 24 sammenhengende timer
   // i bookingen, uavhengig av kalender-grenser.
   if (hourlyRules.length === 0) {
-    return apply24HourBlockDiscount({
+    return apply24HourBlock({
       hourlyBreakdown,
-      discountDayPct,
-      discountWeekPct,
-      discountMonthPct,
+      dailyPrice,
+      weeklyPrice,
+      monthlyPrice,
     });
   }
 
@@ -577,9 +621,9 @@ export function applyDurationDiscount(input: DurationDiscountInput): DurationDis
     } else if (!isFull && runStart !== -1) {
       const runEnd = i - 1;
       const result = applyTiersToRun(dates, hoursByDate, runStart, runEnd, {
-        day: discountDayPct,
-        week: discountWeekPct,
-        month: discountMonthPct,
+        daily: dailyPrice,
+        weekly: weeklyPrice,
+        monthly: monthlyPrice,
       });
       totalSavings += result.savings;
       totalFullDays += result.length;
@@ -601,13 +645,13 @@ export function applyDurationDiscount(input: DurationDiscountInput): DurationDis
   };
 }
 
-/// 24-timers-blokk-rabatt for plasser uten bånd. Et "døgn" = 24 sammenhengende
+/// 24-timers-blokk for plasser uten bånd. Et "døgn" = 24 sammenhengende
 /// timer fra start av booking. Resten (siste < 24t) betales full pris.
-function apply24HourBlockDiscount(input: {
+function apply24HourBlock(input: {
   hourlyBreakdown: HourlyPrice[];
-  discountDayPct: number;
-  discountWeekPct: number;
-  discountMonthPct: number;
+  dailyPrice: number;
+  weeklyPrice: number;
+  monthlyPrice: number;
 }): DurationDiscountResult {
   const usable = input.hourlyBreakdown.filter((h) => h.source !== "unavailable");
   const baseTotal = usable.reduce((s, h) => s + h.price, 0);
@@ -618,26 +662,31 @@ function apply24HourBlockDiscount(input: {
   let savings = 0;
   const tiers = { months: 0, weeks: 0, days: 0 };
 
-  while (remaining >= 30) {
+  const tierSavings = (baseHours: number, tierPrice: number): number => {
+    if (tierPrice <= 0 || tierPrice >= baseHours) return 0;
+    return baseHours - tierPrice;
+  };
+
+  while (input.monthlyPrice > 0 && remaining >= 30) {
     let monthBase = 0;
     for (let i = 0; i < 30 * 24; i++) monthBase += usable[cursor + i].price;
-    savings += monthBase * (input.discountMonthPct / 100);
+    savings += tierSavings(monthBase, input.monthlyPrice);
     tiers.months += 1;
     cursor += 30 * 24;
     remaining -= 30;
   }
-  while (remaining >= 7) {
+  while (input.weeklyPrice > 0 && remaining >= 7) {
     let weekBase = 0;
     for (let i = 0; i < 7 * 24; i++) weekBase += usable[cursor + i].price;
-    savings += weekBase * (input.discountWeekPct / 100);
+    savings += tierSavings(weekBase, input.weeklyPrice);
     tiers.weeks += 1;
     cursor += 7 * 24;
     remaining -= 7;
   }
-  while (remaining > 0) {
+  while (input.dailyPrice > 0 && remaining > 0) {
     let dayBase = 0;
     for (let i = 0; i < 24; i++) dayBase += usable[cursor + i].price;
-    savings += dayBase * (input.discountDayPct / 100);
+    savings += tierSavings(dayBase, input.dailyPrice);
     tiers.days += 1;
     cursor += 24;
     remaining -= 1;
@@ -658,7 +707,7 @@ function applyTiersToRun(
   hoursByDate: Map<string, { hour: number; price: number }[]>,
   start: number,
   end: number,
-  pct: { day: number; week: number; month: number },
+  prices: { daily: number; weekly: number; monthly: number },
 ): { savings: number; length: number; months: number; weeks: number; days: number } {
   const length = end - start + 1;
   let cursor = start;
@@ -666,30 +715,35 @@ function applyTiersToRun(
   let savings = 0;
   let months = 0, weeks = 0, days = 0;
 
+  const tierSavings = (baseHours: number, tierPrice: number): number => {
+    if (tierPrice <= 0 || tierPrice >= baseHours) return 0;
+    return baseHours - tierPrice;
+  };
+
   const sumDay = (dateIdx: number): number => {
     const date = dates[dateIdx];
     const hours = hoursByDate.get(date) || [];
     return hours.reduce((s, h) => s + h.price, 0);
   };
 
-  while (remaining >= 30) {
+  while (prices.monthly > 0 && remaining >= 30) {
     let monthBase = 0;
     for (let i = 0; i < 30; i++) monthBase += sumDay(cursor + i);
-    savings += monthBase * (pct.month / 100);
+    savings += tierSavings(monthBase, prices.monthly);
     months += 1;
     cursor += 30;
     remaining -= 30;
   }
-  while (remaining >= 7) {
+  while (prices.weekly > 0 && remaining >= 7) {
     let weekBase = 0;
     for (let i = 0; i < 7; i++) weekBase += sumDay(cursor + i);
-    savings += weekBase * (pct.week / 100);
+    savings += tierSavings(weekBase, prices.weekly);
     weeks += 1;
     cursor += 7;
     remaining -= 7;
   }
-  while (remaining > 0) {
-    savings += sumDay(cursor) * (pct.day / 100);
+  while (prices.daily > 0 && remaining > 0) {
+    savings += tierSavings(sumDay(cursor), prices.daily);
     days += 1;
     cursor += 1;
     remaining -= 1;
@@ -697,3 +751,6 @@ function applyTiersToRun(
 
   return { savings, length, months, weeks, days };
 }
+
+/** @deprecated bruk applyLongerStayPricing. Beholdt for ekstern backward-compat. */
+export const applyDurationDiscount = applyLongerStayPricing;

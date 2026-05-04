@@ -154,11 +154,22 @@ export interface SpotMarker {
   blockedDates?: string[];
   checkinMessage?: string;
   images?: string[];
-  /** Rabatt (%) for fullt døgn (parkering). 0–100. */
+  /**
+   * "Lengre opphold"-priser (kr) — overstyrer hourly-grunnpris når booking dekker
+   * fulle perioder. Nye annonser skal bruke disse istedenfor %-rabatter.
+   */
+  /** Pris (kr) for ett fullt døgn (24 t). */
+  dailyPrice?: number;
+  /** Pris (kr) for 7 påfølgende fulle døgn. */
+  weeklyPrice?: number;
+  /** Pris (kr) for 30 påfølgende fulle døgn. */
+  monthlyPrice?: number;
+
+  /** @deprecated bruk dailyPrice. Beholdt for backward-compat med iOS build < 153. */
   discountDayPct?: number;
-  /** Rabatt (%) for 7 påfølgende fulle døgn. */
+  /** @deprecated bruk weeklyPrice. */
   discountWeekPct?: number;
-  /** Rabatt (%) for 30 påfølgende fulle døgn. */
+  /** @deprecated bruk monthlyPrice. */
   discountMonthPct?: number;
 }
 

@@ -8,7 +8,8 @@ import {
   getHourlyPricesAndRulesWithServiceClient,
   applyHourlyPriceBreakdown,
   hourlyBreakdownHasUnavailable,
-  applyDurationDiscount,
+  applyLongerStayPricing,
+  getEffectiveLongerStayPrices,
   type NightlyPrice,
   type HourlyPrice,
   type AvailabilityMode,
@@ -77,21 +78,23 @@ async function computeTotalWithBreakdown(args: {
     }
     baseTotal = applyHourlyPriceBreakdown(hourlyBreakdown);
 
-    // Anvend duration-rabatt: hent valgt plass sine rabatt-prosenter (eller
-    // første spot som matcher hvis valgte ikke har egne).
+    // Anvend "lengre opphold"-priser: hent valgt plass sine kr-priser
+    // (eller første spot som matcher hvis valgte ikke har egne). Faller
+    // tilbake til legacy %-felter via getEffectiveLongerStayPrices for
+    // annonser opprettet før prisbasert ble lansert.
     const targetSpot = targetSpotId
       ? selectedSpots.find((s) => s.id === targetSpotId)
       : selectedSpots[0] ?? (args.spotMarkers || [])[0];
-    const dayPct = targetSpot?.discountDayPct ?? 0;
-    const weekPct = targetSpot?.discountWeekPct ?? 0;
-    const monthPct = targetSpot?.discountMonthPct ?? 0;
-    if (dayPct > 0 || weekPct > 0 || monthPct > 0) {
-      discount = applyDurationDiscount({
+    const longerStay = targetSpot
+      ? getEffectiveLongerStayPrices(targetSpot, args.listingPrice)
+      : { dailyPrice: 0, weeklyPrice: 0, monthlyPrice: 0 };
+    if (longerStay.dailyPrice > 0 || longerStay.weeklyPrice > 0 || longerStay.monthlyPrice > 0) {
+      discount = applyLongerStayPricing({
         rules,
         hourlyBreakdown,
-        discountDayPct: dayPct,
-        discountWeekPct: weekPct,
-        discountMonthPct: monthPct,
+        dailyPrice: longerStay.dailyPrice,
+        weeklyPrice: longerStay.weeklyPrice,
+        monthlyPrice: longerStay.monthlyPrice,
         spotId: targetSpotId,
       });
       baseTotal = discount.total;

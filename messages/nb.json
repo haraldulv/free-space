@@ -466,7 +466,7 @@
     "stepImages": "Bilder",
     "stepAmenities": "Fasiliteter",
     "stepExtras": "Felles tillegg",
-    "stepDiscounts": "Rabatter",
+    "stepDiscounts": "Lengre opphold",
     "stepCalendar": "Kalender",
     "stepPublish": "Publiser",
     "publishing": "Publiserer...",
@@ -547,22 +547,22 @@
       "instantLabel": "Direktebooking",
       "instantDesc": "Gjester kan booke umiddelbart opptil 7 netter. Lengre opphold krever alltid godkjenning."
     },
-    "discounts": {
-      "title": "Rabatter ved lengre opphold",
-      "subtitle": "Belønn gjester som booker et helt døgn, en uke eller en måned. La feltene stå tomme om du ikke vil gi rabatt.",
+    "longerStay": {
+      "title": "Lengre opphold",
+      "subtitle": "Sett en fast pris for et fullt døgn, en uke eller en måned. La feltene stå tomme om du ikke vil gi tilbud.",
       "cardTitle": "Alle plasser",
-      "cardSubtitle": "Bruk samme rabatt for alle plassene dine.",
-      "dayLabel": "1 døgn",
-      "dayCaption": "Hele dagens åpningstid",
-      "weekLabel": "1 uke",
-      "weekCaption": "7 påfølgende fulle døgn",
-      "monthLabel": "1 måned",
-      "monthCaption": "30 påfølgende fulle døgn",
-      "previewTitle": "Pris-eksempler etter rabatt",
-      "savedAmount": "Spart {amount} kr",
-      "previewFootnote": "Eksempelet bruker timepris {rate} kr. Faktisk total varierer med pris-bånd.",
-      "info": "Rabatten gjelder kun fulle døgn — booking innenfor enkelt-timer betales full timepris. En 35-dagers-booking blir 1 måned + 5 døgn-rabatter.",
-      "noSpotsYet": "Du må først legge til plasser i Lokasjon-steget før du kan sette rabatter."
+      "cardSubtitle": "Bruk samme priser for alle plassene dine.",
+      "dailyLabel": "1 døgn",
+      "dailyCaption": "Pris for et helt døgn (24 t)",
+      "weeklyLabel": "1 uke",
+      "weeklyCaption": "Pris for 7 påfølgende fulle døgn",
+      "monthlyLabel": "1 måned",
+      "monthlyCaption": "Pris for 30 påfølgende fulle døgn",
+      "baselineHint": "Uten tilbud: {amount} kr",
+      "previewTitle": "Slik ser tilbudene ut for gjesten",
+      "savedAmount": "Gjest sparer {amount} kr",
+      "info": "Tilbudet gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 døgn. Resten betales etter standardpris.",
+      "noSpotsYet": "Du må først legge til plasser i Lokasjon-steget før du kan sette priser for lengre opphold."
     },
     "availability": {
       "title": "Tilgjengelighet",
@@ -645,7 +645,7 @@
       "tabImages": "Bilder",
       "tabAmenities": "Fasiliteter",
       "tabExtras": "Felles tillegg",
-      "tabDiscounts": "Rabatter",
+      "tabDiscounts": "Lengre opphold",
       "tabAvailability": "Tilgjengelighet"
     },
     "location": {

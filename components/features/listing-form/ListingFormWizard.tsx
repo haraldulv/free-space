@@ -203,6 +203,7 @@ export default function ListingFormWizard({
           <DiscountsStep
             spotMarkers={(formData.spotMarkers || []) as SpotMarker[]}
             defaultPrice={formData.price || 0}
+            priceUnit={formData.priceUnit || "natt"}
             onChange={updateField}
           />
         )}
