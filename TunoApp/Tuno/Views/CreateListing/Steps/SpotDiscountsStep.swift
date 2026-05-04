@@ -232,7 +232,7 @@ struct DiscountTrio: Equatable {
 /// Lite preview-kort som viser hva en booking koster med og uten rabatten,
 /// for 1 døgn (24 t), 1 uke (7 d) og 1 måned (30 d). Skjules helt når ingen
 /// rabatt er satt, så steget ikke skummer over for verten som vil hoppe over.
-private struct DiscountPreviewCard: View {
+struct DiscountPreviewCard: View {
     let hourlyRate: Int
     let trio: DiscountTrio
 
@@ -306,7 +306,7 @@ private struct DiscountPreviewCard: View {
 }
 
 /// Numerisk %-input med suffix og tøm-på-tap.
-private struct PercentInput: View {
+struct PercentInput: View {
     @Binding var value: Int?
     @State private var text: String = ""
     @FocusState private var isFocused: Bool
