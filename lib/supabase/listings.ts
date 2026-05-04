@@ -382,6 +382,76 @@ export async function getRecentListings(limit = 12): Promise<Listing[]> {
   return (data || []).map(rowToListing);
 }
 
+/**
+ * Henter "ekte" bruker-annonser (host_id IS NOT NULL) — ekskluderer seeds
+ * uten host. Brukes på forsiden for å speile iOS HomeView som kun viser
+ * brukerlagde annonser.
+ */
+async function getRealUserListings(limit: number): Promise<Listing[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("listings")
+    .select("*")
+    .neq("is_active", false)
+    .not("host_id", "is", null)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("getRealUserListings error:", error.message);
+    return [];
+  }
+
+  return (data || []).map(rowToListing);
+}
+
+/**
+ * Score for "Populære nå"-sortering. Speilet fra iOS ListingService.popularityScore.
+ * Kombinerer rating × reviews + tag-bonus + instant-bonus + bilder.
+ */
+function popularityScore(l: Listing): number {
+  const rating = typeof l.rating === "number" ? l.rating : 0;
+  const reviews = typeof l.reviewCount === "number" ? l.reviewCount : 0;
+  let score = 0;
+  score += rating * reviews * 10;
+  score += reviews * 5;
+  const tags = (l.tags ?? []) as string[];
+  if (tags.includes("popular")) score += 20;
+  if (tags.includes("featured")) score += 10;
+  if (tags.includes("available_today")) score += 4;
+  if (l.instantBooking === true) score += 3;
+  score += Math.min(l.images?.length ?? 0, 5);
+  return score;
+}
+
+/** "Populære nå" — score-sortert top N av ekte bruker-annonser. */
+export async function getPopularListings(limit = 12): Promise<Listing[]> {
+  const all = await getRealUserListings(40);
+  return [...all].sort((a, b) => popularityScore(b) - popularityScore(a)).slice(0, limit);
+}
+
+/** "Nye plasser" — ekte bruker-annonser, nyest først. */
+export async function getRecentRealListings(limit = 12): Promise<Listing[]> {
+  return getRealUserListings(limit);
+}
+
+/** "Tilgjengelig i dag" — direktebooking, ikke blokkert i dag, kun ekte annonser. */
+export async function getAvailableTodayListings(limit = 12): Promise<Listing[]> {
+  const all = await getRealUserListings(40);
+  const todayOslo = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Europe/Oslo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date()); // "YYYY-MM-DD"
+
+  return all
+    .filter((l) => l.instantBooking === true)
+    .filter((l) => !(l.blockedDates ?? []).includes(todayOslo))
+    .slice(0, limit);
+}
+
 export async function getAllListingIds(): Promise<string[]> {
   const supabase = await createClient();
 
