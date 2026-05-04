@@ -171,8 +171,14 @@ struct SettingsView: View {
         } message: {
             Text("Profilen din og alle bookinger, annonser og favoritter vil bli fjernet permanent. Dette kan ikke angres.")
         }
-        .alert("Kunne ikke slette", isPresented: .constant(deleteError != nil)) {
-            Button("OK") { deleteError = nil }
+        .alert(
+            "Kunne ikke slette",
+            isPresented: Binding(
+                get: { deleteError != nil },
+                set: { if !$0 { deleteError = nil } }
+            )
+        ) {
+            Button("OK") {}
         } message: {
             Text(deleteError ?? "")
         }
