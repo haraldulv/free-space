@@ -125,6 +125,7 @@
 		E42A18E39C3758AF4E6127C8 /* EditListingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8D99627256D695D60592DC8 /* EditListingView.swift */; };
 		E50042878D13F35711A857AD /* SpotCountStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A9DFF0FBCEDEA70C1C84433 /* SpotCountStep.swift */; };
 		E6CE29815C06CCD871A9AD5F /* success-confetti.json in Resources */ = {isa = PBXBuildFile; fileRef = 147F3163867D581B11ED7A6D /* success-confetti.json */; };
+		E73EE58A4F48616B26338D4E /* ReceiptBuilder.swift in Sources */ = {isa = PBXBuildFile; fileRef = B162D379B5ED1C064880C2ED /* ReceiptBuilder.swift */; };
 		E8FCDD1039F52B14AC220A3D /* BookingConfirmationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB14096D1AEF4406960194CB /* BookingConfirmationView.swift */; };
 		E8FF6FAF3613994C8CBC367C /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F20335764277C2E44F7825D2 /* LoginView.swift */; };
 		E912DD2299D28C54B1846A12 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D9B33BBC5E75BE977852EBE /* SearchView.swift */; };
@@ -230,6 +231,7 @@
 		ABC8284C8DB15BB1AECA34F0 /* VisitedListingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitedListingsStore.swift; sourceTree = "<group>"; };
 		AF4ECC50EF60CAE563B7D668 /* FavoritesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesService.swift; sourceTree = "<group>"; };
 		AFCA79AFEA0E6F8136582CC1 /* FlowLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FlowLayout.swift; sourceTree = "<group>"; };
+		B162D379B5ED1C064880C2ED /* ReceiptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptBuilder.swift; sourceTree = "<group>"; };
 		B432FE81E7D9B6ECAB6EE3F8 /* SearchHerePill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHerePill.swift; sourceTree = "<group>"; };
 		B4FAE01C676255DD56E0570A /* SpotPriceStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotPriceStep.swift; sourceTree = "<group>"; };
 		B8D99627256D695D60592DC8 /* EditListingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditListingView.swift; sourceTree = "<group>"; };
@@ -491,6 +493,7 @@
 				41E71E1C8EA6E28F59A76B9A /* BlockedSlots.swift */,
 				CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */,
 				8912249569F172B1FAC73845 /* PersonnummerHelper.swift */,
+				B162D379B5ED1C064880C2ED /* ReceiptBuilder.swift */,
 				40D0D12BC80A797DF8A6DEED /* SearchContextStore.swift */,
 				ABC8284C8DB15BB1AECA34F0 /* VisitedListingsStore.swift */,
 			);
@@ -790,6 +793,7 @@
 				CB46F5F9050B9E87910DA0CD /* PublishStep.swift in Sources */,
 				1A1B9BC09172D4EBECCDB2C3 /* PushNotificationManager.swift in Sources */,
 				C0BA2DBEE5876C34B94A911D /* QRCodeView.swift in Sources */,
+				E73EE58A4F48616B26338D4E /* ReceiptBuilder.swift in Sources */,
 				30DB0664F70CAF9A54C49E83 /* RegisterView.swift in Sources */,
 				96B48987F842D9D98F4FE0F7 /* SearchContextStore.swift in Sources */,
 				CCC01BD7E34A8531A3C71E2A /* SearchHerePill.swift in Sources */,

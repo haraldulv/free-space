@@ -450,6 +450,14 @@ struct BookingCard: View {
                     Task { await loadPreview() }
                     showCancelConfirm = true
                 }
+            } else if isPastCheckout && (booking.status == .confirmed || booking.status == .cancelled) {
+                ctaButton(label: "Kvittering", icon: "doc.text") {
+                    let text = ReceiptBuilder.buildText(
+                        for: booking,
+                        guestName: authManager.profile?.fullName
+                    )
+                    ReceiptBuilder.presentShareSheet(text)
+                }
             }
         }
     }
