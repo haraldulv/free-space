@@ -56,30 +56,32 @@ export default function ListingSection({ title, listings }: ListingSectionProps)
         {/* Header with title + arrows */}
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-lg sm:text-xl font-semibold text-neutral-900">{title}</h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => scroll("left")}
               disabled={!canScrollLeft}
-              className={`flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 transition-colors ${
+              className={`flex h-7 w-7 items-center justify-center transition-opacity ${
                 canScrollLeft
-                  ? "bg-white text-neutral-700 hover:bg-neutral-50"
-                  : "bg-neutral-100 text-neutral-300 cursor-default"
+                  ? "text-neutral-800 opacity-100 hover:opacity-70"
+                  : "text-neutral-300 opacity-50 cursor-default"
               }`}
+              style={{ filter: canScrollLeft ? "drop-shadow(0 1px 2px rgba(0,0,0,0.18))" : undefined }}
               aria-label={t("previous")}
             >
-              <ChevronLeft className="h-4 w-4" />
+              <ChevronLeft className="h-5 w-5" strokeWidth={2.25} />
             </button>
             <button
               onClick={() => scroll("right")}
               disabled={!canScrollRight}
-              className={`flex h-9 w-9 items-center justify-center rounded-full border border-neutral-300 transition-colors ${
+              className={`flex h-7 w-7 items-center justify-center transition-opacity ${
                 canScrollRight
-                  ? "bg-white text-neutral-700 hover:bg-neutral-50"
-                  : "bg-neutral-100 text-neutral-300 cursor-default"
+                  ? "text-neutral-800 opacity-100 hover:opacity-70"
+                  : "text-neutral-300 opacity-50 cursor-default"
               }`}
+              style={{ filter: canScrollRight ? "drop-shadow(0 1px 2px rgba(0,0,0,0.18))" : undefined }}
               aria-label={t("next")}
             >
-              <ChevronRight className="h-4 w-4" />
+              <ChevronRight className="h-5 w-5" strokeWidth={2.25} />
             </button>
           </div>
         </div>
