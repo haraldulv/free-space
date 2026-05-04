@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CheckCircle2, ChevronRight, Loader2, ShieldCheck, UserCircle, MapPin, Building2, ArrowLeft } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Input from "@/components/ui/Input";
@@ -31,12 +31,36 @@ export default function HostOnboardingWizard({ onComplete }: HostOnboardingWizar
   const [street, setStreet] = useState("");
   const [postalCode, setPostalCode] = useState("");
   const [city, setCity] = useState("");
+  const [cityAutoFilled, setCityAutoFilled] = useState(false);
 
   const [iban, setIban] = useState("");
   const [accountHolder, setAccountHolder] = useState("");
 
   const [chargesEnabled, setChargesEnabled] = useState(false);
   const [payoutsEnabled, setPayoutsEnabled] = useState(false);
+
+  // Auto-fyll by når host taster gyldig postnummer.
+  useEffect(() => {
+    if (!/^\d{4}$/.test(postalCode)) return;
+    // Ikke overskriv hvis host har skrevet city manuelt (med mindre den var auto-fylt før).
+    if (city && !cityAutoFilled) return;
+    let cancelled = false;
+    fetch(`/api/postal-lookup?postnr=${postalCode}`)
+      .then((r) => r.json())
+      .then((data: { city: string | null }) => {
+        if (cancelled) return;
+        if (data.city) {
+          setCity(data.city);
+          setCityAutoFilled(true);
+        }
+      })
+      .catch(() => {
+        // Ignorer — host kan taste manuelt.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [postalCode]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentIndex = STEPS.indexOf(step);
 
@@ -274,8 +298,8 @@ export default function HostOnboardingWizard({ onComplete }: HostOnboardingWizar
           <div className="space-y-4">
             <Input id="street" label={t("street")} value={street} onChange={(e) => setStreet(e.target.value)} placeholder={t("streetPlaceholder")} />
             <div className="grid grid-cols-2 gap-4">
-              <Input id="postalCode" label={t("postalCode")} value={postalCode} onChange={(e) => setPostalCode(e.target.value)} placeholder={t("postalCodePlaceholder")} maxLength={4} />
-              <Input id="city" label={t("city")} value={city} onChange={(e) => setCity(e.target.value)} placeholder={t("cityPlaceholder")} />
+              <Input id="postalCode" label={t("postalCode")} value={postalCode} onChange={(e) => { setPostalCode(e.target.value); setCityAutoFilled(false); }} placeholder={t("postalCodePlaceholder")} maxLength={4} />
+              <Input id="city" label={t("city")} value={city} onChange={(e) => { setCity(e.target.value); setCityAutoFilled(false); }} placeholder={t("cityPlaceholder")} />
             </div>
             <div className="rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2 text-sm text-neutral-500">
               {t("country")}

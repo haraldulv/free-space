@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Camera, LogOut, Trash2, User, Mail, Calendar, Check, CreditCard, CheckCircle2, Smartphone, Phone } from "lucide-react";
+import Link from "next/link";
+import { Camera, LogOut, Trash2, User, Mail, Calendar, Check, CreditCard, CheckCircle2, Smartphone, Phone, Sparkles, ArrowRight } from "lucide-react";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { createClient } from "@/lib/supabase/client";
@@ -124,8 +125,36 @@ export default function SettingsPanel() {
     );
   }
 
+  const isHost = profile.stripeOnboardingComplete === true;
+
   return (
     <div className="max-w-xl">
+      {/* "Bli utleier" CTA — over konto, kun for ikke-hosts */}
+      {!isHost && (
+        <section className="mb-8 overflow-hidden rounded-2xl border border-primary-200 bg-gradient-to-br from-primary-50 to-white p-5">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 flex-none items-center justify-center rounded-xl bg-primary-600 text-white">
+              <Sparkles className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-base font-bold text-neutral-900">
+                Bli utleier på Tuno
+              </h3>
+              <p className="mt-1 text-sm text-neutral-600">
+                Lei ut parkeringsplassen, hytta eller campingplassen din og tjen ekstra inntekt. Det tar bare noen minutter å sette opp.
+              </p>
+              <Link
+                href="/bli-utleier"
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-primary-700"
+              >
+                Kom i gang
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
       {/* Profile section */}
       <section>
         <h2 className="text-base font-medium text-neutral-700">Profil</h2>
