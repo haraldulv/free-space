@@ -37,6 +37,9 @@ struct SpotAvailabilityStep: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 22) {
                         header(index: index)
+                        if index > 0 {
+                            copyFromPreviousButton(currentIndex: index)
+                        }
                         modeCards(spotIndex: index)
                         if !availability.alwaysAvailable {
                             bandsSection(spotIndex: index)
@@ -250,6 +253,41 @@ struct SpotAvailabilityStep: View {
             BandPrefill(id: "weekday-evening", label: "Hverdager kveld", subtitle: "Mandag–Fredag, 17–22", dayMask: 0b0011111, startHour: 17, endHour: 22),
             BandPrefill(id: "weekend-day", label: "Helg dag", subtitle: "Lør–Søn, 09–22", dayMask: 0b1100000, startHour: 9, endHour: 22),
         ]
+    }
+
+    @ViewBuilder
+    private func copyFromPreviousButton(currentIndex: Int) -> some View {
+        let prevIndex = currentIndex - 1
+        Button {
+            copyFromPrevious(currentIndex: currentIndex)
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "doc.on.doc")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Bruk samme som plass \(prevIndex + 1)")
+                    .font(.system(size: 14, weight: .semibold))
+                Spacer()
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 12, weight: .bold))
+            }
+            .foregroundStyle(.primary700)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Color.primary50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary200, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func copyFromPrevious(currentIndex: Int) {
+        let prevIndex = currentIndex - 1
+        guard
+            let prevId = form.spotMarkers[safe: prevIndex]?.id,
+            let currentId = form.spotMarkers[safe: currentIndex]?.id
+        else { return }
+        let template = form.availability(for: prevId)
+        form.setAvailability(template, for: currentId)
     }
 
     private func setAlwaysAvailable(_ value: Bool, spotIndex: Int) {
