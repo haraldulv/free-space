@@ -94,10 +94,9 @@ function ensureOverlayClass() {
       this.position = new google.maps.LatLng(listing.location.lat, listing.location.lng);
 
       const el = document.createElement("button");
-      const zap = listing.instantBooking ? '<svg style="width:12px;height:12px;fill:#16a34a;display:inline;vertical-align:-1px;margin-right:2px" viewBox="0 0 24 24" stroke="none"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>' : "";
       const spotsLabel = listing.availableSpots !== undefined ? `${listing.availableSpots}/${listing.spots}p` : `${listing.spots}p`;
       const spots = listing.spots > 1 ? `<span style="margin-left:4px;opacity:0.5;font-weight:500;font-size:11px">${spotsLabel}</span>` : "";
-      el.innerHTML = `${zap}${getDisplayPriceText(listing)} kr${spots}`;
+      el.innerHTML = `${getDisplayPriceText(listing)} kr${spots}`;
       el.style.cssText = `
         border-radius: 9999px;
         padding: 6px 14px;
@@ -337,9 +336,7 @@ export default function SearchMapInner({
       el.style.boxShadow = isActive
         ? "0 4px 12px rgba(0,0,0,0.3), 0 0 0 3px rgba(23,23,23,0.15)"
         : "0 2px 8px rgba(0,0,0,0.18), 0 0 0 3px rgba(255,255,255,0.6)";
-      el.style.transform = isActive
-        ? "translate(-50%, -50%) scale(1.08)"
-        : "translate(-50%, -50%)";
+      el.style.transform = "translate(-50%, -50%)";
       el.style.zIndex = isActive ? "10" : "1";
     });
   }, [hoveredListingId, selectedListingId]);
