@@ -188,31 +188,21 @@ export default async function ListingPage({
           )}
 
           {(() => {
-            const listingExtras = listing.extras ?? [];
             const spotsWithExtras = (listing.spotMarkers ?? []).filter((s) => (s.extras ?? []).length > 0);
-            if (listingExtras.length === 0 && spotsWithExtras.length === 0) return null;
+            if (spotsWithExtras.length === 0) return null;
             return (
               <div className="mt-6 border-t border-neutral-100 pt-6">
                 <h2 className="mb-4 text-lg font-semibold text-neutral-900">{tListing("extras")}</h2>
-                {listingExtras.length > 0 && (
-                  <div className="mb-5">
-                    <p className="mb-2 text-sm font-medium text-neutral-700">{tListing("extrasShared")}</p>
-                    <ExtraList extras={listingExtras} />
-                  </div>
-                )}
-                {spotsWithExtras.length > 0 && (
-                  <div className="space-y-3">
-                    <p className="text-sm font-medium text-neutral-700">{tListing("extrasPerSpot")}</p>
-                    {spotsWithExtras.map((spot, idx) => (
-                      <div key={spot.id ?? idx} className="rounded-lg border border-neutral-200 p-4">
-                        <p className="mb-3 text-sm font-semibold text-neutral-900">
-                          {spot.label?.trim() || tListing("spotLabel", { number: idx + 1 })}
-                        </p>
-                        <ExtraList extras={spot.extras ?? []} />
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="space-y-3">
+                  {spotsWithExtras.map((spot, idx) => (
+                    <div key={spot.id ?? idx} className="rounded-lg border border-neutral-200 p-4">
+                      <p className="mb-3 text-sm font-semibold text-neutral-900">
+                        {spot.label?.trim() || tListing("spotLabel", { number: idx + 1 })}
+                      </p>
+                      <ExtraList extras={spot.extras ?? []} />
+                    </div>
+                  ))}
+                </div>
               </div>
             );
           })()}

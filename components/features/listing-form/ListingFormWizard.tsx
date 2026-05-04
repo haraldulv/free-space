@@ -10,13 +10,12 @@ import BasicInfoStep from "./steps/BasicInfoStep";
 import LocationStep from "./steps/LocationStep";
 import ImageUploadStep from "./steps/ImageUploadStep";
 import AmenitiesStep from "./steps/AmenitiesStep";
-import ExtrasStep from "./steps/ExtrasStep";
 import DiscountsStep from "./steps/DiscountsStep";
 import ReviewStep from "./steps/ReviewStep";
 import AvailabilityEditor from "./AvailabilityEditor";
 import { listingStepSchemas } from "@/lib/utils/validation";
 import type { CreateListingData } from "@/lib/supabase/listings";
-import type { Amenity, ListingExtra, SpotMarker, VehicleType } from "@/types";
+import type { Amenity, SpotMarker, VehicleType } from "@/types";
 
 interface ListingFormWizardProps {
   userId: string;
@@ -26,7 +25,7 @@ interface ListingFormWizardProps {
   onSubmit: (data: CreateListingData) => Promise<string | void>;
 }
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 8;
 
 export default function ListingFormWizard({
   userId,
@@ -200,15 +199,7 @@ export default function ListingFormWizard({
           />
         )}
 
-        {step === 5 && formData.category && (
-          <ExtrasStep
-            category={formData.category}
-            extras={(formData.extras || []) as ListingExtra[]}
-            onChange={(extras) => updateField("extras", extras)}
-          />
-        )}
-
-        {step === 6 && (
+        {step === 5 && (
           <DiscountsStep
             spotMarkers={(formData.spotMarkers || []) as SpotMarker[]}
             defaultPrice={formData.price || 0}
@@ -216,14 +207,14 @@ export default function ListingFormWizard({
           />
         )}
 
-        {step === 7 && (
+        {step === 6 && (
           <AvailabilityEditor
             blockedDates={(formData.blockedDates || []) as string[]}
             onChange={(dates) => updateField("blockedDates", dates)}
           />
         )}
 
-        {step === 8 && <ReviewStep data={formData} />}
+        {step === 7 && <ReviewStep data={formData} />}
       </div>
 
       {/* Navigation */}

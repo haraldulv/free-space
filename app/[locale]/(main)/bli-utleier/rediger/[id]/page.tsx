@@ -10,19 +10,17 @@ import BasicInfoStep from "@/components/features/listing-form/steps/BasicInfoSte
 import LocationStep from "@/components/features/listing-form/steps/LocationStep";
 import ImageUploadStep from "@/components/features/listing-form/steps/ImageUploadStep";
 import AmenitiesStep from "@/components/features/listing-form/steps/AmenitiesStep";
-import ExtrasStep from "@/components/features/listing-form/steps/ExtrasStep";
 import DiscountsStep from "@/components/features/listing-form/steps/DiscountsStep";
 import AvailabilityEditor from "@/components/features/listing-form/AvailabilityEditor";
 import Button from "@/components/ui/Button";
 import type { CreateListingData } from "@/lib/supabase/listings";
-import type { Amenity, SpotMarker, ListingExtra } from "@/types";
+import type { Amenity, SpotMarker } from "@/types";
 
 const TAB_META = [
   { id: "info", labelKey: "tabInfo", icon: FileText },
   { id: "location", labelKey: "tabLocation", icon: MapPin },
   { id: "images", labelKey: "tabImages", icon: ImageIcon },
   { id: "amenities", labelKey: "tabAmenities", icon: Sparkles },
-  { id: "extras", labelKey: "tabExtras", icon: Sparkles },
   { id: "discounts", labelKey: "tabDiscounts", icon: Percent },
   { id: "availability", labelKey: "tabAvailability", icon: CalendarDays },
 ] as const;
@@ -244,14 +242,6 @@ export default function EditListingPage() {
             category={formData.category}
             selected={(formData.amenities || []) as Amenity[]}
             onChange={(amenities) => updateField("amenities", amenities)}
-          />
-        )}
-
-        {tab === "extras" && formData.category && (
-          <ExtrasStep
-            category={formData.category}
-            extras={(formData.extras || []) as ListingExtra[]}
-            onChange={(extras) => updateField("extras", extras)}
           />
         )}
 

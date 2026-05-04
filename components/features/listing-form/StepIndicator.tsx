@@ -8,7 +8,6 @@ const STEP_KEYS = [
   "stepLocation",
   "stepImages",
   "stepAmenities",
-  "stepExtras",
   "stepDiscounts",
   "stepCalendar",
   "stepPublish",

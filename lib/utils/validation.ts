@@ -128,8 +128,7 @@ export const listingStepSchemas = [
   listingStep3Schema,   // 2 Lokasjon + pris
   listingStep4Schema,   // 3 Bilder
   listingStep5Schema,   // 4 Fasiliteter
-  null,                  // 5 Felles tillegg
-  null,                  // 6 Rabatter
-  null,                  // 7 Kalender
-  null,                  // 8 Publiser
+  null,                  // 5 Rabatter
+  null,                  // 6 Kalender
+  null,                  // 7 Publiser
 ];

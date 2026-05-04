@@ -29,7 +29,6 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
   const [showCalendar, setShowCalendar] = useState(false);
   const [availability, setAvailability] = useState<{ availableSpots: number; totalSpots: number } | null>(null);
   const [checkingAvailability, setCheckingAvailability] = useState(false);
-  const [listingExtras, setListingExtras] = useState<Record<string, number>>({});
   const [spotExtras, setSpotExtras] = useState<Record<string, Record<string, number>>>({});
   const [selectedSpotIds, setSelectedSpotIds] = useState<string[]>([]);
 
@@ -116,14 +115,6 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
     return listing.price * effectiveNights;
   }, [hasSpotLevelPricing, selectedSpots, listing.price, effectiveNights]);
 
-  const listingExtrasTotal = useMemo(() => {
-    return (listing.extras || []).reduce((sum, extra) => {
-      const qty = listingExtras[extra.id] || 0;
-      if (qty === 0) return sum;
-      return sum + extra.price * (extra.perNight ? effectiveNights : 1) * qty;
-    }, 0);
-  }, [listing.extras, listingExtras, effectiveNights]);
-
   const spotExtrasTotal = useMemo(() => {
     return selectedSpots.reduce((sum, spot) => {
       const perSpot = (spot.extras || []).reduce((acc, extra) => {
@@ -135,7 +126,7 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
     }, 0);
   }, [selectedSpots, spotExtras, effectiveNights]);
 
-  const subtotal = baseTotal + listingExtrasTotal + spotExtrasTotal;
+  const subtotal = baseTotal + spotExtrasTotal;
   const serviceFee = Math.round(subtotal * SERVICE_FEE_RATE);
   const total = subtotal + serviceFee;
 
@@ -158,17 +149,6 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
     }
     return Array.from(set).map((d) => new Date(d + "T00:00:00"));
   }, [listing.blockedDates, listing.spots, bookedDates, spotMarkers]);
-
-  const toggleListingExtra = (id: string, delta: number) => {
-    setListingExtras((prev) => {
-      const curr = prev[id] || 0;
-      const next = Math.max(0, curr + delta);
-      const copy = { ...prev };
-      if (next === 0) delete copy[id];
-      else copy[id] = next;
-      return copy;
-    });
-  };
 
   const toggleSpotExtra = (spotId: string, extraId: string, delta: number) => {
     setSpotExtras((prev) => {
@@ -205,15 +185,14 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
     if (hasSpotLevelPricing && selectedSpotIds.length > 0) {
       params.set("spots", selectedSpotIds.join(","));
     }
-    const payload = { listing: listingExtras, spots: spotExtras };
-    if (Object.keys(listingExtras).length > 0 || Object.keys(spotExtras).length > 0) {
+    const payload = { listing: {}, spots: spotExtras };
+    if (Object.keys(spotExtras).length > 0) {
       params.set("extras", encodeURIComponent(JSON.stringify(payload)));
     }
     router.push(`/book/${listing.id}?${params.toString()}`);
   };
 
   const priceLabel = listing.priceUnit === "hour" ? tListing("hour") : tListing("night");
-  const hasListingExtras = (listing.extras || []).length > 0;
 
   const buttonDisabled =
     checkingAvailability ||
@@ -341,48 +320,6 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
         </div>
       )}
 
-      {/* Listing-wide extras */}
-      {hasListingExtras && nights > 0 && (
-        <div className="mt-4 border-t border-neutral-100 pt-4">
-          <p className="text-sm font-medium text-neutral-700 mb-3">{t("extrasLabel")}</p>
-          <div className="space-y-2">
-            {(listing.extras || []).map((extra) => {
-              const qty = listingExtras[extra.id] || 0;
-              const extraCost = extra.price * (extra.perNight ? nights : 1);
-              return (
-                <div key={extra.id} className="flex items-center justify-between text-sm">
-                  <div>
-                    <span className="text-neutral-700">{extra.name}</span>
-                    <span className="ml-1 text-neutral-400">
-                      {extra.perNight
-                        ? t("pricePerNightShort", { price: extra.price })
-                        : `${extra.price} kr`}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {qty > 0 && <span className="text-xs text-neutral-500">{extraCost * qty} kr</span>}
-                    <button
-                      onClick={() => toggleListingExtra(extra.id, -1)}
-                      disabled={qty === 0}
-                      className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 disabled:opacity-30 hover:bg-neutral-50"
-                    >
-                      <Minus className="h-3 w-3" />
-                    </button>
-                    <span className="w-4 text-center text-sm font-medium">{qty}</span>
-                    <button
-                      onClick={() => toggleListingExtra(extra.id, 1)}
-                      className="flex h-7 w-7 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-50"
-                    >
-                      <Plus className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
       {nights > 0 && (
         <div className="mt-4 space-y-2 border-t border-neutral-100 pt-4 text-sm">
           <div className="flex justify-between text-neutral-600">
@@ -395,10 +332,10 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
             </span>
             <span>{baseTotal} kr</span>
           </div>
-          {(listingExtrasTotal + spotExtrasTotal) > 0 && (
+          {spotExtrasTotal > 0 && (
             <div className="flex justify-between text-neutral-600">
               <span>{t("extrasLabel")}</span>
-              <span>{listingExtrasTotal + spotExtrasTotal} kr</span>
+              <span>{spotExtrasTotal} kr</span>
             </div>
           )}
           <div className="flex justify-between text-neutral-600">
