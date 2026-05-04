@@ -40,18 +40,33 @@ struct WizardPricingCalendarView: View {
     private let monthsAhead = 6
     private let cellHeight: CGFloat = 110
     private let cellSpacing: CGFloat = 6
+    /// Default-høyde per bånd. Skaleres ned dynamisk om mange lanes finnes
+    /// slik at stacken aldri sprenger cellHeight.
     private let bandHeight: CGFloat = 22
     private let bandSpacing: CGFloat = 3
+    private let bandMinHeight: CGFloat = 14
 
     /// Antall lanes som faktisk er i bruk (= max lane + 1).
     private var totalLanes: Int {
         (bandLaneAssignment.values.max() ?? -1) + 1
     }
 
+    /// Effektiv bånd-høyde. Krymper fra 22 ned mot bandMinHeight (14) når
+    /// totalLanes >= 5, slik at hele stacken får plass innenfor cellHeight.
+    /// Forhindrer "kalender forstrekkes med flere bånd"-buggen.
+    private var effectiveBandHeight: CGFloat {
+        guard totalLanes > 0 else { return bandHeight }
+        let availableHeight = cellHeight - 16 // 8 top + 8 bottom padding
+        let totalSpacing = CGFloat(max(0, totalLanes - 1)) * bandSpacing
+        let computed = (availableHeight - totalSpacing) / CGFloat(totalLanes)
+        return max(bandMinHeight, min(bandHeight, computed))
+    }
+
     /// Y-koordinat for bånd-stacken slik at den er vertikalt sentrert
     /// på dag-cellen.
     private var bandStartY: CGFloat {
-        let stackHeight = CGFloat(totalLanes) * bandHeight + CGFloat(max(0, totalLanes - 1)) * bandSpacing
+        let h = effectiveBandHeight
+        let stackHeight = CGFloat(totalLanes) * h + CGFloat(max(0, totalLanes - 1)) * bandSpacing
         return (cellHeight - stackHeight) / 2
     }
 
@@ -448,7 +463,7 @@ struct WizardPricingCalendarView: View {
                     let palette = bandPalette(for: band)
                     let xOffset = CGFloat(seg.start) * (cellWidth + cellSpacing)
                     let width = CGFloat(seg.end - seg.start + 1) * cellWidth + CGFloat(seg.end - seg.start) * cellSpacing
-                    let yOffset = bandStartY + CGFloat(lane) * (bandHeight + bandSpacing)
+                    let yOffset = bandStartY + CGFloat(lane) * (effectiveBandHeight + bandSpacing)
 
                     Button {
                         openBandEditor(band)
@@ -463,7 +478,7 @@ struct WizardPricingCalendarView: View {
                             Spacer(minLength: 0)
                         }
                         .padding(.horizontal, 6)
-                        .frame(width: max(0, width - 4), height: bandHeight)
+                        .frame(width: max(0, width - 4), height: effectiveBandHeight)
                         .background(
                             Capsule()
                                 .fill(isOverride ? palette.bgOverride : palette.bgDefault)
