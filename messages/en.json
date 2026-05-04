@@ -160,7 +160,11 @@
     "memberSince": "Member since {year} · {count, plural, =1 {1 listing} other {# listings}}",
     "hostLabel": "Host",
     "responseRate": "{rate}% response rate",
-    "respondsIn": "Responds {time}"
+    "respondsIn": "Responds {time}",
+    "hostStatsReviews": "{count, plural, =1 {1 review} other {# reviews}}",
+    "hostStatsNoReviews": "No reviews yet",
+    "hostStatsListings": "Listings",
+    "hostStatsResponse": "Response rate"
   },
   "booking": {
     "title": "Booking",

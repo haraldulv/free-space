@@ -160,7 +160,11 @@
     "memberSince": "Medlem siden {year} · {count, plural, =1 {1 annonse} other {# annonser}}",
     "hostLabel": "Utleier",
     "responseRate": "{rate}% svarprosent",
-    "respondsIn": "Svarer {time}"
+    "respondsIn": "Svarer {time}",
+    "hostStatsReviews": "{count, plural, =1 {1 anmeldelse} other {# anmeldelser}}",
+    "hostStatsNoReviews": "Ingen anmeldelser ennå",
+    "hostStatsListings": "Annonser",
+    "hostStatsResponse": "Svarprosent"
   },
   "booking": {
     "title": "Bestilling",

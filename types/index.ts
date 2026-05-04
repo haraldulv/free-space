@@ -116,6 +116,12 @@ export interface Host {
   responseTime: string;
   joinedYear: number;
   listingsCount: number;
+  /** Aggregert rating fra profiles-tabellen (alle vertens annonser kombinert). */
+  rating?: number;
+  /** Antall reviews vert har totalt. */
+  reviewCount?: number;
+  /** Bio fra profiles. */
+  bio?: string;
 }
 
 export type PriceUnit = "time" | "natt" | "hour";

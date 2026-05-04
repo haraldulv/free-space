@@ -160,7 +160,11 @@
     "memberSince": "Mitglied seit {year} · {count, plural, =1 {1 Inserat} other {# Inserate}}",
     "hostLabel": "Gastgeber",
     "responseRate": "{rate} % Antwortrate",
-    "respondsIn": "Antwortet {time}"
+    "respondsIn": "Antwortet {time}",
+    "hostStatsReviews": "{count, plural, =1 {1 Bewertung} other {# Bewertungen}}",
+    "hostStatsNoReviews": "Noch keine Bewertungen",
+    "hostStatsListings": "Anzeigen",
+    "hostStatsResponse": "Antwortrate"
   },
   "booking": {
     "title": "Buchung",

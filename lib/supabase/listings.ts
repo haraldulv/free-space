@@ -343,7 +343,28 @@ export async function getListingById(id: string): Promise<Listing | null> {
     .single();
 
   if (error || !data) return null;
-  return rowToListing(data);
+  const listing = rowToListing(data);
+
+  // Hent fersk host-profil for aggregert rating/review_count + bio.
+  // De-normaliserte host_*-kolonner på listing-rad er stale ved profil-oppdatering;
+  // vi henter direkte fra profiles for å speile iOS sin fetchHostStats.
+  if (listing.host.id && listing.host.id !== "unknown") {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("rating, review_count, bio, full_name, avatar_url")
+      .eq("id", listing.host.id)
+      .single();
+    if (profile) {
+      listing.host.rating = typeof profile.rating === "number" ? profile.rating : undefined;
+      listing.host.reviewCount = typeof profile.review_count === "number" ? profile.review_count : undefined;
+      listing.host.bio = (profile.bio as string | null) || undefined;
+      // Bruk fersk navn/avatar — overstyrer denormaliserte kolonner.
+      if (profile.full_name) listing.host.name = profile.full_name as string;
+      if (profile.avatar_url) listing.host.avatar = profile.avatar_url as string;
+    }
+  }
+
+  return listing;
 }
 
 export async function getListingsByTag(tag: string, limit = 20): Promise<Listing[]> {
