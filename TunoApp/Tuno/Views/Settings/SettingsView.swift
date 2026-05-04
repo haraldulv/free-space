@@ -3,6 +3,10 @@ import UIKit
 
 struct SettingsView: View {
     @EnvironmentObject var localizationManager: LocalizationManager
+    @EnvironmentObject var authManager: AuthManager
+    @State private var showDeleteAccountConfirm = false
+    @State private var deletingAccount = false
+    @State private var deleteError: String?
 
     private let languages: [(code: String, name: String, flag: String)] = [
         ("nb", "Norsk", "🇳🇴"),
@@ -111,6 +115,33 @@ struct SettingsView: View {
                 } header: {
                     Text("Om appen")
                 }
+
+                // Konto
+                Section {
+                    Button {
+                        showDeleteAccountConfirm = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "trash.fill")
+                                .foregroundStyle(.red)
+                                .frame(width: 24)
+                            Text("Slett konto")
+                                .foregroundStyle(.red)
+                            Spacer()
+                            if deletingAccount {
+                                ProgressView().scaleEffect(0.8)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(deletingAccount)
+                } header: {
+                    Text("Konto")
+                } footer: {
+                    Text("Sletting fjerner profilen din og alle tilknyttede data permanent. Aktive bookinger må avsluttes før du sletter.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
             }
             .disabled(localizationManager.isChangingLanguage)
 
@@ -132,6 +163,35 @@ struct SettingsView: View {
             }
         }
         .navigationTitle("Innstillinger")
+        .alert("Slett konto", isPresented: $showDeleteAccountConfirm) {
+            Button("Slett", role: .destructive) {
+                Task { await deleteAccount() }
+            }
+            Button("Avbryt", role: .cancel) {}
+        } message: {
+            Text("Profilen din og alle bookinger, annonser og favoritter vil bli fjernet permanent. Dette kan ikke angres.")
+        }
+        .alert("Kunne ikke slette", isPresented: .constant(deleteError != nil)) {
+            Button("OK") { deleteError = nil }
+        } message: {
+            Text(deleteError ?? "")
+        }
+    }
+
+    private func deleteAccount() async {
+        guard let userId = authManager.currentUser?.id else { return }
+        deletingAccount = true
+        defer { deletingAccount = false }
+        do {
+            try await supabase
+                .from("profiles")
+                .delete()
+                .eq("id", value: userId.uuidString.lowercased())
+                .execute()
+            await authManager.signOut()
+        } catch {
+            deleteError = error.localizedDescription
+        }
     }
 
     // MARK: - Row helper
