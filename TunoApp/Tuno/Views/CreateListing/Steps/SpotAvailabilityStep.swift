@@ -59,14 +59,16 @@ struct SpotAvailabilityStep: View {
                 basePrice: 0,
                 prefill: wrap.prefill,
                 mode: .availability,
-                existingBands: existingBandRanges
-            ) { dayMask, startHour, startMinute, endHour, endMinute, _ in
+                existingBands: existingBandRanges,
+                spotCount: form.spotMarkers.count
+            ) { dayMask, startHour, startMinute, endHour, endMinute, _, applyToAllSpots in
                 addBand(
                     dayMask: dayMask,
                     startHour: startHour,
                     startMinute: startMinute,
                     endHour: endHour,
-                    endMinute: endMinute
+                    endMinute: endMinute,
+                    applyToAllSpots: applyToAllSpots
                 )
             }
         }
@@ -298,10 +300,8 @@ struct SpotAvailabilityStep: View {
         form.setAvailability(avail, for: id)
     }
 
-    private func addBand(dayMask: Int, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
-        guard let id = spotId else { return }
-        var avail = form.availability(for: id)
-        avail.bands.append(WizardPricingBand(
+    private func addBand(dayMask: Int, startHour: Int, startMinute: Int, endHour: Int, endMinute: Int, applyToAllSpots: Bool = false) {
+        let band = WizardPricingBand(
             dayMask: dayMask,
             startHour: startHour,
             startMinute: startMinute,
@@ -309,9 +309,28 @@ struct SpotAvailabilityStep: View {
             endMinute: endMinute,
             price: 0,
             weekScope: .allWeeks
-        ))
-        avail.alwaysAvailable = false
-        form.setAvailability(avail, for: id)
+        )
+        // Hver spot får sitt eget bånd-id — ellers vil edit/slett på en spot
+        // påvirke alle samtidig (avhenger av downstream-logikk).
+        let targetIds: [String] = applyToAllSpots
+            ? form.spotMarkers.compactMap { $0.id }
+            : [spotId].compactMap { $0 }
+
+        for tid in targetIds {
+            var avail = form.availability(for: tid)
+            avail.bands.append(WizardPricingBand(
+                id: UUID(),
+                dayMask: band.dayMask,
+                startHour: band.startHour,
+                startMinute: band.startMinute,
+                endHour: band.endHour,
+                endMinute: band.endMinute,
+                price: band.price,
+                weekScope: band.weekScope
+            ))
+            avail.alwaysAvailable = false
+            form.setAvailability(avail, for: tid)
+        }
     }
 
     private func removeBand(id bandId: UUID, spotIndex: Int) {

@@ -107,7 +107,9 @@ struct PricingRulesEditorView: View {
                     basePrice: basePrice,
                     prefill: bandSheetPrefill,
                     existingBands: existingBandRanges,
-                ) { dayMask, startHour, startMinute, endHour, endMinute, price in
+                ) { dayMask, startHour, startMinute, endHour, endMinute, price, _ in
+                    // PricingRulesEditorView opererer på én listing — applyToAllSpots
+                    // er ikke aktuelt her (sheet-en viser ikke toggle).
                     Task {
                         await addHourlyBand(
                             dayMask: dayMask,
@@ -597,7 +599,10 @@ struct AddHourlyBandSheet: View {
     /// Eksisterende bånd som det nye båndet ikke kan overlappe med. Tom array
     /// skipper sjekk (bakoverkompatibel default).
     var existingBands: [BandRange] = []
-    let onSave: (_ dayMask: Int, _ startHour: Int, _ startMinute: Int, _ endHour: Int, _ endMinute: Int, _ price: Int) -> Void
+    /// Antall plasser i wizarden. Når > 1 viser sheet-en en "Bruk for alle
+    /// plasser"-toggle nederst. 0/1 skjuler den (default).
+    var spotCount: Int = 0
+    let onSave: (_ dayMask: Int, _ startHour: Int, _ startMinute: Int, _ endHour: Int, _ endMinute: Int, _ price: Int, _ applyToAllSpots: Bool) -> Void
 
     @Environment(\.dismiss) var dismiss
     @State private var selectedDays: Set<Int> = []
@@ -605,6 +610,7 @@ struct AddHourlyBandSheet: View {
     @State private var startMinutes: Int = 9 * 60
     @State private var endMinutes: Int = 17 * 60
     @State private var priceText: String = ""
+    @State private var applyToAllSpots: Bool = false
 
     private let dayNames = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"]
 
@@ -637,6 +643,9 @@ struct AddHourlyBandSheet: View {
                     if mode == .pricing {
                         priceSection
                     }
+                    if spotCount > 1 {
+                        applyToAllSpotsToggle
+                    }
                     if let conflict {
                         conflictBanner(conflict)
                     }
@@ -658,7 +667,8 @@ struct AddHourlyBandSheet: View {
                             startMinutes % 60,
                             endMinutes / 60,
                             endMinutes % 60,
-                            price
+                            price,
+                            applyToAllSpots
                         )
                         dismiss()
                     }
@@ -757,6 +767,29 @@ struct AddHourlyBandSheet: View {
                 BandTimeWheelPicker(label: "Til", minutes: $endMinutes, range: max(30, startMinutes + 30)...(24 * 60))
             }
         }
+    }
+
+    private var applyToAllSpotsToggle: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Bruk for alle plasser")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text(applyToAllSpots
+                     ? "Båndet legges på alle \(spotCount) plassene."
+                     : "Båndet gjelder kun denne plassen.")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+            }
+            Spacer()
+            Toggle("", isOn: $applyToAllSpots)
+                .labelsHidden()
+                .tint(Color.primary600)
+        }
+        .padding(14)
+        .background(Color.neutral50)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
     }
 
     private var priceSection: some View {
