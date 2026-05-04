@@ -1,10 +1,9 @@
 "use client";
 
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/src/style.css";
 import { CalendarX2 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { dateFnsLocale } from "@/lib/i18n-helpers";
+import TunoCalendar from "@/components/ui/TunoCalendar";
 
 interface AvailabilityEditorProps {
   blockedDates: string[];
@@ -40,37 +39,11 @@ export default function AvailabilityEditor({ blockedDates, onChange }: Availabil
         </p>
       </div>
 
-      <div className="rdp-custom inline-block rounded-lg border border-neutral-200 p-3">
-        <style>{`
-          .rdp-custom .rdp-root {
-            --rdp-accent-color: #1a3268;
-            --rdp-accent-background-color: #d9e2f5;
-            --rdp-day-height: 40px;
-            --rdp-day-width: 40px;
-            --rdp-day_button-height: 38px;
-            --rdp-day_button-width: 38px;
-            --rdp-day_button-border-radius: 8px;
-            font-size: 0.875rem;
-          }
-          .rdp-custom .rdp-today:not(.rdp-selected) {
-            font-weight: 700;
-            color: var(--rdp-accent-color);
-          }
-          .rdp-custom .rdp-blocked {
-            background-color: #fee2e2 !important;
-            color: #dc2626 !important;
-            border-radius: 8px;
-          }
-          .rdp-custom .rdp-blocked .rdp-day_button {
-            color: #dc2626;
-            font-weight: 600;
-          }
-        `}</style>
-        <DayPicker
+      <div className="inline-block rounded-lg border border-neutral-200 p-3">
+        <TunoCalendar
           onDayClick={handleDayClick}
           disabled={{ before: new Date() }}
           numberOfMonths={2}
-          weekStartsOn={1}
           locale={dfLocale}
           modifiers={{ blocked: blockedDateObjects }}
           modifiersClassNames={{ blocked: "rdp-blocked" }}

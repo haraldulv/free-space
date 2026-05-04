@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { DayPicker } from "react-day-picker";
-import "react-day-picker/src/style.css";
 import { CalendarX2, Save } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { dateFnsLocale } from "@/lib/i18n-helpers";
 import { updateSpotBlockedDatesAction } from "@/app/[locale]/(main)/bli-utleier/actions";
 import Button from "@/components/ui/Button";
+import TunoCalendar from "@/components/ui/TunoCalendar";
 
 interface Props {
   listingId: string;
@@ -67,34 +66,11 @@ export function SpotAvailabilityPanel({ listingId, spotId, initialBlockedDates, 
       <h2 className="text-lg font-semibold text-neutral-900">{t("availabilityTitle")}</h2>
       <p className="mt-1 text-sm text-neutral-500">{t("availabilitySubtitle")}</p>
 
-      <div className="rdp-spot mt-4 inline-block rounded-lg border border-neutral-200 p-3">
-        <style>{`
-          .rdp-spot .rdp-root {
-            --rdp-accent-color: #46c185;
-            --rdp-day-height: 40px;
-            --rdp-day-width: 40px;
-            --rdp-day_button-height: 38px;
-            --rdp-day_button-width: 38px;
-            --rdp-day_button-border-radius: 8px;
-            font-size: 0.875rem;
-          }
-          .rdp-spot .rdp-blocked {
-            background-color: #fee2e2 !important;
-            color: #dc2626 !important;
-            border-radius: 8px;
-          }
-          .rdp-spot .rdp-booked {
-            background-color: #e0e7ff !important;
-            color: #4338ca !important;
-            border-radius: 8px;
-            cursor: not-allowed;
-          }
-        `}</style>
-        <DayPicker
+      <div className="mt-4 inline-block rounded-lg border border-neutral-200 p-3">
+        <TunoCalendar
           onDayClick={handleDayClick}
           disabled={[{ before: new Date() }, ...bookedDateObjects]}
           numberOfMonths={2}
-          weekStartsOn={1}
           locale={dfLocale}
           modifiers={{ blocked: blockedDateObjects, booked: bookedDateObjects }}
           modifiersClassNames={{ blocked: "rdp-blocked", booked: "rdp-booked" }}
@@ -107,7 +83,7 @@ export function SpotAvailabilityPanel({ listingId, spotId, initialBlockedDates, 
           {t("legendBlocked")}
         </span>
         <span className="inline-flex items-center gap-1">
-          <span className="h-2.5 w-2.5 rounded-sm bg-indigo-100 ring-1 ring-indigo-200" />
+          <span className="h-2.5 w-2.5 rounded-sm bg-amber-100 ring-1 ring-amber-200" />
           {t("legendBooked")}
         </span>
       </div>
