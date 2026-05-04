@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { Loader2, FileText, MapPin, Image as ImageIcon, Sparkles, CalendarDays } from "lucide-react";
+import { Loader2, FileText, MapPin, Image as ImageIcon, Sparkles, Percent, CalendarDays } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import { updateListingAction, updateBlockedDatesAction } from "../../actions";
@@ -11,6 +11,7 @@ import LocationStep from "@/components/features/listing-form/steps/LocationStep"
 import ImageUploadStep from "@/components/features/listing-form/steps/ImageUploadStep";
 import AmenitiesStep from "@/components/features/listing-form/steps/AmenitiesStep";
 import ExtrasStep from "@/components/features/listing-form/steps/ExtrasStep";
+import DiscountsStep from "@/components/features/listing-form/steps/DiscountsStep";
 import AvailabilityEditor from "@/components/features/listing-form/AvailabilityEditor";
 import Button from "@/components/ui/Button";
 import type { CreateListingData } from "@/lib/supabase/listings";
@@ -22,6 +23,7 @@ const TAB_META = [
   { id: "images", labelKey: "tabImages", icon: ImageIcon },
   { id: "amenities", labelKey: "tabAmenities", icon: Sparkles },
   { id: "extras", labelKey: "tabExtras", icon: Sparkles },
+  { id: "discounts", labelKey: "tabDiscounts", icon: Percent },
   { id: "availability", labelKey: "tabAvailability", icon: CalendarDays },
 ] as const;
 
@@ -250,6 +252,14 @@ export default function EditListingPage() {
             category={formData.category}
             extras={(formData.extras || []) as ListingExtra[]}
             onChange={(extras) => updateField("extras", extras)}
+          />
+        )}
+
+        {tab === "discounts" && (
+          <DiscountsStep
+            spotMarkers={(formData.spotMarkers || []) as SpotMarker[]}
+            defaultPrice={formData.price || 0}
+            onChange={updateField}
           />
         )}
 

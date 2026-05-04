@@ -462,6 +462,7 @@
     "stepImages": "Fotos",
     "stepAmenities": "Ausstattung",
     "stepExtras": "Gemeinsame Extras",
+    "stepDiscounts": "Rabatte",
     "stepCalendar": "Kalender",
     "stepPublish": "Veröffentlichen",
     "publishing": "Wird veröffentlicht ...",
@@ -541,6 +542,23 @@
       "perNight": "Pro Nacht",
       "instantLabel": "Sofortbuchung",
       "instantDesc": "Gäste können Aufenthalte bis 7 Nächten sofort buchen. Längere Aufenthalte erfordern immer eine Bestätigung."
+    },
+    "discounts": {
+      "title": "Rabatte für längere Aufenthalte",
+      "subtitle": "Belohne Gäste, die einen ganzen Tag, eine Woche oder einen Monat buchen. Lasse die Felder leer, wenn du keinen Rabatt geben möchtest.",
+      "cardTitle": "Alle Stellplätze",
+      "cardSubtitle": "Verwende denselben Rabatt für alle deine Stellplätze.",
+      "dayLabel": "1 Tag",
+      "dayCaption": "Die volle Öffnungszeit des Tages",
+      "weekLabel": "1 Woche",
+      "weekCaption": "7 aufeinanderfolgende volle Tage",
+      "monthLabel": "1 Monat",
+      "monthCaption": "30 aufeinanderfolgende volle Tage",
+      "previewTitle": "Preisbeispiele nach Rabatt",
+      "savedAmount": "Gespart {amount} kr",
+      "previewFootnote": "Das Beispiel verwendet einen Stundenpreis von {rate} kr. Der tatsächliche Gesamtpreis variiert je nach Preisband.",
+      "info": "Der Rabatt gilt nur für volle Tage — Buchungen innerhalb einzelner Stunden werden zum vollen Stundenpreis berechnet. Eine 35-Tage-Buchung wird zu 1 Monat + 5 Tagesrabatten.",
+      "noSpotsYet": "Lege zuerst mindestens einen Stellplatz im Standort-Schritt an, bevor du Rabatte konfigurierst."
     },
     "availability": {
       "title": "Verfügbarkeit",
@@ -623,6 +641,7 @@
       "tabImages": "Fotos",
       "tabAmenities": "Ausstattung",
       "tabExtras": "Gemeinsame Extras",
+      "tabDiscounts": "Rabatte",
       "tabAvailability": "Verfügbarkeit"
     },
     "location": {

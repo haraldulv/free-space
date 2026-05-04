@@ -9,6 +9,7 @@ const STEP_KEYS = [
   "stepImages",
   "stepAmenities",
   "stepExtras",
+  "stepDiscounts",
   "stepCalendar",
   "stepPublish",
 ] as const;

@@ -129,6 +129,7 @@ export const listingStepSchemas = [
   listingStep4Schema,   // 3 Bilder
   listingStep5Schema,   // 4 Fasiliteter
   null,                  // 5 Felles tillegg
-  null,                  // 6 Kalender
-  null,                  // 7 Publiser
+  null,                  // 6 Rabatter
+  null,                  // 7 Kalender
+  null,                  // 8 Publiser
 ];
