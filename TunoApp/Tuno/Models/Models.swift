@@ -128,11 +128,21 @@ struct SpotMarker: Codable, Hashable {
     /// Bilder tagget til denne spesifikke plassen. URL-ene er delmengde av
     /// listing.images — ingen separat opplasting. Utleier tagger i wizard/edit.
     var images: [String]?
-    /// Rabatt (%) når booking dekker hele dagens band-vindu (ett "døgn"). 0–100. Default nil.
+    /// "Lengre opphold"-pris (kr) for ett fullt døgn (24 t). Overstyrer
+    /// hourly-grunnpris × 24 når booking dekker en full dag. nil/0 = ingen tilbud.
+    var dailyPrice: Int? = nil
+    /// "Lengre opphold"-pris (kr) for 7 påfølgende fulle døgn.
+    var weeklyPrice: Int? = nil
+    /// "Lengre opphold"-pris (kr) for 30 påfølgende fulle døgn.
+    var monthlyPrice: Int? = nil
+
+    /// @available *, deprecated — bruk dailyPrice. Beholdt for backward-compat med
+    /// annonser opprettet før prisbasert lansering. Konverteres on-the-fly i
+    /// effectiveLongerStayPrices(baseHourly:).
     var discountDayPct: Int? = nil
-    /// Rabatt (%) for 7 påfølgende fulle døgn. 0–100. Default nil.
+    /// @deprecated bruk weeklyPrice.
     var discountWeekPct: Int? = nil
-    /// Rabatt (%) for 30 påfølgende fulle døgn. 0–100. Default nil.
+    /// @deprecated bruk monthlyPrice.
     var discountMonthPct: Int? = nil
 
     enum CodingKeys: String, CodingKey {
@@ -145,9 +155,29 @@ struct SpotMarker: Codable, Hashable {
         case priceUnit = "priceUnit"
         case blockedDates = "blockedDates"
         case checkinMessage = "checkinMessage"
+        case dailyPrice = "dailyPrice"
+        case weeklyPrice = "weeklyPrice"
+        case monthlyPrice = "monthlyPrice"
         case discountDayPct = "discountDayPct"
         case discountWeekPct = "discountWeekPct"
         case discountMonthPct = "discountMonthPct"
+    }
+
+    /// Returner effektive kr-priser for "lengre opphold". Bruker nye felter når
+    /// satt, ellers konverterer fra legacy %-felter via baseHourly × N. Speil
+    /// av lib/pricing.ts:getEffectiveLongerStayPrices.
+    func effectiveLongerStayPrices(baseHourly: Int) -> (daily: Int, weekly: Int, monthly: Int) {
+        let hourly = pricePerHour ?? price ?? baseHourly
+        func fromPct(_ pct: Int?, hours: Int) -> Int {
+            guard let pct, pct > 0, hourly > 0 else { return 0 }
+            let factor = 1.0 - Double(min(100, pct)) / 100.0
+            return Int((Double(hourly * hours) * factor).rounded())
+        }
+        return (
+            daily: dailyPrice ?? fromPct(discountDayPct, hours: 24),
+            weekly: weeklyPrice ?? fromPct(discountWeekPct, hours: 24 * 7),
+            monthly: monthlyPrice ?? fromPct(discountMonthPct, hours: 24 * 30)
+        )
     }
 
     /// Backward-compat: returner vehicleTypes hvis satt, ellers wrap singel vehicleType.

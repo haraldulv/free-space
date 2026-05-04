@@ -250,20 +250,23 @@ struct BookingView: View {
                 overrides: overrides,
             )
 
-            // Beregn rabatt for valgt plass (eller første plass om ingen valgt).
+            // Beregn "lengre opphold"-pris for valgt plass (eller første plass
+            // om ingen valgt). Faller tilbake til legacy %-felter via
+            // effectiveLongerStayPrices for annonser opprettet før prisbasert
+            // ble lansert.
             let targetSpot = selectedSpots.first ?? listing.spotMarkers?.first
-            let dayPct = targetSpot?.discountDayPct ?? 0
-            let weekPct = targetSpot?.discountWeekPct ?? 0
-            let monthPct = targetSpot?.discountMonthPct ?? 0
+            let longerStay = targetSpot?.effectiveLongerStayPrices(baseHourly: listing.price ?? 0)
+                ?? (daily: 0, weekly: 0, monthly: 0)
 
             var discount: PricingService.DurationDiscount? = nil
-            if listing.category == .parking, dayPct > 0 || weekPct > 0 || monthPct > 0 {
-                discount = PricingService.applyDurationDiscount(
+            if listing.category == .parking,
+               longerStay.daily > 0 || longerStay.weekly > 0 || longerStay.monthly > 0 {
+                discount = PricingService.applyLongerStayPricing(
                     rules: rules,
                     breakdown: breakdown,
-                    discountDayPct: dayPct,
-                    discountWeekPct: weekPct,
-                    discountMonthPct: monthPct,
+                    dailyPrice: longerStay.daily,
+                    weeklyPrice: longerStay.weekly,
+                    monthlyPrice: longerStay.monthly,
                     spotId: targetSpot?.id
                 )
             }
@@ -1029,14 +1032,14 @@ struct BookingView: View {
         }
     }
 
-    /// "Rabatt: 1 måned + 5 døgn" — beskriver tier-stable.
+    /// "Lengre opphold: 1 måned + 5 døgn" — beskriver tier-stable.
     private func durationDiscountLabel(_ d: PricingService.DurationDiscount) -> String {
         var parts: [String] = []
         if d.months > 0 { parts.append("\(d.months) måned\(d.months == 1 ? "" : "er")") }
         if d.weeks > 0 { parts.append("\(d.weeks) uke\(d.weeks == 1 ? "" : "r")") }
         if d.days > 0 { parts.append("\(d.days) døgn") }
         let suffix = parts.isEmpty ? "fulle døgn" : parts.joined(separator: " + ")
-        return "Rabatt: \(suffix)"
+        return "Lengre opphold: \(suffix)"
     }
 
     private var baseLineLabel: String {

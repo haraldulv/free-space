@@ -800,9 +800,9 @@ enum PricingService {
         return HourlyPriceEntry(hourAt: stamp, price: baseHourlyPrice, source: "base")
     }
 
-    // MARK: - Duration discount (parkering, fase 3)
+    // MARK: - Lengre opphold (parkering)
     //
-    // Speiler lib/pricing.ts:applyDurationDiscount. Bruk i BookingView for å
+    // Speiler lib/pricing.ts:applyLongerStayPricing. Bruk i BookingView for å
     // gi gjesten en pris-preview som matcher det server lander på.
 
     struct DurationDiscount {
@@ -815,20 +815,21 @@ enum PricingService {
         let days: Int
     }
 
-    /// Beregn rabatt for hourly booking. Inputs er rules brukt for breakdown
-    /// (samme spot-filter), den ferdige breakdownen, og rabatt-prosentene.
-    /// `spotId` brukes til å re-anvende spot-filter på rules (matcher server).
-    static func applyDurationDiscount(
+    /// Beregn "lengre opphold"-pris for hourly booking. Inputs er rules brukt
+    /// for breakdown (samme spot-filter), den ferdige breakdownen, og kr-priser
+    /// per tier. `spotId` brukes til å re-anvende spot-filter på rules (matcher
+    /// server). Speil av lib/pricing.ts:applyLongerStayPricing.
+    static func applyLongerStayPricing(
         rules: [Rule],
         breakdown: [HourlyPriceEntry],
-        discountDayPct: Int,
-        discountWeekPct: Int,
-        discountMonthPct: Int,
+        dailyPrice: Int,
+        weeklyPrice: Int,
+        monthlyPrice: Int,
         spotId: String?
     ) -> DurationDiscount {
         let baseTotal = breakdown.reduce(0) { $0 + $1.price }
 
-        if discountDayPct <= 0 && discountWeekPct <= 0 && discountMonthPct <= 0 {
+        if dailyPrice <= 0 && weeklyPrice <= 0 && monthlyPrice <= 0 {
             return DurationDiscount(total: baseTotal, baseTotal: baseTotal, savings: 0, fullDays: 0, months: 0, weeks: 0, days: 0)
         }
 
@@ -843,11 +844,11 @@ enum PricingService {
 
         // Alltid-ledig: et døgn = 24 sammenhengende timer.
         if hourlyRules.isEmpty {
-            return apply24HourBlockDiscount(
+            return apply24HourBlock(
                 breakdown: breakdown,
-                discountDayPct: discountDayPct,
-                discountWeekPct: discountWeekPct,
-                discountMonthPct: discountMonthPct
+                dailyPrice: dailyPrice,
+                weeklyPrice: weeklyPrice,
+                monthlyPrice: monthlyPrice
             )
         }
 
@@ -927,24 +928,29 @@ enum PricingService {
                 var cursor = runStart
                 var remaining = length
 
-                while remaining >= 30 {
+                func tierSavings(_ baseHours: Int, _ tierPrice: Int) -> Double {
+                    if tierPrice <= 0 || tierPrice >= baseHours { return 0 }
+                    return Double(baseHours - tierPrice)
+                }
+
+                while monthlyPrice > 0 && remaining >= 30 {
                     var monthBase = 0
                     for j in 0..<30 { monthBase += sumDay(cursor + j) }
-                    totalSavings += Double(monthBase) * Double(discountMonthPct) / 100.0
+                    totalSavings += tierSavings(monthBase, monthlyPrice)
                     totalMonths += 1
                     cursor += 30
                     remaining -= 30
                 }
-                while remaining >= 7 {
+                while weeklyPrice > 0 && remaining >= 7 {
                     var weekBase = 0
                     for j in 0..<7 { weekBase += sumDay(cursor + j) }
-                    totalSavings += Double(weekBase) * Double(discountWeekPct) / 100.0
+                    totalSavings += tierSavings(weekBase, weeklyPrice)
                     totalWeeks += 1
                     cursor += 7
                     remaining -= 7
                 }
-                while remaining > 0 {
-                    totalSavings += Double(sumDay(cursor)) * Double(discountDayPct) / 100.0
+                while dailyPrice > 0 && remaining > 0 {
+                    totalSavings += tierSavings(sumDay(cursor), dailyPrice)
                     totalDayCount += 1
                     cursor += 1
                     remaining -= 1
@@ -966,14 +972,13 @@ enum PricingService {
         )
     }
 
-    /// 24-timers-blokk-rabatt for plasser uten bånd. Et "døgn" = 24
-    /// sammenhengende timer fra start av booking. Resten (siste < 24t)
-    /// betales full pris.
-    private static func apply24HourBlockDiscount(
+    /// 24-timers-blokk for plasser uten bånd. Et "døgn" = 24 sammenhengende
+    /// timer fra start av booking. Resten (siste < 24t) betales full pris.
+    private static func apply24HourBlock(
         breakdown: [HourlyPriceEntry],
-        discountDayPct: Int,
-        discountWeekPct: Int,
-        discountMonthPct: Int
+        dailyPrice: Int,
+        weeklyPrice: Int,
+        monthlyPrice: Int
     ) -> DurationDiscount {
         let usable = breakdown.filter { $0.source != "unavailable" }
         let baseTotal = usable.reduce(0) { $0 + $1.price }
@@ -984,26 +989,31 @@ enum PricingService {
         var savings: Double = 0
         var months = 0, weeks = 0, days = 0
 
-        while remaining >= 30 {
+        func tierSavings(_ baseHours: Int, _ tierPrice: Int) -> Double {
+            if tierPrice <= 0 || tierPrice >= baseHours { return 0 }
+            return Double(baseHours - tierPrice)
+        }
+
+        while monthlyPrice > 0 && remaining >= 30 {
             var monthBase = 0
             for i in 0..<(30 * 24) { monthBase += usable[cursor + i].price }
-            savings += Double(monthBase) * Double(discountMonthPct) / 100.0
+            savings += tierSavings(monthBase, monthlyPrice)
             months += 1
             cursor += 30 * 24
             remaining -= 30
         }
-        while remaining >= 7 {
+        while weeklyPrice > 0 && remaining >= 7 {
             var weekBase = 0
             for i in 0..<(7 * 24) { weekBase += usable[cursor + i].price }
-            savings += Double(weekBase) * Double(discountWeekPct) / 100.0
+            savings += tierSavings(weekBase, weeklyPrice)
             weeks += 1
             cursor += 7 * 24
             remaining -= 7
         }
-        while remaining > 0 {
+        while dailyPrice > 0 && remaining > 0 {
             var dayBase = 0
             for i in 0..<24 { dayBase += usable[cursor + i].price }
-            savings += Double(dayBase) * Double(discountDayPct) / 100.0
+            savings += tierSavings(dayBase, dailyPrice)
             days += 1
             cursor += 24
             remaining -= 1

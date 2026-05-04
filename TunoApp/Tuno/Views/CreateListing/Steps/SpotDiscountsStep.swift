@@ -1,14 +1,13 @@
 import SwiftUI
 
-/// Steg 10 — Rabatter ved lengre opphold (parkering only).
+/// "Lengre opphold"-steg (parkering only).
 ///
-/// Lar verten sette prosent-rabatt for: 1 døgn, 1 uke, 1 måned. Et "døgn" er
-/// definert som booking som dekker hele dagens band-vindu. "Uke" = 7 påfølgende
-/// fulle døgn, "måned" = 30. Booking-API stabler rabatten greedy: month tas
-/// først, så week, så enkelt-døgn — slik at en 35-dagers-booking blir
-/// 1 måned + 5 enkelt-døgn.
+/// Lar verten sette en fast pris (kr) for: 1 døgn, 1 uke, 1 måned. Et "døgn" =
+/// booking som dekker hele dagens band-vindu. "Uke" = 7 påfølgende fulle døgn,
+/// "måned" = 30. Booking-API stabler greedy: month tas først, så week, så
+/// enkelt-døgn — slik at en 35-dagers-booking blir 1 måned + 5 enkelt-døgn.
 ///
-/// Default-modus: "Felles for alle plasser" på, så ett input-sett gjelder alle
+/// Default-modus: "Felles for alle plasser" på, så ett pris-sett gjelder alle
 /// spots. Skrur bruker av toggle, vises per-plass-input.
 struct SpotDiscountsStep: View {
     @ObservedObject var form: ListingFormModel
@@ -17,8 +16,8 @@ struct SpotDiscountsStep: View {
 
     var body: some View {
         WizardScreen(
-            title: "Rabatter ved lengre opphold",
-            subtitle: "Belønn gjester som booker hele dagen, uken eller måneden. La feltene stå tomme om du ikke vil gi rabatt."
+            title: "Lengre opphold",
+            subtitle: "Sett en fast pris for et fullt døgn, en uke eller en måned. Gjør det attraktivt for gjester å booke lenger."
         ) {
             VStack(spacing: 16) {
                 if form.spotMarkers.count > 1 {
@@ -26,17 +25,17 @@ struct SpotDiscountsStep: View {
                 }
 
                 if sharedAcrossSpots || form.spotMarkers.count <= 1 {
-                    discountCard(
+                    longerStayCard(
                         title: "Alle plasser",
-                        subtitle: "Bruk samme rabatt for alle plassene dine",
-                        binding: sharedDiscountBinding
+                        subtitle: "Bruk samme priser for alle plassene dine",
+                        binding: sharedPriceBinding
                     )
                 } else {
                     ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { idx, spot in
-                        discountCard(
+                        longerStayCard(
                             title: spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false ? spot.label! : "Plass \(idx + 1)",
                             subtitle: "Per time: \(spot.pricePerHour ?? 0) kr",
-                            binding: spotDiscountBinding(for: idx)
+                            binding: spotPriceBinding(for: idx)
                         )
                     }
                 }
@@ -45,9 +44,8 @@ struct SpotDiscountsStep: View {
             }
         }
         .onAppear {
-            // Hvis alle plasser har samme rabatt-verdier, default til shared-modus.
-            // Hvis de divergerer, default til per-plass.
-            if form.spotMarkers.count > 1, !allSpotsHaveSameDiscounts {
+            // Hvis alle plasser har samme priser, default til shared-modus.
+            if form.spotMarkers.count > 1, !allSpotsHaveSamePrices {
                 sharedAcrossSpots = false
             }
         }
@@ -59,7 +57,7 @@ struct SpotDiscountsStep: View {
                 Text("Felles for alle plasser")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.neutral900)
-                Text(sharedAcrossSpots ? "Ett rabatt-sett gjelder alle." : "Sett rabatt per plass.")
+                Text(sharedAcrossSpots ? "Ett pris-sett gjelder alle." : "Sett pris per plass.")
                     .font(.system(size: 13))
                     .foregroundStyle(.neutral500)
             }
@@ -69,8 +67,7 @@ struct SpotDiscountsStep: View {
                 .tint(Color.primary600)
                 .onChange(of: sharedAcrossSpots) { _, newValue in
                     if newValue {
-                        // Når toggle slås på: kopier første plass sin rabatt til alle.
-                        applyFirstSpotDiscountsToAll()
+                        applyFirstSpotPricesToAll()
                     }
                 }
         }
@@ -84,7 +81,7 @@ struct SpotDiscountsStep: View {
     }
 
     @ViewBuilder
-    private func discountCard(title: String, subtitle: String, binding: Binding<DiscountTrio>) -> some View {
+    private func longerStayCard(title: String, subtitle: String, binding: Binding<LongerStayPrices>) -> some View {
         VStack(alignment: .leading, spacing: 14) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -96,14 +93,29 @@ struct SpotDiscountsStep: View {
             }
 
             VStack(spacing: 10) {
-                discountRow(label: "1 døgn", caption: "Hele dagens åpningstid", percent: binding.day)
-                discountRow(label: "1 uke", caption: "7 påfølgende fulle døgn", percent: binding.week)
-                discountRow(label: "1 måned", caption: "30 påfølgende fulle døgn", percent: binding.month)
+                priceRow(
+                    label: "1 døgn",
+                    caption: "Pris for et helt døgn (24 t)",
+                    baseline: representativeHourlyRate * 24,
+                    price: binding.daily
+                )
+                priceRow(
+                    label: "1 uke",
+                    caption: "Pris for 7 påfølgende fulle døgn",
+                    baseline: representativeHourlyRate * 24 * 7,
+                    price: binding.weekly
+                )
+                priceRow(
+                    label: "1 måned",
+                    caption: "Pris for 30 påfølgende fulle døgn",
+                    baseline: representativeHourlyRate * 24 * 30,
+                    price: binding.monthly
+                )
             }
 
-            DiscountPreviewCard(
+            LongerStayPreviewCard(
                 hourlyRate: representativeHourlyRate,
-                trio: binding.wrappedValue
+                prices: binding.wrappedValue
             )
         }
         .padding(18)
@@ -122,18 +134,25 @@ struct SpotDiscountsStep: View {
     }
 
     @ViewBuilder
-    private func discountRow(label: String, caption: String, percent: Binding<Int?>) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                Text(caption)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
+    private func priceRow(label: String, caption: String, baseline: Int, price: Binding<Int?>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text(caption)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                KrInput(value: price)
             }
-            Spacer()
-            PercentInput(value: percent)
+            if baseline > 0 {
+                Text("Uten tilbud: \(formatKr(baseline))")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral400)
+            }
         }
     }
 
@@ -142,7 +161,7 @@ struct SpotDiscountsStep: View {
             Image(systemName: "info.circle.fill")
                 .font(.system(size: 14))
                 .foregroundStyle(.primary600)
-            Text("Rabatten gjelder kun fulle døgn — booking innenfor enkelt-timer betales full timepris. En 35-dagers-booking blir 1 måned + 5 døgn-rabatter.")
+            Text("Tilbudet gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 døgn. Resten betales etter standardpris.")
                 .font(.system(size: 12))
                 .foregroundStyle(.neutral600)
                 .fixedSize(horizontal: false, vertical: true)
@@ -155,111 +174,115 @@ struct SpotDiscountsStep: View {
 
     // MARK: - Bindings
 
-    private var sharedDiscountBinding: Binding<DiscountTrio> {
+    private var sharedPriceBinding: Binding<LongerStayPrices> {
         Binding(
             get: {
                 let s = form.spotMarkers.first
-                return DiscountTrio(
-                    day: s?.discountDayPct ?? nil,
-                    week: s?.discountWeekPct ?? nil,
-                    month: s?.discountMonthPct ?? nil
+                return LongerStayPrices(
+                    daily: s?.dailyPrice ?? nil,
+                    weekly: s?.weeklyPrice ?? nil,
+                    monthly: s?.monthlyPrice ?? nil
                 )
             },
             set: { newValue in
                 for i in form.spotMarkers.indices {
-                    form.spotMarkers[i].discountDayPct = newValue.day
-                    form.spotMarkers[i].discountWeekPct = newValue.week
-                    form.spotMarkers[i].discountMonthPct = newValue.month
+                    form.spotMarkers[i].dailyPrice = newValue.daily
+                    form.spotMarkers[i].weeklyPrice = newValue.weekly
+                    form.spotMarkers[i].monthlyPrice = newValue.monthly
+                    // Fjern legacy %-felter når host setter kr-priser, så det
+                    // ikke ligger dobbel-konfig i DB.
+                    form.spotMarkers[i].discountDayPct = nil
+                    form.spotMarkers[i].discountWeekPct = nil
+                    form.spotMarkers[i].discountMonthPct = nil
                 }
             }
         )
     }
 
-    private func spotDiscountBinding(for index: Int) -> Binding<DiscountTrio> {
+    private func spotPriceBinding(for index: Int) -> Binding<LongerStayPrices> {
         Binding(
             get: {
-                guard form.spotMarkers.indices.contains(index) else { return DiscountTrio() }
+                guard form.spotMarkers.indices.contains(index) else { return LongerStayPrices() }
                 let s = form.spotMarkers[index]
-                return DiscountTrio(day: s.discountDayPct, week: s.discountWeekPct, month: s.discountMonthPct)
+                return LongerStayPrices(daily: s.dailyPrice, weekly: s.weeklyPrice, monthly: s.monthlyPrice)
             },
             set: { newValue in
                 guard form.spotMarkers.indices.contains(index) else { return }
-                form.spotMarkers[index].discountDayPct = newValue.day
-                form.spotMarkers[index].discountWeekPct = newValue.week
-                form.spotMarkers[index].discountMonthPct = newValue.month
+                form.spotMarkers[index].dailyPrice = newValue.daily
+                form.spotMarkers[index].weeklyPrice = newValue.weekly
+                form.spotMarkers[index].monthlyPrice = newValue.monthly
+                form.spotMarkers[index].discountDayPct = nil
+                form.spotMarkers[index].discountWeekPct = nil
+                form.spotMarkers[index].discountMonthPct = nil
             }
         )
     }
 
     // MARK: - Helpers
 
-    private var allSpotsHaveSameDiscounts: Bool {
+    private var allSpotsHaveSamePrices: Bool {
         guard let first = form.spotMarkers.first else { return true }
         return form.spotMarkers.allSatisfy { spot in
-            spot.discountDayPct == first.discountDayPct
-                && spot.discountWeekPct == first.discountWeekPct
-                && spot.discountMonthPct == first.discountMonthPct
+            spot.dailyPrice == first.dailyPrice
+                && spot.weeklyPrice == first.weeklyPrice
+                && spot.monthlyPrice == first.monthlyPrice
         }
     }
 
-    private func applyFirstSpotDiscountsToAll() {
+    private func applyFirstSpotPricesToAll() {
         guard let first = form.spotMarkers.first else { return }
-        let trio = DiscountTrio(
-            day: first.discountDayPct,
-            week: first.discountWeekPct,
-            month: first.discountMonthPct
+        let prices = LongerStayPrices(
+            daily: first.dailyPrice,
+            weekly: first.weeklyPrice,
+            monthly: first.monthlyPrice
         )
         for i in form.spotMarkers.indices {
-            form.spotMarkers[i].discountDayPct = trio.day
-            form.spotMarkers[i].discountWeekPct = trio.week
-            form.spotMarkers[i].discountMonthPct = trio.month
+            form.spotMarkers[i].dailyPrice = prices.daily
+            form.spotMarkers[i].weeklyPrice = prices.weekly
+            form.spotMarkers[i].monthlyPrice = prices.monthly
         }
     }
 }
 
-/// Container for de tre rabatt-prosentene.
-struct DiscountTrio: Equatable {
-    var day: Int? = nil
-    var week: Int? = nil
-    var month: Int? = nil
+/// Container for de tre kr-prisene.
+struct LongerStayPrices: Equatable {
+    var daily: Int? = nil
+    var weekly: Int? = nil
+    var monthly: Int? = nil
 
-    /// True hvis minst én rabatt er satt (>0).
+    /// True hvis minst én pris er satt (>0).
     var hasAny: Bool {
-        (day ?? 0) > 0 || (week ?? 0) > 0 || (month ?? 0) > 0
+        (daily ?? 0) > 0 || (weekly ?? 0) > 0 || (monthly ?? 0) > 0
     }
 }
 
-/// Lite preview-kort som viser hva en booking koster med og uten rabatten,
+/// Lite preview-kort som viser hva en booking koster med og uten tilbudet,
 /// for 1 døgn (24 t), 1 uke (7 d) og 1 måned (30 d). Skjules helt når ingen
-/// rabatt er satt, så steget ikke skummer over for verten som vil hoppe over.
-struct DiscountPreviewCard: View {
+/// pris er satt, så steget ikke skummer over for verten som vil hoppe over.
+struct LongerStayPreviewCard: View {
     let hourlyRate: Int
-    let trio: DiscountTrio
+    let prices: LongerStayPrices
 
     var body: some View {
-        if trio.hasAny && hourlyRate > 0 {
+        if prices.hasAny && hourlyRate > 0 {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 6) {
                     Image(systemName: "sparkles")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.primary600)
-                    Text("Pris-eksempler etter rabatt")
+                    Text("Slik ser tilbudene ut for gjesten")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.neutral600)
                 }
-                if let pct = trio.day, pct > 0 {
-                    previewRow(label: "1 døgn", hours: 24, pct: pct)
+                if let p = prices.daily, p > 0 {
+                    previewRow(label: "1 døgn", hours: 24, tierPrice: p)
                 }
-                if let pct = trio.week, pct > 0 {
-                    previewRow(label: "1 uke", hours: 24 * 7, pct: pct)
+                if let p = prices.weekly, p > 0 {
+                    previewRow(label: "1 uke", hours: 24 * 7, tierPrice: p)
                 }
-                if let pct = trio.month, pct > 0 {
-                    previewRow(label: "1 måned", hours: 24 * 30, pct: pct)
+                if let p = prices.monthly, p > 0 {
+                    previewRow(label: "1 måned", hours: 24 * 30, tierPrice: p)
                 }
-                Text("Eksemplet bruker timepris \(formatKr(hourlyRate)). Faktisk total varierer med pris-bånd.")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.neutral500)
-                    .padding(.top, 2)
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -269,10 +292,9 @@ struct DiscountPreviewCard: View {
     }
 
     @ViewBuilder
-    private func previewRow(label: String, hours: Int, pct: Int) -> some View {
+    private func previewRow(label: String, hours: Int, tierPrice: Int) -> some View {
         let baseTotal = hourlyRate * hours
-        let discounted = Int((Double(baseTotal) * (1.0 - Double(pct) / 100.0)).rounded())
-        let savings = baseTotal - discounted
+        let savings = max(0, baseTotal - tierPrice)
 
         HStack(alignment: .firstTextBaseline) {
             Text(label)
@@ -285,28 +307,30 @@ struct DiscountPreviewCard: View {
                         .font(.system(size: 12))
                         .foregroundStyle(.neutral400)
                         .strikethrough()
-                    Text(formatKr(discounted))
+                    Text(formatKr(tierPrice))
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.neutral900)
                 }
-                Text("Spart \(formatKr(savings))")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(.primary700)
+                if savings > 0 {
+                    Text("Gjest sparer \(formatKr(savings))")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.primary700)
+                }
             }
         }
     }
-
-    private func formatKr(_ value: Int) -> String {
-        let f = NumberFormatter()
-        f.numberStyle = .decimal
-        f.groupingSeparator = " "
-        f.maximumFractionDigits = 0
-        return "\(f.string(from: NSNumber(value: value)) ?? "\(value)") kr"
-    }
 }
 
-/// Numerisk %-input med suffix og tøm-på-tap.
-struct PercentInput: View {
+func formatKr(_ value: Int) -> String {
+    let f = NumberFormatter()
+    f.numberStyle = .decimal
+    f.groupingSeparator = " "
+    f.maximumFractionDigits = 0
+    return "\(f.string(from: NSNumber(value: value)) ?? "\(value)") kr"
+}
+
+/// Numerisk kr-input. Tøm-på-tap så bruker kan skrive nytt tall direkte.
+struct KrInput: View {
     @Binding var value: Int?
     @State private var text: String = ""
     @FocusState private var isFocused: Bool
@@ -319,8 +343,8 @@ struct PercentInput: View {
                 .multilineTextAlignment(.trailing)
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.neutral900)
-                .frame(width: 56)
-            Text("%")
+                .frame(width: 90)
+            Text("kr")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.neutral500)
         }
@@ -342,7 +366,6 @@ struct PercentInput: View {
         }
         .onChange(of: isFocused) { _, focused in
             if focused {
-                // Tøm ved tap så bruker kan skrive nytt tall direkte.
                 text = ""
             } else {
                 commit()
@@ -358,7 +381,7 @@ struct PercentInput: View {
             return
         }
         let parsed = Int(trimmed) ?? 0
-        let clamped = max(0, min(100, parsed))
+        let clamped = max(0, parsed)
         value = clamped > 0 ? clamped : nil
         text = clamped > 0 ? "\(clamped)" : ""
     }

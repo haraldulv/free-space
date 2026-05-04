@@ -64,7 +64,7 @@ struct EditListingView: View {
     @State private var draggedImageURL: String?
     @State private var showFullCalendar = false
 
-    private let tabs = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Rabatter", "Kalender"]
+    private let tabs = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Lengre opphold", "Kalender"]
 
     var body: some View {
         VStack(spacing: 0) {
@@ -1079,7 +1079,7 @@ struct EditListingView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("Rabatter ved lengre opphold")
+                    Text("Lengre opphold")
                         .font(.system(size: 20, weight: .semibold))
                         .foregroundStyle(.neutral900)
                     Text("Belønn gjester som booker hele dagen, uken eller måneden. La feltene stå tomme for ingen rabatt.")
@@ -1103,7 +1103,7 @@ struct EditListingView: View {
                     Image(systemName: "info.circle.fill")
                         .font(.system(size: 14))
                         .foregroundStyle(.primary600)
-                    Text("Rabatten gjelder kun fulle døgn — booking innenfor enkelt-timer betales full timepris. En 35-dagers-booking blir 1 måned + 5 døgn-rabatter.")
+                    Text("Tilbudet gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 døgn. Resten betales etter standardpris.")
                         .font(.system(size: 12))
                         .foregroundStyle(.neutral600)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1119,33 +1119,39 @@ struct EditListingView: View {
 
     @ViewBuilder
     private func spotDiscountCard(index: Int, title: String) -> some View {
-        let trio = Binding<DiscountTrio>(
+        let prices = Binding<LongerStayPrices>(
             get: {
-                guard spotMarkers.indices.contains(index) else { return DiscountTrio() }
+                guard spotMarkers.indices.contains(index) else { return LongerStayPrices() }
                 let s = spotMarkers[index]
-                return DiscountTrio(day: s.discountDayPct, week: s.discountWeekPct, month: s.discountMonthPct)
+                return LongerStayPrices(daily: s.dailyPrice, weekly: s.weeklyPrice, monthly: s.monthlyPrice)
             },
             set: { newValue in
                 guard spotMarkers.indices.contains(index) else { return }
-                spotMarkers[index].discountDayPct = newValue.day
-                spotMarkers[index].discountWeekPct = newValue.week
-                spotMarkers[index].discountMonthPct = newValue.month
+                spotMarkers[index].dailyPrice = newValue.daily
+                spotMarkers[index].weeklyPrice = newValue.weekly
+                spotMarkers[index].monthlyPrice = newValue.monthly
+                // Fjern legacy %-felter når host setter kr-priser, så det ikke
+                // ligger dobbel-konfig i DB.
+                spotMarkers[index].discountDayPct = nil
+                spotMarkers[index].discountWeekPct = nil
+                spotMarkers[index].discountMonthPct = nil
             }
         )
+        let hourlyRate = spotMarkers.indices.contains(index) ? (spotMarkers[index].pricePerHour ?? 0) : 0
         VStack(alignment: .leading, spacing: 14) {
             Text(title)
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(.neutral900)
 
             VStack(spacing: 10) {
-                discountRow(label: "1 døgn", caption: "Hele dagens åpningstid", percent: trio.day)
-                discountRow(label: "1 uke", caption: "7 påfølgende fulle døgn", percent: trio.week)
-                discountRow(label: "1 måned", caption: "30 påfølgende fulle døgn", percent: trio.month)
+                priceRow(label: "1 døgn", caption: "Pris for et helt døgn (24 t)", baseline: hourlyRate * 24, price: prices.daily)
+                priceRow(label: "1 uke", caption: "Pris for 7 påfølgende fulle døgn", baseline: hourlyRate * 24 * 7, price: prices.weekly)
+                priceRow(label: "1 måned", caption: "Pris for 30 påfølgende fulle døgn", baseline: hourlyRate * 24 * 30, price: prices.monthly)
             }
 
-            DiscountPreviewCard(
-                hourlyRate: spotMarkers.indices.contains(index) ? (spotMarkers[index].pricePerHour ?? 0) : 0,
-                trio: trio.wrappedValue
+            LongerStayPreviewCard(
+                hourlyRate: hourlyRate,
+                prices: prices.wrappedValue
             )
         }
         .padding(18)
@@ -1156,18 +1162,25 @@ struct EditListingView: View {
     }
 
     @ViewBuilder
-    private func discountRow(label: String, caption: String, percent: Binding<Int?>) -> some View {
-        HStack(spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                Text(caption)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
+    private func priceRow(label: String, caption: String, baseline: Int, price: Binding<Int?>) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text(caption)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                KrInput(value: price)
             }
-            Spacer()
-            PercentInput(value: percent)
+            if baseline > 0 {
+                Text("Uten tilbud: \(formatKr(baseline))")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral400)
+            }
         }
     }
 
@@ -1584,7 +1597,7 @@ enum EditListingTab: Int, CaseIterable, Identifiable, Hashable {
         case .spots: return "Plasser"
         case .photos: return "Bilder"
         case .amenities: return "Fasiliteter"
-        case .discounts: return "Rabatter"
+        case .discounts: return "Lengre opphold"
         case .availability: return "Kalender"
         }
     }
@@ -1595,7 +1608,7 @@ enum EditListingTab: Int, CaseIterable, Identifiable, Hashable {
         case .spots: return "mappin.and.ellipse"
         case .photos: return "photo.on.rectangle.angled"
         case .amenities: return "wand.and.stars"
-        case .discounts: return "percent"
+        case .discounts: return "calendar.badge.clock"
         case .availability: return "calendar"
         }
     }
@@ -1616,8 +1629,11 @@ enum EditListingTab: Int, CaseIterable, Identifiable, Hashable {
             return n == 0 ? "Ingen valgt" : "\(n) valgt"
         case .discounts:
             let spots = listing.spotMarkers ?? []
-            let any = spots.contains { ($0.discountDayPct ?? 0) > 0 || ($0.discountWeekPct ?? 0) > 0 || ($0.discountMonthPct ?? 0) > 0 }
-            return any ? "Aktive rabatter" : "Ingen rabatter"
+            let any = spots.contains { spot in
+                (spot.dailyPrice ?? 0) > 0 || (spot.weeklyPrice ?? 0) > 0 || (spot.monthlyPrice ?? 0) > 0
+                    || (spot.discountDayPct ?? 0) > 0 || (spot.discountWeekPct ?? 0) > 0 || (spot.discountMonthPct ?? 0) > 0
+            }
+            return any ? "Aktive tilbud" : "Ingen tilbud"
         case .availability:
             let blocked = listing.blockedDates?.count ?? 0
             return blocked == 0 ? "Alle datoer åpne" : "\(blocked) blokkert"
