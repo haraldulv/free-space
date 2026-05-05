@@ -133,6 +133,10 @@ final class AuthManager: ObservableObject {
             try await supabase.auth.signInWithOAuth(
                 provider: .google,
                 redirectTo: URL(string: "no.tuno.app://auth/callback"),
+                // prompt=select_account tvinger Google til å vise konto-velgeren
+                // hver gang. Uten denne husker Google forrige valg og logger
+                // inn automatisk — uleselig for brukere med flere Google-kontoer.
+                queryParams: [(name: "prompt", value: "select_account")],
                 launchFlow: launchFlow
             )
 
