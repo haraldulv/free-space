@@ -63,8 +63,16 @@ struct EditListingView: View {
     @State private var isActive: Bool = true
     @State private var draggedImageURL: String?
     @State private var showFullCalendar = false
+    @State private var openingHours: OpeningHours? = nil
 
-    private let tabs = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Lengre opphold", "Kalender"]
+    /// Tab-tittler. Åpningstid vises kun for parkering (legges til runtime i `visibleTabs`).
+    private var tabs: [String] {
+        var base = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Lengre opphold", "Kalender"]
+        if listing.category == .parking {
+            base.append("Åpningstid")
+        }
+        return base
+    }
 
     /// "døgn" for parkering, "natt" for camping. Brukes i pris-labels.
     private var priceUnitLabel: String {
@@ -129,6 +137,9 @@ struct EditListingView: View {
                 amenitiesTab.tag(3)
                 discountsTab.tag(4)
                 availabilityTab.tag(5)
+                if listing.category == .parking {
+                    openingHoursTab.tag(6)
+                }
             }
             .tabViewStyle(.page(indexDisplayMode: .never))
 
@@ -1247,12 +1258,32 @@ struct EditListingView: View {
         hideExactLocation = listing.hideExactLocation ?? false
         selectedExtras = listing.extras ?? []
         isActive = listing.isActive ?? true
+        openingHours = listing.openingHours
         // Set perSpotPricing om noen spot har egen pris
         perSpotPricing = (listing.spotMarkers ?? []).contains { $0.price != nil }
         // Set perSpotCheckinMessage om noen spot har egen melding
         perSpotCheckinMessage = (listing.spotMarkers ?? []).contains { ($0.checkinMessage?.isEmpty == false) }
     }
 
+
+    private var openingHoursTab: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Åpningstid")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text("Sett når plassen er åpen for booking. Default er døgnåpent.")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.neutral500)
+                        .lineSpacing(2)
+                }
+
+                OpeningHoursEditorView(value: $openingHours)
+            }
+            .padding(16)
+        }
+    }
 
     private func saveChanges() {
         isSaving = true
@@ -1286,7 +1317,8 @@ struct EditListingView: View {
                     spotMarkers: spotMarkers,
                     extras: selectedExtras,
                     maxVehicleLength: listing.category == .camping ? maxVehicleLength : nil,
-                    isActive: isActive
+                    isActive: isActive,
+                    openingHours: listing.category == .parking ? openingHours : nil
                 )
 
                 let updated: [Listing] = try await supabase
@@ -1561,8 +1593,18 @@ enum EditListingTab: Int, CaseIterable, Identifiable, Hashable {
     case amenities = 3
     case discounts = 4
     case availability = 5
+    case openingHours = 6
 
     var id: Int { rawValue }
+
+    /// Filtrer ut taber som ikke gjelder for denne kategorien.
+    static func tabs(for category: ListingCategory?) -> [EditListingTab] {
+        if category == .parking {
+            return allCases
+        }
+        // Camping: ingen åpningstid (alltid døgnåpent)
+        return allCases.filter { $0 != .openingHours }
+    }
 
     var displayTitle: String {
         switch self {
@@ -1572,6 +1614,7 @@ enum EditListingTab: Int, CaseIterable, Identifiable, Hashable {
         case .amenities: return "Fasiliteter"
         case .discounts: return "Lengre opphold"
         case .availability: return "Kalender"
+        case .openingHours: return "Åpningstid"
         }
     }
 
@@ -1583,6 +1626,7 @@ enum EditListingTab: Int, CaseIterable, Identifiable, Hashable {
         case .amenities: return "wand.and.stars"
         case .discounts: return "calendar.badge.clock"
         case .availability: return "calendar"
+        case .openingHours: return "clock"
         }
     }
 
@@ -1610,6 +1654,8 @@ enum EditListingTab: Int, CaseIterable, Identifiable, Hashable {
         case .availability:
             let blocked = listing.blockedDates?.count ?? 0
             return blocked == 0 ? "Alle datoer åpne" : "\(blocked) blokkert"
+        case .openingHours:
+            return OpeningHoursService.hasLimitedHours(listing.openingHours) ? "Begrensede åpningstider" : "Døgnåpent"
         }
     }
 }
@@ -1634,7 +1680,7 @@ struct EditListingRootView: View {
             VStack(spacing: 16) {
                 heroCard
                 VStack(spacing: 0) {
-                    ForEach(Array(EditListingTab.allCases.enumerated()), id: \.offset) { idx, tab in
+                    ForEach(Array(EditListingTab.tabs(for: listing.category).enumerated()), id: \.offset) { idx, tab in
                         NavigationLink {
                             EditListingView(listing: current, focusedTab: tab) { updated in
                                 current = updated
@@ -1644,7 +1690,7 @@ struct EditListingRootView: View {
                             row(tab: tab)
                         }
                         .buttonStyle(.plain)
-                        if idx < EditListingTab.allCases.count - 1 {
+                        if idx < EditListingTab.tabs(for: listing.category).count - 1 {
                             Divider().padding(.leading, 60).opacity(0.5)
                         }
                     }
@@ -1750,6 +1796,8 @@ private struct UpdateListingInput: Encodable {
     let extras: [ListingExtra]
     let maxVehicleLength: Int?
     let isActive: Bool
+    /// Åpningstid på listing-nivå (parkering). nil = døgnåpent.
+    let openingHours: OpeningHours?
 
     enum CodingKeys: String, CodingKey {
         case title, description, spots, address, city, region, lat, lng, price, amenities, images, extras
@@ -1766,6 +1814,7 @@ private struct UpdateListingInput: Encodable {
         case spotMarkers = "spot_markers"
         case maxVehicleLength = "max_vehicle_length"
         case isActive = "is_active"
+        case openingHours = "opening_hours"
     }
 }
 

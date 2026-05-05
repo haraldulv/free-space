@@ -139,11 +139,11 @@ struct ListingCard: View {
                     .padding(10)
                 }
 
-                // Instant booking badge
-                if listing.instantBooking == true {
-                    VStack {
-                        Spacer()
-                        HStack {
+                // Bunn-badges: instant booking + 🕒 åpningstid
+                VStack {
+                    Spacer()
+                    HStack(spacing: 6) {
+                        if listing.instantBooking == true {
                             HStack(spacing: 3) {
                                 Image(systemName: "bolt.fill")
                                     .font(.system(size: 10))
@@ -155,10 +155,23 @@ struct ListingCard: View {
                             .padding(.vertical, 4)
                             .background(.ultraThinMaterial)
                             .clipShape(Capsule())
-                            Spacer()
                         }
-                        .padding(10)
+                        if OpeningHoursService.hasLimitedHours(listing.openingHours) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "clock.fill")
+                                    .font(.system(size: 10))
+                                Text("Åpningstid")
+                                    .font(.system(size: 11, weight: .semibold))
+                            }
+                            .foregroundStyle(.neutral700)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(.ultraThinMaterial)
+                            .clipShape(Capsule())
+                        }
+                        Spacer()
                     }
+                    .padding(10)
                 }
             }
 

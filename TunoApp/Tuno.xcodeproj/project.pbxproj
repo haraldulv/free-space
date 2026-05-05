@@ -45,6 +45,7 @@
 		402B7759282C565BD0F02A60 /* OpeningHoursService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A884CCDAD07F56994881803 /* OpeningHoursService.swift */; };
 		414ACCF50897E595892BBE9B /* CreateListingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A8155F44B5F1E01A1FE767 /* CreateListingView.swift */; };
 		4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */; };
+		427C0F0D1B37C5AF58AFAD58 /* OpeningHoursStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B6DFA8459E85A9536C1F27 /* OpeningHoursStep.swift */; };
 		42BCA2F242941F8AC4F84750 /* stand-out.png in Resources */ = {isa = PBXBuildFile; fileRef = 00E476D769839A839AA8AD06 /* stand-out.png */; };
 		432DD68BE80C7C7E163D66CE /* AddressStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D457F224FB227BB0280276E /* AddressStep.swift */; };
 		468941D0A90A4A4D9C423A60 /* VisitedListingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC8284C8DB15BB1AECA34F0 /* VisitedListingsStore.swift */; };
@@ -87,6 +88,7 @@
 		96B48987F842D9D98F4FE0F7 /* SearchContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D0D12BC80A797DF8A6DEED /* SearchContextStore.swift */; };
 		96BC4BC4EB06699B3E5A5D69 /* HostSpotDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E78282D80E5F27037C4EC4 /* HostSpotDetailView.swift */; };
 		9823672A74799973F05F4ECC /* home.png in Resources */ = {isa = PBXBuildFile; fileRef = 40D5D06E16F5E9919282FBCB /* home.png */; };
+		98B32B463DB40DC1874532A3 /* OpeningHoursEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A54AF55D0728E58C694E0F3B /* OpeningHoursEditorView.swift */; };
 		99B9B0BC00ECC0126A3CF885 /* ProfileCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76509C97338D49F5D4C1B30B /* ProfileCalendarView.swift */; };
 		9AE9EF8B07B0FB00DF4149AF /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D0ADDAE2EA91F5F458E3E5A /* SupabaseService.swift */; };
 		9D96F4F3063C446B43FF6E99 /* complete-phone.png in Resources */ = {isa = PBXBuildFile; fileRef = C60A79D4D54F1069BB4CA915 /* complete-phone.png */; };
@@ -197,6 +199,7 @@
 		5E4DD0720CB861E932C5AECA /* ImageDropDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDropDelegate.swift; sourceTree = "<group>"; };
 		633F2046F5DC659D1D443A25 /* SpotBlockedDatesSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotBlockedDatesSection.swift; sourceTree = "<group>"; };
 		64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingViewModel.swift; sourceTree = "<group>"; };
+		64B6DFA8459E85A9536C1F27 /* OpeningHoursStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningHoursStep.swift; sourceTree = "<group>"; };
 		653B4F2F1D411111416483A4 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
 		69D03627A981C3C64EF47F06 /* PublicProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicProfileView.swift; sourceTree = "<group>"; };
 		6A884CCDAD07F56994881803 /* OpeningHoursService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningHoursService.swift; sourceTree = "<group>"; };
@@ -229,6 +232,7 @@
 		9BCA07B748FCC5E1497CD115 /* progress-pin.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "progress-pin.json"; sourceTree = "<group>"; };
 		9DE80E0F57ED28043A953489 /* WhereSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhereSheet.swift; sourceTree = "<group>"; };
 		9F37F3CD542B4B76200AE7AE /* ProfileStatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStatsStore.swift; sourceTree = "<group>"; };
+		A54AF55D0728E58C694E0F3B /* OpeningHoursEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningHoursEditorView.swift; sourceTree = "<group>"; };
 		A9A8155F44B5F1E01A1FE767 /* CreateListingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateListingView.swift; sourceTree = "<group>"; };
 		A9C00EBE7ED77620DE8CBA92 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		ABC8284C8DB15BB1AECA34F0 /* VisitedListingsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisitedListingsStore.swift; sourceTree = "<group>"; };
@@ -407,6 +411,7 @@
 			isa = PBXGroup;
 			children = (
 				1C62328BAF7DE7328480EAF9 /* LottieView.swift */,
+				A54AF55D0728E58C694E0F3B /* OpeningHoursEditorView.swift */,
 				4FF267768B92B52734B7568A /* WizardNavBar.swift */,
 				411181AFF3AC2C69BF0D3CB4 /* WizardPricingCalendarView.swift */,
 				5467FA534273021B9B949773 /* WizardProgressBar.swift */,
@@ -586,6 +591,7 @@
 				DF8A3195D726FC00B6EA4A3D /* InstantBookingStep.swift */,
 				D04AE83B5E261BA41D246388 /* MarkSpotsStep.swift */,
 				F3BF694A798055824C4651A4 /* MessagesStep.swift */,
+				64B6DFA8459E85A9536C1F27 /* OpeningHoursStep.swift */,
 				3357259B4CCDFE2FA9F1745C /* PhotosStep.swift */,
 				5B65DE53742FC3A764A59D8C /* PublishStep.swift */,
 				58A32E4837D41534ECFB0953 /* SpotAvailabilityStep.swift */,
@@ -785,7 +791,9 @@
 				4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */,
 				F5C607CAFB1A650AC022C486 /* MotorhomeIcon.swift in Sources */,
 				B2A276C68ACCEB05DBF4F7DB /* NotificationsView.swift in Sources */,
+				98B32B463DB40DC1874532A3 /* OpeningHoursEditorView.swift in Sources */,
 				402B7759282C565BD0F02A60 /* OpeningHoursService.swift in Sources */,
+				427C0F0D1B37C5AF58AFAD58 /* OpeningHoursStep.swift in Sources */,
 				8225D7A59A196A15D1387988 /* PayoutsService.swift in Sources */,
 				DF4CB397EEC21B6155822A74 /* PersonnummerHelper.swift in Sources */,
 				481B700D9FEB3AFB038F6A9E /* PhotosStep.swift in Sources */,
@@ -874,7 +882,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 161;
+				CURRENT_PROJECT_VERSION = 162;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -992,7 +1000,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 161;
+				CURRENT_PROJECT_VERSION = 162;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1058,7 +1066,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 161;
+				CURRENT_PROJECT_VERSION = 162;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1117,7 +1125,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 161;
+				CURRENT_PROJECT_VERSION = 162;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

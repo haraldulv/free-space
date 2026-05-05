@@ -117,6 +117,10 @@ struct ListingDetailView: View {
 
                         combinedSpotsSection(listing: listing)
 
+                        if let oh = listing.openingHours {
+                            openingHoursCard(hours: oh)
+                        }
+
                         locationCard(listing: listing, hideExact: hideExact)
 
                         meetHostCard(listing: listing)
@@ -690,6 +694,54 @@ struct ListingDetailView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - Åpningstid card (parkering only)
+
+    @ViewBuilder
+    private func openingHoursCard(hours: OpeningHours) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "clock.fill")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.primary600)
+                Text("Åpningstid")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.neutral900)
+            }
+
+            VStack(spacing: 6) {
+                ForEach(Weekday.allCases, id: \.self) { day in
+                    HStack {
+                        Text(weekdayLongLabel(day))
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundStyle(.neutral700)
+                        Spacer()
+                        let v = hours.value(for: day)
+                        Text(v?.replacingOccurrences(of: "-", with: " – ") ?? "Stengt")
+                            .font(.system(size: 14, design: .monospaced))
+                            .foregroundStyle(v == nil ? .neutral400 : .neutral900)
+                    }
+                }
+            }
+        }
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
+    }
+
+    private func weekdayLongLabel(_ day: Weekday) -> String {
+        switch day {
+        case .mon: return "Mandag"
+        case .tue: return "Tirsdag"
+        case .wed: return "Onsdag"
+        case .thu: return "Torsdag"
+        case .fri: return "Fredag"
+        case .sat: return "Lørdag"
+        case .sun: return "Søndag"
         }
     }
 

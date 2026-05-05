@@ -519,7 +519,8 @@ struct SearchView: View {
             checkOut: checkOut.map { df.string(from: $0) },
             amenities: amenitiesArg,
             instantOnly: filters.bookingPreference == .directOnly,
-            flexibilityDays: flexibility
+            flexibilityDays: flexibility,
+            openingHours: filters.openingHours
         )
     }
 

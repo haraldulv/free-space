@@ -8,6 +8,13 @@ enum BookingPreference: String, Equatable, CaseIterable {
     case requestOnly  // Kun forespørsel
 }
 
+/// Filter for åpningstid (parkering). Speiler web's 3-segments pille.
+enum OpeningHoursFilter: String, Equatable, CaseIterable {
+    case any            // Alle annonser (default)
+    case alwaysOpen     // Døgnåpent (opening_hours = NULL)
+    case limitedHours   // Med åpningstid (opening_hours != NULL)
+}
+
 /// Modeltype for søk + filter-valg. Delt mellom WhereSheet (søkepille)
 /// og FiltersSheet (filter-knapp). Begge oppdaterer samme state, så
 /// endringer ett sted speiles automatisk det andre.
@@ -21,6 +28,7 @@ struct SearchFilters: Equatable {
     var priceMax: Int = 0
     var bookingPreference: BookingPreference = .all
     var amenities: Set<AmenityType> = []
+    var openingHours: OpeningHoursFilter = .any
 
     /// Antall aktive filtre — driver badge på FilterCircleButton.
     /// `dynamicMaxPrice` er øvre grense fra current listings; den brukes
@@ -32,6 +40,7 @@ struct SearchFilters: Equatable {
         if priceMin > 0 || (priceMax > 0 && priceMax < dynamicMaxPrice) { n += 1 }
         if bookingPreference != .all { n += 1 }
         if !amenities.isEmpty { n += 1 }
+        if openingHours != .any { n += 1 }
         return n
     }
 }
@@ -78,6 +87,9 @@ struct FiltersSheet: View {
                     typeSection
                     vehicleSection
                     bookingPrefSection
+                    if draft.category == .parking || draft.category == nil {
+                        openingHoursSection
+                    }
                     priceSection
                     amenitiesSection
                 }
@@ -175,6 +187,25 @@ struct FiltersSheet: View {
                 }
                 segmentButton(label: "Forespørsel", isSelected: draft.bookingPreference == .requestOnly) {
                     draft.bookingPreference = .requestOnly
+                }
+            }
+        }
+    }
+
+    private var openingHoursSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Åpningstid")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(.neutral900)
+            HStack(spacing: 8) {
+                segmentButton(label: "Alle", isSelected: draft.openingHours == .any) {
+                    draft.openingHours = .any
+                }
+                segmentButton(label: "Døgnåpent", isSelected: draft.openingHours == .alwaysOpen) {
+                    draft.openingHours = .alwaysOpen
+                }
+                segmentButton(label: "Med åpningstid", isSelected: draft.openingHours == .limitedHours) {
+                    draft.openingHours = .limitedHours
                 }
             }
         }

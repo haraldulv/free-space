@@ -125,7 +125,7 @@ struct CreateListingView: View {
         case 3: SpotCountStep(form: form)
         case 4: MarkSpotsStep(form: form)
         case 5: SpotDetailsStep(form: form)
-        case 6: SpotAvailabilityStep(form: form)
+        case 6: OpeningHoursStep(form: form)
         case 7: SpotPriceStep(form: form)
         case 8: SpotPriceVariationStep(form: form)
         case 9: SpotExtrasStep(form: form)

@@ -135,11 +135,11 @@ final class ListingFormModel: ObservableObject {
         ["Velkommen", "Kategori", "Adresse", "Plasser", "Marker", "Kjøretøy", "Tilgjengelighet", "Pris", "Prisvariasjon", "Tillegg", "Rabatter", "Booking", "Beskrivelse", "Bilder", "Fasiliteter", "Meldinger", "Kalender", "Klar"]
     }
 
-    /// Tilgjengelighets-steget (6) er midlertidig deaktivert i wizard etter
-    /// parkering-per-dag-refaktoren — håndteres nå via åpningstid (døgnåpent
-    /// default). Holdes igjen som follow-up i EditListingView.
+    /// Åpningstid-steget (6) er listing-nivå og kun for parkering. Default
+    /// døgnåpent (form.openingHours = nil). Vises på første plass-iterasjon i
+    /// mini-wizarden — etterfølgende plasser hopper steget.
     var skipsAvailabilityStep: Bool {
-        true
+        category != .parking
     }
 
     /// Pris-variasjon-steget (8) er per plass.
@@ -261,8 +261,9 @@ final class ListingFormModel: ObservableObject {
         if currentStepHasMiniWizard {
             if currentStep < 9 {
                 var next = currentStep + 1
-                // Hopp over Tilgjengelighet (6) for camping
-                if next == 6 && skipsAvailabilityStep { next = 7 }
+                // Åpningstid (6) er listing-nivå — vis kun for parkering, og
+                // kun på første plass-iterasjon (currentSpotIndex == 0).
+                if next == 6 && (skipsAvailabilityStep || currentSpotIndex > 0) { next = 7 }
                 // Hopp over Pris-variasjon (8) hvis plassen ikke har bånd
                 if next == 8 && skipsPriceVariationStep(forSpotIndex: currentSpotIndex) { next = 9 }
                 withAnimation(.easeInOut(duration: 0.32)) { currentStep = next }
@@ -306,7 +307,7 @@ final class ListingFormModel: ObservableObject {
         if currentStepHasMiniWizard {
             if currentStep > 5 {
                 var prev = currentStep - 1
-                if prev == 6 && skipsAvailabilityStep { prev = 5 }
+                if prev == 6 && (skipsAvailabilityStep || currentSpotIndex > 0) { prev = 5 }
                 if prev == 8 && skipsPriceVariationStep(forSpotIndex: currentSpotIndex) { prev = 7 }
                 withAnimation(.easeInOut(duration: 0.32)) { currentStep = prev }
                 return

@@ -139,7 +139,8 @@ final class ListingService: ObservableObject {
         checkOut: String? = nil,
         amenities: Set<AmenityType>? = nil,
         instantOnly: Bool = false,
-        flexibilityDays: Int = 0
+        flexibilityDays: Int = 0,
+        openingHours: OpeningHoursFilter = .any
     ) async {
         isLoading = true
         do {
@@ -211,6 +212,16 @@ final class ListingService: ObservableObject {
             // Filter by instant booking
             if instantOnly {
                 listings = listings.filter { $0.instantBooking == true }
+            }
+
+            // Filter by opening hours
+            switch openingHours {
+            case .any:
+                break
+            case .alwaysOpen:
+                listings = listings.filter { $0.openingHours == nil }
+            case .limitedHours:
+                listings = listings.filter { OpeningHoursService.hasLimitedHours($0.openingHours) }
             }
 
             searchResults = listings
