@@ -94,12 +94,6 @@ struct SpotDiscountsStep: View {
 
             VStack(spacing: 10) {
                 priceRow(
-                    label: "1 dag",
-                    caption: "Pris for én hel dag",
-                    baseline: representativeDailyRate,
-                    price: binding.daily
-                )
-                priceRow(
                     label: "1 uke",
                     caption: "Pris for 7 påfølgende fulle dager",
                     baseline: representativeDailyRate * 7,
@@ -110,6 +104,24 @@ struct SpotDiscountsStep: View {
                     caption: "Pris for 30 påfølgende fulle dager",
                     baseline: representativeDailyRate * 30,
                     price: binding.monthly
+                )
+                priceRow(
+                    label: "3 måneder",
+                    caption: "Pris for 90 påfølgende fulle dager",
+                    baseline: representativeDailyRate * 90,
+                    price: binding.threeMonth
+                )
+                priceRow(
+                    label: "6 måneder",
+                    caption: "Pris for 180 påfølgende fulle dager",
+                    baseline: representativeDailyRate * 180,
+                    price: binding.sixMonth
+                )
+                priceRow(
+                    label: "1 år",
+                    caption: "Pris for 365 påfølgende fulle dager",
+                    baseline: representativeDailyRate * 365,
+                    price: binding.year
                 )
             }
 
@@ -179,9 +191,12 @@ struct SpotDiscountsStep: View {
             get: {
                 let s = form.spotMarkers.first
                 return LongerStayPrices(
-                    daily: s?.dailyPrice ?? nil,
-                    weekly: s?.weeklyPrice ?? nil,
-                    monthly: s?.monthlyPrice ?? nil
+                    daily: s?.dailyPrice,
+                    weekly: s?.weeklyPrice,
+                    monthly: s?.monthlyPrice,
+                    threeMonth: s?.threeMonthPrice,
+                    sixMonth: s?.sixMonthPrice,
+                    year: s?.yearPrice
                 )
             },
             set: { newValue in
@@ -189,6 +204,9 @@ struct SpotDiscountsStep: View {
                     form.spotMarkers[i].dailyPrice = newValue.daily
                     form.spotMarkers[i].weeklyPrice = newValue.weekly
                     form.spotMarkers[i].monthlyPrice = newValue.monthly
+                    form.spotMarkers[i].threeMonthPrice = newValue.threeMonth
+                    form.spotMarkers[i].sixMonthPrice = newValue.sixMonth
+                    form.spotMarkers[i].yearPrice = newValue.year
                     // Fjern legacy %-felter når host setter kr-priser, så det
                     // ikke ligger dobbel-konfig i DB.
                     form.spotMarkers[i].discountDayPct = nil
@@ -204,13 +222,23 @@ struct SpotDiscountsStep: View {
             get: {
                 guard form.spotMarkers.indices.contains(index) else { return LongerStayPrices() }
                 let s = form.spotMarkers[index]
-                return LongerStayPrices(daily: s.dailyPrice, weekly: s.weeklyPrice, monthly: s.monthlyPrice)
+                return LongerStayPrices(
+                    daily: s.dailyPrice,
+                    weekly: s.weeklyPrice,
+                    monthly: s.monthlyPrice,
+                    threeMonth: s.threeMonthPrice,
+                    sixMonth: s.sixMonthPrice,
+                    year: s.yearPrice
+                )
             },
             set: { newValue in
                 guard form.spotMarkers.indices.contains(index) else { return }
                 form.spotMarkers[index].dailyPrice = newValue.daily
                 form.spotMarkers[index].weeklyPrice = newValue.weekly
                 form.spotMarkers[index].monthlyPrice = newValue.monthly
+                form.spotMarkers[index].threeMonthPrice = newValue.threeMonth
+                form.spotMarkers[index].sixMonthPrice = newValue.sixMonth
+                form.spotMarkers[index].yearPrice = newValue.year
                 form.spotMarkers[index].discountDayPct = nil
                 form.spotMarkers[index].discountWeekPct = nil
                 form.spotMarkers[index].discountMonthPct = nil
@@ -226,6 +254,9 @@ struct SpotDiscountsStep: View {
             spot.dailyPrice == first.dailyPrice
                 && spot.weeklyPrice == first.weeklyPrice
                 && spot.monthlyPrice == first.monthlyPrice
+                && spot.threeMonthPrice == first.threeMonthPrice
+                && spot.sixMonthPrice == first.sixMonthPrice
+                && spot.yearPrice == first.yearPrice
         }
     }
 
@@ -234,25 +265,40 @@ struct SpotDiscountsStep: View {
         let prices = LongerStayPrices(
             daily: first.dailyPrice,
             weekly: first.weeklyPrice,
-            monthly: first.monthlyPrice
+            monthly: first.monthlyPrice,
+            threeMonth: first.threeMonthPrice,
+            sixMonth: first.sixMonthPrice,
+            year: first.yearPrice
         )
         for i in form.spotMarkers.indices {
             form.spotMarkers[i].dailyPrice = prices.daily
             form.spotMarkers[i].weeklyPrice = prices.weekly
             form.spotMarkers[i].monthlyPrice = prices.monthly
+            form.spotMarkers[i].threeMonthPrice = prices.threeMonth
+            form.spotMarkers[i].sixMonthPrice = prices.sixMonth
+            form.spotMarkers[i].yearPrice = prices.year
         }
     }
 }
 
-/// Container for de tre kr-prisene.
+/// Container for "Lengre opphold"-tier-prisene.
+///
+/// `daily` er beholdt for bakoverkompat med eldre annonser men eksponeres
+/// ikke i UI lenger — standard-dagsprisen dekker allerede 1-dags-tilfellet.
+/// Aktive tiers: uke (7d), måned (30d), 3 måneder (90d), 6 måneder (180d), år (365d).
 struct LongerStayPrices: Equatable {
+    /// @deprecated — beholdt kun for å ikke nullstille eksisterende data.
     var daily: Int? = nil
     var weekly: Int? = nil
     var monthly: Int? = nil
+    var threeMonth: Int? = nil
+    var sixMonth: Int? = nil
+    var year: Int? = nil
 
-    /// True hvis minst én pris er satt (>0).
+    /// True hvis minst én tier-pris er satt (>0).
     var hasAny: Bool {
-        (daily ?? 0) > 0 || (weekly ?? 0) > 0 || (monthly ?? 0) > 0
+        (weekly ?? 0) > 0 || (monthly ?? 0) > 0
+            || (threeMonth ?? 0) > 0 || (sixMonth ?? 0) > 0 || (year ?? 0) > 0
     }
 }
 
@@ -277,14 +323,20 @@ struct LongerStayPreviewCard: View {
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.neutral600)
                 }
-                if let p = prices.daily, p > 0 {
-                    previewRow(label: "1 dag", days: 1, tierPrice: p)
-                }
                 if let p = prices.weekly, p > 0 {
                     previewRow(label: "1 uke", days: 7, tierPrice: p)
                 }
                 if let p = prices.monthly, p > 0 {
                     previewRow(label: "1 måned", days: 30, tierPrice: p)
+                }
+                if let p = prices.threeMonth, p > 0 {
+                    previewRow(label: "3 måneder", days: 90, tierPrice: p)
+                }
+                if let p = prices.sixMonth, p > 0 {
+                    previewRow(label: "6 måneder", days: 180, tierPrice: p)
+                }
+                if let p = prices.year, p > 0 {
+                    previewRow(label: "1 år", days: 365, tierPrice: p)
                 }
             }
             .padding(14)

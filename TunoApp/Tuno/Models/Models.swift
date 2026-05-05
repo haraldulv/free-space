@@ -41,6 +41,10 @@ struct Listing: Codable, Identifiable, Hashable {
     let checkoutMessage: String?
     let checkoutMessageSendHoursBefore: Int?
     let isActive: Bool?
+    /// Minste antall dager en bruker kan booke. nil = ingen minimum.
+    let minStayDays: Int?
+    /// Største antall dager en bruker kan booke. nil = ingen maksimum.
+    let maxStayDays: Int?
     let extras: [ListingExtra]?
     let rating: Double?
     let reviewCount: Int?
@@ -74,6 +78,8 @@ struct Listing: Codable, Identifiable, Hashable {
         case checkoutMessage = "checkout_message"
         case checkoutMessageSendHoursBefore = "checkout_message_send_hours_before"
         case isActive = "is_active"
+        case minStayDays = "min_stay_days"
+        case maxStayDays = "max_stay_days"
         case extras
         case reviewCount = "review_count"
         case hostName = "host_name"
@@ -131,12 +137,20 @@ struct SpotMarker: Codable, Hashable {
     /// Bilder tagget til denne spesifikke plassen. URL-ene er delmengde av
     /// listing.images — ingen separat opplasting. Utleier tagger i wizard/edit.
     var images: [String]?
-    /// "Lengre opphold"-pris (kr) for ett fullt døgn. nil/0 = ingen tilbud.
+    /// "Lengre opphold"-pris (kr) for ett fullt døgn. @deprecated — fjernet fra
+    /// UI fordi det er identisk med standard-dagspris. Beholdt felt for
+    /// bakoverkompat ved decode av eldre annonser. Sett alltid nil for nye.
     var dailyPrice: Int? = nil
     /// "Lengre opphold"-pris (kr) for 7 påfølgende fulle døgn.
     var weeklyPrice: Int? = nil
     /// "Lengre opphold"-pris (kr) for 30 påfølgende fulle døgn.
     var monthlyPrice: Int? = nil
+    /// "Lengre opphold"-pris (kr) for 90 påfølgende fulle døgn (3 måneder).
+    var threeMonthPrice: Int? = nil
+    /// "Lengre opphold"-pris (kr) for 180 påfølgende fulle døgn (6 måneder).
+    var sixMonthPrice: Int? = nil
+    /// "Lengre opphold"-pris (kr) for 365 påfølgende fulle døgn (1 år).
+    var yearPrice: Int? = nil
     /// @deprecated %-rabatt. Beholdes kun for å hindre Codable-feil på eldre annonser. Alltid nil.
     var discountDayPct: Int? = nil
     /// @deprecated bruk weeklyPrice.
@@ -160,6 +174,9 @@ struct SpotMarker: Codable, Hashable {
         case dailyPrice = "dailyPrice"
         case weeklyPrice = "weeklyPrice"
         case monthlyPrice = "monthlyPrice"
+        case threeMonthPrice = "threeMonthPrice"
+        case sixMonthPrice = "sixMonthPrice"
+        case yearPrice = "yearPrice"
         case discountDayPct = "discountDayPct"
         case discountWeekPct = "discountWeekPct"
         case discountMonthPct = "discountMonthPct"

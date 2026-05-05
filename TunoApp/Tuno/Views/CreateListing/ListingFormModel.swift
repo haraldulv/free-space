@@ -95,6 +95,10 @@ final class ListingFormModel: ObservableObject {
     @Published var priceUnit: PriceUnit = .time
     /// Listing-nivå åpningstid (parkering). nil = døgnåpent.
     @Published var openingHours: OpeningHours? = nil
+    /// Minimum antall dager bruker kan booke. nil = ingen minimum.
+    @Published var minStayDays: Int? = nil
+    /// Maksimum antall dager bruker kan booke. nil = ingen maksimum.
+    @Published var maxStayDays: Int? = nil
 
     /// Settes når kategori velges — bytter også defaultPriceUnit og defaultVehicleTypes.
     func setCategory(_ newCategory: ListingCategory) {
@@ -147,6 +151,8 @@ final class ListingFormModel: ObservableObject {
             instantBooking: instantBooking,
             priceUnit: priceUnit,
             openingHours: openingHours,
+            minStayDays: minStayDays,
+            maxStayDays: maxStayDays,
             currentStep: currentStep,
             savedAt: Date()
         )
@@ -181,6 +187,8 @@ final class ListingFormModel: ObservableObject {
         instantBooking = draft.instantBooking
         priceUnit = draft.priceUnit
         openingHours = draft.openingHours
+        minStayDays = draft.minStayDays
+        maxStayDays = draft.maxStayDays
         currentStep = draft.currentStep
     }
 
@@ -215,18 +223,21 @@ final class ListingFormModel: ObservableObject {
     }
 
     // MARK: - Step labels (for progress) — 18 steg
+    // Booking-steget er flyttet rett etter Marker-plasser (steg 5) slik at
+    // verten setter booking-modus + min/maks-dager før de går inn i mini-
+    // wizarden per plass. Mini-wizarden er nå steg 6–10.
     var stepLabels: [String] {
-        ["Velkommen", "Kategori", "Adresse", "Plasser", "Marker", "Kjøretøy", "Tilgjengelighet", "Pris", "Prisvariasjon", "Tillegg", "Rabatter", "Booking", "Beskrivelse", "Bilder", "Fasiliteter", "Meldinger", "Kalender", "Klar"]
+        ["Velkommen", "Kategori", "Adresse", "Plasser", "Marker", "Booking", "Kjøretøy", "Tilgjengelighet", "Pris", "Prisvariasjon", "Tillegg", "Rabatter", "Beskrivelse", "Bilder", "Fasiliteter", "Meldinger", "Kalender", "Klar"]
     }
 
-    /// Åpningstid-steget (6) er listing-nivå og kun for parkering. Default
+    /// Åpningstid-steget (7) er listing-nivå og kun for parkering. Default
     /// døgnåpent (form.openingHours = nil). Vises på første plass-iterasjon i
     /// mini-wizarden — etterfølgende plasser hopper steget.
     var skipsAvailabilityStep: Bool {
         category != .parking
     }
 
-    /// Pris-variasjon-steget (8) er per plass.
+    /// Pris-variasjon-steget (9) er per plass.
     /// - Parkering: hopper alltid over (ingen hourly-bånd lenger etter
     ///   parkering-per-dag-refaktoren).
     /// - Camping: aktivert — viser sesong-bånd-kalender (WizardSeasonalCalendarView).
@@ -237,14 +248,14 @@ final class ListingFormModel: ObservableObject {
         return true  // parkering: ingen pris-variasjon i wizard for nå
     }
 
-    /// Rabatter-steget (10) gir prosent-rabatt for døgn/uke/måned-bookinger.
-    /// Kun relevant for parkering — camping bruker en flat per-natt-pris.
+    /// Rabatter-steget (11) gir kr-priser for uke/måned/3mnd/6mnd/år-bookinger.
+    /// Kun relevant for parkering — camping bruker en flat per-døgn-pris.
     var skipsRabatterStep: Bool {
         category != .parking
     }
 
     /// Kalender-steget (16) blokkerer datoer. For parkering er tilgjengelighet
-    /// allerede definert via tilgjengelighets-bånd, så vi hopper over.
+    /// allerede definert via åpningstid, så vi hopper over.
     /// Camping bruker fortsatt CalendarStep til å blokkere spesifikke datoer.
     var skipsCalendarStep: Bool {
         category == .parking
@@ -271,15 +282,22 @@ final class ListingFormModel: ObservableObject {
         case 4:
             if spotMarkers.count < spots { return "Marker alle \(spots) plassene på kartet" }
         case 5:
+            // Booking — instant/request + min/maks. Min ≤ maks.
+            if let minD = minStayDays, let maxD = maxStayDays, minD > maxD {
+                return "Minimum kan ikke være større enn maksimum"
+            }
+            return nil
+        case 6:
+            // Mini-wizard Kjøretøy
             guard spotMarkers.indices.contains(currentSpotIndex) else { return "Ingen plass valgt" }
             let spot = spotMarkers[currentSpotIndex]
             if spot.effectiveVehicleTypes.isEmpty { return "Velg minst én biltype" }
             let needsLength = spot.effectiveVehicleTypes.contains(where: { !$0.isCompact })
             if needsLength, (spot.vehicleMaxLength ?? 0) < 1 { return "Sett maks lengde i meter" }
-        case 6:
+        case 7:
             // Mini-wizard Tilgjengelighet — alltid gyldig
             return nil
-        case 7:
+        case 8:
             // Mini-wizard Pris: minst én pris satt
             guard spotMarkers.indices.contains(currentSpotIndex) else { return "Ingen plass valgt" }
             let s = spotMarkers[currentSpotIndex]
@@ -287,17 +305,14 @@ final class ListingFormModel: ObservableObject {
             let hasNight = (s.pricePerNight ?? 0) > 0
             let hasLegacy = (s.price ?? 0) > 0
             if !hasHour && !hasNight && !hasLegacy { return "Sett pris" }
-        case 8:
-            // Mini-wizard Pris-variasjon — alltid gyldig (overstyringer er valgfritt)
-            return nil
         case 9:
-            // Mini-wizard Tillegg — alltid gyldig
+            // Mini-wizard Pris-variasjon — alltid gyldig
             return nil
         case 10:
-            // Rabatter — alltid valid (alle tre er frivillige)
+            // Mini-wizard Tillegg — alltid gyldig
             return nil
         case 11:
-            // Instant booking — alltid valid
+            // Rabatter — alltid valid (alle tier-priser er frivillige)
             return nil
         case 12:
             let trimmed = title.trimmingCharacters(in: .whitespaces)
@@ -311,24 +326,24 @@ final class ListingFormModel: ObservableObject {
     }
 
     /// Sant hvis nåværende hovedsteg har mini-wizard (én plass per slide).
-    /// Mini-wizard er nå 5 steg: Kjøretøy (5), Tilgjengelighet (6), Pris (7),
-    /// Pris-variasjon (8), Tillegg (9).
+    /// Mini-wizard er nå 5 steg: Kjøretøy (6), Tilgjengelighet (7), Pris (8),
+    /// Pris-variasjon (9), Tillegg (10).
     var currentStepHasMiniWizard: Bool {
-        currentStep >= 5 && currentStep <= 9
+        currentStep >= 6 && currentStep <= 10
     }
 
     /// Visuell fremdrift 0..1. Mini-wizard utgjør 5 steg per plass.
     var displayProgress: Double {
         let spotCount = max(1, spotMarkers.count)
-        // 5 pre-mini (0–4) + 5*N mini + 8 post-mini (10 Rabatter → 17 Klar)
+        // 6 pre-mini (0–5: Velkommen → Booking) + 5*N mini + 7 post-mini (11 Rabatter → 17 Klar)
         let totalVirtual = 13 + 5 * spotCount
         let pos: Int
-        if currentStep < 5 {
+        if currentStep < 6 {
             pos = currentStep
-        } else if currentStep <= 9 {
-            pos = 5 + currentSpotIndex * 5 + (currentStep - 5)
+        } else if currentStep <= 10 {
+            pos = 6 + currentSpotIndex * 5 + (currentStep - 6)
         } else {
-            pos = 5 + 5 * spotCount + (currentStep - 10)
+            pos = 6 + 5 * spotCount + (currentStep - 11)
         }
         guard totalVirtual > 1 else { return 1 }
         return Double(pos) / Double(totalVirtual - 1)
@@ -341,28 +356,28 @@ final class ListingFormModel: ObservableObject {
         }
         error = nil
 
-        // Mini-wizard 5-9: Kjøretøy → Tilgjengelighet → Pris → Pris-variasjon → Tillegg
+        // Mini-wizard 6-10: Kjøretøy → Tilgjengelighet → Pris → Pris-variasjon → Tillegg
         if currentStepHasMiniWizard {
-            if currentStep < 9 {
+            if currentStep < 10 {
                 var next = currentStep + 1
-                // Åpningstid (6) er listing-nivå — vis kun for parkering, og
+                // Åpningstid (7) er listing-nivå — vis kun for parkering, og
                 // kun på første plass-iterasjon (currentSpotIndex == 0).
-                if next == 6 && (skipsAvailabilityStep || currentSpotIndex > 0) { next = 7 }
-                // Hopp over Pris-variasjon (8) hvis plassen ikke har bånd
-                if next == 8 && skipsPriceVariationStep(forSpotIndex: currentSpotIndex) { next = 9 }
+                if next == 7 && (skipsAvailabilityStep || currentSpotIndex > 0) { next = 8 }
+                // Hopp over Pris-variasjon (9) hvis plassen ikke har bånd
+                if next == 9 && skipsPriceVariationStep(forSpotIndex: currentSpotIndex) { next = 10 }
                 withAnimation(.easeInOut(duration: 0.32)) { currentStep = next }
                 return
             }
-            // Steg 9 (Tillegg): plassen er ferdig
+            // Steg 10 (Tillegg): plassen er ferdig
             if currentSpotIndex < spotMarkers.count - 1 {
                 withAnimation(.easeInOut(duration: 0.32)) {
                     currentSpotIndex += 1
-                    currentStep = 5
+                    currentStep = 6
                 }
                 return
             }
-            // Siste plass ferdig — gå til Rabatter (10), eller hopp til Booking (11) for camping.
-            let nextAfterMini = skipsRabatterStep ? 11 : 10
+            // Siste plass ferdig — gå til Rabatter (11), eller hopp til Beskrivelse (12) for camping.
+            let nextAfterMini = skipsRabatterStep ? 12 : 11
             withAnimation(.easeInOut(duration: 0.32)) { currentStep = nextAfterMini }
             return
         }
@@ -373,9 +388,9 @@ final class ListingFormModel: ObservableObject {
                 if currentStepHasMiniWizard {
                     currentSpotIndex = 0
                 }
-                // Hopp over Rabatter (10) for camping
-                if currentStep == 10 && skipsRabatterStep {
-                    currentStep = 11
+                // Hopp over Rabatter (11) for camping
+                if currentStep == 11 && skipsRabatterStep {
+                    currentStep = 12
                 }
                 // Hopp over Kalender (16) for parkering
                 if currentStep == 16 && skipsCalendarStep {
@@ -389,23 +404,23 @@ final class ListingFormModel: ObservableObject {
         error = nil
 
         if currentStepHasMiniWizard {
-            if currentStep > 5 {
+            if currentStep > 6 {
                 var prev = currentStep - 1
-                if prev == 6 && (skipsAvailabilityStep || currentSpotIndex > 0) { prev = 5 }
-                if prev == 8 && skipsPriceVariationStep(forSpotIndex: currentSpotIndex) { prev = 7 }
+                if prev == 7 && (skipsAvailabilityStep || currentSpotIndex > 0) { prev = 6 }
+                if prev == 9 && skipsPriceVariationStep(forSpotIndex: currentSpotIndex) { prev = 8 }
                 withAnimation(.easeInOut(duration: 0.32)) { currentStep = prev }
                 return
             }
-            // Steg 5 (Kjøretøy): gå til Tillegg (9) av forrige plass
+            // Steg 6 (Kjøretøy): gå til Tillegg (10) av forrige plass
             if currentSpotIndex > 0 {
                 withAnimation(.easeInOut(duration: 0.32)) {
                     currentSpotIndex -= 1
-                    currentStep = 9
+                    currentStep = 10
                 }
                 return
             }
-            // Første plass på steg 5 — tilbake til MarkSpots (4)
-            withAnimation(.easeInOut(duration: 0.32)) { currentStep = 4 }
+            // Første plass på steg 6 — tilbake til Booking (5)
+            withAnimation(.easeInOut(duration: 0.32)) { currentStep = 5 }
             return
         }
 
@@ -418,21 +433,21 @@ final class ListingFormModel: ObservableObject {
         if currentStep > 0 {
             withAnimation(.easeInOut(duration: 0.32)) {
                 currentStep -= 1
-                // Hopp over Rabatter (10) bakover for camping
-                if currentStep == 10 && skipsRabatterStep {
-                    currentStep = 9
+                // Hopp over Rabatter (11) bakover for camping
+                if currentStep == 11 && skipsRabatterStep {
+                    currentStep = 10
                 }
-                // Bakover INN i mini-wizard fra Rabatter/Booking → siste plass, Tillegg (9)
+                // Bakover INN i mini-wizard fra Rabatter/Beskrivelse → siste plass, Tillegg (10)
                 if currentStepHasMiniWizard && !spotMarkers.isEmpty {
                     currentSpotIndex = spotMarkers.count - 1
-                    currentStep = 9
+                    currentStep = 10
                 }
             }
         }
     }
 
     /// Hopp direkte til et bestemt steg. Brukes fra PublishStep for hurtignav.
-    /// `spotIndex` settes når mål-steget er en mini-wizard-step (5-9).
+    /// `spotIndex` settes når mål-steget er en mini-wizard-step (6-10).
     func goTo(step: Int, spotIndex: Int? = nil) {
         guard step >= 0, step < totalSteps else { return }
         error = nil
@@ -578,7 +593,9 @@ final class ListingFormModel: ObservableObject {
             extras: [],
             hostName: profile?.fullName ?? "",
             hostAvatar: profile?.avatarUrl ?? "",
-            isActive: true
+            isActive: true,
+            minStayDays: minStayDays,
+            maxStayDays: maxStayDays
         )
     }
 }
@@ -658,6 +675,8 @@ struct CreateListingInput: Encodable {
     let hostName: String
     let hostAvatar: String
     let isActive: Bool
+    let minStayDays: Int?
+    let maxStayDays: Int?
 
     enum CodingKeys: String, CodingKey {
         case id, title, description, category, city, region, address, lat, lng, price, spots, images, amenities, extras
@@ -680,5 +699,7 @@ struct CreateListingInput: Encodable {
         case hostName = "host_name"
         case hostAvatar = "host_avatar"
         case isActive = "is_active"
+        case minStayDays = "min_stay_days"
+        case maxStayDays = "max_stay_days"
     }
 }

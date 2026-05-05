@@ -6,7 +6,7 @@ import {
   getNightlyPricesWithServiceClient,
   applyPriceBreakdown,
   applyLongerStayPricing,
-  getEffectiveLongerStayPrices,
+  spotLongerStayTiers,
   type NightlyPrice,
   type LongerStayResult,
 } from "@/lib/pricing";
@@ -57,13 +57,22 @@ async function computeTotalWithBreakdown(args: {
     ? selectedSpots.find((s) => s.id === args.selectedSpotIds![0])
     : selectedSpots[0] ?? (args.spotMarkers || [])[0];
   if (breakdown && targetSpot) {
-    const longerStay = getEffectiveLongerStayPrices(targetSpot);
-    if (longerStay.dailyPrice > 0 || longerStay.weeklyPrice > 0 || longerStay.monthlyPrice > 0) {
+    const tiers = spotLongerStayTiers(targetSpot);
+    const hasAny =
+      tiers.weeklyPrice > 0 ||
+      tiers.monthlyPrice > 0 ||
+      tiers.threeMonthPrice > 0 ||
+      tiers.sixMonthPrice > 0 ||
+      tiers.yearPrice > 0;
+    if (hasAny) {
       discount = applyLongerStayPricing({
         breakdown,
-        dailyPrice: longerStay.dailyPrice,
-        weeklyPrice: longerStay.weeklyPrice,
-        monthlyPrice: longerStay.monthlyPrice,
+        dailyPrice: tiers.dailyPrice,
+        weeklyPrice: tiers.weeklyPrice,
+        monthlyPrice: tiers.monthlyPrice,
+        threeMonthPrice: tiers.threeMonthPrice,
+        sixMonthPrice: tiers.sixMonthPrice,
+        yearPrice: tiers.yearPrice,
       });
       baseTotal = discount.total;
     }
@@ -135,7 +144,7 @@ export async function POST(request: NextRequest) {
     // Check availability
     const { data: listing } = await supabase
       .from("listings")
-      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, category")
+      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, category, min_stay_days, max_stay_days")
       .eq("id", listingId)
       .single();
 
@@ -145,6 +154,27 @@ export async function POST(request: NextRequest) {
 
     if (listing.host_id === user.id) {
       return NextResponse.json({ error: "Du kan ikke booke din egen annonse" }, { status: 400 });
+    }
+
+    // Min/maks antall dager-validering. Opphold-lengde i hele dager basert
+    // på UTC midnight-til-midnight-konvertering for å unngå DST-skjev.
+    const stayDays = Math.max(
+      1,
+      Math.round(
+        (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24),
+      ),
+    );
+    if (listing.min_stay_days != null && stayDays < listing.min_stay_days) {
+      return NextResponse.json(
+        { error: `Denne annonsen krever minimum ${listing.min_stay_days} dager.` },
+        { status: 400 },
+      );
+    }
+    if (listing.max_stay_days != null && stayDays > listing.max_stay_days) {
+      return NextResponse.json(
+        { error: `Denne annonsen tillater maksimum ${listing.max_stay_days} dager.` },
+        { status: 400 },
+      );
     }
 
     // Rekalkulér totalen autoritativt server-side — klient sender ikke lenger beløp.

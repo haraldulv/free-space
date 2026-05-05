@@ -810,9 +810,93 @@ enum PricingService {
         let baseTotal: Int
         let savings: Int
         let fullDays: Int
+        let years: Int
+        let sixMonths: Int
+        let threeMonths: Int
         let months: Int
         let weeks: Int
         let days: Int
+    }
+
+    /// Tier-prisene som verten kan tilby. Stables greedy 365 → 180 → 90 → 30 → 7.
+    struct LongerStayTiers {
+        let weeklyPrice: Int
+        let monthlyPrice: Int
+        let threeMonthPrice: Int
+        let sixMonthPrice: Int
+        let yearPrice: Int
+
+        var hasAny: Bool {
+            weeklyPrice > 0 || monthlyPrice > 0
+                || threeMonthPrice > 0 || sixMonthPrice > 0 || yearPrice > 0
+        }
+    }
+
+    /// Anvender "lengre opphold"-priser på en per-dag-breakdown. Speiler
+    /// lib/pricing.ts:applyLongerStayPricing.
+    static func applyLongerStayPricing(
+        breakdown: [NightlyPriceEntry],
+        tiers: LongerStayTiers
+    ) -> DurationDiscount {
+        let baseTotal = breakdown.reduce(0) { $0 + $1.price }
+        let totalDays = breakdown.count
+
+        if !tiers.hasAny {
+            return DurationDiscount(
+                total: baseTotal, baseTotal: baseTotal, savings: 0, fullDays: 0,
+                years: 0, sixMonths: 0, threeMonths: 0, months: 0, weeks: 0, days: 0
+            )
+        }
+
+        var cursor = 0
+        var remaining = totalDays
+        var savings = 0
+        var years = 0, sixMonths = 0, threeMonths = 0, months = 0, weeks = 0
+
+        func tierSavings(_ baseSum: Int, _ tierPrice: Int) -> Int {
+            if tierPrice <= 0 || tierPrice >= baseSum { return 0 }
+            return baseSum - tierPrice
+        }
+
+        func sumRange(_ start: Int, _ length: Int) -> Int {
+            var s = 0
+            for i in 0..<length { s += breakdown[start + i].price }
+            return s
+        }
+
+        while tiers.yearPrice > 0 && remaining >= 365 {
+            savings += tierSavings(sumRange(cursor, 365), tiers.yearPrice)
+            years += 1; cursor += 365; remaining -= 365
+        }
+        while tiers.sixMonthPrice > 0 && remaining >= 180 {
+            savings += tierSavings(sumRange(cursor, 180), tiers.sixMonthPrice)
+            sixMonths += 1; cursor += 180; remaining -= 180
+        }
+        while tiers.threeMonthPrice > 0 && remaining >= 90 {
+            savings += tierSavings(sumRange(cursor, 90), tiers.threeMonthPrice)
+            threeMonths += 1; cursor += 90; remaining -= 90
+        }
+        while tiers.monthlyPrice > 0 && remaining >= 30 {
+            savings += tierSavings(sumRange(cursor, 30), tiers.monthlyPrice)
+            months += 1; cursor += 30; remaining -= 30
+        }
+        while tiers.weeklyPrice > 0 && remaining >= 7 {
+            savings += tierSavings(sumRange(cursor, 7), tiers.weeklyPrice)
+            weeks += 1; cursor += 7; remaining -= 7
+        }
+
+        return DurationDiscount(
+            total: baseTotal - savings,
+            baseTotal: baseTotal,
+            savings: savings,
+            fullDays: totalDays,
+            years: years,
+            sixMonths: sixMonths,
+            threeMonths: threeMonths,
+            months: months,
+            weeks: weeks,
+            days: 0
+        )
     }
 
     /// Beregn "lengre opphold"-pris for hourly booking. Inputs er rules brukt
@@ -830,7 +914,7 @@ enum PricingService {
         let baseTotal = breakdown.reduce(0) { $0 + $1.price }
 
         if dailyPrice <= 0 && weeklyPrice <= 0 && monthlyPrice <= 0 {
-            return DurationDiscount(total: baseTotal, baseTotal: baseTotal, savings: 0, fullDays: 0, months: 0, weeks: 0, days: 0)
+            return DurationDiscount(total: baseTotal, baseTotal: baseTotal, savings: 0, fullDays: 0, years: 0, sixMonths: 0, threeMonths: 0, months: 0, weeks: 0, days: 0)
         }
 
         // Filtrer regler likt som server (spot_id IS NULL OR spot_id = target).
@@ -966,6 +1050,9 @@ enum PricingService {
             baseTotal: baseTotal,
             savings: savings,
             fullDays: totalFullDays,
+            years: 0,
+            sixMonths: 0,
+            threeMonths: 0,
             months: totalMonths,
             weeks: totalWeeks,
             days: totalDayCount
@@ -1025,6 +1112,9 @@ enum PricingService {
             baseTotal: baseTotal,
             savings: rounded,
             fullDays: totalDays,
+            years: 0,
+            sixMonths: 0,
+            threeMonths: 0,
             months: months,
             weeks: weeks,
             days: days

@@ -33,6 +33,8 @@ struct DraftListing: Codable {
     var instantBooking: Bool
     var priceUnit: PriceUnit
     var openingHours: OpeningHours?
+    var minStayDays: Int?
+    var maxStayDays: Int?
     var currentStep: Int
     var savedAt: Date
 

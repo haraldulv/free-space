@@ -310,7 +310,21 @@ struct BookingView: View {
         let vehicleOK = isRentalCar || !licensePlate.trimmingCharacters(in: .whitespaces).isEmpty
         let spotOK = !hasSpotLevelPricing || !selectedSpotIds.isEmpty
         let datesOK = isHourly ? (hourlyDate != nil && endMinutes > startMinutes) : hasDates
-        return datesOK && vehicleOK && spotOK
+        return datesOK && vehicleOK && spotOK && stayLengthError == nil
+    }
+
+    /// Returnerer en feilmelding hvis valgte datoer bryter min/maks dager-grenser.
+    /// Bruker stay-dager (samme som server: round(check_out - check_in)).
+    private var stayLengthError: String? {
+        guard let ci = checkIn, let co = checkOut else { return nil }
+        let days = max(1, Calendar.current.dateComponents([.day], from: ci, to: co).day ?? 1)
+        if let minD = listing.minStayDays, days < minD {
+            return "Annonsen krever minimum \(minD) \(days == 1 ? "dag" : "dager")."
+        }
+        if let maxD = listing.maxStayDays, days > maxD {
+            return "Annonsen tillater maksimum \(maxD) dager."
+        }
+        return nil
     }
 
     var body: some View {
@@ -325,6 +339,20 @@ struct BookingView: View {
 
                 Divider()
                 dateSection
+                if let error = stayLengthError {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                            .font(.system(size: 14))
+                        Text(error)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.neutral700)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
                 Divider()
                 vehicleSection
                 Divider()

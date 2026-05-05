@@ -64,6 +64,8 @@ struct EditListingView: View {
     @State private var draggedImageURL: String?
     @State private var showFullCalendar = false
     @State private var openingHours: OpeningHours? = nil
+    @State private var minStayDays: Int? = nil
+    @State private var maxStayDays: Int? = nil
 
     /// Tab-tittler. Åpningstid vises kun for parkering (legges til runtime i `visibleTabs`).
     private var tabs: [String] {
@@ -1054,6 +1056,27 @@ struct EditListingView: View {
                     }
                 }
                 .tint(.primary600)
+
+                // Min/maks lengde på opphold
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Lengde på opphold")
+                        .font(.system(size: 15, weight: .semibold))
+                    Text("La være tom hvis ingen grense.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                    HStack(spacing: 12) {
+                        field("Minimum") {
+                            TextField("Ingen", value: $minStayDays, format: .number)
+                                .textFieldStyle(.roundedBorder)
+                                .keyboardType(.numberPad)
+                        }
+                        field("Maksimum") {
+                            TextField("Ingen", value: $maxStayDays, format: .number)
+                                .textFieldStyle(.roundedBorder)
+                                .keyboardType(.numberPad)
+                        }
+                    }
+                }
             }
             .padding()
         }
@@ -1107,13 +1130,23 @@ struct EditListingView: View {
             get: {
                 guard spotMarkers.indices.contains(index) else { return LongerStayPrices() }
                 let s = spotMarkers[index]
-                return LongerStayPrices(daily: s.dailyPrice, weekly: s.weeklyPrice, monthly: s.monthlyPrice)
+                return LongerStayPrices(
+                    daily: s.dailyPrice,
+                    weekly: s.weeklyPrice,
+                    monthly: s.monthlyPrice,
+                    threeMonth: s.threeMonthPrice,
+                    sixMonth: s.sixMonthPrice,
+                    year: s.yearPrice
+                )
             },
             set: { newValue in
                 guard spotMarkers.indices.contains(index) else { return }
                 spotMarkers[index].dailyPrice = newValue.daily
                 spotMarkers[index].weeklyPrice = newValue.weekly
                 spotMarkers[index].monthlyPrice = newValue.monthly
+                spotMarkers[index].threeMonthPrice = newValue.threeMonth
+                spotMarkers[index].sixMonthPrice = newValue.sixMonth
+                spotMarkers[index].yearPrice = newValue.year
                 // Fjern legacy %-felter når host setter kr-priser, så det ikke
                 // ligger dobbel-konfig i DB.
                 spotMarkers[index].discountDayPct = nil
@@ -1128,9 +1161,11 @@ struct EditListingView: View {
                 .foregroundStyle(.neutral900)
 
             VStack(spacing: 10) {
-                priceRow(label: "1 dag", caption: "Pris for én hel dag", baseline: dailyRate, price: prices.daily)
                 priceRow(label: "1 uke", caption: "Pris for 7 påfølgende fulle dager", baseline: dailyRate * 7, price: prices.weekly)
                 priceRow(label: "1 måned", caption: "Pris for 30 påfølgende fulle dager", baseline: dailyRate * 30, price: prices.monthly)
+                priceRow(label: "3 måneder", caption: "Pris for 90 påfølgende fulle dager", baseline: dailyRate * 90, price: prices.threeMonth)
+                priceRow(label: "6 måneder", caption: "Pris for 180 påfølgende fulle dager", baseline: dailyRate * 180, price: prices.sixMonth)
+                priceRow(label: "1 år", caption: "Pris for 365 påfølgende fulle dager", baseline: dailyRate * 365, price: prices.year)
             }
 
             LongerStayPreviewCard(
@@ -1259,6 +1294,8 @@ struct EditListingView: View {
         selectedExtras = listing.extras ?? []
         isActive = listing.isActive ?? true
         openingHours = listing.openingHours
+        minStayDays = listing.minStayDays
+        maxStayDays = listing.maxStayDays
         // Set perSpotPricing om noen spot har egen pris
         perSpotPricing = (listing.spotMarkers ?? []).contains { $0.price != nil }
         // Set perSpotCheckinMessage om noen spot har egen melding
@@ -1318,7 +1355,9 @@ struct EditListingView: View {
                     extras: selectedExtras,
                     maxVehicleLength: listing.category == .camping ? maxVehicleLength : nil,
                     isActive: isActive,
-                    openingHours: listing.category == .parking ? openingHours : nil
+                    openingHours: listing.category == .parking ? openingHours : nil,
+                    minStayDays: minStayDays,
+                    maxStayDays: maxStayDays
                 )
 
                 let updated: [Listing] = try await supabase
@@ -1798,6 +1837,8 @@ private struct UpdateListingInput: Encodable {
     let isActive: Bool
     /// Åpningstid på listing-nivå (parkering). nil = døgnåpent.
     let openingHours: OpeningHours?
+    let minStayDays: Int?
+    let maxStayDays: Int?
 
     enum CodingKeys: String, CodingKey {
         case title, description, spots, address, city, region, lat, lng, price, amenities, images, extras
@@ -1815,6 +1856,8 @@ private struct UpdateListingInput: Encodable {
         case maxVehicleLength = "max_vehicle_length"
         case isActive = "is_active"
         case openingHours = "opening_hours"
+        case minStayDays = "min_stay_days"
+        case maxStayDays = "max_stay_days"
     }
 }
 

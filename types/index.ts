@@ -162,12 +162,18 @@ export interface SpotMarker {
   blockedDates?: string[];
   checkinMessage?: string;
   images?: string[];
-  /** Pris (kr) for ett fullt døgn. */
+  /** @deprecated 1-dags-tier eksponeres ikke i UI lenger — standard-dagsprisen dekker. */
   dailyPrice?: number;
   /** Pris (kr) for 7 påfølgende fulle døgn. */
   weeklyPrice?: number;
   /** Pris (kr) for 30 påfølgende fulle døgn. */
   monthlyPrice?: number;
+  /** Pris (kr) for 90 påfølgende fulle døgn (3 måneder). */
+  threeMonthPrice?: number;
+  /** Pris (kr) for 180 påfølgende fulle døgn (6 måneder). */
+  sixMonthPrice?: number;
+  /** Pris (kr) for 365 påfølgende fulle døgn (1 år). */
+  yearPrice?: number;
   /**
    * Per-plass åpningstid. Hvis satt overstyrer den listing-nivå.
    * `null` (eller fraværende) = arve listing.openingHours.
@@ -263,6 +269,10 @@ export interface Listing {
   checkoutMessageSendHoursBefore?: number;
   /** Åpningstid på listing-nivå. NULL = døgnåpent. Kun relevant for parkering. */
   openingHours?: OpeningHours | null;
+  /** Minimum antall dager bruker kan booke. NULL = ingen minimum. */
+  minStayDays?: number | null;
+  /** Maksimum antall dager bruker kan booke. NULL = ingen maksimum. */
+  maxStayDays?: number | null;
 }
 
 export interface Booking {

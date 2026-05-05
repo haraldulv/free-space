@@ -237,15 +237,53 @@ export function getEffectiveLongerStayPrices(
   };
 }
 
+/**
+ * Hent alle "Lengre opphold"-tier-priser fra en spot-marker. Bruker 0 som
+ * fallback for hver tier-pris som ikke er satt — `applyLongerStayPricing`
+ * ignorerer da tieren under stabling.
+ */
+export function spotLongerStayTiers(
+  spot: {
+    dailyPrice?: number | null;
+    weeklyPrice?: number | null;
+    monthlyPrice?: number | null;
+    threeMonthPrice?: number | null;
+    sixMonthPrice?: number | null;
+    yearPrice?: number | null;
+  } | null | undefined,
+): {
+  dailyPrice: number;
+  weeklyPrice: number;
+  monthlyPrice: number;
+  threeMonthPrice: number;
+  sixMonthPrice: number;
+  yearPrice: number;
+} {
+  return {
+    dailyPrice: spot?.dailyPrice ?? 0,
+    weeklyPrice: spot?.weeklyPrice ?? 0,
+    monthlyPrice: spot?.monthlyPrice ?? 0,
+    threeMonthPrice: spot?.threeMonthPrice ?? 0,
+    sixMonthPrice: spot?.sixMonthPrice ?? 0,
+    yearPrice: spot?.yearPrice ?? 0,
+  };
+}
+
 export interface LongerStayInput {
   /** Per-dag breakdown fra getNightlyPrices/getNightlyPricesWithServiceClient. */
   breakdown: NightlyPrice[];
-  /** Pris (kr) for ett fullt døgn. 0 = ingen tilbud. */
-  dailyPrice: number;
+  /** Pris (kr) for ett fullt døgn. 0 = ingen tilbud. @deprecated bruk ikke i UI lenger. */
+  dailyPrice?: number;
   /** Pris (kr) for 7 påfølgende fulle døgn. 0 = ingen tilbud. */
   weeklyPrice: number;
   /** Pris (kr) for 30 påfølgende fulle døgn. 0 = ingen tilbud. */
   monthlyPrice: number;
+  /** Pris (kr) for 90 påfølgende fulle døgn. 0 = ingen tilbud. */
+  threeMonthPrice?: number;
+  /** Pris (kr) for 180 påfølgende fulle døgn. 0 = ingen tilbud. */
+  sixMonthPrice?: number;
+  /** Pris (kr) for 365 påfølgende fulle døgn. 0 = ingen tilbud. */
+  yearPrice?: number;
 }
 
 export interface LongerStayResult {
@@ -258,55 +296,100 @@ export interface LongerStayResult {
   /** Antall dager i bookingen. */
   fullDays: number;
   /** Hvordan rabatten er stablet. */
-  tiers: { months: number; weeks: number; days: number };
+  tiers: {
+    years: number;
+    sixMonths: number;
+    threeMonths: number;
+    months: number;
+    weeks: number;
+    days: number;
+  };
 }
 
 /**
  * Anvender "lengre opphold"-priser på en per-dag-breakdown. Tier-pris er den
  * faste kr-prisen som erstatter basisen for tier-perioden.
+ *
+ * Stables greedy fra lengste tier først: 365 → 180 → 90 → 30 → 7 → enkelt-dag.
+ * "Daily"-tier (1 dag) er deprecated fordi det er identisk med standard-
+ * dagsprisen — beholdt i input for bakoverkompat med eldre annonser.
  */
 export function applyLongerStayPricing(input: LongerStayInput): LongerStayResult {
-  const { breakdown, dailyPrice, weeklyPrice, monthlyPrice } = input;
+  const {
+    breakdown,
+    dailyPrice = 0,
+    weeklyPrice,
+    monthlyPrice,
+    threeMonthPrice = 0,
+    sixMonthPrice = 0,
+    yearPrice = 0,
+  } = input;
   const baseTotal = breakdown.reduce((s, n) => s + n.price, 0);
   const totalDays = breakdown.length;
 
-  if (dailyPrice <= 0 && weeklyPrice <= 0 && monthlyPrice <= 0) {
+  const noOffers =
+    dailyPrice <= 0 &&
+    weeklyPrice <= 0 &&
+    monthlyPrice <= 0 &&
+    threeMonthPrice <= 0 &&
+    sixMonthPrice <= 0 &&
+    yearPrice <= 0;
+
+  if (noOffers) {
     return {
       total: baseTotal,
       baseTotal,
       savings: 0,
       fullDays: 0,
-      tiers: { months: 0, weeks: 0, days: 0 },
+      tiers: { years: 0, sixMonths: 0, threeMonths: 0, months: 0, weeks: 0, days: 0 },
     };
   }
 
   let cursor = 0;
   let remaining = totalDays;
   let savings = 0;
-  const tiers = { months: 0, weeks: 0, days: 0 };
+  const tiers = { years: 0, sixMonths: 0, threeMonths: 0, months: 0, weeks: 0, days: 0 };
 
   const tierSavings = (baseSum: number, tierPrice: number): number => {
     if (tierPrice <= 0 || tierPrice >= baseSum) return 0;
     return baseSum - tierPrice;
   };
 
+  const sumRange = (start: number, length: number): number =>
+    breakdown.slice(start, start + length).reduce((s, n) => s + n.price, 0);
+
+  while (yearPrice > 0 && remaining >= 365) {
+    savings += tierSavings(sumRange(cursor, 365), yearPrice);
+    tiers.years += 1;
+    cursor += 365;
+    remaining -= 365;
+  }
+  while (sixMonthPrice > 0 && remaining >= 180) {
+    savings += tierSavings(sumRange(cursor, 180), sixMonthPrice);
+    tiers.sixMonths += 1;
+    cursor += 180;
+    remaining -= 180;
+  }
+  while (threeMonthPrice > 0 && remaining >= 90) {
+    savings += tierSavings(sumRange(cursor, 90), threeMonthPrice);
+    tiers.threeMonths += 1;
+    cursor += 90;
+    remaining -= 90;
+  }
   while (monthlyPrice > 0 && remaining >= 30) {
-    const baseSum = breakdown.slice(cursor, cursor + 30).reduce((s, n) => s + n.price, 0);
-    savings += tierSavings(baseSum, monthlyPrice);
+    savings += tierSavings(sumRange(cursor, 30), monthlyPrice);
     tiers.months += 1;
     cursor += 30;
     remaining -= 30;
   }
   while (weeklyPrice > 0 && remaining >= 7) {
-    const baseSum = breakdown.slice(cursor, cursor + 7).reduce((s, n) => s + n.price, 0);
-    savings += tierSavings(baseSum, weeklyPrice);
+    savings += tierSavings(sumRange(cursor, 7), weeklyPrice);
     tiers.weeks += 1;
     cursor += 7;
     remaining -= 7;
   }
   while (dailyPrice > 0 && remaining > 0) {
-    const baseSum = breakdown[cursor].price;
-    savings += tierSavings(baseSum, dailyPrice);
+    savings += tierSavings(breakdown[cursor].price, dailyPrice);
     tiers.days += 1;
     cursor += 1;
     remaining -= 1;
