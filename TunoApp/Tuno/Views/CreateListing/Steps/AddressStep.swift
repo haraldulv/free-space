@@ -69,6 +69,8 @@ struct AddressStep: View {
                                     }
                                     .padding(.vertical, 12)
                                     .padding(.horizontal, 14)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
                                 if prediction.id != placesService.predictions.last?.id {
@@ -139,11 +141,24 @@ struct AddressStep: View {
             if let detail = await placesService.getPlaceDetail(placeId: prediction.id) {
                 form.lat = detail.lat
                 form.lng = detail.lng
-                form.address = prediction.mainText
-                // Forsøk å parse "By, Region" fra secondary text
-                let parts = prediction.secondaryText.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }
-                if parts.count >= 1 { form.city = parts[0] }
-                if parts.count >= 2 { form.region = parts[1] }
+                // Bruk parsed streetAddress hvis tilgjengelig (rute + nummer),
+                // ellers fallback til prediction.mainText for sjeldne adresser.
+                form.address = detail.streetAddress?.isEmpty == false
+                    ? detail.streetAddress!
+                    : prediction.mainText
+                // Foretrekk parsed by + region fra address components — sikrere
+                // enn å splitte secondaryText (som kan inneholde ulike formater).
+                if let city = detail.city, !city.isEmpty {
+                    form.city = city
+                } else {
+                    let parts = prediction.secondaryText
+                        .split(separator: ",")
+                        .map { $0.trimmingCharacters(in: .whitespaces) }
+                    if parts.count >= 1 { form.city = parts[0] }
+                }
+                if let region = detail.region, !region.isEmpty {
+                    form.region = region
+                }
                 searchText = ""
                 placesService.clear()
                 isSearchFocused = false

@@ -461,6 +461,8 @@ private struct HostOnboardingAddressStep: View {
     @ObservedObject var viewModel: HostOnboardingViewModel
     var focusedField: FocusState<OnboardingField?>.Binding
 
+    @StateObject private var placesService = PlacesService()
+
     var body: some View {
         ScrollViewReader { proxy in
             WizardScreen(
@@ -468,16 +470,66 @@ private struct HostOnboardingAddressStep: View {
                 subtitle: "Brukes kun til identitetsverifisering, vises aldri offentlig."
             ) {
                 VStack(spacing: 16) {
-                    OnboardingTextField(
-                        label: "Gateadresse",
-                        placeholder: "Storgata 1",
-                        text: $viewModel.addressLine1,
-                        error: viewModel.fieldErrors["line1"],
-                        submitLabel: .next
-                    )
-                    .focused(focusedField, equals: .addressLine1)
-                    .id(OnboardingField.addressLine1)
-                    .onSubmit { focusedField.wrappedValue = .postalCode }
+                    VStack(alignment: .leading, spacing: 0) {
+                        OnboardingTextField(
+                            label: "Gateadresse",
+                            placeholder: "Storgata 1",
+                            text: $viewModel.addressLine1,
+                            error: viewModel.fieldErrors["line1"],
+                            submitLabel: .next
+                        )
+                        .focused(focusedField, equals: .addressLine1)
+                        .id(OnboardingField.addressLine1)
+                        .onSubmit { focusedField.wrappedValue = .postalCode }
+                        .onChange(of: viewModel.addressLine1) { _, newValue in
+                            // Trigger Places-autocomplete kun mens feltet er fokusert,
+                            // så vi ikke spør om forslag etter at brukeren har valgt.
+                            if focusedField.wrappedValue == .addressLine1 {
+                                placesService.autocomplete(query: newValue)
+                            }
+                        }
+
+                        if !placesService.predictions.isEmpty,
+                           focusedField.wrappedValue == .addressLine1 {
+                            VStack(spacing: 0) {
+                                ForEach(placesService.predictions) { prediction in
+                                    Button {
+                                        selectPlace(prediction)
+                                    } label: {
+                                        HStack(spacing: 12) {
+                                            Image(systemName: "mappin.circle.fill")
+                                                .font(.system(size: 20))
+                                                .foregroundStyle(.primary600)
+                                            VStack(alignment: .leading, spacing: 2) {
+                                                Text(prediction.mainText)
+                                                    .font(.system(size: 15, weight: .medium))
+                                                    .foregroundStyle(.neutral900)
+                                                    .lineLimit(1)
+                                                Text(prediction.secondaryText)
+                                                    .font(.system(size: 12))
+                                                    .foregroundStyle(.neutral500)
+                                                    .lineLimit(1)
+                                            }
+                                            Spacer()
+                                        }
+                                        .padding(.vertical, 12)
+                                        .padding(.horizontal, 14)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    if prediction.id != placesService.predictions.last?.id {
+                                        Divider().padding(.leading, 46)
+                                    }
+                                }
+                            }
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+                            .shadow(color: .black.opacity(0.06), radius: 8, y: 4)
+                            .padding(.top, 4)
+                        }
+                    }
 
                     OnboardingTextField(
                         label: "Postnummer",
@@ -527,6 +579,26 @@ private struct HostOnboardingAddressStep: View {
                 withAnimation(.easeInOut(duration: 0.25)) {
                     proxy.scrollTo(new, anchor: .center)
                 }
+            }
+        }
+    }
+
+    /// Velg en place fra Google-forslagene — auto-fyller adressen,
+    /// postnummer og poststed via parsed address components.
+    private func selectPlace(_ prediction: PlacePrediction) {
+        Task {
+            if let detail = await placesService.getPlaceDetail(placeId: prediction.id) {
+                viewModel.addressLine1 = detail.streetAddress?.isEmpty == false
+                    ? detail.streetAddress!
+                    : prediction.mainText
+                if let postalCode = detail.postalCode, !postalCode.isEmpty {
+                    viewModel.postalCode = postalCode
+                }
+                if let city = detail.city, !city.isEmpty {
+                    viewModel.city = city
+                }
+                placesService.clear()
+                focusedField.wrappedValue = nil
             }
         }
     }
