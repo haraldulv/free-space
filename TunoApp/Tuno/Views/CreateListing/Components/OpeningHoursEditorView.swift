@@ -9,6 +9,9 @@ import UIKit
 struct OpeningHoursEditorView: View {
     @Binding var value: OpeningHours?
 
+    /// Hvilken ukedag som redigeres i sheet-en. nil = ingen sheet åpen.
+    @State private var editingDay: Weekday? = nil
+
     private var isLimited: Bool { value != nil }
 
     var body: some View {
@@ -31,12 +34,27 @@ struct OpeningHoursEditorView: View {
                     if value == nil { value = OpeningHours.defaultLimited }
                 }
             }
-            // Equal-height ved å binde begge til høyeste søsken.
             .fixedSize(horizontal: false, vertical: true)
 
             if isLimited, let oh = value {
                 weekdayGrid(oh: oh)
             }
+        }
+        .sheet(item: $editingDay) { day in
+            let raw = value?.value(for: day) ?? "09:00-17:00"
+            let parsed = OpeningHoursService.parseRange(raw) ?? (start: 9 * 60, end: 17 * 60)
+            DayHoursPickerSheet(
+                day: day,
+                initialStart: parsed.start,
+                initialEnd: parsed.end,
+                onSave: { newStart, newEnd in
+                    setDayValue(day, range: rangeString(start: newStart, end: newEnd))
+                    editingDay = nil
+                },
+                onCancel: { editingDay = nil }
+            )
+            .presentationDetents([.height(400)])
+            .presentationDragIndicator(.visible)
         }
     }
 
@@ -110,40 +128,38 @@ struct OpeningHoursEditorView: View {
             }
             .buttonStyle(.plain)
 
-            // Time-pickers eller blank plass av samme bredde, så Stengt-rader
-            // står på linje med Åpen-rader.
+            // Time-display: tap åpner kombinert fra/til-sheet for hele dagen.
             if !closed, let parsed = OpeningHoursService.parseRange(raw ?? "") {
-                let startMin = parsed.start
-                let endMin = parsed.end
-                HStack(spacing: 6) {
-                    HourPickerButton(
-                        selection: Binding(
-                            get: { startMin },
-                            set: { newStart in
-                                let safeEnd = max(newStart + 30, endMin)
-                                setDayValue(day, range: rangeString(start: newStart, end: safeEnd))
-                            }
-                        )
-                    )
-                    Text("–")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral400)
-                    HourPickerButton(
-                        selection: Binding(
-                            get: { endMin },
-                            set: { newEnd in
-                                let safeEnd = max(startMin + 30, newEnd)
-                                setDayValue(day, range: rangeString(start: startMin, end: safeEnd))
-                            }
-                        )
-                    )
+                Button {
+                    editingDay = day
+                } label: {
+                    HStack(spacing: 6) {
+                        timePill(text: OpeningHoursService.formatTime(parsed.start))
+                        Text("–")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral400)
+                        timePill(text: OpeningHoursService.formatTime(parsed.end))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .contentShape(Rectangle())
                 }
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .buttonStyle(.plain)
             } else {
                 Spacer(minLength: 0)
             }
         }
         .frame(maxWidth: .infinity, minHeight: 32)
+    }
+
+    private func timePill(text: String) -> some View {
+        Text(text)
+            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+            .foregroundStyle(.neutral900)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.neutral200, lineWidth: 1))
     }
 
     private func setDayValue(_ day: Weekday, range: String?) {
@@ -169,110 +185,147 @@ struct OpeningHoursEditorView: View {
     }
 }
 
-// MARK: - HourPickerButton
-
-/// Knapp som åpner et bottom sheet med native UIDatePicker (.wheels) i 30-min
-/// step. Brukes per fra/til-tid på hver ukedag.
-private struct HourPickerButton: View {
-    @Binding var selection: Int
-    @State private var showSheet = false
-
-    var body: some View {
-        Button {
-            showSheet = true
-        } label: {
-            Text(OpeningHoursService.formatTime(selection))
-                .font(.system(size: 13, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.neutral900)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .background(Color.neutral50)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.neutral200, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
-        .sheet(isPresented: $showSheet) {
-            HourPickerSheet(selection: $selection, isPresented: $showSheet)
-                .presentationDetents([.height(320)])
-                .presentationDragIndicator(.visible)
-        }
-    }
+// Weekday må være Identifiable for å brukes med .sheet(item:).
+extension Weekday: Identifiable {
+    public var id: String { rawValue }
 }
 
-/// Sheet med stor wheel-time-picker (30-min step) + Ferdig-knapp.
-private struct HourPickerSheet: View {
-    @Binding var selection: Int
-    @Binding var isPresented: Bool
+// MARK: - DayHoursPickerSheet
+
+/// Sheet med Fra og Til side-ved-side. Verten ser begge tidene samtidig
+/// og kan justere begge før de trykker Ferdig.
+private struct DayHoursPickerSheet: View {
+    let day: Weekday
+    let onSave: (Int, Int) -> Void
+    let onCancel: () -> Void
+
+    @State private var startMinutes: Int
+    @State private var endMinutes: Int
+
+    init(
+        day: Weekday,
+        initialStart: Int,
+        initialEnd: Int,
+        onSave: @escaping (Int, Int) -> Void,
+        onCancel: @escaping () -> Void
+    ) {
+        self.day = day
+        _startMinutes = State(initialValue: initialStart)
+        _endMinutes = State(initialValue: initialEnd)
+        self.onSave = onSave
+        self.onCancel = onCancel
+    }
+
+    private var isValid: Bool { endMinutes > startMinutes }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack {
-                Text("Velg tid")
+                Button("Avbryt") { onCancel() }
+                    .font(.system(size: 16))
+                    .foregroundStyle(.neutral600)
+                Spacer()
+                Text(weekdayLongLabel(day))
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(.neutral900)
                 Spacer()
                 Button("Ferdig") {
-                    isPresented = false
+                    let safeEnd = max(startMinutes + 30, endMinutes)
+                    onSave(startMinutes, safeEnd)
                 }
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.primary700)
+                .foregroundStyle(isValid ? .primary700 : .neutral400)
+                .disabled(!isValid)
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
-            .padding(.bottom, 8)
+            .padding(.bottom, 12)
 
-            WheelTimePicker(minutes: $selection)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            HStack(spacing: 0) {
+                timeColumn(label: "Fra", minutes: $startMinutes)
+                    .frame(maxWidth: .infinity)
+
+                Rectangle()
+                    .fill(Color.neutral200)
+                    .frame(width: 1, height: 200)
+
+                timeColumn(label: "Til", minutes: $endMinutes)
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal, 12)
+
+            if !isValid {
+                Text("Slutt-tid må være etter start-tid.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.red)
+                    .padding(.top, 8)
+            }
+
+            Spacer(minLength: 0)
         }
         .background(Color.white)
     }
-}
 
-/// UIKit-bro for å bruke UIDatePicker i .wheels-modus med 30-min step.
-private struct WheelTimePicker: UIViewRepresentable {
-    @Binding var minutes: Int
+    @ViewBuilder
+    private func timeColumn(label: String, minutes: Binding<Int>) -> some View {
+        VStack(spacing: 6) {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral500)
+                .textCase(.uppercase)
 
-    func makeUIView(context: Context) -> UIDatePicker {
-        let picker = UIDatePicker()
-        picker.datePickerMode = .time
-        picker.preferredDatePickerStyle = .wheels
-        picker.minuteInterval = 30
-        picker.locale = Locale(identifier: "nb_NO")
-        picker.addTarget(
-            context.coordinator,
-            action: #selector(Coordinator.changed(_:)),
-            for: .valueChanged
-        )
-        // Sett initial dato fra binding.
-        picker.date = dateFor(minutes: minutes)
-        return picker
-    }
+            HStack(spacing: 0) {
+                Picker("", selection: hourBinding(minutes)) {
+                    ForEach(0..<24, id: \.self) { h in
+                        Text(String(format: "%02d", h)).tag(h)
+                    }
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+                .frame(height: 200)
+                .clipped()
 
-    func updateUIView(_ uiView: UIDatePicker, context: Context) {
-        let target = dateFor(minutes: minutes)
-        if uiView.date != target {
-            uiView.date = target
+                Picker("", selection: minuteBinding(minutes)) {
+                    Text("00").tag(0)
+                    Text("30").tag(30)
+                }
+                .pickerStyle(.wheel)
+                .frame(maxWidth: .infinity)
+                .frame(height: 200)
+                .clipped()
+            }
         }
     }
 
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
-
-    private func dateFor(minutes: Int) -> Date {
-        var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
-        comps.hour = minutes / 60
-        comps.minute = minutes % 60
-        comps.second = 0
-        return Calendar.current.date(from: comps) ?? Date()
+    private func hourBinding(_ minutes: Binding<Int>) -> Binding<Int> {
+        Binding(
+            get: { minutes.wrappedValue / 60 },
+            set: { newHour in
+                let m = minutes.wrappedValue % 60
+                minutes.wrappedValue = newHour * 60 + m
+            }
+        )
     }
 
-    final class Coordinator: NSObject {
-        let parent: WheelTimePicker
-        init(_ parent: WheelTimePicker) { self.parent = parent }
+    private func minuteBinding(_ minutes: Binding<Int>) -> Binding<Int> {
+        Binding(
+            get: { minutes.wrappedValue % 60 == 30 ? 30 : 0 },
+            set: { newMin in
+                let h = minutes.wrappedValue / 60
+                minutes.wrappedValue = h * 60 + newMin
+            }
+        )
+    }
 
-        @objc func changed(_ picker: UIDatePicker) {
-            let h = Calendar.current.component(.hour, from: picker.date)
-            let m = Calendar.current.component(.minute, from: picker.date)
-            parent.minutes = h * 60 + m
+    private func weekdayLongLabel(_ day: Weekday) -> String {
+        switch day {
+        case .mon: return "Mandag"
+        case .tue: return "Tirsdag"
+        case .wed: return "Onsdag"
+        case .thu: return "Torsdag"
+        case .fri: return "Fredag"
+        case .sat: return "Lørdag"
+        case .sun: return "Søndag"
         }
     }
 }
