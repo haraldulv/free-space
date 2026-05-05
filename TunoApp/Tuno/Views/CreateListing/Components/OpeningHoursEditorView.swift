@@ -53,7 +53,7 @@ struct OpeningHoursEditorView: View {
                 },
                 onCancel: { editingDay = nil }
             )
-            .presentationDetents([.height(400)])
+            .presentationDetents([.height(310)])
             .presentationDragIndicator(.visible)
         }
     }
@@ -247,7 +247,7 @@ private struct DayHoursPickerSheet: View {
 
                 Rectangle()
                     .fill(Color.neutral200)
-                    .frame(width: 1, height: 200)
+                    .frame(width: 1, height: 180)
 
                 timeColumn(label: "Til", minutes: $endMinutes)
                     .frame(maxWidth: .infinity)
@@ -256,12 +256,10 @@ private struct DayHoursPickerSheet: View {
 
             if !isValid {
                 Text("Slutt-tid må være etter start-tid.")
-                    .font(.system(size: 13))
+                    .font(.system(size: 12))
                     .foregroundStyle(.red)
-                    .padding(.top, 8)
+                    .padding(.top, 4)
             }
-
-            Spacer(minLength: 0)
         }
         .background(Color.white)
     }
@@ -282,7 +280,7 @@ private struct DayHoursPickerSheet: View {
                 }
                 .pickerStyle(.wheel)
                 .frame(maxWidth: .infinity)
-                .frame(height: 200)
+                .frame(height: 180)
                 .clipped()
 
                 Picker("", selection: minuteBinding(minutes)) {
@@ -291,7 +289,7 @@ private struct DayHoursPickerSheet: View {
                 }
                 .pickerStyle(.wheel)
                 .frame(maxWidth: .infinity)
-                .frame(height: 200)
+                .frame(height: 180)
                 .clipped()
             }
         }
