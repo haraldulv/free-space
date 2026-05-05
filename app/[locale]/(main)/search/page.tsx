@@ -28,8 +28,12 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const checkOut = typeof params.checkOut === "string" ? params.checkOut : undefined;
   const lat = typeof params.lat === "string" ? parseFloat(params.lat) : undefined;
   const lng = typeof params.lng === "string" ? parseFloat(params.lng) : undefined;
+  const openingHours: "any" | "always" | "limited" =
+    params.openingHours === "always" || params.openingHours === "limited"
+      ? params.openingHours
+      : "any";
 
-  const listings = await searchListings({ query, category, vehicleType, checkIn, checkOut, lat, lng });
+  const listings = await searchListings({ query, category, vehicleType, checkIn, checkOut, lat, lng, openingHours });
 
   return (
     <SearchResultsView
@@ -39,6 +43,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       vehicleType={vehicleType}
       checkIn={checkIn}
       checkOut={checkOut}
+      openingHours={openingHours}
     />
   );
 }

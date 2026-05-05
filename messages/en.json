@@ -123,6 +123,7 @@
     "spotsOfTotalAvailable": "{available}/{total} spots available",
     "hour": "hour",
     "instantBook": "Instant Book",
+    "limitedHours": "Limited hours",
     "requestToBook": "Request to book",
     "reviews": "reviews",
     "noReviewsYet": "No reviews yet",
@@ -473,6 +474,10 @@
     "publishListing": "Publish listing",
     "saveChanges": "Save changes",
     "somethingWentWrong": "Something went wrong",
+    "openingHoursTitle": "Opening hours",
+    "openingHoursSubtitle": "Set opening hours if the spot is not available around the clock. Leave on 'Open 24/7' if it's always available.",
+    "availabilityTitle": "Availability",
+    "availabilitySubtitle": "Tap dates to block the spot for maintenance or personal use.",
     "category": {
       "title": "What kind of spot are you renting out?",
       "subtitle": "Pick the category that fits best",
@@ -540,9 +545,12 @@
       "title": "Set price",
       "subtitle": "You can change the price at any time",
       "priceLabel": "Price (NOK)",
+      "priceLabelDay": "Price per day (NOK)",
+      "priceLabelNight": "Price per night (NOK)",
       "pricePlaceholder": "E.g. 150",
       "priceUnitLabel": "Price unit",
       "perHour": "Per hour",
+      "perDay": "Per day",
       "perNight": "Per night",
       "instantLabel": "Instant book",
       "instantDesc": "Guests can book instantly for up to 7 nights. Longer stays always require approval."
@@ -674,7 +682,11 @@
       "locationPricePreview": "From {price} {unit}",
       "locationEmpty": "Set address and price",
       "discountsActive": "Offers active",
-      "discountsInactive": "No offers set"
+      "discountsInactive": "No offers set",
+      "sectionOpeningHoursTitle": "Opening hours",
+      "sectionOpeningHoursSubtitle": "Set opening hours if the spot is not open 24/7.",
+      "openingHoursAlways": "Open 24/7",
+      "openingHoursLimited": "Limited hours"
     },
     "location": {
       "title": "Where is the spot?",
@@ -692,6 +704,7 @@
       "priceHeader": "Price",
       "pricePerNight": "kr/night",
       "pricePerHour": "kr/hour",
+      "pricePerDay": "kr/day",
       "priceCurrency": "kr",
       "pricePlaceholder": "E.g. 150",
       "priceStandardLabel": "Default price {unit}",
@@ -852,5 +865,34 @@
     "saved": "Saved",
     "invalidPrice": "Invalid price.",
     "missingDates": "Pick start and end date."
+  },
+  "openingHours": {
+    "title": "Opening hours",
+    "subtitle": "Set opening hours if the spot is not available around the clock.",
+    "alwaysOpen": "Open 24/7",
+    "alwaysOpenHint": "The spot is available 24 hours a day.",
+    "limitedHours": "Limited hours",
+    "limitedHoursHint": "Set opening hours per weekday.",
+    "open": "Open",
+    "closed": "Closed",
+    "perSpotOverride": "Custom hours",
+    "perSpotInherit": "Same as listing",
+    "day": {
+      "mon": "Monday",
+      "tue": "Tuesday",
+      "wed": "Wednesday",
+      "thu": "Thursday",
+      "fri": "Friday",
+      "sat": "Saturday",
+      "sun": "Sunday"
+    }
+  },
+  "searchFilter": {
+    "openingHours": {
+      "label": "Opening hours",
+      "any": "All",
+      "always": "Open 24/7",
+      "limited": "Limited hours"
+    }
   }
 }

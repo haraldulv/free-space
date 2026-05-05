@@ -123,6 +123,7 @@
     "spotsOfTotalAvailable": "{available}/{total} plasser tilgjengelig",
     "hour": "time",
     "instantBook": "Direktebooking",
+    "limitedHours": "Begrenset åpningstid",
     "requestToBook": "Be om å få booke",
     "reviews": "anmeldelser",
     "noReviewsYet": "Ingen anmeldelser ennå",
@@ -473,6 +474,10 @@
     "publishListing": "Publiser annonse",
     "saveChanges": "Lagre endringer",
     "somethingWentWrong": "Noe gikk galt",
+    "openingHoursTitle": "Åpningstid",
+    "openingHoursSubtitle": "Sett åpningstid hvis plassen ikke er tilgjengelig hele døgnet. La stå på 'Døgnåpent' hvis plassen alltid er ledig.",
+    "availabilityTitle": "Tilgjengelighet",
+    "availabilitySubtitle": "Trykk på datoer for å blokkere plassen for vedlikehold eller egen bruk.",
     "category": {
       "title": "Hva slags plass leier du ut?",
       "subtitle": "Velg kategorien som passer best",
@@ -540,9 +545,12 @@
       "title": "Sett pris",
       "subtitle": "Du kan alltid endre prisen senere",
       "priceLabel": "Pris (kr)",
+      "priceLabelDay": "Pris per dag (kr)",
+      "priceLabelNight": "Pris per natt (kr)",
       "pricePlaceholder": "F.eks. 150",
       "priceUnitLabel": "Prisenhet",
       "perHour": "Per time",
+      "perDay": "Per dag",
       "perNight": "Per natt",
       "instantLabel": "Direktebooking",
       "instantDesc": "Gjester kan booke umiddelbart opptil 7 netter. Lengre opphold krever alltid godkjenning."
@@ -674,7 +682,11 @@
       "locationPricePreview": "Fra {price} {unit}",
       "locationEmpty": "Sett adresse og pris",
       "discountsActive": "Tilbud aktivert",
-      "discountsInactive": "Ingen tilbud satt"
+      "discountsInactive": "Ingen tilbud satt",
+      "sectionOpeningHoursTitle": "Åpningstid",
+      "sectionOpeningHoursSubtitle": "Sett åpningstider hvis plassen ikke er døgnåpent.",
+      "openingHoursAlways": "Døgnåpent",
+      "openingHoursLimited": "Med åpningstid"
     },
     "location": {
       "title": "Hvor er plassen?",
@@ -692,6 +704,7 @@
       "priceHeader": "Pris",
       "pricePerNight": "kr/natt",
       "pricePerHour": "kr/time",
+      "pricePerDay": "kr/dag",
       "priceCurrency": "kr",
       "pricePlaceholder": "F.eks. 150",
       "priceStandardLabel": "Standardpris {unit}",
@@ -852,5 +865,34 @@
     "saved": "Lagret",
     "invalidPrice": "Ugyldig pris.",
     "missingDates": "Velg start- og sluttdato."
+  },
+  "openingHours": {
+    "title": "Åpningstid",
+    "subtitle": "Sett åpningstid hvis plassen ikke er tilgjengelig hele døgnet.",
+    "alwaysOpen": "Døgnåpent",
+    "alwaysOpenHint": "Plassen er tilgjengelig 24 timer i døgnet.",
+    "limitedHours": "Med åpningstid",
+    "limitedHoursHint": "Sett åpningstid per ukedag.",
+    "open": "Åpen",
+    "closed": "Stengt",
+    "perSpotOverride": "Egen åpningstid",
+    "perSpotInherit": "Samme som annonsen",
+    "day": {
+      "mon": "Mandag",
+      "tue": "Tirsdag",
+      "wed": "Onsdag",
+      "thu": "Torsdag",
+      "fri": "Fredag",
+      "sat": "Lørdag",
+      "sun": "Søndag"
+    }
+  },
+  "searchFilter": {
+    "openingHours": {
+      "label": "Åpningstid",
+      "any": "Alle",
+      "always": "Døgnåpent",
+      "limited": "Med åpningstid"
+    }
   }
 }

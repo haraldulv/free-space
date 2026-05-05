@@ -29,7 +29,7 @@ interface ReviewStepProps {
     images?: string[];
     amenities?: Amenity[];
     price?: number;
-    priceUnit?: "time" | "natt" | "hour";
+    priceUnit?: "time" | "natt";
     instantBooking?: boolean;
     blockedDates?: string[];
     checkInTime?: string;
@@ -39,7 +39,7 @@ interface ReviewStepProps {
 
 export default function ReviewStep({ data }: ReviewStepProps) {
   const amenityConfig = useAmenityConfig();
-  const unit = data.priceUnit === "hour" ? "time" : "natt";
+  const unit = data.priceUnit === "time" ? "dag" : "natt";
   const VIcon = data.vehicleType ? vehicleIcons[data.vehicleType] : Bus;
 
   return (

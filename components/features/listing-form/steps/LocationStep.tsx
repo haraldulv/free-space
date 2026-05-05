@@ -23,7 +23,7 @@ interface LocationStepProps {
   category: ListingCategory;
   defaultPrice: number;
   perSpotPricing: boolean;
-  priceUnit: "time" | "natt" | "hour";
+  priceUnit: "time" | "natt";
   checkinMessage?: string;
   perSpotCheckinMessage: boolean;
   checkoutMessage?: string;
@@ -90,7 +90,7 @@ export default function LocationStep({
     }));
     onChange("spotMarkers", next);
   };
-  const priceLabel = priceUnit === "natt" ? t("pricePerNight") : t("pricePerHour");
+  const priceLabel = priceUnit === "natt" ? t("pricePerNight") : t("pricePerDay");
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const mainMarkerRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Star, Zap } from "lucide-react";
+import { Star, Zap, Clock } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { Listing, getDisplayPriceText } from "@/types";
@@ -47,7 +47,7 @@ export default function SearchListingCard({
     }
   }, [isSelected]);
 
-  const priceUnitLabel = listing.priceUnit === "hour" ? t("hour") : t("night");
+  const priceUnitLabel = listing.priceUnit === "time" ? t("day") : t("night");
 
   return (
     <div
@@ -103,6 +103,11 @@ export default function SearchListingCard({
               </span>
             </p>
             <div className="flex items-center gap-1.5">
+              {listing.openingHours && (
+                <span className="flex items-center text-[10px] font-semibold text-amber-700" title={t("limitedHours")}>
+                  <Clock className="h-3 w-3" />
+                </span>
+              )}
               {listing.instantBooking && (
                 <span className="flex items-center text-[10px] font-semibold text-green-600" title={t("instantBook")}>
                   <Zap className="h-3 w-3 fill-green-600" />

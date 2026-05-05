@@ -5,15 +5,10 @@ import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS } from "@/lib/config";
 import {
   getNightlyPricesWithServiceClient,
   applyPriceBreakdown,
-  getHourlyPricesAndRulesWithServiceClient,
-  applyHourlyPriceBreakdown,
-  hourlyBreakdownHasUnavailable,
   applyLongerStayPricing,
   getEffectiveLongerStayPrices,
   type NightlyPrice,
-  type HourlyPrice,
-  type AvailabilityMode,
-  type DurationDiscountResult,
+  type LongerStayResult,
 } from "@/lib/pricing";
 import type { SpotMarker, ListingExtra, SelectedExtras } from "@/types";
 
@@ -24,25 +19,12 @@ async function computeTotalWithBreakdown(args: {
   listingExtras: ListingExtra[] | null;
   checkIn: string;
   checkOut: string;
-  /** Hourly mode: full timestamps when set. Drives per-hour pricing. */
-  checkInAt?: string | null;
-  checkOutAt?: string | null;
   selectedSpotIds?: string[];
   selectedExtras?: SelectedExtras;
-  /** Listing availability mode. Brukes for å avvise hourly bookings utenfor bånd. */
-  availabilityMode?: AvailabilityMode;
-}): Promise<{ total: number; breakdown: NightlyPrice[] | HourlyPrice[] | null; unavailable?: boolean; discount?: DurationDiscountResult | null }> {
-  const isHourly = !!(args.checkInAt && args.checkOutAt);
+}): Promise<{ total: number; breakdown: NightlyPrice[] | null; discount?: LongerStayResult | null }> {
   const start = new Date(args.checkIn);
   const end = new Date(args.checkOut);
   const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-  const hours = isHourly
-    ? Math.max(1, Math.round((new Date(args.checkOutAt!).getTime() - new Date(args.checkInAt!).getTime()) / (1000 * 60 * 60)))
-    : 0;
-  // Antall enheter for pris-beregning — timer for parkering per time, netter ellers.
-  const units = isHourly ? hours : nights;
-  // Extras betales per natt/døgn for daglige bookinger, men engangs for hourly (tunet pris-modell).
-  const extrasUnits = isHourly ? 1 : nights;
 
   const selectedSpots = (args.spotMarkers || []).filter(
     (s) => s.id && args.selectedSpotIds?.includes(s.id),
@@ -50,55 +32,11 @@ async function computeTotalWithBreakdown(args: {
   const hasPerSpotPricing = selectedSpots.length > 0 && selectedSpots.some((s) => s.price != null);
 
   let baseTotal: number;
-  let breakdown: NightlyPrice[] | HourlyPrice[] | null = null;
-  let discount: DurationDiscountResult | null = null;
+  let breakdown: NightlyPrice[] | null = null;
+  let discount: LongerStayResult | null = null;
 
   if (hasPerSpotPricing) {
-    baseTotal = selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * units, 0);
-  } else if (isHourly) {
-    // Hourly listing: per-time-resolution med band-regler.
-    // Per-spot scope: hvis kun én plass er valgt, send spotId så server filtrerer
-    // bånd til den plassens regler (med fallback til listing-wide).
-    const targetSpotId = args.selectedSpotIds?.length === 1 ? args.selectedSpotIds[0] : null;
-    const { breakdown: hourlyBreakdown, rules } = await getHourlyPricesAndRulesWithServiceClient(
-      {
-        listingId: args.listingId,
-        checkInAt: args.checkInAt!,
-        checkOutAt: args.checkOutAt!,
-        basePrice: args.listingPrice,
-        spotId: targetSpotId,
-        availabilityMode: args.availabilityMode ?? "always",
-      },
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
-    breakdown = hourlyBreakdown;
-    if (hourlyBreakdownHasUnavailable(hourlyBreakdown)) {
-      return { total: 0, breakdown, unavailable: true };
-    }
-    baseTotal = applyHourlyPriceBreakdown(hourlyBreakdown);
-
-    // Anvend "lengre opphold"-priser: hent valgt plass sine kr-priser
-    // (eller første spot som matcher hvis valgte ikke har egne). Faller
-    // tilbake til legacy %-felter via getEffectiveLongerStayPrices for
-    // annonser opprettet før prisbasert ble lansert.
-    const targetSpot = targetSpotId
-      ? selectedSpots.find((s) => s.id === targetSpotId)
-      : selectedSpots[0] ?? (args.spotMarkers || [])[0];
-    const longerStay = targetSpot
-      ? getEffectiveLongerStayPrices(targetSpot, args.listingPrice)
-      : { dailyPrice: 0, weeklyPrice: 0, monthlyPrice: 0 };
-    if (longerStay.dailyPrice > 0 || longerStay.weeklyPrice > 0 || longerStay.monthlyPrice > 0) {
-      discount = applyLongerStayPricing({
-        rules,
-        hourlyBreakdown,
-        dailyPrice: longerStay.dailyPrice,
-        weeklyPrice: longerStay.weeklyPrice,
-        monthlyPrice: longerStay.monthlyPrice,
-        spotId: targetSpotId,
-      });
-      baseTotal = discount.total;
-    }
+    baseTotal = selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * nights, 0);
   } else {
     breakdown = await getNightlyPricesWithServiceClient(
       {
@@ -110,15 +48,32 @@ async function computeTotalWithBreakdown(args: {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
-    const perNight = applyPriceBreakdown(breakdown);
-    baseTotal = selectedSpots.length > 1 ? perNight * selectedSpots.length : perNight;
+    const perDay = applyPriceBreakdown(breakdown);
+    baseTotal = selectedSpots.length > 1 ? perDay * selectedSpots.length : perDay;
+  }
+
+  // Anvend "lengre opphold"-priser når en spot er valgt og har dailyPrice/weeklyPrice/monthlyPrice satt.
+  const targetSpot = args.selectedSpotIds?.length === 1
+    ? selectedSpots.find((s) => s.id === args.selectedSpotIds![0])
+    : selectedSpots[0] ?? (args.spotMarkers || [])[0];
+  if (breakdown && targetSpot) {
+    const longerStay = getEffectiveLongerStayPrices(targetSpot);
+    if (longerStay.dailyPrice > 0 || longerStay.weeklyPrice > 0 || longerStay.monthlyPrice > 0) {
+      discount = applyLongerStayPricing({
+        breakdown,
+        dailyPrice: longerStay.dailyPrice,
+        weeklyPrice: longerStay.weeklyPrice,
+        monthlyPrice: longerStay.monthlyPrice,
+      });
+      baseTotal = discount.total;
+    }
   }
 
   let extrasTotal = 0;
   for (const entry of args.selectedExtras?.listing || []) {
     const canonical = (args.listingExtras || []).find((e) => e.id === entry.id);
     if (!canonical) continue;
-    extrasTotal += canonical.price * (canonical.perNight ? extrasUnits : 1) * entry.quantity;
+    extrasTotal += canonical.price * (canonical.perNight ? nights : 1) * entry.quantity;
   }
   for (const [spotId, entries] of Object.entries(args.selectedExtras?.spots || {})) {
     const spot = selectedSpots.find((s) => s.id === spotId);
@@ -126,7 +81,7 @@ async function computeTotalWithBreakdown(args: {
     for (const entry of entries) {
       const canonical = (spot.extras || []).find((e) => e.id === entry.id);
       if (!canonical) continue;
-      extrasTotal += canonical.price * (canonical.perNight ? extrasUnits : 1) * entry.quantity;
+      extrasTotal += canonical.price * (canonical.perNight ? nights : 1) * entry.quantity;
     }
   }
 
@@ -159,8 +114,6 @@ export async function POST(request: NextRequest) {
       listingId,
       checkIn,
       checkOut,
-      checkInAt,
-      checkOutAt,
       licensePlate,
       isRentalCar,
       selectedSpotIds,
@@ -169,9 +122,6 @@ export async function POST(request: NextRequest) {
       listingId: string;
       checkIn: string;
       checkOut: string;
-      /** ISO timestamps for hourly bookings. NULL for daily/nightly. */
-      checkInAt?: string | null;
-      checkOutAt?: string | null;
       licensePlate?: string;
       isRentalCar?: boolean;
       selectedSpotIds?: string[];
@@ -181,12 +131,11 @@ export async function POST(request: NextRequest) {
     if (!listingId || !checkIn || !checkOut) {
       return NextResponse.json({ error: "Mangler påkrevde felt" }, { status: 400 });
     }
-    const isHourly = !!(checkInAt && checkOutAt);
 
     // Check availability
     const { data: listing } = await supabase
       .from("listings")
-      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, availability_mode, category")
+      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, category")
       .eq("id", listingId)
       .single();
 
@@ -198,37 +147,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Du kan ikke booke din egen annonse" }, { status: 400 });
     }
 
-    // Parkering er per-time-only — døgn-rabatt-flow tar over senere.
-    // Avvis nightly-bookinger for parkering tidlig så vi ikke ender med
-    // gale prisberegninger eller ureachable nightly-paths.
-    if (listing.category === "parking" && !isHourly) {
-      return NextResponse.json(
-        { error: "Parkering må bookes per time. Velg start- og slutt-tidspunkt." },
-        { status: 400 },
-      );
-    }
-
     // Rekalkulér totalen autoritativt server-side — klient sender ikke lenger beløp.
-    const { total: totalPrice, breakdown, unavailable } = await computeTotalWithBreakdown({
+    const { total: totalPrice, breakdown } = await computeTotalWithBreakdown({
       listingId,
       listingPrice: listing.price,
       spotMarkers: listing.spot_markers as SpotMarker[] | null,
       listingExtras: listing.extras as ListingExtra[] | null,
       checkIn,
       checkOut,
-      checkInAt,
-      checkOutAt,
       selectedSpotIds,
       selectedExtras,
-      availabilityMode: (listing.availability_mode as AvailabilityMode) ?? "always",
     });
-
-    if (unavailable) {
-      return NextResponse.json(
-        { error: "Plassen er ikke tilgjengelig på det valgte tidspunktet." },
-        { status: 409 },
-      );
-    }
 
     // Stripe krever minst kr 3 for NOK-betalinger.
     if (totalPrice < 3) {
@@ -238,35 +167,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // For hourly bookings er check_in og check_out som regel samme dato, så
-    // den vanlige `.lt(check_in, checkOut)`-sjekken misser eksisterende hourly
-    // på samme dag. Vi henter alle bookings i dato-rangen (inclusive) og
-    // filtrerer i kode: hourly-mot-hourly via timestamp-overlap, hourly-mot-
-    // daily via dato-medlemskap.
-    const isHourlyCheck = isHourly && checkInAt && checkOutAt;
-    const overlapQuery = supabase
+    const { data: rawOverlap } = await supabase
       .from("bookings")
-      .select("selected_spot_ids, check_in, check_out, check_in_at, check_out_at")
+      .select("selected_spot_ids, check_in, check_out")
       .eq("listing_id", listingId)
-      .in("status", ["confirmed", "pending", "requested"]);
+      .in("status", ["confirmed", "pending", "requested"])
+      .lt("check_in", checkOut)
+      .gt("check_out", checkIn);
 
-    const { data: rawOverlap } = isHourlyCheck
-      ? await overlapQuery.lte("check_in", checkOut).gte("check_out", checkIn)
-      : await overlapQuery.lt("check_in", checkOut).gt("check_out", checkIn);
-
-    const overlappingBookings = (rawOverlap || []).filter((b) => {
-      if (!isHourlyCheck) return true;  // daily-flyt: SQL har allerede filtrert riktig
-      if (b.check_in_at && b.check_out_at) {
-        // Hourly-mot-hourly: krever ekte tidsoverlapp
-        const newIn = new Date(checkInAt!).getTime();
-        const newOut = new Date(checkOutAt!).getTime();
-        const bIn = new Date(b.check_in_at).getTime();
-        const bOut = new Date(b.check_out_at).getTime();
-        return newIn < bOut && newOut > bIn;
-      }
-      // Hourly-mot-daily: daily blokkerer [check_in, check_out)-rangen
-      return checkIn >= b.check_in && checkIn < b.check_out;
-    });
+    const overlappingBookings = rawOverlap || [];
 
     const bookedCount = overlappingBookings.reduce((sum, row) => {
       const ids = row.selected_spot_ids as string[] | null;
@@ -291,22 +200,16 @@ export async function POST(request: NextRequest) {
       }
 
       // Sjekk manuelt blokkerte datoer per plass.
-      // Hourly bookings har checkIn === checkOut (samme dag) — while-løkken
-      // gir tom liste, så vi inkluderer datoen eksplisitt i hourly-flyt.
       const spotMarkers = (listing.spot_markers as SpotMarker[] | null) || [];
       const datesInRange: string[] = [];
-      if (isHourlyCheck) {
-        datesInRange.push(checkIn);
-      } else {
-        const cursor = new Date(checkIn);
-        const end = new Date(checkOut);
-        while (cursor < end) {
-          const y = cursor.getFullYear();
-          const m = String(cursor.getMonth() + 1).padStart(2, "0");
-          const d = String(cursor.getDate()).padStart(2, "0");
-          datesInRange.push(`${y}-${m}-${d}`);
-          cursor.setDate(cursor.getDate() + 1);
-        }
+      const cursor = new Date(checkIn);
+      const end = new Date(checkOut);
+      while (cursor < end) {
+        const y = cursor.getFullYear();
+        const m = String(cursor.getMonth() + 1).padStart(2, "0");
+        const d = String(cursor.getDate()).padStart(2, "0");
+        datesInRange.push(`${y}-${m}-${d}`);
+        cursor.setDate(cursor.getDate() + 1);
       }
       for (const spotId of selectedSpotIds) {
         const spot = spotMarkers.find((s) => s.id === spotId);
@@ -346,9 +249,6 @@ export async function POST(request: NextRequest) {
         listing_id: listingId,
         check_in: checkIn,
         check_out: checkOut,
-        // Hourly bookings: lagre faktisk timestamp-vindu i tillegg til check_in/check_out (samme dag).
-        check_in_at: isHourly ? checkInAt : null,
-        check_out_at: isHourly ? checkOutAt : null,
         // Snapshot tidspunkter — host-endringer på listing skal ikke ramme eksisterende bookinger.
         check_in_time: (listing.check_in_time as string) || "15:00",
         check_out_time: (listing.check_out_time as string) || "11:00",

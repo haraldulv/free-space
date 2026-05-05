@@ -47,6 +47,8 @@ export interface SearchFilters {
   lat?: number;
   lng?: number;
   radiusKm?: number;
+  /** Filter på åpningstid. `any` = alle (default), `always` = kun døgnåpne, `limited` = kun med begrenset åpningstid. */
+  openingHours?: "any" | "always" | "limited";
 }
 
 export type Amenity =
@@ -124,13 +126,23 @@ export interface Host {
   bio?: string;
 }
 
-export type PriceUnit = "time" | "natt" | "hour";
+export type PriceUnit = "time" | "natt";
 
 export const priceUnitLabels: Record<PriceUnit, string> = {
-  time: "døgn",
+  time: "dag",
   natt: "natt",
-  hour: "time",
 };
+
+export type Weekday = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+
+export const WEEKDAYS: Weekday[] = ["mon", "tue", "wed", "thu", "fri", "sat", "sun"];
+
+/**
+ * Åpningstid per ukedag for parkering. `"HH:MM-HH:MM"` (lokal tid, Europe/Oslo).
+ * `null` på en ukedag = stengt. Felt fraværende = stengt.
+ * Hele objektet `null`/`undefined` på listing = døgnåpent.
+ */
+export type OpeningHours = Partial<Record<Weekday, string | null>>;
 
 export interface SpotMarker {
   id?: string;
@@ -139,38 +151,28 @@ export interface SpotMarker {
   label?: string;
   description?: string;
   price?: number;
-  /** Dual-pricing per plass — time-pris (kr/time). */
-  pricePerHour?: number;
-  /** Dual-pricing per plass — natt-pris (camping). */
+  /** Camping per natt-pris per plass. */
   pricePerNight?: number;
   vehicleMaxLength?: number;
   /** Multi-select biltyper — bruk denne fra build 61+. Singel `vehicleType` er backward-compat. */
   vehicleTypes?: VehicleType[];
   /** @deprecated bruk `vehicleTypes`. Beholdes for decode av seedede listings. */
   vehicleType?: VehicleType;
-  /** Per-plass priceUnit — overstyrer listing.priceUnit. Kun parkering bruker dette. */
-  priceUnit?: PriceUnit;
   extras?: ListingExtra[];
   blockedDates?: string[];
   checkinMessage?: string;
   images?: string[];
-  /**
-   * "Lengre opphold"-priser (kr) — overstyrer hourly-grunnpris når booking dekker
-   * fulle perioder. Nye annonser skal bruke disse istedenfor %-rabatter.
-   */
-  /** Pris (kr) for ett fullt døgn (24 t). */
+  /** Pris (kr) for ett fullt døgn. */
   dailyPrice?: number;
   /** Pris (kr) for 7 påfølgende fulle døgn. */
   weeklyPrice?: number;
   /** Pris (kr) for 30 påfølgende fulle døgn. */
   monthlyPrice?: number;
-
-  /** @deprecated bruk dailyPrice. Beholdt for backward-compat med iOS build < 153. */
-  discountDayPct?: number;
-  /** @deprecated bruk weeklyPrice. */
-  discountWeekPct?: number;
-  /** @deprecated bruk monthlyPrice. */
-  discountMonthPct?: number;
+  /**
+   * Per-plass åpningstid. Hvis satt overstyrer den listing-nivå.
+   * `null` (eller fraværende) = arve listing.openingHours.
+   */
+  openingHours?: OpeningHours | null;
 }
 
 /** Returner effective vehicleTypes på en SpotMarker — håndterer backward-compat. */
@@ -259,6 +261,8 @@ export interface Listing {
   checkinMessage?: string;
   checkoutMessage?: string;
   checkoutMessageSendHoursBefore?: number;
+  /** Åpningstid på listing-nivå. NULL = døgnåpent. Kun relevant for parkering. */
+  openingHours?: OpeningHours | null;
 }
 
 export interface Booking {

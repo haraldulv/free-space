@@ -46,14 +46,11 @@ export default function BookingSummary({
 
   const resolvedBase = baseAmount ?? listing.price * nights;
   const spotCount = selectedSpotCount ?? 1;
-  // Parkering = "hour" (per time). Camping = "natt". Legacy "time" var historisk
-  // ment som "døgn" — beholdes for bakoverkompatibilitet selv om ingen rader
-  // bruker det i dagens DB.
-  const isHourly = listing.priceUnit === "hour";
+  const isParking = listing.priceUnit === "time";
 
   const baseLabel = spotCount > 1
     ? t("spotsTimesNights", { spots: spotCount, nights })
-    : isHourly
+    : isParking
       ? t("pricePerDayCalc", { price: listing.price, days: nights })
       : t("pricePerNightCalc", { price: listing.price, nights });
 

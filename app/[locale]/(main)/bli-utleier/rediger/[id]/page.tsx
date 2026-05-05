@@ -16,6 +16,7 @@ import {
   Eye,
   EyeOff,
   Loader,
+  Clock,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -30,10 +31,11 @@ import ImageUploadStep from "@/components/features/listing-form/steps/ImageUploa
 import AmenitiesStep from "@/components/features/listing-form/steps/AmenitiesStep";
 import DiscountsStep from "@/components/features/listing-form/steps/DiscountsStep";
 import AvailabilityEditor from "@/components/features/listing-form/AvailabilityEditor";
+import OpeningHoursEditor from "@/components/features/OpeningHoursEditor";
 import Button from "@/components/ui/Button";
 import Sheet from "@/components/ui/Sheet";
 import type { CreateListingData } from "@/lib/supabase/listings";
-import type { Amenity, SpotMarker } from "@/types";
+import type { Amenity, OpeningHours, SpotMarker } from "@/types";
 
 type SectionId =
   | "info"
@@ -41,7 +43,8 @@ type SectionId =
   | "images"
   | "amenities"
   | "discounts"
-  | "availability";
+  | "availability"
+  | "openingHours";
 
 export default function EditListingPage() {
   const t = useTranslations("host.edit");
@@ -107,6 +110,7 @@ export default function EditListingPage() {
         checkoutMessage: row.checkout_message || "",
         checkoutMessageSendHoursBefore: row.checkout_message_send_hours_before ?? 2,
         extras: row.extras || [],
+        openingHours: (row.opening_hours as OpeningHours | null) ?? null,
         perSpotPricing: Array.isArray(row.spot_markers) && (row.spot_markers as SpotMarker[]).some((s) => s.price != null),
         perSpotCheckinMessage: Array.isArray(row.spot_markers) && (row.spot_markers as SpotMarker[]).some((s) => s.checkinMessage),
       });
@@ -275,6 +279,15 @@ export default function EditListingPage() {
           onClick={() => setOpenSheet("discounts")}
         />
 
+        {formData.category === "parking" && (
+          <SectionCard
+            icon={Clock}
+            title={t("sectionOpeningHoursTitle")}
+            preview={openingHoursPreview(formData, t)}
+            onClick={() => setOpenSheet("openingHours")}
+          />
+        )}
+
         <SectionCard
           icon={Sparkles}
           title={t("sectionAmenitiesTitle")}
@@ -416,6 +429,21 @@ export default function EditListingPage() {
           onChange={updateField}
         />
       </Sheet>
+
+      <Sheet
+        open={openSheet === "openingHours"}
+        onClose={() => setOpenSheet(null)}
+        title={t("sectionOpeningHoursTitle")}
+        footer={<SaveBar onSave={() => handleSave()} saving={saving} saved={saved} t={t} />}
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-neutral-600">{t("sectionOpeningHoursSubtitle")}</p>
+          <OpeningHoursEditor
+            value={(formData.openingHours ?? null) as OpeningHours | null}
+            onChange={(next) => updateField("openingHours", next)}
+          />
+        </div>
+      </Sheet>
     </div>
   );
 }
@@ -498,17 +526,17 @@ function infoPreview(d: Partial<CreateListingData>, t: (key: string, args?: Reco
 function locationPreview(d: Partial<CreateListingData>, t: (key: string, args?: Record<string, string | number | Date>) => string): string {
   const markers = d.spotMarkers || [];
   const prices = markers
-    .map((m) => m.price ?? m.pricePerHour ?? m.pricePerNight)
+    .map((m) => m.price ?? m.pricePerNight)
     .filter((p): p is number => p != null && p > 0);
   if (prices.length > 0) {
     const min = Math.min(...prices);
     const max = Math.max(...prices);
-    const unit = d.priceUnit === "hour" ? "kr/time" : "kr/natt";
+    const unit = d.priceUnit === "time" ? "kr/dag" : "kr/natt";
     if (min === max) return t("locationPricePreview", { price: `${min}`, unit });
     return t("locationPricePreview", { price: `${min}–${max}`, unit });
   }
   if (d.price && d.price > 0) {
-    const unit = d.priceUnit === "hour" ? "kr/time" : "kr/natt";
+    const unit = d.priceUnit === "time" ? "kr/dag" : "kr/natt";
     return t("locationPricePreview", { price: `${d.price}`, unit });
   }
   return d.address ? d.address : t("locationEmpty");
@@ -520,10 +548,11 @@ function discountsPreview(d: Partial<CreateListingData>, t: (key: string) => str
     (m) =>
       (m.dailyPrice ?? 0) > 0 ||
       (m.weeklyPrice ?? 0) > 0 ||
-      (m.monthlyPrice ?? 0) > 0 ||
-      (m.discountDayPct ?? 0) > 0 ||
-      (m.discountWeekPct ?? 0) > 0 ||
-      (m.discountMonthPct ?? 0) > 0,
+      (m.monthlyPrice ?? 0) > 0,
   );
   return hasAny ? t("discountsActive") : t("discountsInactive");
+}
+
+function openingHoursPreview(d: Partial<CreateListingData>, t: (key: string) => string): string {
+  return d.openingHours ? t("openingHoursLimited") : t("openingHoursAlways");
 }

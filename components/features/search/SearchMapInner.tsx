@@ -96,7 +96,8 @@ function ensureOverlayClass() {
       const el = document.createElement("button");
       const spotsLabel = listing.availableSpots !== undefined ? `${listing.availableSpots}/${listing.spots}p` : `${listing.spots}p`;
       const spots = listing.spots > 1 ? `<span style="margin-left:4px;opacity:0.5;font-weight:500;font-size:11px">${spotsLabel}</span>` : "";
-      el.innerHTML = `${getDisplayPriceText(listing)} kr${spots}`;
+      const clock = listing.openingHours ? `<span style="margin-right:4px;display:inline-flex;vertical-align:-2px;color:#b45309" title="Begrenset åpningstid">🕒</span>` : "";
+      el.innerHTML = `${clock}${getDisplayPriceText(listing)} kr${spots}`;
       el.style.cssText = `
         border-radius: 9999px;
         padding: 6px 14px;
@@ -354,7 +355,7 @@ export default function SearchMapInner({
     if (selectedListingId) {
       const listing = listings.find((l) => l.id === selectedListingId);
       if (listing) {
-        const unit = listing.priceUnit === "hour" ? "time" : "natt";
+        const unit = listing.priceUnit === "time" ? "dag" : "natt";
         const images = listing.images || [];
         let imgIndex = 0;
 

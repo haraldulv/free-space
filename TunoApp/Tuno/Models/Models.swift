@@ -17,12 +17,16 @@ struct Listing: Codable, Identifiable, Hashable {
     let lng: Double?
     let price: Int?
     let priceUnit: PriceUnit?
-    /// Dual-pricing: per-time-pris (parkering). NULL = denne pris-modusen ikke tilbudt.
+    /// Legacy per-time-pris (parkering). Kun til stede på gamle annonser før modellen
+    /// ble forenklet til per-dag. nil for nye annonser.
     let pricePerHour: Int?
-    /// Dual-pricing: per-døgn/natt-pris. NULL = denne pris-modusen ikke tilbudt.
+    /// Per-natt-pris for camping. NULL for parkering.
     let pricePerNight: Int?
-    /// 'always' = alltid ledig 24/7. 'bands' = kun ledig innenfor hourly-bånd.
+    /// @deprecated availability_mode er fjernet fra DB — felt beholdes kun for å
+    /// hindre Codable-feil på eldre app-builds. Alltid nil.
     let availabilityMode: String?
+    /// Åpningstid på listing-nivå (parkering). NULL = døgnåpent.
+    let openingHours: OpeningHours?
     let amenities: [String]?
     let maxVehicleLength: Double?
     let spots: Int?
@@ -58,6 +62,7 @@ struct Listing: Codable, Identifiable, Hashable {
         case pricePerHour = "price_per_hour"
         case pricePerNight = "price_per_night"
         case availabilityMode = "availability_mode"
+        case openingHours = "opening_hours"
         case maxVehicleLength = "max_vehicle_length"
         case instantBooking = "instant_booking"
         case spotMarkers = "spot_markers"
@@ -109,18 +114,16 @@ struct SpotMarker: Codable, Hashable {
     var label: String?
     var description: String?
     var price: Int?
-    /// Dual-pricing per plass: time-pris. Overstyrer listing-nivå når satt.
+    /// @deprecated Legacy per-time-pris. Kun nil på nye annonser.
     var pricePerHour: Int?
-    /// Dual-pricing per plass: døgn/natt-pris. Overstyrer listing-nivå når satt.
+    /// Per-natt-pris for camping (overstyrer listing-nivå). nil for parkering.
     var pricePerNight: Int?
     var vehicleMaxLength: Int?
-    /// Multi-select biltyper plassen passer for. Brukes som primær-kilde fra build 61+.
-    /// Hvis nil ved decode, derives fra eldre `vehicleType`-felt for backward-compat.
+    /// Multi-select biltyper plassen passer for.
     var vehicleTypes: [VehicleType]?
     /// Eldre singel-felt — beholdes kun for backward-compat ved decode av seedede listings.
-    /// Skal ikke leses i ny kode; bruk `effectiveVehicleTypes`.
     var vehicleType: VehicleType?
-    /// Per-plass pris-enhet (kun parkering — camping er alltid natt). Hvis nil → bruk listing.priceUnit.
+    /// @deprecated Per-plass priceUnit. Nye annonser arver kategorinivå.
     var priceUnit: PriceUnit?
     var extras: [ListingExtra]?
     var blockedDates: [String]?
@@ -128,22 +131,21 @@ struct SpotMarker: Codable, Hashable {
     /// Bilder tagget til denne spesifikke plassen. URL-ene er delmengde av
     /// listing.images — ingen separat opplasting. Utleier tagger i wizard/edit.
     var images: [String]?
-    /// "Lengre opphold"-pris (kr) for ett fullt døgn (24 t). Overstyrer
-    /// hourly-grunnpris × 24 når booking dekker en full dag. nil/0 = ingen tilbud.
+    /// "Lengre opphold"-pris (kr) for ett fullt døgn. nil/0 = ingen tilbud.
     var dailyPrice: Int? = nil
     /// "Lengre opphold"-pris (kr) for 7 påfølgende fulle døgn.
     var weeklyPrice: Int? = nil
     /// "Lengre opphold"-pris (kr) for 30 påfølgende fulle døgn.
     var monthlyPrice: Int? = nil
-
-    /// @available *, deprecated — bruk dailyPrice. Beholdt for backward-compat med
-    /// annonser opprettet før prisbasert lansering. Konverteres on-the-fly i
-    /// effectiveLongerStayPrices(baseHourly:).
+    /// @deprecated %-rabatt. Beholdes kun for å hindre Codable-feil på eldre annonser. Alltid nil.
     var discountDayPct: Int? = nil
     /// @deprecated bruk weeklyPrice.
     var discountWeekPct: Int? = nil
     /// @deprecated bruk monthlyPrice.
     var discountMonthPct: Int? = nil
+    /// Per-plass åpningstid (parkering). Overstyrer listing.openingHours hvis satt.
+    /// nil = arve listing-nivå.
+    var openingHours: OpeningHours?
 
     enum CodingKeys: String, CodingKey {
         case id, lat, lng, label, description, price, extras, images
@@ -161,23 +163,12 @@ struct SpotMarker: Codable, Hashable {
         case discountDayPct = "discountDayPct"
         case discountWeekPct = "discountWeekPct"
         case discountMonthPct = "discountMonthPct"
+        case openingHours = "openingHours"
     }
 
-    /// Returner effektive kr-priser for "lengre opphold". Bruker nye felter når
-    /// satt, ellers konverterer fra legacy %-felter via baseHourly × N. Speil
-    /// av lib/pricing.ts:getEffectiveLongerStayPrices.
+    /// Returner effektive kr-priser for "lengre opphold".
     func effectiveLongerStayPrices(baseHourly: Int) -> (daily: Int, weekly: Int, monthly: Int) {
-        let hourly = pricePerHour ?? price ?? baseHourly
-        func fromPct(_ pct: Int?, hours: Int) -> Int {
-            guard let pct, pct > 0, hourly > 0 else { return 0 }
-            let factor = 1.0 - Double(min(100, pct)) / 100.0
-            return Int((Double(hourly * hours) * factor).rounded())
-        }
-        return (
-            daily: dailyPrice ?? fromPct(discountDayPct, hours: 24),
-            weekly: weeklyPrice ?? fromPct(discountWeekPct, hours: 24 * 7),
-            monthly: monthlyPrice ?? fromPct(discountMonthPct, hours: 24 * 30)
-        )
+        return (daily: dailyPrice ?? 0, weekly: weeklyPrice ?? 0, monthly: monthlyPrice ?? 0)
     }
 
     /// Backward-compat: returner vehicleTypes hvis satt, ellers wrap singel vehicleType.
@@ -642,24 +633,93 @@ enum AmenityType: String, CaseIterable {
 }
 
 enum PriceUnit: String, Codable {
-    case time   // Parkering per døgn (24 timer) — semantisk "døgn", men key er historisk "time"
+    case time   // Parkering per dag (24 timer) — historisk key "time".
     case natt   // Camping per natt
-    case hour   // Parkering per time
+    /// @deprecated per-time-prising er fjernet. Beholdes som case kun for å
+    /// hindre Codable-feil hvis en gammel app-build sender 'hour'.
+    case hour
 
     var displayName: String {
         switch self {
-        case .time: return "døgn"
+        case .time: return "dag"
         case .natt: return "natt"
         case .hour: return "time"
         }
     }
 
-    /// Default-enhet for en gitt kategori. Brukes når plass ikke har eksplisitt overstyring.
-    /// Parkering defaulter til per time — utleier kan bytte til døgn (.time) i wizarden.
     static func defaultUnit(for category: ListingCategory) -> PriceUnit {
         switch category {
         case .camping: return .natt
-        case .parking: return .hour
+        case .parking: return .time
+        }
+    }
+}
+
+// MARK: - OpeningHours
+//
+// Åpningstid per ukedag (parkering). nil/manglende felt = stengt.
+// Verdier på formatet "HH:MM-HH:MM" (lokal tid, Europe/Oslo).
+// Hele struct nil på listing = døgnåpent.
+
+struct OpeningHours: Codable, Hashable {
+    var mon: String?
+    var tue: String?
+    var wed: String?
+    var thu: String?
+    var fri: String?
+    var sat: String?
+    var sun: String?
+
+    func value(for day: Weekday) -> String? {
+        switch day {
+        case .mon: return mon
+        case .tue: return tue
+        case .wed: return wed
+        case .thu: return thu
+        case .fri: return fri
+        case .sat: return sat
+        case .sun: return sun
+        }
+    }
+
+    mutating func set(_ value: String?, for day: Weekday) {
+        switch day {
+        case .mon: mon = value
+        case .tue: tue = value
+        case .wed: wed = value
+        case .thu: thu = value
+        case .fri: fri = value
+        case .sat: sat = value
+        case .sun: sun = value
+        }
+    }
+
+    /// Default for "Med åpningstid"-toggle: man-fre 09-17, helg stengt.
+    static let defaultLimited = OpeningHours(
+        mon: "09:00-17:00",
+        tue: "09:00-17:00",
+        wed: "09:00-17:00",
+        thu: "09:00-17:00",
+        fri: "09:00-17:00",
+        sat: nil,
+        sun: nil
+    )
+}
+
+enum Weekday: String, CaseIterable, Codable {
+    case mon, tue, wed, thu, fri, sat, sun
+
+    /// Fra Calendar.component(.weekday, from:) (1=Sun..7=Sat) til Weekday.
+    static func from(weekdayComponent w: Int) -> Weekday {
+        switch w {
+        case 1: return .sun
+        case 2: return .mon
+        case 3: return .tue
+        case 4: return .wed
+        case 5: return .thu
+        case 6: return .fri
+        case 7: return .sat
+        default: return .mon
         }
     }
 }

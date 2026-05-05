@@ -123,6 +123,7 @@
     "spotsOfTotalAvailable": "{available}/{total} Stellplätze verfügbar",
     "hour": "Stunde",
     "instantBook": "Sofortbuchung",
+    "limitedHours": "Mit Öffnungszeiten",
     "requestToBook": "Buchung anfragen",
     "reviews": "Bewertungen",
     "noReviewsYet": "Noch keine Bewertungen",
@@ -473,6 +474,10 @@
     "publishListing": "Inserat veröffentlichen",
     "saveChanges": "Änderungen speichern",
     "somethingWentWrong": "Etwas ist schiefgelaufen",
+    "openingHoursTitle": "Öffnungszeiten",
+    "openingHoursSubtitle": "Lege Öffnungszeiten fest, wenn der Stellplatz nicht rund um die Uhr verfügbar ist. Lass „Rund um die Uhr“ stehen, wenn er immer verfügbar ist.",
+    "availabilityTitle": "Verfügbarkeit",
+    "availabilitySubtitle": "Tippe auf Daten, um den Stellplatz für Wartung oder Eigennutzung zu blockieren.",
     "category": {
       "title": "Was für einen Stellplatz vermietest du?",
       "subtitle": "Wähle die Kategorie, die am besten passt",
@@ -540,9 +545,12 @@
       "title": "Preis festlegen",
       "subtitle": "Du kannst den Preis jederzeit ändern",
       "priceLabel": "Preis (kr)",
+      "priceLabelDay": "Preis pro Tag (kr)",
+      "priceLabelNight": "Preis pro Nacht (kr)",
       "pricePlaceholder": "Z. B. 150",
       "priceUnitLabel": "Preiseinheit",
       "perHour": "Pro Stunde",
+      "perDay": "Pro Tag",
       "perNight": "Pro Nacht",
       "instantLabel": "Sofortbuchung",
       "instantDesc": "Gäste können Aufenthalte bis 7 Nächten sofort buchen. Längere Aufenthalte erfordern immer eine Bestätigung."
@@ -674,7 +682,11 @@
       "locationPricePreview": "Ab {price} {unit}",
       "locationEmpty": "Adresse und Preis festlegen",
       "discountsActive": "Angebote aktiv",
-      "discountsInactive": "Keine Angebote festgelegt"
+      "discountsInactive": "Keine Angebote festgelegt",
+      "sectionOpeningHoursTitle": "Öffnungszeiten",
+      "sectionOpeningHoursSubtitle": "Lege Öffnungszeiten fest, wenn der Stellplatz nicht rund um die Uhr verfügbar ist.",
+      "openingHoursAlways": "Rund um die Uhr",
+      "openingHoursLimited": "Mit Öffnungszeiten"
     },
     "location": {
       "title": "Wo liegt der Stellplatz?",
@@ -692,6 +704,7 @@
       "priceHeader": "Preis",
       "pricePerNight": "kr/Nacht",
       "pricePerHour": "kr/Stunde",
+      "pricePerDay": "kr/Tag",
       "priceCurrency": "kr",
       "pricePlaceholder": "Z. B. 150",
       "priceStandardLabel": "Standardpreis {unit}",
@@ -852,5 +865,34 @@
     "saved": "Gespeichert",
     "invalidPrice": "Ungültiger Preis.",
     "missingDates": "Wähle Start- und Enddatum."
+  },
+  "openingHours": {
+    "title": "Öffnungszeiten",
+    "subtitle": "Lege Öffnungszeiten fest, wenn der Stellplatz nicht rund um die Uhr verfügbar ist.",
+    "alwaysOpen": "Rund um die Uhr",
+    "alwaysOpenHint": "Der Stellplatz ist 24 Stunden am Tag verfügbar.",
+    "limitedHours": "Mit Öffnungszeiten",
+    "limitedHoursHint": "Lege Öffnungszeiten pro Wochentag fest.",
+    "open": "Geöffnet",
+    "closed": "Geschlossen",
+    "perSpotOverride": "Eigene Öffnungszeiten",
+    "perSpotInherit": "Wie das Inserat",
+    "day": {
+      "mon": "Montag",
+      "tue": "Dienstag",
+      "wed": "Mittwoch",
+      "thu": "Donnerstag",
+      "fri": "Freitag",
+      "sat": "Samstag",
+      "sun": "Sonntag"
+    }
+  },
+  "searchFilter": {
+    "openingHours": {
+      "label": "Öffnungszeiten",
+      "any": "Alle",
+      "always": "Rund um die Uhr",
+      "limited": "Mit Öffnungszeiten"
+    }
   }
 }

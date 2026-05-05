@@ -8,7 +8,7 @@ import type { SpotMarker } from "@/types";
 interface LongerStayStepProps {
   spotMarkers: SpotMarker[];
   defaultPrice: number;
-  priceUnit: "time" | "natt" | "hour";
+  priceUnit: "time" | "natt";
   onChange: (field: string, value: unknown) => void;
 }
 
@@ -82,7 +82,7 @@ export default function DiscountsStep({
   const basePrice = useMemo(() => {
     const first = spotMarkers[0];
     if (isCamping) return first?.pricePerNight ?? first?.price ?? defaultPrice ?? 0;
-    return first?.pricePerHour ?? first?.price ?? defaultPrice ?? 0;
+    return first?.price ?? defaultPrice ?? 0;
   }, [spotMarkers, defaultPrice, isCamping]);
 
   if (spotMarkers.length === 0) {
@@ -99,9 +99,10 @@ export default function DiscountsStep({
     );
   }
 
-  const dailyBaseline = isCamping ? basePrice : basePrice * 24;
-  const weeklyBaseline = isCamping ? basePrice * 7 : basePrice * 24 * 7;
-  const monthlyBaseline = isCamping ? basePrice * 30 : basePrice * 24 * 30;
+  // Parkering og camping: dagspris (eller nattspris) som basis for tier-baselines.
+  const dailyBaseline = basePrice;
+  const weeklyBaseline = basePrice * 7;
+  const monthlyBaseline = basePrice * 30;
 
   return (
     <div className="space-y-6">

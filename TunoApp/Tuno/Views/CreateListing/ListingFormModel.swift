@@ -91,9 +91,10 @@ final class ListingFormModel: ObservableObject {
 
     // MARK: - Listing-level (settes ved review)
     @Published var instantBooking = true
-    /// Listing-nivå priceUnit — derives fra kategori (camping=natt, parkering=time/døgn).
-    /// Per-plass priceUnit i SpotMarker overstyrer denne for visning av plass-pris.
-    @Published var priceUnit: PriceUnit = .natt
+    /// Listing-nivå priceUnit — derives fra kategori (camping=natt, parkering=time).
+    @Published var priceUnit: PriceUnit = .time
+    /// Listing-nivå åpningstid (parkering). nil = døgnåpent.
+    @Published var openingHours: OpeningHours? = nil
 
     /// Settes når kategori velges — bytter også defaultPriceUnit og defaultVehicleTypes.
     func setCategory(_ newCategory: ListingCategory) {
@@ -429,19 +430,14 @@ final class ListingFormModel: ObservableObject {
     func buildInput(hostId: String, profile: Profile?) -> CreateListingInput {
         // Auto-derive listing-nivå pris og maxVehicleLength fra plasser så
         // søkefilter på web (som leser listing-nivå) fortsatt fungerer.
-        // Bruk primær-prisen (pricePerHour hvis satt, ellers pricePerNight, ellers legacy price).
+        // Parkering bruker price (kr/dag), camping bruker pricePerNight.
         let primaryPrices = spotMarkers.compactMap { spot -> Int? in
-            if let h = spot.pricePerHour, h > 0 { return h }
             if let n = spot.pricePerNight, n > 0 { return n }
             return spot.price
         }.filter { $0 > 0 }
         let derivedListingPrice = primaryPrices.min() ?? 0
 
-        // Dual-pricing på listing-nivå: minste timepris og minste døgnpris (hvis satt på noen plasser).
-        // Parkering er per-time-only — pricePerNight er alltid nil på listing-nivå.
-        let hourPrices = spotMarkers.compactMap { $0.pricePerHour }.filter { $0 > 0 }
         let nightPrices = spotMarkers.compactMap { $0.pricePerNight }.filter { $0 > 0 }
-        let derivedPricePerHour = hourPrices.min()
         let derivedPricePerNight: Int? = category == .parking ? nil : nightPrices.min()
 
         let lengths = spotMarkers.compactMap { $0.vehicleMaxLength }.filter { $0 > 0 }
@@ -450,12 +446,8 @@ final class ListingFormModel: ObservableObject {
             ?? defaultVehicleTypes.first
             ?? .motorhome
 
-        // Listing-nivå priceUnit: prefer .hour hvis ANY plass har timepris, ellers .time/.natt
-        let derivedPriceUnit: PriceUnit = {
-            if derivedPricePerHour != nil { return .hour }
-            if derivedPricePerNight != nil { return category == .parking ? .time : .natt }
-            return priceUnit
-        }()
+        // Parkering = .time (kr/dag), camping = .natt. .hour er fjernet fra DB.
+        let derivedPriceUnit: PriceUnit = category == .parking ? .time : .natt
 
         let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
         let resolvedTitle: String = {
@@ -483,9 +475,8 @@ final class ListingFormModel: ObservableObject {
             lng: lng,
             price: derivedListingPrice,
             priceUnit: derivedPriceUnit.rawValue,
-            pricePerHour: derivedPricePerHour,
             pricePerNight: derivedPricePerNight,
-            availabilityMode: hasAnyAvailabilityBands ? "bands" : "always",
+            openingHours: openingHours,
             spots: spotMarkers.count,
             images: imageURLs,
             amenities: Array(selectedAmenities),
@@ -563,9 +554,8 @@ struct CreateListingInput: Encodable {
     let lng: Double
     let price: Int
     let priceUnit: String
-    let pricePerHour: Int?
     let pricePerNight: Int?
-    let availabilityMode: String
+    let openingHours: OpeningHours?
     let spots: Int
     let images: [String]
     let amenities: [String]
@@ -590,9 +580,8 @@ struct CreateListingInput: Encodable {
         case internalName = "internal_name"
         case vehicleType = "vehicle_type"
         case priceUnit = "price_unit"
-        case pricePerHour = "price_per_hour"
         case pricePerNight = "price_per_night"
-        case availabilityMode = "availability_mode"
+        case openingHours = "opening_hours"
         case instantBooking = "instant_booking"
         case hideExactLocation = "hide_exact_location"
         case spotMarkers = "spot_markers"

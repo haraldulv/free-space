@@ -43,7 +43,9 @@ export interface CreateListingData {
   images: string[];
   amenities: Amenity[];
   price: number;
-  priceUnit: "time" | "natt" | "hour";
+  priceUnit: "time" | "natt";
+  /** Åpningstid på listing-nivå. NULL = døgnåpent. Kun parkering. */
+  openingHours?: import("@/types").OpeningHours | null;
   instantBooking: boolean;
   spotMarkers?: SpotMarker[];
   hideExactLocation?: boolean;
@@ -119,6 +121,7 @@ function rowToListing(row: Record<string, unknown>): Listing {
     checkoutMessage: row.checkout_message as string | undefined,
     checkoutMessageSendHoursBefore: row.checkout_message_send_hours_before as number | undefined,
     extras: (row.extras as Listing["extras"]) || [],
+    openingHours: (row.opening_hours as Listing["openingHours"]) ?? null,
   };
 }
 
@@ -140,6 +143,12 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
   if (filters.vehicleType) {
     const acceptedTypes = vehicleFitsIn[filters.vehicleType];
     query = query.in("vehicle_type", acceptedTypes);
+  }
+
+  if (filters.openingHours === "always") {
+    query = query.is("opening_hours", null);
+  } else if (filters.openingHours === "limited") {
+    query = query.not("opening_hours", "is", null);
   }
 
   const { data, error } = await query.limit(500);
@@ -568,6 +577,7 @@ export async function createListing(input: CreateListingData, hostId: string): P
     checkout_message: input.checkoutMessage || null,
     checkout_message_send_hours_before: input.checkoutMessageSendHoursBefore ?? 2,
     extras: input.extras || [],
+    opening_hours: input.openingHours ?? null,
     host_name: profile?.full_name || "Anonym",
     host_avatar: profile?.avatar_url || "",
     host_response_rate: profile?.response_rate || 0,
@@ -612,6 +622,7 @@ export async function updateListing(id: string, input: Partial<CreateListingData
     updateData.checkout_message_send_hours_before = input.checkoutMessageSendHoursBefore;
   }
   if (input.extras !== undefined) updateData.extras = input.extras;
+  if (input.openingHours !== undefined) updateData.opening_hours = input.openingHours ?? null;
 
   const { error } = await supabase
     .from("listings")

@@ -17,6 +17,7 @@ import ShareButton from "@/components/features/ShareButton";
 import ListingMap from "@/components/features/ListingMap";
 import ListingDistanceBadge from "@/components/features/ListingDistanceBadge";
 import ReviewList from "@/components/features/ReviewList";
+import OpeningHoursDisplay from "@/components/features/OpeningHoursDisplay";
 
 export const dynamic = "force-dynamic";
 
@@ -65,12 +66,13 @@ export default async function ListingPage({
   params: Promise<{ id: string; locale: string }>;
 }) {
   const { id } = await params;
-  const [listing, reviews, bookedDates, tListing, tCategory] = await Promise.all([
+  const [listing, reviews, bookedDates, tListing, tCategory, tOpening] = await Promise.all([
     getListingById(id),
     getListingReviews(id),
     getFutureBookedDates(id),
     getTranslations("listing"),
     getTranslations("category"),
+    getTranslations("openingHours"),
   ]);
   if (!listing) notFound();
 
@@ -104,7 +106,7 @@ export default async function ListingPage({
             longitude: listing.location.lng,
           },
         }),
-    priceRange: `${listing.price} NOK / ${listing.priceUnit === "hour" ? "hour" : "night"}`,
+    priceRange: `${listing.price} NOK / ${listing.priceUnit === "time" ? "day" : "night"}`,
     ...(listing.reviewCount > 0
       ? {
           aggregateRating: {
@@ -184,6 +186,17 @@ export default async function ListingPage({
                 {tListing("amenities")}
               </h2>
               <AmenityList amenities={listing.amenities} />
+            </div>
+          )}
+
+          {listing.openingHours && (
+            <div className="mt-6 border-t border-neutral-100 pt-6">
+              <h2 className="mb-4 text-lg font-semibold text-neutral-900">
+                {tOpening("title")}
+              </h2>
+              <div className="rounded-lg border border-neutral-200 bg-neutral-50 p-4">
+                <OpeningHoursDisplay hours={listing.openingHours} />
+              </div>
             </div>
           )}
 
