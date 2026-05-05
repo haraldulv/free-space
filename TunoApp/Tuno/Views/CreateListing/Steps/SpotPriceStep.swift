@@ -54,9 +54,10 @@ struct SpotPriceStep: View {
             form.spotMarkers.indices.contains(currentIndex)
         else { return }
         let prev = form.spotMarkers[prevIndex]
-        form.spotMarkers[currentIndex].pricePerHour = prev.pricePerHour
-        form.spotMarkers[currentIndex].pricePerNight = prev.pricePerNight
+        // For parkering bruker vi `price` (kr/døgn). For camping `pricePerNight`.
         form.spotMarkers[currentIndex].price = prev.price
+        form.spotMarkers[currentIndex].pricePerNight = prev.pricePerNight
+        form.spotMarkers[currentIndex].pricePerHour = nil
         form.spotMarkers[currentIndex].priceUnit = prev.priceUnit
     }
 }

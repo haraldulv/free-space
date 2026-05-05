@@ -122,20 +122,21 @@ struct SpotPriceContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if form.category == .parking, let s = spot {
-                // Parkering: kun per time. Døgn-rabatt-flow kommer i et eget steg.
+                // Parkering per døgn (24t). Lengre opphold-rabatter (uke/måned)
+                // kommer i et eget steg.
                 BigPriceInput(
                     price: Binding(
-                        get: { s.pricePerHour ?? 0 },
+                        get: { s.price ?? 0 },
                         set: { newValue in
-                            form.spotMarkers[index].pricePerHour = newValue
-                            form.spotMarkers[index].pricePerNight = nil
-                            form.spotMarkers[index].priceUnit = .hour
                             form.spotMarkers[index].price = newValue
+                            form.spotMarkers[index].pricePerHour = nil
+                            form.spotMarkers[index].pricePerNight = nil
+                            form.spotMarkers[index].priceUnit = .time
                         }
                     ),
-                    unitLabel: "time"
+                    unitLabel: "døgn"
                 )
-                FeeBreakdownCard(subtotal: s.pricePerHour ?? 0, unitLabel: "time")
+                FeeBreakdownCard(subtotal: s.price ?? 0, unitLabel: "døgn")
             } else if let s = spot {
                 // Camping: kun per natt
                 BigPriceInput(
@@ -153,18 +154,21 @@ struct SpotPriceContent: View {
             }
         }
         .onAppear {
-            // Sikre invariant for parkering: pricePerHour er settet pris-felt,
-            // pricePerNight er alltid nil. Eksisterende natt-pris ryddes også opp.
+            // Sikre invariant for parkering: price (kr/døgn) er settet pris-felt;
+            // legacy pricePerHour og pricePerNight skal alltid være nil.
             guard form.spotMarkers.indices.contains(index) else { return }
             let s = form.spotMarkers[index]
             if form.category == .parking {
-                if s.pricePerHour == nil {
-                    form.spotMarkers[index].pricePerHour = 0
+                if s.price == nil {
+                    form.spotMarkers[index].price = 0
+                }
+                if s.pricePerHour != nil {
+                    form.spotMarkers[index].pricePerHour = nil
                 }
                 if s.pricePerNight != nil {
                     form.spotMarkers[index].pricePerNight = nil
                 }
-                form.spotMarkers[index].priceUnit = .hour
+                form.spotMarkers[index].priceUnit = .time
             }
         }
     }

@@ -55,6 +55,7 @@ struct OpeningHoursEditorView: View {
             )
             .presentationDetents([.height(310)])
             .presentationDragIndicator(.visible)
+            .presentationBackground(.regularMaterial)
         }
     }
 
@@ -261,7 +262,6 @@ private struct DayHoursPickerSheet: View {
                     .padding(.top, 4)
             }
         }
-        .background(Color.white)
     }
 
     @ViewBuilder
@@ -282,6 +282,7 @@ private struct DayHoursPickerSheet: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 180)
                 .clipped()
+                .background(Color.clear)
 
                 Picker("", selection: minuteBinding(minutes)) {
                     Text("00").tag(0)
@@ -291,6 +292,7 @@ private struct DayHoursPickerSheet: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: 180)
                 .clipped()
+                .background(Color.clear)
             }
         }
     }
