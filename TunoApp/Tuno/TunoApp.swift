@@ -69,12 +69,35 @@ final class DeepLinkManager: ObservableObject {
                     }
                 }
             } else {
-                do {
-                    try await supabase.auth.session(from: url)
-                    await MainActor.run { self.verifyStatus = .success }
-                } catch {
-                    await MainActor.run {
-                        self.verifyStatus = .failed(error.localizedDescription)
+                // URL mangler token_hash. To muligheter:
+                //  A) Standard Supabase-flyt der server-side verify allerede har
+                //     skjedd og e-posten er bekreftet — bare ingen tokens i
+                //     redirect-URL. Vi sjekker om bruker har en gyldig session
+                //     (f.eks. fra OAuth-fragment) og viser suksess hvis ja.
+                //  B) URL har OAuth-fragment (#access_token=...) som SDK kan parse.
+                //     Vi prøver session(from:) og fanger PKCE-feil graceful.
+                let hasFragment = !(url.fragment ?? "").isEmpty
+
+                if hasFragment {
+                    do {
+                        try await supabase.auth.session(from: url)
+                        await MainActor.run { self.verifyStatus = .success }
+                    } catch {
+                        await MainActor.run {
+                            self.verifyStatus = .failed(error.localizedDescription)
+                        }
+                    }
+                } else {
+                    // Ingen token og ingen fragment → e-posten er sannsynligvis
+                    // allerede bekreftet via web. Hvis vi har gyldig session, alt OK.
+                    // Ellers: be brukeren logge inn manuelt med passordet sitt.
+                    do {
+                        _ = try await supabase.auth.session
+                        await MainActor.run { self.verifyStatus = .success }
+                    } catch {
+                        await MainActor.run {
+                            self.verifyStatus = .failed("E-posten er bekreftet. Logg inn med e-post og passord for å fortsette.")
+                        }
                     }
                 }
             }
