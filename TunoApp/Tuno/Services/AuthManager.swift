@@ -62,9 +62,50 @@ final class AuthManager: ObservableObject {
                 .value
             profile = result
         } catch {
+            // PGRST116 = ingen profil-rad fantes. Skjer når e-post-signup
+            // sin profile-insert ble blokkert av RLS før verifisering. Vi
+            // upserter nå fra user_metadata så brukerens navn og avatar
+            // blir riktig vist i UI-et fra første sekund.
             print("Failed to load profile: \(error)")
+            await ensureProfileExists()
         }
         await checkHostStatus()
+    }
+
+    /// Opprett profile-rad hvis den mangler. Bruker user_metadata fra Supabase
+    /// auth (som har full_name fra signUp data, eller name/picture fra OAuth).
+    private func ensureProfileExists() async {
+        guard let user = currentUser else { return }
+        let metadata = user.userMetadata
+        let fullName = metadata["full_name"]?.stringValue
+            ?? metadata["name"]?.stringValue
+            ?? ""
+        let avatarURL = metadata["avatar_url"]?.stringValue
+            ?? metadata["picture"]?.stringValue
+
+        var payload: [String: String] = [
+            "id": user.id.uuidString.lowercased(),
+            "full_name": fullName,
+            "terms_accepted_at": ISO8601DateFormatter().string(from: Date()),
+        ]
+        if let avatarURL, !avatarURL.isEmpty {
+            payload["avatar_url"] = avatarURL
+        }
+
+        do {
+            try await supabase.from("profiles").upsert(payload).execute()
+            // Re-load profile etter upsert.
+            let result: Profile = try await supabase
+                .from("profiles")
+                .select()
+                .eq("id", value: user.id.uuidString)
+                .single()
+                .execute()
+                .value
+            profile = result
+        } catch {
+            print("❌ ensureProfileExists feilet: \(error)")
+        }
     }
 
     // MARK: - Email/Password Auth

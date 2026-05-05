@@ -117,13 +117,13 @@ struct ProfileView: View {
                         .padding(.horizontal, 16)
                 }
 
-                accountSection
-                    .padding(.horizontal, 16)
-
                 if !authManager.isHost {
                     becomeHostCard
                         .padding(.horizontal, 16)
                 }
+
+                accountSection
+                    .padding(.horizontal, 16)
 
                 logoutRow
                     .padding(.horizontal, 16)
