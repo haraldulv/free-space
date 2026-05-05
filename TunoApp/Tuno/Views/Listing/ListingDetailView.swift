@@ -183,7 +183,7 @@ struct ListingDetailView: View {
         }
         .sheet(isPresented: $showShareSheet) {
             let url = URL(string: "https://tuno.no/listings/\(listing.id)")!
-            let text = "\(listing.title) · \(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "natt") på Tuno"
+            let text = "\(listing.title) · \(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "døgn") på Tuno"
             ShareSheet(items: [text, url])
                 .presentationDetents([.medium, .large])
         }
@@ -550,7 +550,7 @@ struct ListingDetailView: View {
         let price = isParking
             ? (spot.price ?? listing.price ?? 0)
             : (spot.pricePerNight ?? spot.price ?? listing.pricePerNight ?? listing.price ?? 0)
-        let priceUnitLabel = isParking ? "/ døgn" : "/ natt"
+        let priceUnitLabel = isParking ? "/ dag" : "/ døgn"
         let extras = spot.extras ?? []
         let isOwnListing = listing.hostId?.lowercased() == authManager.currentUser?.id.uuidString.lowercased()
 
@@ -1023,7 +1023,7 @@ struct ListingDetailView: View {
                     Text("\(listing.displayPriceText) kr")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.neutral900)
-                    Text("/ \(listing.priceUnit?.displayName ?? "natt")")
+                    Text("/ \(listing.priceUnit?.displayName ?? "døgn")")
                         .font(.system(size: 14))
                         .foregroundStyle(.neutral600)
                 }

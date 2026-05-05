@@ -74,9 +74,9 @@ struct EditListingView: View {
         return base
     }
 
-    /// "døgn" for parkering, "natt" for camping. Brukes i pris-labels.
+    /// "dag" for parkering, "døgn" for camping. Brukes i pris-labels.
     private var priceUnitLabel: String {
-        listing.category == .parking ? "døgn" : "natt"
+        listing.category == .parking ? "dag" : "døgn"
     }
 
     var body: some View {
@@ -1128,9 +1128,9 @@ struct EditListingView: View {
                 .foregroundStyle(.neutral900)
 
             VStack(spacing: 10) {
-                priceRow(label: "1 døgn", caption: "Pris for et helt døgn", baseline: dailyRate, price: prices.daily)
-                priceRow(label: "1 uke", caption: "Pris for 7 påfølgende fulle døgn", baseline: dailyRate * 7, price: prices.weekly)
-                priceRow(label: "1 måned", caption: "Pris for 30 påfølgende fulle døgn", baseline: dailyRate * 30, price: prices.monthly)
+                priceRow(label: "1 dag", caption: "Pris for én hel dag", baseline: dailyRate, price: prices.daily)
+                priceRow(label: "1 uke", caption: "Pris for 7 påfølgende fulle dager", baseline: dailyRate * 7, price: prices.weekly)
+                priceRow(label: "1 måned", caption: "Pris for 30 påfølgende fulle dager", baseline: dailyRate * 30, price: prices.monthly)
             }
 
             LongerStayPreviewCard(

@@ -464,7 +464,7 @@ private struct HostRequestDetailSheet: View {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
                         HStack {
-                            Text("\(g.price) kr × \(g.count) \(g.count == 1 ? "natt" : "netter")")
+                            Text("\(g.price) kr × \(g.count) døgn")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.neutral600)
                             + Text(" (\(sourceLabel(g.source)))")

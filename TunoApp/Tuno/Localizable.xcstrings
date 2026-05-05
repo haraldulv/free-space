@@ -14,6 +14,9 @@
         }
       }
     },
+    "–" : {
+
+    },
     ":" : {
 
     },
@@ -525,6 +528,9 @@
     "−%@ kr" : {
 
     },
+    "00" : {
+
+    },
     "1" : {
 
     },
@@ -544,6 +550,9 @@
 
     },
     "24 timer før" : {
+
+    },
+    "30" : {
 
     },
     "Administrer push-varslinger i iOS-innstillinger." : {
@@ -745,6 +754,9 @@
       }
     },
     "Åpne kalender" : {
+
+    },
+    "Åpningstid" : {
 
     },
     "Åpningstider" : {
@@ -2671,6 +2683,9 @@
           }
         }
       }
+    },
+    "Gjester ser åpningstidene på annonsen og blir varslet før booking. Du kan endre dette senere." : {
+
     },
     "Gjester ser et omtrentlig område. Eksakt adresse deles etter booking." : {
 
@@ -4617,9 +4632,6 @@
         }
       }
     },
-    "Modell" : {
-
-    },
     "Møt verten" : {
 
     },
@@ -5079,9 +5091,6 @@
         }
       }
     },
-    "Parkering bookes per døgn foreløpig" : {
-
-    },
     "Passord" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5098,9 +5107,6 @@
           }
         }
       }
-    },
-    "Per døgn" : {
-
     },
     "per natt" : {
       "extractionState" : "manual",
@@ -6085,6 +6091,9 @@
     "Sett en pris du synes er rettferdig. Du kan endre den senere." : {
 
     },
+    "Sett når plassen er åpen for booking. Default er døgnåpent." : {
+
+    },
     "Sett pris" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6386,6 +6395,9 @@
 
     },
     "Slik ser tilbudene ut for gjesten" : {
+
+    },
+    "Slutt-tid må være etter start-tid." : {
 
     },
     "Søk" : {
@@ -6746,9 +6758,6 @@
       }
     },
     "Time-bånd" : {
-
-    },
-    "Time-spesifikk parkering kommer snart. Inntil videre regnes hvert valgte døgn som ett 24-timers opphold." : {
 
     },
     "Timer" : {

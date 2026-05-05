@@ -34,7 +34,7 @@ struct SpotDiscountsStep: View {
                     ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { idx, spot in
                         longerStayCard(
                             title: spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false ? spot.label! : "Plass \(idx + 1)",
-                            subtitle: "Per døgn: \(spot.price ?? 0) kr",
+                            subtitle: "Per dag: \(spot.price ?? 0) kr",
                             binding: spotPriceBinding(for: idx)
                         )
                     }
@@ -94,20 +94,20 @@ struct SpotDiscountsStep: View {
 
             VStack(spacing: 10) {
                 priceRow(
-                    label: "1 døgn",
-                    caption: "Pris for et helt døgn",
+                    label: "1 dag",
+                    caption: "Pris for én hel dag",
                     baseline: representativeDailyRate,
                     price: binding.daily
                 )
                 priceRow(
                     label: "1 uke",
-                    caption: "Pris for 7 påfølgende fulle døgn",
+                    caption: "Pris for 7 påfølgende fulle dager",
                     baseline: representativeDailyRate * 7,
                     price: binding.weekly
                 )
                 priceRow(
                     label: "1 måned",
-                    caption: "Pris for 30 påfølgende fulle døgn",
+                    caption: "Pris for 30 påfølgende fulle dager",
                     baseline: representativeDailyRate * 30,
                     price: binding.monthly
                 )
@@ -278,7 +278,7 @@ struct LongerStayPreviewCard: View {
                         .foregroundStyle(.neutral600)
                 }
                 if let p = prices.daily, p > 0 {
-                    previewRow(label: "1 døgn", days: 1, tierPrice: p)
+                    previewRow(label: "1 dag", days: 1, tierPrice: p)
                 }
                 if let p = prices.weekly, p > 0 {
                     previewRow(label: "1 uke", days: 7, tierPrice: p)

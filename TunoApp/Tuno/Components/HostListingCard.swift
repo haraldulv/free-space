@@ -24,7 +24,7 @@ struct HostListingCard: View {
     private var priceText: String {
         let range = listing.displayPriceRange
         guard range.max > 0 else { return "" }
-        let unit = listing.priceUnit?.displayName ?? "natt"
+        let unit = listing.priceUnit?.displayName ?? "døgn"
         return "\(listing.displayPriceText) kr/\(unit)"
     }
 

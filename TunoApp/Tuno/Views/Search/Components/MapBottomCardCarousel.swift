@@ -202,7 +202,7 @@ struct MapListingBigCard: View {
                 }
             }
 
-            Text("\(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "natt")")
+            Text("\(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "døgn")")
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(.neutral900)
                 .padding(.top, 2)

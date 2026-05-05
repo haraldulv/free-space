@@ -11,6 +11,14 @@ struct BookingConfirmationView: View {
         max(1, Calendar.current.dateComponents([.day], from: checkIn, to: checkOut).day ?? 1)
     }
 
+    /// "dag"/"dager" for parkering, "døgn" for camping. Brukes i Varighet-raden.
+    private func durationUnit(count: Int) -> String {
+        if listing.category == .parking {
+            return count == 1 ? "dag" : "dager"
+        }
+        return "døgn"
+    }
+
     private var dateFormatter: DateFormatter {
         let f = DateFormatter()
         f.dateStyle = .long
@@ -71,7 +79,7 @@ struct BookingConfirmationView: View {
 
                 detailRow(label: "Innsjekk", value: dateFormatter.string(from: checkIn))
                 detailRow(label: "Utsjekk", value: dateFormatter.string(from: checkOut))
-                detailRow(label: "Varighet", value: "\(nights) \(nights == 1 ? "natt" : "netter")")
+                detailRow(label: "Varighet", value: "\(nights) \(durationUnit(count: nights))")
 
                 Divider()
 

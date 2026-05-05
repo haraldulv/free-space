@@ -603,7 +603,7 @@ struct MapListingCard: View {
                     }
 
                     HStack(spacing: 6) {
-                        Text("\(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "natt")")
+                        Text("\(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "døgn")")
                             .font(.system(size: 14, weight: .bold))
                             .foregroundStyle(.neutral900)
 

@@ -134,9 +134,9 @@ struct SpotPriceContent: View {
                             form.spotMarkers[index].priceUnit = .time
                         }
                     ),
-                    unitLabel: "døgn"
+                    unitLabel: "dag"
                 )
-                FeeBreakdownCard(subtotal: s.price ?? 0, unitLabel: "døgn")
+                FeeBreakdownCard(subtotal: s.price ?? 0, unitLabel: "dag")
             } else if let s = spot {
                 // Camping: kun per natt
                 BigPriceInput(

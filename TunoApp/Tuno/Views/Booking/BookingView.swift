@@ -597,7 +597,7 @@ struct BookingView: View {
                 HStack(spacing: 4) {
                     Text("\(listing.displayPriceText) kr")
                         .font(.system(size: 14, weight: .bold))
-                    Text("/ \(listing.priceUnit?.displayName ?? "natt")")
+                    Text("/ \(listing.priceUnit?.displayName ?? "døgn")")
                         .font(.system(size: 13))
                         .foregroundStyle(.neutral500)
                 }
@@ -648,8 +648,7 @@ struct BookingView: View {
             .buttonStyle(.plain)
 
             if hasDates {
-                let unitLabel = (effectiveBookingPriceUnit == .time) ? "døgn" : "natt"
-                Text("\(nights) \(nights == 1 ? unitLabel : unitLabel + (unitLabel == "døgn" ? "" : "er"))")
+                Text("\(nights) \(effectiveBookingPriceUnit.pluralized(count: nights))")
                     .font(.system(size: 14))
                     .foregroundStyle(.neutral500)
             }
@@ -1067,10 +1066,12 @@ struct BookingView: View {
         return "\(listing.price ?? 0) kr × \(nights) \(perDayUnitLabel(count: nights))"
     }
 
-    /// "natt"/"netter" for camping, "døgn"/"døgn" for parkering.
+    /// "dag"/"dager" for parkering, "døgn"/"døgn" for camping.
     private func perDayUnitLabel(count: Int) -> String {
-        if listing.category == .parking { return "døgn" }
-        return count == 1 ? "natt" : "netter"
+        if listing.category == .parking {
+            return count == 1 ? "dag" : "dager"
+        }
+        return "døgn"
     }
 
     private var spotPickerSection: some View {

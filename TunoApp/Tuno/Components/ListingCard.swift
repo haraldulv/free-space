@@ -205,7 +205,7 @@ struct ListingCard: View {
                 HStack(spacing: 4) {
                     Text("\(listing.displayPriceText) kr")
                         .font(.system(size: 14, weight: .bold))
-                    Text("/ \(listing.priceUnit?.displayName ?? "natt")")
+                    Text("/ \(listing.priceUnit?.displayName ?? "døgn")")
                         .font(.system(size: 12))
                         .foregroundStyle(.neutral500)
 

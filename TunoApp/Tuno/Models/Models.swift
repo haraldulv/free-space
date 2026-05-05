@@ -642,8 +642,17 @@ enum PriceUnit: String, Codable {
     var displayName: String {
         switch self {
         case .time: return "dag"
-        case .natt: return "natt"
+        case .natt: return "døgn"
         case .hour: return "time"
+        }
+    }
+
+    /// Pluralisert label for telleordet — "1 dag" / "2 dager", "1 døgn" / "2 døgn".
+    func pluralized(count: Int) -> String {
+        switch self {
+        case .time: return count == 1 ? "dag" : "dager"
+        case .natt: return "døgn"
+        case .hour: return count == 1 ? "time" : "timer"
         }
     }
 
