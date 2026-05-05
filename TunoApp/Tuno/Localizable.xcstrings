@@ -56,9 +56,6 @@
         }
       }
     },
-    "%" : {
-
-    },
     "%@" : {
       "localizations" : {
         "de" : {
@@ -747,6 +744,9 @@
         }
       }
     },
+    "Åpne kalender" : {
+
+    },
     "Åpningstider" : {
 
     },
@@ -931,6 +931,9 @@
           }
         }
       }
+    },
+    "Belønn gjester som booker hele dagen, uken eller måneden. La feltene stå tomme for ingen rabatt." : {
+
     },
     "Beløpet belastes gjesten og pengene reserveres til utbetaling etter oppholdet." : {
       "localizations" : {
@@ -1147,6 +1150,9 @@
         }
       }
     },
+    "Blokker datoer, sett egen pris per dag og se bookinger per plass. Endringer lagres automatisk." : {
+
+    },
     "Blokkerte datoer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1214,6 +1220,9 @@
           }
         }
       }
+    },
+    "Bruk for alle plasser" : {
+
     },
     "Bruker annonsens pris" : {
       "localizations" : {
@@ -1767,9 +1776,6 @@
           }
         }
       }
-    },
-    "Eksemplet bruker timepris %@. Faktisk total varierer med pris-bånd." : {
-
     },
     "Elbil-lading" : {
       "extractionState" : "manual",
@@ -2599,6 +2605,9 @@
           }
         }
       }
+    },
+    "Gjest sparer %@" : {
+
     },
     "Gjeste-favoritt" : {
 
@@ -3468,6 +3477,9 @@
         }
       }
     },
+    "Kalender og priser" : {
+
+    },
     "Kanseller bestilling" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3663,6 +3675,9 @@
       }
     },
     "Kontakt verten" : {
+
+    },
+    "Konto" : {
 
     },
     "Kontoeier" : {
@@ -4170,6 +4185,9 @@
         }
       }
     },
+    "Lengre opphold" : {
+
+    },
     "Les brukervilkår" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4603,6 +4621,9 @@
 
     },
     "Møt verten" : {
+
+    },
+    "Multi-spot, prisregler, blokkering" : {
 
     },
     "Når ankommer du?" : {
@@ -5560,9 +5581,6 @@
     "Pris-bånd er felles for alle plasser. Endringer gjøres på plass 1." : {
 
     },
-    "Pris-eksempler etter rabatt" : {
-
-    },
     "Prisenhet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5601,6 +5619,9 @@
       }
     },
     "Profilbilde" : {
+
+    },
+    "Profilen din og alle bookinger, annonser og favoritter vil bli fjernet permanent. Dette kan ikke angres." : {
 
     },
     "Prøv å søke etter et annet sted" : {
@@ -5653,9 +5674,6 @@
           }
         }
       }
-    },
-    "Rabatten gjelder kun fulle døgn — booking innenfor enkelt-timer betales full timepris. En 35-dagers-booking blir 1 måned + 5 døgn-rabatter." : {
-
     },
     "Rediger annonse" : {
       "extractionState" : "manual",
@@ -6361,6 +6379,15 @@
     "Slett bånd" : {
 
     },
+    "Slett konto" : {
+
+    },
+    "Sletting fjerner profilen din og alle tilknyttede data permanent. Aktive bookinger må avsluttes før du sletter." : {
+
+    },
+    "Slik ser tilbudene ut for gjesten" : {
+
+    },
     "Søk" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6394,9 +6421,6 @@
           }
         }
       }
-    },
-    "Spart %@" : {
-
     },
     "Språk" : {
       "localizations" : {
@@ -6612,6 +6636,9 @@
           }
         }
       }
+    },
+    "Tilbudet gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 døgn. Resten betales etter standardpris." : {
+
     },
     "Tilgjengelig" : {
 
@@ -6995,6 +7022,9 @@
 
     },
     "Utbetalinger" : {
+
+    },
+    "Uten tilbud: %@" : {
 
     },
     "Utforsk" : {

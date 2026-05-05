@@ -544,9 +544,9 @@ struct ListingDetailView: View {
         let images = spot.images ?? []
         let isParking = listing.category == .parking
         let price = isParking
-            ? (spot.pricePerHour ?? spot.price ?? listing.pricePerHour ?? listing.price ?? 0)
+            ? (spot.price ?? listing.price ?? 0)
             : (spot.pricePerNight ?? spot.price ?? listing.pricePerNight ?? listing.price ?? 0)
-        let priceUnitLabel = isParking ? "/ time" : "/ natt"
+        let priceUnitLabel = isParking ? "/ døgn" : "/ natt"
         let extras = spot.extras ?? []
         let isOwnListing = listing.hostId?.lowercased() == authManager.currentUser?.id.uuidString.lowercased()
 

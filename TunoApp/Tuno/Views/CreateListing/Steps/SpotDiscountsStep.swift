@@ -34,7 +34,7 @@ struct SpotDiscountsStep: View {
                     ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { idx, spot in
                         longerStayCard(
                             title: spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false ? spot.label! : "Plass \(idx + 1)",
-                            subtitle: "Per time: \(spot.pricePerHour ?? 0) kr",
+                            subtitle: "Per døgn: \(spot.price ?? 0) kr",
                             binding: spotPriceBinding(for: idx)
                         )
                     }
@@ -95,26 +95,26 @@ struct SpotDiscountsStep: View {
             VStack(spacing: 10) {
                 priceRow(
                     label: "1 døgn",
-                    caption: "Pris for et helt døgn (24 t)",
-                    baseline: representativeHourlyRate * 24,
+                    caption: "Pris for et helt døgn",
+                    baseline: representativeDailyRate,
                     price: binding.daily
                 )
                 priceRow(
                     label: "1 uke",
                     caption: "Pris for 7 påfølgende fulle døgn",
-                    baseline: representativeHourlyRate * 24 * 7,
+                    baseline: representativeDailyRate * 7,
                     price: binding.weekly
                 )
                 priceRow(
                     label: "1 måned",
                     caption: "Pris for 30 påfølgende fulle døgn",
-                    baseline: representativeHourlyRate * 24 * 30,
+                    baseline: representativeDailyRate * 30,
                     price: binding.monthly
                 )
             }
 
             LongerStayPreviewCard(
-                hourlyRate: representativeHourlyRate,
+                hourlyRate: representativeDailyRate,
                 prices: binding.wrappedValue
             )
         }
@@ -127,10 +127,10 @@ struct SpotDiscountsStep: View {
         )
     }
 
-    /// Representativ timepris for forhåndsvisning. Bruker første spot i delt-
-    /// modus, eller den valgte spot i per-plass-modus.
-    private var representativeHourlyRate: Int {
-        form.spotMarkers.first?.pricePerHour ?? 0
+    /// Representativ døgnpris for forhåndsvisning av "Lengre opphold"-tilbud.
+    /// Bruker første spot — alle spots har samme pris i delt-modus.
+    private var representativeDailyRate: Int {
+        form.spotMarkers.first?.price ?? 0
     }
 
     @ViewBuilder
@@ -260,6 +260,9 @@ struct LongerStayPrices: Equatable {
 /// for 1 døgn (24 t), 1 uke (7 d) og 1 måned (30 d). Skjules helt når ingen
 /// pris er satt, så steget ikke skummer over for verten som vil hoppe over.
 struct LongerStayPreviewCard: View {
+    /// Døgn-pris (kr/døgn). Beholder navn `hourlyRate` for kompatibilitet med
+    /// kallsteder som ikke har migrert. Etter parkering-per-dag-refaktoren
+    /// representerer feltet alltid kr/døgn.
     let hourlyRate: Int
     let prices: LongerStayPrices
 
@@ -275,13 +278,13 @@ struct LongerStayPreviewCard: View {
                         .foregroundStyle(.neutral600)
                 }
                 if let p = prices.daily, p > 0 {
-                    previewRow(label: "1 døgn", hours: 24, tierPrice: p)
+                    previewRow(label: "1 døgn", days: 1, tierPrice: p)
                 }
                 if let p = prices.weekly, p > 0 {
-                    previewRow(label: "1 uke", hours: 24 * 7, tierPrice: p)
+                    previewRow(label: "1 uke", days: 7, tierPrice: p)
                 }
                 if let p = prices.monthly, p > 0 {
-                    previewRow(label: "1 måned", hours: 24 * 30, tierPrice: p)
+                    previewRow(label: "1 måned", days: 30, tierPrice: p)
                 }
             }
             .padding(14)
@@ -292,8 +295,8 @@ struct LongerStayPreviewCard: View {
     }
 
     @ViewBuilder
-    private func previewRow(label: String, hours: Int, tierPrice: Int) -> some View {
-        let baseTotal = hourlyRate * hours
+    private func previewRow(label: String, days: Int, tierPrice: Int) -> some View {
+        let baseTotal = hourlyRate * days
         let savings = max(0, baseTotal - tierPrice)
 
         HStack(alignment: .firstTextBaseline) {

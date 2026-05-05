@@ -66,6 +66,11 @@ struct EditListingView: View {
 
     private let tabs = ["Detaljer", "Plasser", "Bilder", "Fasiliteter", "Lengre opphold", "Kalender"]
 
+    /// "døgn" for parkering, "natt" for camping. Brukes i pris-labels.
+    private var priceUnitLabel: String {
+        listing.category == .parking ? "døgn" : "natt"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Tab bar — skjult når vi er i fokusert single-tab-modus.
@@ -393,7 +398,7 @@ struct EditListingView: View {
             Text("Pris").font(.system(size: 18, weight: .semibold))
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(perSpotPricing ? "Standardpris per natt" : "Pris per natt")
+                Text(perSpotPricing ? "Standardpris per \(priceUnitLabel)" : "Pris per \(priceUnitLabel)")
                     .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(.neutral600)
                 HStack(spacing: 8) {
@@ -634,22 +639,6 @@ struct EditListingView: View {
                     Spacer()
                 }
 
-                // Pris-modell for parkering — per time eller per døgn
-                if listing.category == .parking {
-                    HStack(spacing: 8) {
-                        Text("Modell").font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.neutral600).frame(width: 60, alignment: .leading)
-                        Picker("Pris-modell", selection: Binding(
-                            get: { spotMarkers[index].priceUnit ?? priceUnit },
-                            set: { spotMarkers[index].priceUnit = $0 }
-                        )) {
-                            Text("Per døgn").tag(PriceUnit.time)
-                            Text("Per time").tag(PriceUnit.hour)
-                        }
-                        .pickerStyle(.segmented)
-                        Spacer()
-                    }
-                }
             }
 
             // Beskrivelse (valgfri, per plass)
@@ -1047,22 +1036,6 @@ struct EditListingView: View {
                         .textFieldStyle(.roundedBorder)
                         .keyboardType(.numberPad)
                 }
-                field("Prisenhet") {
-                    HStack(spacing: 10) {
-                        ForEach([PriceUnit.time, .natt], id: \.self) { unit in
-                            let sel = priceUnit == unit
-                            Button { priceUnit = unit } label: {
-                                Text(unit == .time ? "Per time" : "Per natt")
-                                    .font(.system(size: 15, weight: .medium))
-                                    .foregroundStyle(sel ? .primary600 : .neutral600)
-                                    .frame(maxWidth: .infinity).padding(.vertical, 12)
-                                    .background(sel ? Color.primary50 : Color.neutral50)
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(sel ? Color.primary600 : Color.neutral200, lineWidth: sel ? 2 : 1))
-                            }
-                        }
-                    }
-                }
                 Toggle(isOn: $instantBooking) {
                     HStack(spacing: 6) {
                         Image(systemName: "bolt.fill").foregroundStyle(.green)
@@ -1137,20 +1110,20 @@ struct EditListingView: View {
                 spotMarkers[index].discountMonthPct = nil
             }
         )
-        let hourlyRate = spotMarkers.indices.contains(index) ? (spotMarkers[index].pricePerHour ?? 0) : 0
+        let dailyRate = spotMarkers.indices.contains(index) ? (spotMarkers[index].price ?? 0) : 0
         VStack(alignment: .leading, spacing: 14) {
             Text(title)
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(.neutral900)
 
             VStack(spacing: 10) {
-                priceRow(label: "1 døgn", caption: "Pris for et helt døgn (24 t)", baseline: hourlyRate * 24, price: prices.daily)
-                priceRow(label: "1 uke", caption: "Pris for 7 påfølgende fulle døgn", baseline: hourlyRate * 24 * 7, price: prices.weekly)
-                priceRow(label: "1 måned", caption: "Pris for 30 påfølgende fulle døgn", baseline: hourlyRate * 24 * 30, price: prices.monthly)
+                priceRow(label: "1 døgn", caption: "Pris for et helt døgn", baseline: dailyRate, price: prices.daily)
+                priceRow(label: "1 uke", caption: "Pris for 7 påfølgende fulle døgn", baseline: dailyRate * 7, price: prices.weekly)
+                priceRow(label: "1 måned", caption: "Pris for 30 påfølgende fulle døgn", baseline: dailyRate * 30, price: prices.monthly)
             }
 
             LongerStayPreviewCard(
-                hourlyRate: hourlyRate,
+                hourlyRate: dailyRate,
                 prices: prices.wrappedValue
             )
         }

@@ -170,16 +170,10 @@ struct BookingView: View {
     /// Antall enheter for pris-beregning — timer for parkering per time, netter ellers.
     private var unitsCount: Int { isHourly ? hours : nights }
 
-    /// Hvilken pris-modell denne bookingen følger. Per-time krever at ALLE valgte plasser
-    /// er .hour (eller listing-nivå er .hour). Mixed-mode er ikke støttet for booking;
-    /// fallback til natt/døgn.
+    /// Hvilken pris-modell denne bookingen følger. Parkering er per-døgn (.time),
+    /// camping per-natt (.natt). Hourly-modus er fjernet i parkering per-dag-refaktoren.
     private var effectiveBookingPriceUnit: PriceUnit {
-        // Parkering er per-time-only — døgn-rabatt-flow tar over senere.
-        if listing.category == .parking { return .hour }
-        if !selectedSpots.isEmpty {
-            let units = selectedSpots.compactMap { $0.priceUnit }
-            if !units.isEmpty, units.allSatisfy({ $0 == .hour }) { return .hour }
-        }
+        if listing.category == .parking { return .time }
         return listing.priceUnit ?? .natt
     }
 
@@ -324,10 +318,9 @@ struct BookingView: View {
             VStack(alignment: .leading, spacing: 24) {
                 listingSummary
 
-                // Døgn-banner vises kun for parkering som IKKE er per-time
-                // (per-time parkering har full booking-flow nå).
-                if listing.category == .parking && !isHourly {
-                    parkingPreviewBanner
+                if let oh = OpeningHoursService.effective(listing: listing, spot: selectedSpots.first),
+                   OpeningHoursService.hasLimitedHours(oh) {
+                    openingHoursBanner(oh)
                 }
 
                 Divider()
@@ -535,21 +528,28 @@ struct BookingView: View {
 
     // MARK: - Subviews
 
-    /// Vises kun for parking-listings inntil time-spesifikk booking lanseres (Fase 2).
-    /// Booking i dag bruker hele døgn — vi gjør dette eksplisitt for gjesten.
-    private var parkingPreviewBanner: some View {
+    /// Vises når listing/plass har begrensede åpningstider — gir gjest beskjed
+    /// før de bekrefter datoer.
+    private func openingHoursBanner(_ oh: OpeningHours) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "info.circle.fill")
+            Image(systemName: "clock.fill")
                 .foregroundStyle(.primary600)
                 .font(.system(size: 16))
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Parkering bookes per døgn foreløpig")
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Åpningstid")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.neutral900)
-                Text("Time-spesifikk parkering kommer snart. Inntil videre regnes hvert valgte døgn som ett 24-timers opphold.")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral600)
-                    .lineSpacing(2)
+                ForEach(Weekday.allCases, id: \.self) { day in
+                    HStack(spacing: 8) {
+                        Text(weekdayLabel(day))
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.neutral600)
+                            .frame(width: 40, alignment: .leading)
+                        Text(oh.value(for: day) ?? "Stengt")
+                            .font(.system(size: 12))
+                            .foregroundStyle(oh.value(for: day) == nil ? .neutral400 : .neutral700)
+                    }
+                }
             }
             Spacer()
         }
@@ -557,6 +557,18 @@ struct BookingView: View {
         .background(Color.primary50)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary200, lineWidth: 1))
+    }
+
+    private func weekdayLabel(_ day: Weekday) -> String {
+        switch day {
+        case .mon: return "Man"
+        case .tue: return "Tir"
+        case .wed: return "Ons"
+        case .thu: return "Tor"
+        case .fri: return "Fre"
+        case .sat: return "Lør"
+        case .sun: return "Søn"
+        }
     }
 
     private var listingSummary: some View {
@@ -924,7 +936,7 @@ struct BookingView: View {
             } else if let groups = nightlyGroups, groups.count > 1 {
                 ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
                     HStack(spacing: 4) {
-                        Text("\(g.price) kr × \(g.count) \(g.count == 1 ? "natt" : "netter")")
+                        Text("\(g.price) kr × \(g.count) \(perDayUnitLabel(count: g.count))")
                             .font(.system(size: 14))
                             .foregroundStyle(.neutral600)
                         Text("(\(sourceLabel(g.source)))")
@@ -1050,9 +1062,15 @@ struct BookingView: View {
             return "\(listing.price ?? 0) kr × \(hours) \(hours == 1 ? "time" : "timer")"
         }
         if hasSpotLevelPricing && !selectedSpots.isEmpty {
-            return "\(selectedSpots.count) plass\(selectedSpots.count > 1 ? "er" : "") × \(nights) \(nights == 1 ? "natt" : "netter")"
+            return "\(selectedSpots.count) plass\(selectedSpots.count > 1 ? "er" : "") × \(nights) \(perDayUnitLabel(count: nights))"
         }
-        return "\(listing.price ?? 0) kr × \(nights) \(nights == 1 ? "natt" : "netter")"
+        return "\(listing.price ?? 0) kr × \(nights) \(perDayUnitLabel(count: nights))"
+    }
+
+    /// "natt"/"netter" for camping, "døgn"/"døgn" for parkering.
+    private func perDayUnitLabel(count: Int) -> String {
+        if listing.category == .parking { return "døgn" }
+        return count == 1 ? "natt" : "netter"
     }
 
     private var spotPickerSection: some View {

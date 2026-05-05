@@ -135,22 +135,22 @@ final class ListingFormModel: ObservableObject {
         ["Velkommen", "Kategori", "Adresse", "Plasser", "Marker", "Kjøretøy", "Tilgjengelighet", "Pris", "Prisvariasjon", "Tillegg", "Rabatter", "Booking", "Beskrivelse", "Bilder", "Fasiliteter", "Meldinger", "Kalender", "Klar"]
     }
 
-    /// Tilgjengelighets-steget (6) er kun relevant for parkering.
-    /// Camping er per-døgn-only og skips automatisk i goNext/goBack.
+    /// Tilgjengelighets-steget (6) er midlertidig deaktivert i wizard etter
+    /// parkering-per-dag-refaktoren — håndteres nå via åpningstid (døgnåpent
+    /// default). Holdes igjen som follow-up i EditListingView.
     var skipsAvailabilityStep: Bool {
-        category != .parking
+        true
     }
 
     /// Pris-variasjon-steget (8) er per plass.
-    /// - Parkering: hopper over kun hvis plassen ikke har bånd (alltid ledig).
+    /// - Parkering: hopper alltid over (ingen hourly-bånd lenger etter
+    ///   parkering-per-dag-refaktoren).
     /// - Camping: aktivert — viser sesong-bånd-kalender (WizardSeasonalCalendarView).
     func skipsPriceVariationStep(forSpotIndex idx: Int) -> Bool {
         if category == .camping {
             return false  // camping bruker sesong-bånd
         }
-        if category != .parking { return true }
-        guard let spotId = spotMarkers[safe: idx]?.id else { return true }
-        return availability(for: spotId).bands.isEmpty
+        return true  // parkering: ingen pris-variasjon i wizard for nå
     }
 
     /// Rabatter-steget (10) gir prosent-rabatt for døgn/uke/måned-bookinger.

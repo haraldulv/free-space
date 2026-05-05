@@ -42,6 +42,7 @@
 		3F2C71CB33819E76B0A47700 /* MessagesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BB47DB7ED9FBB036BC353A /* MessagesListView.swift */; };
 		3F9B2D62042A08F8EAD36159 /* WizardNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF267768B92B52734B7568A /* WizardNavBar.swift */; };
 		400CCE6F1D6B0AF5A1699287 /* TunoCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308BCB9A59C6E33399015B98 /* TunoCalendar.swift */; };
+		402B7759282C565BD0F02A60 /* OpeningHoursService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A884CCDAD07F56994881803 /* OpeningHoursService.swift */; };
 		414ACCF50897E595892BBE9B /* CreateListingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A8155F44B5F1E01A1FE767 /* CreateListingView.swift */; };
 		4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */; };
 		42BCA2F242941F8AC4F84750 /* stand-out.png in Resources */ = {isa = PBXBuildFile; fileRef = 00E476D769839A839AA8AD06 /* stand-out.png */; };
@@ -198,6 +199,7 @@
 		64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingViewModel.swift; sourceTree = "<group>"; };
 		653B4F2F1D411111416483A4 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
 		69D03627A981C3C64EF47F06 /* PublicProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicProfileView.swift; sourceTree = "<group>"; };
+		6A884CCDAD07F56994881803 /* OpeningHoursService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningHoursService.swift; sourceTree = "<group>"; };
 		6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingFlowView.swift; sourceTree = "<group>"; };
 		6D08232C248CE64924B19723 /* DescriptionStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStep.swift; sourceTree = "<group>"; };
 		6FFBF70DF9565FD913EA5D09 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
@@ -332,6 +334,7 @@
 				E9E57AB4DC338617AB61C3E7 /* ListingService.swift */,
 				653B4F2F1D411111416483A4 /* LocalizationManager.swift */,
 				5416B142A121192B7EDCA9A2 /* LocationManager.swift */,
+				6A884CCDAD07F56994881803 /* OpeningHoursService.swift */,
 				86D6665556989227BEA372A6 /* PayoutsService.swift */,
 				3CB173E040FBC726599E7A89 /* PlacesService.swift */,
 				56E3029710A8D3475494799E /* PricingService.swift */,
@@ -782,6 +785,7 @@
 				4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */,
 				F5C607CAFB1A650AC022C486 /* MotorhomeIcon.swift in Sources */,
 				B2A276C68ACCEB05DBF4F7DB /* NotificationsView.swift in Sources */,
+				402B7759282C565BD0F02A60 /* OpeningHoursService.swift in Sources */,
 				8225D7A59A196A15D1387988 /* PayoutsService.swift in Sources */,
 				DF4CB397EEC21B6155822A74 /* PersonnummerHelper.swift in Sources */,
 				481B700D9FEB3AFB038F6A9E /* PhotosStep.swift in Sources */,
@@ -870,7 +874,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -988,7 +992,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1054,7 +1058,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1113,7 +1117,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 160;
+				CURRENT_PROJECT_VERSION = 161;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
