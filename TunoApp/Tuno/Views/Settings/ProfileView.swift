@@ -638,6 +638,10 @@ struct MyListingsView: View {
     @State private var showCreateListing = false
     @State private var deleteTarget: Listing?
     @State private var qrTarget: Listing?
+    /// Eksisterende utkast som verten kan fortsette med. nil = ingen utkast.
+    @State private var draft: DraftListing?
+    @State private var showDiscardDraftAlert = false
+    @State private var resumeDraft: DraftListing?
 
     private static let serviceFee = 0.10
 
@@ -645,7 +649,7 @@ struct MyListingsView: View {
         Group {
             if isLoading {
                 ProgressView()
-            } else if listings.isEmpty {
+            } else if listings.isEmpty && draft == nil {
                 emptyState
             } else {
                 listingsScrollView
@@ -655,20 +659,40 @@ struct MyListingsView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    resumeDraft = nil
                     showCreateListing = true
                 } label: {
                     Image(systemName: "plus")
                 }
             }
         }
-        .fullScreenCover(isPresented: $showCreateListing) {
+        .fullScreenCover(isPresented: $showCreateListing, onDismiss: {
+            // Re-load utkast når wizarden lukkes så banneret oppdateres
+            // (utkast slettet ved publisering, eller fortsatt der hvis ikke).
+            loadDraft()
+            resumeDraft = nil
+        }) {
             // Wizarden i sin egen NavigationStack — pakker for å bevare navigationTitle/toolbar.
             NavigationStack {
-                CreateListingView(onCreated: { newListing in
-                    listings.insert(newListing, at: 0)
-                })
+                CreateListingView(
+                    onCreated: { newListing in
+                        listings.insert(newListing, at: 0)
+                    },
+                    initialDraft: resumeDraft
+                )
             }
         }
+        .alert("Forkast utkast?", isPresented: $showDiscardDraftAlert, actions: {
+            Button("Forkast", role: .destructive) {
+                if let userId = authManager.currentUser?.id.uuidString {
+                    DraftStorage.clear(userId: userId)
+                }
+                draft = nil
+            }
+            Button("Avbryt", role: .cancel) {}
+        }, message: {
+            Text("Du mister fremdriften du har lagret. Dette kan ikke angres.")
+        })
         .sheet(item: $qrTarget) { listing in
             QRCodeModal(listing: listing)
         }
@@ -686,9 +710,18 @@ struct MyListingsView: View {
             Text("Denne handlingen kan ikke angres.")
         }
         .task {
+            loadDraft()
             await loadListings()
             await loadMonthlyEarnings()
         }
+    }
+
+    private func loadDraft() {
+        guard let userId = authManager.currentUser?.id.uuidString else {
+            draft = nil
+            return
+        }
+        draft = DraftStorage.load(userId: userId)
     }
 
     private var emptyState: some View {
@@ -715,6 +748,9 @@ struct MyListingsView: View {
     private var listingsScrollView: some View {
         ScrollView {
             LazyVStack(spacing: 24) {
+                if let draft {
+                    draftCard(draft: draft)
+                }
                 ForEach(listings) { listing in
                     NavigationLink {
                         EditListingRootView(listing: listing, onSaved: { updated in
@@ -745,6 +781,65 @@ struct MyListingsView: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
+        }
+    }
+
+    /// Kort som vises øverst i Mine annonser når et utkast finnes.
+    /// Tap → re-åpner wizarden med utkastet pre-lastet. Long-press →
+    /// kontekstmeny med "Forkast utkast"-action.
+    @ViewBuilder
+    private func draftCard(draft: DraftListing) -> some View {
+        Button {
+            resumeDraft = draft
+            showCreateListing = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.primary100)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.primary600)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text("Fortsett utkast")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.primary700)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.primary100)
+                            .clipShape(Capsule())
+                    }
+                    Text(draft.displayTitle)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .lineLimit(1)
+                    Text(draft.displaySubtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral400)
+            }
+            .padding(16)
+            .background(Color.primary50)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.primary200, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .contextMenu {
+            Button(role: .destructive) {
+                showDiscardDraftAlert = true
+            } label: {
+                Label("Forkast utkast", systemImage: "trash")
+            }
         }
     }
 

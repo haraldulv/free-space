@@ -115,6 +115,90 @@ final class ListingFormModel: ObservableObject {
         availabilityBySpotId[spotId] ?? WizardSpotAvailability()
     }
 
+    // MARK: - Draft persistence
+
+    /// Snapshot av nåværende wizard-state for utkast-lagring.
+    func toDraft() -> DraftListing {
+        DraftListing(
+            category: category,
+            address: address,
+            city: city,
+            region: region,
+            lat: lat,
+            lng: lng,
+            hideExactLocation: hideExactLocation,
+            spots: spots,
+            defaultVehicleTypes: defaultVehicleTypes,
+            title: title,
+            internalName: internalName,
+            description: description,
+            spotMarkers: spotMarkers,
+            currentSpotIndex: currentSpotIndex,
+            pricingBandsSharedAcrossSpots: pricingBandsSharedAcrossSpots,
+            imageURLs: imageURLs,
+            selectedAmenities: Array(selectedAmenities),
+            checkInTime: checkInTime,
+            checkOutTime: checkOutTime,
+            checkinMessage: checkinMessage,
+            checkoutMessage: checkoutMessage,
+            checkoutMessageSendHoursBefore: checkoutMessageSendHoursBefore,
+            skippedMessages: skippedMessages,
+            blockedDates: Array(blockedDates),
+            instantBooking: instantBooking,
+            priceUnit: priceUnit,
+            openingHours: openingHours,
+            currentStep: currentStep,
+            savedAt: Date()
+        )
+    }
+
+    /// Restore wizard-state fra et lagret utkast.
+    func loadFromDraft(_ draft: DraftListing) {
+        category = draft.category
+        address = draft.address
+        city = draft.city
+        region = draft.region
+        lat = draft.lat
+        lng = draft.lng
+        hideExactLocation = draft.hideExactLocation
+        spots = draft.spots
+        defaultVehicleTypes = draft.defaultVehicleTypes
+        title = draft.title
+        internalName = draft.internalName
+        description = draft.description
+        spotMarkers = draft.spotMarkers
+        currentSpotIndex = draft.currentSpotIndex
+        pricingBandsSharedAcrossSpots = draft.pricingBandsSharedAcrossSpots
+        imageURLs = draft.imageURLs
+        selectedAmenities = Set(draft.selectedAmenities)
+        checkInTime = draft.checkInTime
+        checkOutTime = draft.checkOutTime
+        checkinMessage = draft.checkinMessage
+        checkoutMessage = draft.checkoutMessage
+        checkoutMessageSendHoursBefore = draft.checkoutMessageSendHoursBefore
+        skippedMessages = draft.skippedMessages
+        blockedDates = Set(draft.blockedDates)
+        instantBooking = draft.instantBooking
+        priceUnit = draft.priceUnit
+        openingHours = draft.openingHours
+        currentStep = draft.currentStep
+    }
+
+    /// Lagre utkast for denne brukeren. Kalles auto fra goNext/goBack
+    /// + ved bruker-eksplisitt close.
+    func saveDraft(userId: String) {
+        // Sparer ikke utkast hvis bruker er på Velkomst-steget (0) — ingen
+        // meningsfulle data ennå, og det forhindrer at en tom "Fortsett"-
+        // banner dukker opp etter at de bare titta på første skjerm.
+        guard currentStep > 0 else { return }
+        DraftStorage.save(toDraft(), userId: userId)
+    }
+
+    /// Slett utkast (kalles etter publisering).
+    func clearDraft(userId: String) {
+        DraftStorage.clear(userId: userId)
+    }
+
     /// Hjelper: oppdater availability-state for en plass.
     func setAvailability(_ avail: WizardSpotAvailability, for spotId: String) {
         availabilityBySpotId[spotId] = avail

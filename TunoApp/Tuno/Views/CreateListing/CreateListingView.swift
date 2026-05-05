@@ -6,6 +6,8 @@ import UIKit
 /// progress-bar, error-banner, swipe-bar mellom stegene og submit-logikk.
 struct CreateListingView: View {
     var onCreated: ((Listing) -> Void)? = nil
+    /// Hvis satt: gjenoppta wizarden fra dette utkastet ved første visning.
+    var initialDraft: DraftListing? = nil
 
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var form = ListingFormModel()
@@ -27,14 +29,35 @@ struct CreateListingView: View {
             .toolbar(.hidden, for: .tabBar)
             .toolbar(content: cancelToolbar)
             .toolbar(content: spotIndicatorToolbar)
-            .alert("Avbryt og forkast?", isPresented: $showCancelAlert, actions: {
-                Button("Forkast", role: .destructive) { dismiss() }
-                Button("Fortsett å redigere", role: .cancel) {}
+            .alert("Lukk wizarden?", isPresented: $showCancelAlert, actions: {
+                Button("Forkast utkast", role: .destructive) {
+                    if let userId = authManager.currentUser?.id.uuidString {
+                        form.clearDraft(userId: userId)
+                    }
+                    dismiss()
+                }
+                Button("Lukk og lagre", role: .cancel) {
+                    if let userId = authManager.currentUser?.id.uuidString {
+                        form.saveDraft(userId: userId)
+                    }
+                    dismiss()
+                }
             }, message: {
-                Text("Du mister alt du har skrevet inn.")
+                Text("Vi lagrer fremdriften din som utkast så du kan fortsette senere fra Mine annonser.")
             })
             .overlay { successOverlay }
             .animation(.easeInOut(duration: 0.3), value: showSuccess)
+            .onAppear {
+                if let draft = initialDraft {
+                    form.loadFromDraft(draft)
+                }
+            }
+            .onChange(of: form.currentStep) { _, newStep in
+                // Auto-lagre etter hver steg-overgang så bruker aldri mister
+                // progress hvis appen drepes eller terminerer i bakgrunnen.
+                guard newStep > 0, let userId = authManager.currentUser?.id.uuidString else { return }
+                form.saveDraft(userId: userId)
+            }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
                 withAnimation(.easeOut(duration: 0.22)) { keyboardVisible = true }
             }
@@ -376,6 +399,9 @@ struct CreateListingView: View {
                     newListing = listing
                 }
                 form.isSubmitting = false
+                // Publisering vellykket — slett utkastet så verten ikke ser
+                // det som "Fortsett utkast" i Mine annonser.
+                form.clearDraft(userId: userId.uuidString)
                 withAnimation { showSuccess = true }
             } catch {
                 form.error = "Kunne ikke opprette annonse: \(error.localizedDescription)"

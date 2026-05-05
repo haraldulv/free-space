@@ -121,6 +121,7 @@
 		D419BBEA241B1C886CA82778 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 177959CBC6EFAB9035701BA2 /* Supabase */; };
 		D66A3C676F36A7AC0C7FA620 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF829CF95A92CC9F95F9C3E /* ProfileView.swift */; };
 		D810CB11774F2D2C919200B8 /* SpotDetailsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = E168ECC061FD115C52320C1F /* SpotDetailsStep.swift */; };
+		DD5F9A568DB0596D6BB597CE /* DraftStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4BE8903623B90ED0A8174BC /* DraftStorage.swift */; };
 		DF4CB397EEC21B6155822A74 /* PersonnummerHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8912249569F172B1FAC73845 /* PersonnummerHelper.swift */; };
 		E12BD446142FEAEF21A97826 /* HostInntektCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FEA73740940C702629F4D7 /* HostInntektCard.swift */; };
 		E280A497623DB50EB8DB28E0 /* HostOnboardingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54806C1D2B79947D8E8CE6C9 /* HostOnboardingService.swift */; };
@@ -232,6 +233,7 @@
 		9BCA07B748FCC5E1497CD115 /* progress-pin.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "progress-pin.json"; sourceTree = "<group>"; };
 		9DE80E0F57ED28043A953489 /* WhereSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhereSheet.swift; sourceTree = "<group>"; };
 		9F37F3CD542B4B76200AE7AE /* ProfileStatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStatsStore.swift; sourceTree = "<group>"; };
+		A4BE8903623B90ED0A8174BC /* DraftStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftStorage.swift; sourceTree = "<group>"; };
 		A54AF55D0728E58C694E0F3B /* OpeningHoursEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningHoursEditorView.swift; sourceTree = "<group>"; };
 		A9A8155F44B5F1E01A1FE767 /* CreateListingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateListingView.swift; sourceTree = "<group>"; };
 		A9C00EBE7ED77620DE8CBA92 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -333,6 +335,7 @@
 				2FFF7A576FF6BA28D9AC107D /* AuthManager.swift */,
 				CF1513FE906EE61E579B662D /* BookingService.swift */,
 				8CF2C4D557CBB8DCF564CD2A /* ChatService.swift */,
+				A4BE8903623B90ED0A8174BC /* DraftStorage.swift */,
 				AF4ECC50EF60CAE563B7D668 /* FavoritesService.swift */,
 				54806C1D2B79947D8E8CE6C9 /* HostOnboardingService.swift */,
 				E9E57AB4DC338617AB61C3E7 /* ListingService.swift */,
@@ -749,6 +752,7 @@
 				414ACCF50897E595892BBE9B /* CreateListingView.swift in Sources */,
 				12663C1EA3152BC7C6440902 /* CustomTabBar.swift in Sources */,
 				1C32E4CA70F86F9BAF6C8EA2 /* DescriptionStep.swift in Sources */,
+				DD5F9A568DB0596D6BB597CE /* DraftStorage.swift in Sources */,
 				90D70482683053BEFF821336 /* EarningsView.swift in Sources */,
 				E42A18E39C3758AF4E6127C8 /* EditListingView.swift in Sources */,
 				6B9D27F1FAB9F57992BA3988 /* EmailVerifiedView.swift in Sources */,
