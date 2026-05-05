@@ -80,6 +80,9 @@ struct CreateListingView: View {
 
             stepsTabView
         }
+        // Opaque bg så iOS 26 fullScreenCover ikke render-er translucent og
+        // viser dashboard-listen gjennom wizarden når brukeren re-åpner draft.
+        .background(Color.white)
         .animation(.easeInOut(duration: 0.22), value: form.fullscreenStep)
         // Tap utenfor felter lukker tastaturet — standard iOS-mønster.
         .contentShape(Rectangle())
