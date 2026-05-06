@@ -20,6 +20,11 @@ struct CreateListingView: View {
     /// True når iOS-tastaturet er åpent. Skjuler WizardNavBar så den ikke
     /// kolliderer med "Ferdig"-knappen i tastatur-toolbaren.
     @State private var keyboardVisible = false
+    /// Snapshot av draft-storage tatt på onAppear i .new-mode. Brukes til å
+    /// restore det opprinnelige utkastet hvis bruker velger "Forkast utkast"
+    /// — så et eksisterende utkast ikke slettes ved et uhell når brukeren
+    /// trykket "+" og deretter forkastet.
+    @State private var preExistingDraftSnapshot: DraftListing?
 
     var body: some View {
         mainContent
@@ -32,7 +37,14 @@ struct CreateListingView: View {
             .alert("Lukk wizarden?", isPresented: $showCancelAlert, actions: {
                 Button("Forkast utkast", role: .destructive) {
                     if let userId = authManager.currentUser?.id.uuidString {
-                        form.clearDraft(userId: userId)
+                        if let snapshot = preExistingDraftSnapshot {
+                            // Vi var i .new-mode og det fantes et utkast fra før.
+                            // Auto-save under sesjonen kan ha overskrevet det,
+                            // så restore det opprinnelige.
+                            DraftStorage.save(snapshot, userId: userId)
+                        } else {
+                            form.clearDraft(userId: userId)
+                        }
                     }
                     dismiss()
                 }
@@ -50,6 +62,11 @@ struct CreateListingView: View {
             .onAppear {
                 if let draft = initialDraft {
                     form.loadFromDraft(draft)
+                } else if let userId = authManager.currentUser?.id.uuidString {
+                    // .new-mode: snapshot evt. eksisterende utkast så vi kan
+                    // restore hvis bruker velger "Forkast utkast" istedenfor å
+                    // slette utkastet de opprinnelig hadde.
+                    preExistingDraftSnapshot = DraftStorage.load(userId: userId)
                 }
             }
             .onChange(of: form.currentStep) { _, newStep in
@@ -234,7 +251,15 @@ struct CreateListingView: View {
             // Matcher det Apple bruker i Mail/Settings/etc. når man lukker en modal.
             // Skjules i fullscreenStep (kalender-editor) for å gi mer plass.
             if !form.fullscreenStep {
-                Button(action: { showCancelAlert = true }) {
+                Button(action: {
+                    // Ingen progress gjort i en ny wizard — bare lukk uten
+                    // alert. Et evt. eksisterende utkast forblir urørt.
+                    if initialDraft == nil && form.currentStep == 0 {
+                        dismiss()
+                    } else {
+                        showCancelAlert = true
+                    }
+                }) {
                     Image(systemName: "xmark")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(.neutral700)
