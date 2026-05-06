@@ -1742,6 +1742,9 @@ struct EditListingRootView: View {
             .padding(16)
         }
         .background(Color.neutral50)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            previewPill
+        }
         .navigationTitle("Rediger annonse")
         .navigationBarTitleDisplayMode(.inline)
         .fullScreenCover(isPresented: $showPreview) {
@@ -1752,54 +1755,59 @@ struct EditListingRootView: View {
     }
 
     private var heroCard: some View {
-        ZStack(alignment: .topTrailing) {
-            ZStack(alignment: .bottomLeading) {
-                CachedAsyncImage(url: URL(string: current.images?.first ?? "")) { image in
-                    image.resizable().aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle().fill(Color.neutral100)
-                }
-                .frame(height: 180)
-                .frame(maxWidth: .infinity)
-                .clipped()
-
-                LinearGradient(
-                    colors: [Color.black.opacity(0), Color.black.opacity(0.55)],
-                    startPoint: .top,
-                    endPoint: .bottom
-                )
-                .frame(height: 180)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(current.title.isEmpty ? "Uten tittel" : current.title)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .lineLimit(2)
-                    Text(current.city ?? "")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.white.opacity(0.85))
-                }
-                .padding(16)
+        ZStack(alignment: .bottomLeading) {
+            CachedAsyncImage(url: URL(string: current.images?.first ?? "")) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Rectangle().fill(Color.neutral100)
             }
+            .frame(height: 180)
+            .frame(maxWidth: .infinity)
+            .clipped()
 
-            Button {
-                showPreview = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "eye.fill")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text("Vis")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundStyle(.neutral900)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay(Capsule().stroke(Color.white.opacity(0.4), lineWidth: 1))
+            LinearGradient(
+                colors: [Color.black.opacity(0), Color.black.opacity(0.55)],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            .frame(height: 180)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(current.title.isEmpty ? "Uten tittel" : current.title)
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                Text(current.city ?? "")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.white.opacity(0.85))
             }
-            .padding(12)
+            .padding(16)
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var previewPill: some View {
+        Button {
+            showPreview = true
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "eye.fill")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Vis annonsen som gjest")
+                    .font(.system(size: 15, weight: .semibold))
+            }
+            .foregroundStyle(.neutral900)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color.white)
+            .clipShape(Capsule())
+            .overlay(Capsule().stroke(Color.neutral200, lineWidth: 1))
+            .shadow(color: Color.black.opacity(0.06), radius: 8, y: 2)
+        }
+        .buttonStyle(.plain)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
+        .background(.ultraThinMaterial)
     }
 
     private func row(tab: EditListingTab) -> some View {
