@@ -96,8 +96,13 @@ struct WizardPricingCalendarView: View {
         return assignment
     }
 
+    /// Standardpris for plassen (kr/dag). Faller tilbake til legacy-felter
+    /// (pricePerNight, pricePerHour) for å støtte eldre annonser.
+    /// Brukes som referanse for å vite om en pris-overstyring faktisk
+    /// avviker fra standard.
     private var basePerHour: Int {
-        form.spotMarkers.first(where: { $0.id == spotId })?.pricePerHour ?? 0
+        let s = spot
+        return s?.price ?? s?.pricePerNight ?? s?.pricePerHour ?? 0
     }
 
     private var spot: SpotMarker? {
@@ -346,7 +351,10 @@ struct WizardPricingCalendarView: View {
         let isSelected = selectedDates.contains(iso)
         let isAnchor = rangeAnchor == iso
         let isBlocked = blockedDates.contains(iso)
-        let hasOverride = dateOverrides[iso] != nil
+        // hasOverride er kun true når overstyringen FAKTISK avviker fra
+        // base — defensiv mot stale data der dict'en kan ha verdier lik base.
+        let overrideValue = dateOverrides[iso]
+        let hasOverride = overrideValue != nil && overrideValue != basePerHour
         let priceInfo = priceForDate(date)
 
         Button {
