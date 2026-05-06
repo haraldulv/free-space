@@ -628,6 +628,21 @@ struct EditProfileView: View {
 
 // MARK: - Mine annonser
 
+/// Hvilken modus wizarden skal åpnes i — bruker `.fullScreenCover(item:)`-binding
+/// så vi unngår to-state-race mellom `resumeDraft` og en `Bool` flag (som
+/// gir lyder cover-presentasjon med stale draft-verdi).
+enum WizardIntent: Identifiable {
+    case new
+    case resume(DraftListing)
+
+    var id: String {
+        switch self {
+        case .new: return "new"
+        case .resume(let d): return "resume-\(d.savedAt.timeIntervalSince1970)"
+        }
+    }
+}
+
 struct MyListingsView: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var listings: [Listing] = []
@@ -635,13 +650,13 @@ struct MyListingsView: View {
     /// etter listings, så kortene viser inntekt-banner når data er klart.
     @State private var monthlyEarnings: [String: Int] = [:]
     @State private var isLoading = true
-    @State private var showCreateListing = false
     @State private var deleteTarget: Listing?
     @State private var qrTarget: Listing?
     /// Eksisterende utkast som verten kan fortsette med. nil = ingen utkast.
     @State private var draft: DraftListing?
     @State private var showDiscardDraftAlert = false
-    @State private var resumeDraft: DraftListing?
+    /// Driver fullScreenCover'en — én state for både ny annonse og fortsett-utkast.
+    @State private var wizardSheet: WizardIntent?
 
     private static let serviceFee = 0.10
 
@@ -659,27 +674,35 @@ struct MyListingsView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    resumeDraft = nil
-                    showCreateListing = true
+                    wizardSheet = .new
                 } label: {
                     Image(systemName: "plus")
                 }
             }
         }
-        .fullScreenCover(isPresented: $showCreateListing, onDismiss: {
+        .fullScreenCover(item: $wizardSheet, onDismiss: {
             // Re-load utkast når wizarden lukkes så banneret oppdateres
             // (utkast slettet ved publisering, eller fortsatt der hvis ikke).
             loadDraft()
-            resumeDraft = nil
-        }) {
+        }) { intent in
             // Wizarden i sin egen NavigationStack — pakker for å bevare navigationTitle/toolbar.
             NavigationStack {
-                CreateListingView(
-                    onCreated: { newListing in
-                        listings.insert(newListing, at: 0)
-                    },
-                    initialDraft: resumeDraft
-                )
+                switch intent {
+                case .new:
+                    CreateListingView(
+                        onCreated: { newListing in
+                            listings.insert(newListing, at: 0)
+                        },
+                        initialDraft: nil
+                    )
+                case .resume(let draft):
+                    CreateListingView(
+                        onCreated: { newListing in
+                            listings.insert(newListing, at: 0)
+                        },
+                        initialDraft: draft
+                    )
+                }
             }
         }
         .alert("Forkast utkast?", isPresented: $showDiscardDraftAlert, actions: {
@@ -732,7 +755,7 @@ struct MyListingsView: View {
             Text("Du har ingen annonser ennå")
                 .foregroundStyle(.neutral500)
             Button {
-                showCreateListing = true
+                wizardSheet = .new
             } label: {
                 Text("Opprett annonse")
                     .font(.system(size: 15, weight: .semibold))
@@ -746,14 +769,19 @@ struct MyListingsView: View {
     }
 
     private var listingsScrollView: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                // Draft-kortet ligger UTENFOR LazyVStack — LazyVStack hadde
-                // hit-testing-bug der long-press på draft-cellen trigget
-                // contextMenu på listing-cellen under (build 165/166).
-                if let draft {
-                    draftCard(draft: draft)
-                }
+        // Draft-kortet ligger UTENFOR ScrollView — runde 1-3 prøvde alle å
+        // putte det inn i samme scroll-container som listing-NavigationLinks,
+        // og det ga konsekvent hit-testing-fail (tap registreres ikke,
+        // long-press popup'er listing-cellens contextMenu i stedet for
+        // utkastets). Eget gesture-context utenfor scroll fikser begge.
+        VStack(spacing: 0) {
+            if let draft {
+                draftCard(draft: draft)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 16)
+            }
+            ScrollView {
                 LazyVStack(spacing: 24) {
                     ForEach(listings) { listing in
                         NavigationLink {
@@ -783,63 +811,65 @@ struct MyListingsView: View {
                         }
                     }
                 }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 12)
         }
     }
 
     /// Kort som vises øverst i Mine annonser når et utkast finnes.
-    /// Tap → re-åpner wizarden med utkastet pre-lastet. Long-press →
+    /// Tap → åpner wizarden med utkastet pre-lastet. Long-press →
     /// kontekstmeny med "Forkast utkast"-action.
+    ///
+    /// Bruker onTapGesture i kombinasjon med wizardSheet-enum (single-state)
+    /// — tre tidligere forsøk med Button + isPresented Bool feilet pga.
+    /// gesture-routing-bug i samme scroll-container som listing-cellene.
     @ViewBuilder
     private func draftCard(draft: DraftListing) -> some View {
-        Button {
-            resumeDraft = draft
-            showCreateListing = true
-        } label: {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle()
-                        .fill(Color.primary100)
-                        .frame(width: 44, height: 44)
-                    Image(systemName: "doc.text")
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.primary600)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text("Fortsett utkast")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(Color.primary700)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 3)
-                            .background(Color.primary100)
-                            .clipShape(Capsule())
-                    }
-                    Text(draft.displayTitle)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                        .lineLimit(1)
-                    Text(draft.displaySubtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.neutral400)
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.primary100)
+                    .frame(width: 44, height: 44)
+                Image(systemName: "doc.text")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundStyle(Color.primary600)
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.primary50)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .stroke(Color.primary200, lineWidth: 1)
-            )
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text("Fortsett utkast")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.primary700)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Color.primary100)
+                        .clipShape(Capsule())
+                }
+                Text(draft.displayTitle)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .lineLimit(1)
+                Text(draft.displaySubtitle)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+            }
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(.neutral400)
         }
-        .buttonStyle(.plain)
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.primary50)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color.primary200, lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            wizardSheet = .resume(draft)
+        }
         .contextMenu {
             Button(role: .destructive) {
                 showDiscardDraftAlert = true
