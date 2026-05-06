@@ -95,15 +95,27 @@ struct MapListingBigCard: View {
                     Rectangle().fill(Color.neutral100).tag(0)
                 }
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
-            .indexViewStyle(.page(backgroundDisplayMode: .always))
+            .tabViewStyle(.page(indexDisplayMode: .never))
             .frame(height: 180)
             .clipped()
+            .overlay(alignment: .bottom) {
+                // Custom page-prikker (matcher ListingCard på forsiden) i
+                // stedet for SwiftUI's pill-stil-indikator. Plain hvite dots,
+                // sentrert. Vises på samme høyde som åpningstid-tag.
+                if let images = listing.images, images.count > 1 {
+                    HStack(spacing: 4) {
+                        ForEach(0..<min(images.count, 5), id: \.self) { i in
+                            Circle()
+                                .fill(i == imageIndex ? .white : .white.opacity(0.5))
+                                .frame(width: 5, height: 5)
+                        }
+                    }
+                    .padding(.bottom, 12)
+                }
+            }
             .overlay(alignment: .bottomLeading) {
                 // Åpningstid-tag for parkering — overlay på TabView arver
-                // dens 180pt-frame og kan ikke vokse forbi. Tidligere VStack
-                // + Spacer-pattern poppet ut av image-containeren fordi
-                // ZStack-en ikke hadde høyde-constraint.
+                // dens 180pt-frame og kan ikke vokse forbi.
                 if listing.category == .parking,
                    let label = OpeningHoursService.compactLabel(listing.openingHours) {
                     HStack(spacing: 3) {
@@ -117,8 +129,6 @@ struct MapListingBigCard: View {
                     .padding(.vertical, 4)
                     .background(.ultraThinMaterial)
                     .clipShape(Capsule())
-                    // Match TabView's page-indikator (sentrert i bunn med
-                    // ~8pt fra kant) så tag og prikker ligger på samme linje.
                     .padding(.leading, 10)
                     .padding(.bottom, 8)
                 }
