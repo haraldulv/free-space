@@ -273,9 +273,6 @@
         }
       }
     },
-    "%@ kr/time" : {
-
-    },
     "%@ kr%@" : {
       "localizations" : {
         "de" : {
@@ -314,6 +311,9 @@
         }
       }
     },
+    "%@ valgt" : {
+
+    },
     "%@–%@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -343,16 +343,6 @@
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@, %2$@"
-          }
-        }
-      }
-    },
-    "%@/%@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@/%2$@"
           }
         }
       }
@@ -539,9 +529,6 @@
 
     },
     "00" : {
-
-    },
-    "1" : {
 
     },
     "1 time før" : {
@@ -736,16 +723,6 @@
     "Annonsen mangler plass-data" : {
 
     },
-    "Annonsens standardpris er %@ kr/%@. Legg til helg-pris eller sesong-regler som overstyrer." : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Annonsens standardpris er %1$@ kr/%2$@. Legg til helg-pris eller sesong-regler som overstyrer."
-          }
-        }
-      }
-    },
     "Antall plasser" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -767,9 +744,6 @@
 
     },
     "Åpningstid" : {
-
-    },
-    "Åpningstider" : {
 
     },
     "Apple" : {
@@ -862,9 +836,6 @@
           }
         }
       }
-    },
-    "Båndet og pris-overstyringene som tilhører det fjernes." : {
-
     },
     "Bankkonto" : {
       "extractionState" : "manual",
@@ -1243,9 +1214,6 @@
         }
       }
     },
-    "Bruk for alle plasser" : {
-
-    },
     "Bruk forslag: %@" : {
 
     },
@@ -1393,9 +1361,6 @@
           }
         }
       }
-    },
-    "Dager" : {
-
     },
     "Datoer" : {
       "extractionState" : "manual",
@@ -1602,6 +1567,12 @@
           }
         }
       }
+    },
+    "Du kan blokkere enkeltdager eller sette egne priser for spesielle perioder. Du kan hoppe over dette nå — annonsen blir åpen alle datoer til standardpris." : {
+
+    },
+    "Du kan justere kalenderen når som helst fra Profil → Kalender etter publisering." : {
+
     },
     "Du må fortsette eller forkaste det aktive utkastet før du kan starte en ny annonse." : {
 
@@ -2068,9 +2039,6 @@
         }
       }
     },
-    "Farge" : {
-
-    },
     "Fasiliteter" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2121,9 +2089,6 @@
           }
         }
       }
-    },
-    "Felles bånd for alle plasser" : {
-
     },
     "Felles for alle plasser" : {
 
@@ -2503,9 +2468,6 @@
     "Fortsett utkast" : {
 
     },
-    "Fra" : {
-
-    },
     "Fra %@" : {
 
     },
@@ -2527,9 +2489,6 @@
       }
     },
     "Fra %@, velg utsjekk" : {
-
-    },
-    "Fredag, lørdag og søndag får egen pris. Presedens: sesong > helg > standard." : {
 
     },
     "Fremhevede i Norge" : {
@@ -2601,9 +2560,6 @@
       }
     },
     "Gå til Rediger annonse → Plasser for å sette opp plasser før du administrerer kalenderen." : {
-
-    },
-    "Gå tilbake og legg til tilgjengelighets-bånd hvis du vil variere prisen." : {
 
     },
     "Gateadresse" : {
@@ -2868,9 +2824,6 @@
         }
       }
     },
-    "Helg-pris" : {
-
-    },
     "Henter utbetalingsstatus..." : {
 
     },
@@ -2915,9 +2868,6 @@
       }
     },
     "Hurtigsvar vises i meldingsfeltet når du trykker +. Tap for å redigere, sveip for å slette." : {
-
-    },
-    "Hurtigvalg" : {
 
     },
     "Hva gjør plassen din spesiell? Utsikt, omgivelser, fasiliteter, tips til gjester …" : {
@@ -3105,9 +3055,6 @@
         }
       }
     },
-    "Ikke vis denne meldingen igjen" : {
-
-    },
     "Individuell melding per plass" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3142,13 +3089,7 @@
         }
       }
     },
-    "Ingen aktive regler. Alle netter bruker annonsens standardpris (%@ kr)." : {
-
-    },
     "Ingen annonser ennå" : {
-
-    },
-    "Ingen bånd å variere prisen på" : {
 
     },
     "Ingen bank-konto registrert. Pengene blir liggende til du legger inn IBAN." : {
@@ -3637,9 +3578,6 @@
     "Klikk for å endre. Maks 5 MB." : {
 
     },
-    "Klokkeslett" : {
-
-    },
     "Kom i gang med Tuno" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3843,9 +3781,6 @@
         }
       }
     },
-    "kr/time" : {
-
-    },
     "kr%@" : {
 
     },
@@ -4045,9 +3980,6 @@
         }
       }
     },
-    "Lagre helg-pris" : {
-
-    },
     "Lagrer …" : {
 
     },
@@ -4159,9 +4091,6 @@
         }
       }
     },
-    "Legg til eget bånd" : {
-
-    },
     "Legg til eget tillegg" : {
 
     },
@@ -4184,12 +4113,6 @@
           }
         }
       }
-    },
-    "Legg til pris for bestemte dager og klokkeslett — f.eks. arbeidstid, kveld eller helg. Bånd uten dekning bruker standardprisen." : {
-
-    },
-    "Legg til sesong" : {
-
     },
     "Legitimasjon (kommer senere — du kan opprette annonse nå)" : {
       "extractionState" : "manual",
@@ -4467,9 +4390,6 @@
         }
       }
     },
-    "Mange tar høyere pris i rushtiden eller helger. Du kan også beholde én fast pris hele uken." : {
-
-    },
     "Mangler betalingsinformasjon" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4667,9 +4587,6 @@
 
     },
     "Når ankommer du?" : {
-
-    },
-    "Når er plassene dine ledige?" : {
 
     },
     "Når?" : {
@@ -4943,9 +4860,6 @@
         }
       }
     },
-    "Ny åpningstid" : {
-
-    },
     "Ny gjest" : {
       "localizations" : {
         "de" : {
@@ -4955,9 +4869,6 @@
           }
         }
       }
-    },
-    "Nytt bånd" : {
-
     },
     "Om" : {
 
@@ -5204,9 +5115,6 @@
         }
       }
     },
-    "Periode" : {
-
-    },
     "Personbil" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5312,9 +5220,6 @@
         }
       }
     },
-    "Plass %@ bruker fellesbåndene" : {
-
-    },
     "Plass %lld" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5397,9 +5302,6 @@
       }
     },
     "Plasser plassene dine" : {
-
-    },
-    "Plasser: " : {
 
     },
     "Plassering" : {
@@ -5575,7 +5477,7 @@
     "Pris per %@" : {
 
     },
-    "Pris per døgn" : {
+    "Pris per dag" : {
 
     },
     "Pris per natt" : {
@@ -5612,12 +5514,6 @@
         }
       }
     },
-    "Pris per time" : {
-
-    },
-    "Pris-bånd er felles for alle plasser. Endringer gjøres på plass 1." : {
-
-    },
     "Prisenhet" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5634,9 +5530,6 @@
           }
         }
       }
-    },
-    "Prisregler" : {
-
     },
     "Profil" : {
       "extractionState" : "manual",
@@ -6119,9 +6012,6 @@
         }
       }
     },
-    "Sesong-pris" : {
-
-    },
     "Sett en pris du synes er rettferdig. Du kan endre den senere." : {
 
     },
@@ -6144,19 +6034,6 @@
           }
         }
       }
-    },
-    "Sett pris for %@ %@" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Sett pris for %1$@ %2$@"
-          }
-        }
-      }
-    },
-    "Sett pris for en periode (f.eks. sommeruker). Overstyrer helg og standard." : {
-
     },
     "Sett ulik melding per plass (f.eks. ulike port-koder)." : {
       "extractionState" : "manual",
@@ -6208,9 +6085,6 @@
           }
         }
       }
-    },
-    "Sett ulike priser for arbeidstid, kveld og helg via Prisregler øverst til høyre." : {
-
     },
     "Siste bookings" : {
       "extractionState" : "manual",
@@ -6419,9 +6293,6 @@
         }
       }
     },
-    "Slett bånd" : {
-
-    },
     "Slett konto" : {
 
     },
@@ -6488,15 +6359,6 @@
         }
       }
     },
-    "Standardpris %@ kr/time" : {
-
-    },
-    "Standardpris er %@ kr. La stå tomt for å beholde standardpris." : {
-
-    },
-    "Standardpris er %@ kr/time. Legg til time-bånd som gjelder bestemte dager og klokkeslett." : {
-
-    },
     "Standardpris per natt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6514,10 +6376,10 @@
         }
       }
     },
-    "Start søket" : {
+    "Standardpris: %@ kr" : {
 
     },
-    "Start-dato satt" : {
+    "Start søket" : {
 
     },
     "Største kjøretøy som passer på plassen, i meter. Påkrevd for bobil og campingbil." : {
@@ -6654,12 +6516,6 @@
         }
       }
     },
-    "Tidspunkt" : {
-
-    },
-    "Til" : {
-
-    },
     "Til bank •••• %@" : {
 
     },
@@ -6787,12 +6643,6 @@
           }
         }
       }
-    },
-    "Time-bånd" : {
-
-    },
-    "Timer" : {
-
     },
     "Ting du bør vite" : {
 
@@ -6977,9 +6827,6 @@
           }
         }
       }
-    },
-    "Trykk slutt-dato for å velge hele området" : {
-
     },
     "Tuno-vert" : {
 
@@ -7229,12 +7076,6 @@
     "Ved å fortsette godtar du [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer](https://tuno.no/retningslinjer). Tuno bruker Stripe som betalingsleverandør." : {
 
     },
-    "Velg alle" : {
-
-    },
-    "Velg annonse" : {
-
-    },
     "Velg bilder" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7307,12 +7148,6 @@
       }
     },
     "Velg hva som er inkludert eller tilgjengelig på denne plassen. Alt er valgfritt, du kan justere prisen og legge til egne tillegg." : {
-
-    },
-    "Velg hvilke plasser blokkering gjelder for. Prisoverstyringer gjelder hele annonsen." : {
-
-    },
-    "Velg om plassen alltid er ledig, eller sett bestemte tider den kan leies ut." : {
 
     },
     "Velg plass" : {

@@ -1,21 +1,18 @@
 import SwiftUI
 
-/// Profile-kalender for både parking og camping. Bruker den nye
-/// `SpotCalendarEditor` som erstatter den tidligere bånd-baserte kalenderen.
+/// Post-publisering kalender (Profil → Kalender). Bruker den samme
+/// `WizardPricingCalendarView` / `WizardSeasonalCalendarView` som wizarden,
+/// hooked til den nye datamodellen (per-plass blockedDates +
+/// datePriceOverrides — ingen bånd).
 ///
-/// Modell: per-plass `blockedDates` + per-plass `datePriceOverrides`. Ingen
-/// bånd, ingen ukedags-mønster, ingen åpningstid (åpningstid er listing-level
-/// og redigeres i egen Rediger-tab).
-///
-/// Multi-spot-picker øverst lar verten redigere alle plasser samtidig
-/// (default) eller velge én eller flere spesifikke. Endringer på den
-/// "kanoniske" plassen propagerer til alle valgte før save.
+/// Multi-spot-picker pill-rad øverst lar host velge "Alle plasser" eller én
+/// spesifikk plass. Endringer auto-lagres til spot_markers jsonb.
 struct ProfileCalendarView: View {
     let listing: Listing
 
-    @State private var spotMarkers: [SpotMarker] = []
-    /// Tom mengde = "Alle plasser". Ellers spesifikke spotId-er.
-    @State private var selectedSpotIds: Set<String> = []
+    @StateObject private var form = ListingFormModel()
+    @State private var focusedSpotId: String? = nil
+    @State private var allSpotsMode: Bool = true
     @State private var isLoading = true
     @State private var saveTask: Task<Void, Never>?
     @State private var saveStatus: SaveStatus = .idle
@@ -27,22 +24,12 @@ struct ProfileCalendarView: View {
 
     @Environment(\.dismiss) private var dismiss
 
-    /// Indeks for den "kanoniske" plassen som vises i editor'en. Endringer
-    /// her propageres til alle andre valgte plasser før save.
-    private var canonicalIndex: Int? {
-        if let firstSelected = selectedSpotIds.sorted().first,
-           let idx = spotMarkers.firstIndex(where: { $0.id == firstSelected }) {
-            return idx
-        }
-        return spotMarkers.indices.first
+    private var spotIds: [String] {
+        form.spotMarkers.compactMap { $0.id }
     }
 
-    /// SpotIds som mottar endringer ved save. Tom selection = alle spots.
-    private var effectiveTargetIds: [String] {
-        if selectedSpotIds.isEmpty {
-            return spotMarkers.compactMap { $0.id }
-        }
-        return Array(selectedSpotIds)
+    private var canonicalSpotId: String? {
+        focusedSpotId ?? spotIds.first
     }
 
     var body: some View {
@@ -56,102 +43,59 @@ struct ProfileCalendarView: View {
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .task { await load() }
-        .onChange(of: spotMarkers) { _, _ in scheduleSave() }
+        .onChange(of: form.spotMarkers) { _, _ in scheduleSave() }
     }
 
     @ViewBuilder
     private var content: some View {
-        ZStack(alignment: .topLeading) {
-            VStack(spacing: 0) {
-                Spacer().frame(height: 56)
-                if let idx = canonicalIndex {
-                    SpotCalendarEditor(
-                        blockedDates: blockedDatesBinding(for: idx),
-                        datePriceOverrides: overridesBinding(for: idx),
-                        basePrice: spotMarkers[idx].pricePerNight ?? spotMarkers[idx].price ?? 0
-                    )
-                } else {
-                    emptyState
+        ZStack(alignment: .top) {
+            calendarBody
+
+            VStack(spacing: 8) {
+                topBar
+                if form.spotMarkers.count > 1 {
+                    spotPickerBar
                 }
-            }
-
-            HStack(alignment: .center, spacing: 10) {
-                Button {
-                    dismiss()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Color.white))
-                        .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
-                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Lukk")
-
-                if spotMarkers.count > 1 {
-                    spotPickerPill
-                }
-
-                Spacer()
-
-                saveIndicator
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
         }
     }
 
-    // MARK: - Bindings
-
-    private func blockedDatesBinding(for index: Int) -> Binding<[String]> {
-        Binding(
-            get: {
-                guard spotMarkers.indices.contains(index) else { return [] }
-                return spotMarkers[index].blockedDates ?? []
-            },
-            set: { newValue in
-                guard spotMarkers.indices.contains(index) else { return }
-                let value = newValue.isEmpty ? nil : newValue
-                spotMarkers[index].blockedDates = value
-                propagateToOtherTargets(canonicalIndex: index, blocked: value, overrides: nil)
+    @ViewBuilder
+    private var calendarBody: some View {
+        if let id = canonicalSpotId {
+            if listing.category == .camping {
+                WizardSeasonalCalendarView(form: form, spotId: id)
+            } else {
+                WizardPricingCalendarView(form: form, spotId: id)
             }
-        )
-    }
-
-    private func overridesBinding(for index: Int) -> Binding<[String: Int]> {
-        Binding(
-            get: {
-                guard spotMarkers.indices.contains(index) else { return [:] }
-                return spotMarkers[index].datePriceOverrides ?? [:]
-            },
-            set: { newValue in
-                guard spotMarkers.indices.contains(index) else { return }
-                let value = newValue.isEmpty ? nil : newValue
-                spotMarkers[index].datePriceOverrides = value
-                propagateToOtherTargets(canonicalIndex: index, blocked: nil, overrides: value)
-            }
-        )
-    }
-
-    private func propagateToOtherTargets(
-        canonicalIndex: Int,
-        blocked: [String]??,
-        overrides: [String: Int]??
-    ) {
-        let targets = effectiveTargetIds
-        guard targets.count > 1 else { return }
-        let canonicalId = spotMarkers[canonicalIndex].id
-        for i in spotMarkers.indices where spotMarkers[i].id != canonicalId {
-            if let id = spotMarkers[i].id, targets.contains(id) {
-                if let blocked { spotMarkers[i].blockedDates = blocked }
-                if let overrides { spotMarkers[i].datePriceOverrides = overrides }
-            }
+        } else {
+            emptyState
         }
     }
 
-    // MARK: - Save indicator
+    private var topBar: some View {
+        HStack(alignment: .center, spacing: 10) {
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color.white))
+                    .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+                    .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Lukk")
+
+            Spacer()
+
+            saveIndicator
+        }
+    }
 
     @ViewBuilder
     private var saveIndicator: some View {
@@ -180,65 +124,65 @@ struct ProfileCalendarView: View {
         }
     }
 
-    // MARK: - Spot-picker
+    private var spotPickerBar: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Hvilke plasser?")
+                .font(.system(size: 12))
+                .foregroundStyle(.neutral500)
 
-    private var spotPickerSummary: String {
-        if selectedSpotIds.isEmpty { return "Alle plasser" }
-        let labels: [String] = spotMarkers.enumerated().compactMap { idx, spot in
-            guard let id = spot.id, selectedSpotIds.contains(id) else { return nil }
-            return spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
-                ? spot.label!
-                : "Plass \(idx + 1)"
-        }
-        if labels.count <= 2 { return labels.joined(separator: ", ") }
-        return "\(labels.count) av \(spotMarkers.count) plasser"
-    }
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    pickerPill(
+                        label: "Alle plasser",
+                        icon: "rectangle.3.group.fill",
+                        isSelected: allSpotsMode
+                    ) {
+                        allSpotsMode = true
+                        focusedSpotId = spotIds.first
+                    }
 
-    private var spotPickerPill: some View {
-        Menu {
-            Button {
-                selectedSpotIds = []
-            } label: {
-                Label("Alle plasser", systemImage: selectedSpotIds.isEmpty ? "checkmark" : "rectangle.3.group.fill")
-            }
-            Divider()
-            ForEach(Array(spotMarkers.enumerated()), id: \.offset) { idx, spot in
-                if let id = spot.id {
-                    let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
-                        ? spot.label!
-                        : "Plass \(idx + 1)"
-                    Button {
-                        if selectedSpotIds.contains(id) {
-                            selectedSpotIds.remove(id)
-                        } else {
-                            selectedSpotIds.insert(id)
-                        }
-                    } label: {
-                        if selectedSpotIds.contains(id) {
-                            Label(label, systemImage: "checkmark")
-                        } else {
-                            Text(label)
+                    ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { idx, spot in
+                        if let id = spot.id {
+                            let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+                                ? spot.label!
+                                : "\(idx + 1)"
+                            pickerPill(
+                                label: label,
+                                icon: nil,
+                                isSelected: !allSpotsMode && focusedSpotId == id
+                            ) {
+                                allSpotsMode = false
+                                focusedSpotId = id
+                            }
                         }
                     }
                 }
             }
-        } label: {
+        }
+    }
+
+    @ViewBuilder
+    private func pickerPill(label: String, icon: String?, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
             HStack(spacing: 6) {
-                Image(systemName: "mappin.and.ellipse")
-                    .font(.system(size: 11, weight: .semibold))
-                Text(spotPickerSummary)
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                Text(label)
                     .font(.system(size: 13, weight: .semibold))
-                    .lineLimit(1)
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 10, weight: .bold))
             }
-            .foregroundStyle(.neutral900)
+            .foregroundStyle(isSelected ? .white : Color.neutral900)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(Capsule().fill(Color.white))
-            .overlay(Capsule().stroke(Color.neutral200, lineWidth: 1))
-            .shadow(color: .black.opacity(0.06), radius: 4, y: 2)
+            .background(isSelected ? Color.primary600 : Color.white)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule().stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
         }
+        .buttonStyle(.plain)
     }
 
     private var emptyState: some View {
@@ -249,11 +193,6 @@ struct ProfileCalendarView: View {
             Text("Annonsen mangler plass-data")
                 .font(.system(size: 14, weight: .semibold))
                 .foregroundStyle(.neutral600)
-            Text("Gå til Rediger annonse → Plasser for å sette opp plasser før du administrerer kalenderen.")
-                .font(.system(size: 12))
-                .foregroundStyle(.neutral500)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 40)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -262,8 +201,12 @@ struct ProfileCalendarView: View {
 
     @MainActor
     private func load() async {
-        spotMarkers = listing.spotMarkers ?? []
-        previousSpotMarkers = spotMarkers
+        form.spotMarkers = listing.spotMarkers ?? []
+        form.category = listing.category
+        form.title = listing.title
+        form.priceUnit = listing.priceUnit ?? .natt
+        focusedSpotId = form.spotMarkers.first?.id
+        previousSpotMarkers = form.spotMarkers
         isLoading = false
     }
 
@@ -271,7 +214,7 @@ struct ProfileCalendarView: View {
 
     private func scheduleSave() {
         guard !isLoading else { return }
-        let current = spotMarkers
+        let current = form.spotMarkers
         let previous = previousSpotMarkers
         let changed = current.enumerated().contains { idx, spot in
             guard idx < previous.count else { return true }
@@ -280,6 +223,17 @@ struct ProfileCalendarView: View {
                 || (spot.datePriceOverrides ?? [:]) != (prev.datePriceOverrides ?? [:])
         }
         guard changed else { return }
+
+        // I "Alle plasser"-modus: kopier endringer til alle andre spots før save.
+        if allSpotsMode, let canonical = canonicalSpotId,
+           let canonicalIdx = form.spotMarkers.firstIndex(where: { $0.id == canonical }) {
+            let blocked = form.spotMarkers[canonicalIdx].blockedDates
+            let overrides = form.spotMarkers[canonicalIdx].datePriceOverrides
+            for i in form.spotMarkers.indices where form.spotMarkers[i].id != canonical {
+                form.spotMarkers[i].blockedDates = blocked
+                form.spotMarkers[i].datePriceOverrides = overrides
+            }
+        }
 
         saveTask?.cancel()
         saveTask = Task {
@@ -298,10 +252,10 @@ struct ProfileCalendarView: View {
             }
             try await supabase
                 .from("listings")
-                .update(SpotMarkersUpdate(spot_markers: spotMarkers))
+                .update(SpotMarkersUpdate(spot_markers: form.spotMarkers))
                 .eq("id", value: listing.id)
                 .execute()
-            previousSpotMarkers = spotMarkers
+            previousSpotMarkers = form.spotMarkers
             saveStatus = .saved
             Task {
                 try? await Task.sleep(nanoseconds: 2_500_000_000)

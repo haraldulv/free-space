@@ -1,125 +1,136 @@
 import SwiftUI
 
-/// Mini-wizard-step for kalender per plass. Valgfritt — bruker kan hoppe over
-/// og justere senere fra Profil → Kalender.
+/// Mini-wizard-step for kalender per plass.
 ///
-/// Wraper `SpotCalendarEditor` per plass og gir tydelig "skip"-melding.
+/// Setter `form.fullscreenStep = true` så progress-bar + WizardNavBar skjules.
+/// Bruker den eksisterende `WizardPricingCalendarView` (parkering) /
+/// `WizardSeasonalCalendarView` (camping) — de samme fine kontrollerne som er
+/// bygget over flere økter, nå hooked til den nye datamodellen
+/// (spot.blockedDates + spot.datePriceOverrides, ingen bånd).
+///
+/// Spot-picker pills øverst lar host velge "Alle plasser" eller én spesifikk
+/// plass. I "Alle plasser"-modus kopieres endringer fra den valgte plassen
+/// til alle andre.
 struct SpotCalendarStep: View {
     @ObservedObject var form: ListingFormModel
+    /// Hvilken plass kalenderen redigerer akkurat nå. nil = alle (vises som
+    /// første plass under, men endringer propagerer til alle).
+    @State private var focusedSpotId: String? = nil
+    /// True hvis bruker har sagt "alle plasser" — synk endringer på tvers.
+    @State private var allSpotsMode: Bool = true
+
+    private var spotIds: [String] {
+        form.spotMarkers.compactMap { $0.id }
+    }
+
+    private var canonicalSpotId: String? {
+        focusedSpotId ?? spotIds.first
+    }
 
     var body: some View {
-        TabView(selection: $form.currentSpotIndex) {
-            ForEach(Array(form.spotMarkers.indices), id: \.self) { index in
-                VStack(alignment: .leading, spacing: 0) {
-                    spotHeader(index: index)
-                        .padding(.horizontal, 24)
+        ZStack(alignment: .top) {
+            calendarContent
+
+            VStack(spacing: 0) {
+                if form.spotMarkers.count > 1 {
+                    spotPickerBar
                         .padding(.top, 8)
-                        .padding(.bottom, 6)
-
-                    skipNotice
-                        .padding(.horizontal, 24)
-                        .padding(.bottom, 12)
-
-                    if index > 0 {
-                        copyFromPreviousButton(currentIndex: index)
-                            .padding(.horizontal, 24)
-                            .padding(.bottom, 8)
-                    }
-
-                    SpotCalendarEditor(
-                        blockedDates: blockedDatesBinding(for: index),
-                        datePriceOverrides: overridesBinding(for: index),
-                        basePrice: basePrice(for: index)
-                    )
+                        .padding(.horizontal, 16)
                 }
-                .tag(index)
+                Spacer()
             }
         }
-        .tabViewStyle(.page(indexDisplayMode: .never))
-        .animation(.easeInOut(duration: 0.28), value: form.currentSpotIndex)
-    }
-
-    private func spotHeader(index: Int) -> some View {
-        let total = form.spotMarkers.count
-        return VStack(alignment: .leading, spacing: 6) {
-            Text(total == 1
-                 ? "Blokker datoer eller sett spesialpriser"
-                 : "Kalender for plass \(index + 1)")
-                .font(.system(size: 24, weight: .bold))
-                .foregroundStyle(.neutral900)
-            Text("Du kan blokkere enkeltdager eller sette egne priser for spesielle perioder. Du kan hoppe over dette nå — annonsen blir åpen alle datoer til standardpris.")
-                .font(.system(size: 14))
-                .foregroundStyle(.neutral500)
-                .lineSpacing(2)
+        .onAppear { form.fullscreenStep = true }
+        .onDisappear {
+            form.fullscreenStep = false
+            // Etter editing: hvis "alle plasser"-modus, kopier kanonisk
+            // plass' kalender-data til alle andre.
+            if allSpotsMode, let canonical = canonicalSpotId,
+               let idx = form.spotMarkers.firstIndex(where: { $0.id == canonical }) {
+                let blocked = form.spotMarkers[idx].blockedDates
+                let overrides = form.spotMarkers[idx].datePriceOverrides
+                for i in form.spotMarkers.indices where form.spotMarkers[i].id != canonical {
+                    form.spotMarkers[i].blockedDates = blocked
+                    form.spotMarkers[i].datePriceOverrides = overrides
+                }
+            }
         }
-    }
-
-    private var skipNotice: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "info.circle.fill")
-                .font(.system(size: 14))
-                .foregroundStyle(Color.primary600)
-            Text("Du kan justere kalenderen når som helst fra Profil → Kalender etter publisering.")
-                .font(.system(size: 12))
-                .foregroundStyle(.neutral600)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.primary50)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     @ViewBuilder
-    private func copyFromPreviousButton(currentIndex: Int) -> some View {
-        CopyFromPreviousSpotButton(label: "Bruk samme kalender som plass \(currentIndex)") {
-            copyCalendarFromPrevious(currentIndex: currentIndex)
+    private var calendarContent: some View {
+        if let id = canonicalSpotId {
+            if form.category == .camping {
+                WizardSeasonalCalendarView(form: form, spotId: id)
+            } else {
+                WizardPricingCalendarView(form: form, spotId: id)
+            }
+        } else {
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
-    // MARK: - Bindings
+    // MARK: - Spot picker pills (Alle plasser / 1 / 2 / ...)
 
-    private func blockedDatesBinding(for index: Int) -> Binding<[String]> {
-        Binding(
-            get: {
-                guard form.spotMarkers.indices.contains(index) else { return [] }
-                return form.spotMarkers[index].blockedDates ?? []
-            },
-            set: { newValue in
-                guard form.spotMarkers.indices.contains(index) else { return }
-                form.spotMarkers[index].blockedDates = newValue.isEmpty ? nil : newValue
+    private var spotPickerBar: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Hvilke plasser?")
+                .font(.system(size: 13))
+                .foregroundStyle(.neutral500)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    pickerPill(
+                        label: "Alle plasser",
+                        icon: "rectangle.3.group.fill",
+                        isSelected: allSpotsMode
+                    ) {
+                        allSpotsMode = true
+                        focusedSpotId = spotIds.first
+                    }
+
+                    ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { idx, spot in
+                        if let id = spot.id {
+                            let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+                                ? spot.label!
+                                : "\(idx + 1)"
+                            pickerPill(
+                                label: label,
+                                icon: nil,
+                                isSelected: !allSpotsMode && focusedSpotId == id
+                            ) {
+                                allSpotsMode = false
+                                focusedSpotId = id
+                            }
+                        }
+                    }
+                }
             }
-        )
+        }
     }
 
-    private func overridesBinding(for index: Int) -> Binding<[String: Int]> {
-        Binding(
-            get: {
-                guard form.spotMarkers.indices.contains(index) else { return [:] }
-                return form.spotMarkers[index].datePriceOverrides ?? [:]
-            },
-            set: { newValue in
-                guard form.spotMarkers.indices.contains(index) else { return }
-                form.spotMarkers[index].datePriceOverrides = newValue.isEmpty ? nil : newValue
+    @ViewBuilder
+    private func pickerPill(label: String, icon: String?, isSelected: Bool, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .semibold))
+                }
+                Text(label)
+                    .font(.system(size: 13, weight: .semibold))
             }
-        )
-    }
-
-    private func basePrice(for index: Int) -> Int {
-        guard form.spotMarkers.indices.contains(index) else { return 0 }
-        let spot = form.spotMarkers[index]
-        // Parkering: price (kr/dag). Camping: pricePerNight ?? price.
-        return spot.pricePerNight ?? spot.price ?? 0
-    }
-
-    private func copyCalendarFromPrevious(currentIndex: Int) {
-        let prevIndex = currentIndex - 1
-        guard
-            form.spotMarkers.indices.contains(prevIndex),
-            form.spotMarkers.indices.contains(currentIndex)
-        else { return }
-        let prev = form.spotMarkers[prevIndex]
-        form.spotMarkers[currentIndex].blockedDates = prev.blockedDates
-        form.spotMarkers[currentIndex].datePriceOverrides = prev.datePriceOverrides
+            .foregroundStyle(isSelected ? .white : Color.neutral900)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 8)
+            .background(isSelected ? Color.primary600 : Color.white)
+            .clipShape(Capsule())
+            .overlay(
+                Capsule().stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
+        }
+        .buttonStyle(.plain)
     }
 }
