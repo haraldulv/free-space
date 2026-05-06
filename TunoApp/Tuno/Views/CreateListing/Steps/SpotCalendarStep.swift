@@ -1,65 +1,185 @@
 import SwiftUI
 
-/// Mini-wizard-step for kalender per plass.
+/// Mini-wizard-step for kalender per plass. To faser:
 ///
-/// Setter `form.fullscreenStep = true` så progress-bar + WizardNavBar skjules.
-/// Bruker den eksisterende `WizardPricingCalendarView` (parkering) /
-/// `WizardSeasonalCalendarView` (camping) — de samme fine kontrollerne som er
-/// bygget over flere økter, nå hooked til den nye datamodellen
-/// (spot.blockedDates + spot.datePriceOverrides, ingen bånd).
+/// **`.ask`** — vises i normal wizard-modus med Neste/Tilbake. To valg-kort:
+///   - "Hopp over" → annonsen er åpen alle dager til standardpris.
+///   - "Sett opp kalender" → går til `.editing`.
 ///
-/// Spot-picker pills øverst lar host velge "Alle plasser" eller én spesifikk
-/// plass. I "Alle plasser"-modus kopieres endringer fra den valgte plassen
-/// til alle andre.
+/// **`.editing`** — fullskjerm (form.fullscreenStep = true). Bruker den
+/// eksisterende `WizardPricingCalendarView` / `WizardSeasonalCalendarView`.
+/// Egen top-bar med X (= tilbake til ask) og Ferdig (= form.goNext()).
 struct SpotCalendarStep: View {
     @ObservedObject var form: ListingFormModel
-    /// Hvilken plass kalenderen redigerer akkurat nå. nil = alle (vises som
-    /// første plass under, men endringer propagerer til alle).
-    @State private var focusedSpotId: String? = nil
-    /// True hvis bruker har sagt "alle plasser" — synk endringer på tvers.
-    @State private var allSpotsMode: Bool = true
+    @State private var phasePerSpot: [String: Phase] = [:]
 
-    private var spotIds: [String] {
-        form.spotMarkers.compactMap { $0.id }
+    enum Phase { case ask, editing }
+
+    private var currentSpotId: String? {
+        guard form.spotMarkers.indices.contains(form.currentSpotIndex) else { return nil }
+        return form.spotMarkers[form.currentSpotIndex].id
     }
 
-    private var canonicalSpotId: String? {
-        focusedSpotId ?? spotIds.first
+    private var phase: Phase {
+        guard let id = currentSpotId else { return .ask }
+        return phasePerSpot[id] ?? .ask
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            calendarContent
-
-            VStack(spacing: 0) {
-                if form.spotMarkers.count > 1 {
-                    spotPickerBar
-                        .padding(.top, 8)
-                        .padding(.horizontal, 16)
-                }
-                Spacer()
+        Group {
+            switch phase {
+            case .ask:
+                askPhase
+            case .editing:
+                editingPhase
             }
         }
-        .onAppear { form.fullscreenStep = true }
-        .onDisappear {
-            form.fullscreenStep = false
-            // Etter editing: hvis "alle plasser"-modus, kopier kanonisk
-            // plass' kalender-data til alle andre.
-            if allSpotsMode, let canonical = canonicalSpotId,
-               let idx = form.spotMarkers.firstIndex(where: { $0.id == canonical }) {
-                let blocked = form.spotMarkers[idx].blockedDates
-                let overrides = form.spotMarkers[idx].datePriceOverrides
-                for i in form.spotMarkers.indices where form.spotMarkers[i].id != canonical {
-                    form.spotMarkers[i].blockedDates = blocked
-                    form.spotMarkers[i].datePriceOverrides = overrides
+        .id("\(currentSpotId ?? "")-\(phase)")
+        .animation(.easeInOut(duration: 0.22), value: phase)
+    }
+
+    // MARK: - Ask phase
+
+    @ViewBuilder
+    private var askPhase: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                askHeader
+                    .padding(.top, 8)
+
+                askChoiceCard(
+                    icon: "calendar.badge.checkmark",
+                    title: "Sett opp kalender",
+                    subtitle: "Blokker datoer eller sett egne priser for spesielle perioder.",
+                    accent: Color.primary600
+                ) {
+                    if let id = currentSpotId {
+                        phasePerSpot[id] = .editing
+                    }
                 }
+
+                askChoiceCard(
+                    icon: "arrow.right.circle.fill",
+                    title: "Hopp over",
+                    subtitle: "Annonsen blir åpen alle datoer til standardpris. Du kan justere når som helst fra Profil → Kalender etter publisering.",
+                    accent: .neutral900
+                ) {
+                    form.goNext()
+                }
+
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
+        }
+    }
+
+    private var askHeader: some View {
+        let total = form.spotMarkers.count
+        let title = total == 1
+            ? "Vil du sette opp kalender?"
+            : "Kalender for plass \(form.currentSpotIndex + 1)"
+        return VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 24, weight: .bold))
+                .foregroundStyle(.neutral900)
+            Text("Du kan blokkere enkeltdager eller sette egne priser for spesielle perioder. Eller bare hoppe over og gjøre dette senere — annonsen er da åpen alle datoer til standardpris.")
+                .font(.system(size: 14))
+                .foregroundStyle(.neutral500)
+                .lineSpacing(2)
         }
     }
 
     @ViewBuilder
-    private var calendarContent: some View {
-        if let id = canonicalSpotId {
+    private func askChoiceCard(
+        icon: String,
+        title: String,
+        subtitle: String,
+        accent: Color,
+        onTap: @escaping () -> Void
+    ) -> some View {
+        Button(action: onTap) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(accent.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: icon)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(accent)
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(title)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text(subtitle)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral500)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral400)
+            }
+            .padding(16)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Editing phase (fullscreen)
+
+    @ViewBuilder
+    private var editingPhase: some View {
+        ZStack(alignment: .top) {
+            calendarBody
+
+            // Egen top-bar med X (= tilbake) + Ferdig (= advance).
+            HStack(alignment: .center, spacing: 10) {
+                Button {
+                    if let id = currentSpotId { phasePerSpot[id] = .ask }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Color.white))
+                        .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Lukk")
+
+                Spacer()
+
+                Button {
+                    form.goNext()
+                } label: {
+                    Text("Ferdig")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 9)
+                        .background(Color.primary600)
+                        .clipShape(Capsule())
+                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+        }
+        .onAppear { form.fullscreenStep = true }
+        .onDisappear { form.fullscreenStep = false }
+    }
+
+    @ViewBuilder
+    private var calendarBody: some View {
+        if let id = currentSpotId {
             if form.category == .camping {
                 WizardSeasonalCalendarView(form: form, spotId: id)
             } else {
@@ -69,68 +189,5 @@ struct SpotCalendarStep: View {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-    }
-
-    // MARK: - Spot picker pills (Alle plasser / 1 / 2 / ...)
-
-    private var spotPickerBar: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Hvilke plasser?")
-                .font(.system(size: 13))
-                .foregroundStyle(.neutral500)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    pickerPill(
-                        label: "Alle plasser",
-                        icon: "rectangle.3.group.fill",
-                        isSelected: allSpotsMode
-                    ) {
-                        allSpotsMode = true
-                        focusedSpotId = spotIds.first
-                    }
-
-                    ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { idx, spot in
-                        if let id = spot.id {
-                            let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
-                                ? spot.label!
-                                : "\(idx + 1)"
-                            pickerPill(
-                                label: label,
-                                icon: nil,
-                                isSelected: !allSpotsMode && focusedSpotId == id
-                            ) {
-                                allSpotsMode = false
-                                focusedSpotId = id
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func pickerPill(label: String, icon: String?, isSelected: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 6) {
-                if let icon {
-                    Image(systemName: icon)
-                        .font(.system(size: 11, weight: .semibold))
-                }
-                Text(label)
-                    .font(.system(size: 13, weight: .semibold))
-            }
-            .foregroundStyle(isSelected ? .white : Color.neutral900)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(isSelected ? Color.primary600 : Color.white)
-            .clipShape(Capsule())
-            .overlay(
-                Capsule().stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
-        }
-        .buttonStyle(.plain)
     }
 }

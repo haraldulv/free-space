@@ -35,7 +35,7 @@ struct WizardSeasonalCalendarView: View {
 
     // Match parking-kalenderens konstanter eksakt.
     private let monthsAhead = 6
-    private let cellHeight: CGFloat = 110
+    private let cellHeight: CGFloat = 95
     private let cellSpacing: CGFloat = 6
     private let bandHeight: CGFloat = 22
     private let bandSpacing: CGFloat = 3
@@ -325,7 +325,8 @@ struct WizardSeasonalCalendarView: View {
         if isAnchor { return Color.primary600.opacity(0.18) }
         if isSelected { return Color.primary600.opacity(0.10) }
         if isBlocked { return Color.neutral100 }
-        if hasOverride { return Color(hex: "#ecfdf5") }
+        // hasOverride har ikke egen bakgrunn lenger — den grønne pris-teksten
+        // alene markerer at en dato har en pris-overstyring.
         return Color.white
     }
 

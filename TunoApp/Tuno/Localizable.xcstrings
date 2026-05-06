@@ -311,9 +311,6 @@
         }
       }
     },
-    "%@ valgt" : {
-
-    },
     "%@–%@" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -836,6 +833,9 @@
           }
         }
       }
+    },
+    "Båndet og pris-overstyringene som tilhører det fjernes." : {
+
     },
     "Bankkonto" : {
       "extractionState" : "manual",
@@ -1568,12 +1568,6 @@
         }
       }
     },
-    "Du kan blokkere enkeltdager eller sette egne priser for spesielle perioder. Du kan hoppe over dette nå — annonsen blir åpen alle datoer til standardpris." : {
-
-    },
-    "Du kan justere kalenderen når som helst fra Profil → Kalender etter publisering." : {
-
-    },
     "Du må fortsette eller forkaste det aktive utkastet før du kan starte en ny annonse." : {
 
     },
@@ -2038,6 +2032,9 @@
           }
         }
       }
+    },
+    "Farge" : {
+
     },
     "Fasiliteter" : {
       "extractionState" : "manual",
@@ -2559,7 +2556,7 @@
         }
       }
     },
-    "Gå til Rediger annonse → Plasser for å sette opp plasser før du administrerer kalenderen." : {
+    "Gå tilbake og legg til tilgjengelighets-bånd hvis du vil variere prisen." : {
 
     },
     "Gateadresse" : {
@@ -2904,6 +2901,9 @@
         }
       }
     },
+    "Hvilke plasser?" : {
+
+    },
     "Hvilken kjøretøytype passer?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3090,6 +3090,9 @@
       }
     },
     "Ingen annonser ennå" : {
+
+    },
+    "Ingen bånd å variere prisen på" : {
 
     },
     "Ingen bank-konto registrert. Pengene blir liggende til du legger inn IBAN." : {
@@ -4870,6 +4873,9 @@
         }
       }
     },
+    "Nytt bånd" : {
+
+    },
     "Om" : {
 
     },
@@ -5114,6 +5120,9 @@
           }
         }
       }
+    },
+    "Periode" : {
+
     },
     "Personbil" : {
       "extractionState" : "manual",
@@ -5477,7 +5486,7 @@
     "Pris per %@" : {
 
     },
-    "Pris per dag" : {
+    "Pris per døgn" : {
 
     },
     "Pris per natt" : {
@@ -5513,6 +5522,9 @@
           }
         }
       }
+    },
+    "Pris per time" : {
+
     },
     "Prisenhet" : {
       "extractionState" : "manual",
@@ -6293,6 +6305,9 @@
         }
       }
     },
+    "Slett bånd" : {
+
+    },
     "Slett konto" : {
 
     },
@@ -6375,9 +6390,6 @@
           }
         }
       }
-    },
-    "Standardpris: %@ kr" : {
-
     },
     "Start søket" : {
 
@@ -6515,6 +6527,9 @@
           }
         }
       }
+    },
+    "Tidspunkt" : {
+
     },
     "Til bank •••• %@" : {
 
