@@ -455,7 +455,7 @@ enum PricingService {
                 )
             case .specificWeeks(let weeks):
                 for week in weeks {
-                    guard let range = WizardPricingCalendarView.dateRangeForWeek(year: week.year, week: week.weekNum) else { continue }
+                    guard let range = isoWeekDateRange(year: week.year, week: week.weekNum) else { continue }
                     try? await addHourlyBandRule(
                         listingId: listingId,
                         dayMask: band.dayMask,
@@ -557,6 +557,22 @@ enum PricingService {
         f.locale = Locale(identifier: "en_US_POSIX")
         return f
     }()
+
+    /// Returner dato-range (start, slutt) for en gitt ISO-uke.
+    /// Erstatter den tidligere `WizardPricingCalendarView.dateRangeForWeek`.
+    private static func isoWeekDateRange(year: Int, week: Int) -> (start: String, end: String)? {
+        var cal = Calendar(identifier: .iso8601)
+        cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+        cal.firstWeekday = 2
+        cal.minimumDaysInFirstWeek = 4
+        var comps = DateComponents()
+        comps.weekday = 2
+        comps.weekOfYear = week
+        comps.yearForWeekOfYear = year
+        guard let monday = cal.date(from: comps),
+              let sunday = cal.date(byAdding: .day, value: 6, to: monday) else { return nil }
+        return (start: format(monday), end: format(sunday))
+    }
 
     private static func parse(_ s: String) -> Date? {
         isoFormatter.date(from: s)

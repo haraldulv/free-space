@@ -1603,6 +1603,9 @@
         }
       }
     },
+    "Du må fortsette eller forkaste det aktive utkastet før du kan starte en ny annonse." : {
+
+    },
     "Du må fullføre oppsettet før du kan opprette annonser." : {
 
     },
@@ -7475,13 +7478,13 @@
         }
       }
     },
+    "Vis" : {
+
+    },
     "Vis %@ annonser" : {
 
     },
     "Vis alle %@ fasiliteter" : {
-
-    },
-    "Vis annonsen som gjest" : {
 
     },
     "WiFi" : {

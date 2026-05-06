@@ -172,15 +172,14 @@ struct CreateListingView: View {
         case 7: SpotDetailsStep(form: form)
         case 8: OpeningHoursStep(form: form)
         case 9: SpotPriceStep(form: form)
-        case 10: SpotPriceVariationStep(form: form)
-        case 11: SpotExtrasStep(form: form)
+        case 10: SpotExtrasStep(form: form)
+        case 11: SpotCalendarStep(form: form)
         case 12: SpotDiscountsStep(form: form)
         case 13: DescriptionStep(form: form)
         case 14: PhotosStep(form: form)
         case 15: AmenitiesStep(form: form)
         case 16: MessagesStep(form: form)
-        case 17: CalendarStep(form: form)
-        case 18: PublishStep(form: form)
+        case 17: PublishStep(form: form)
         default: EmptyView()
         }
     }
@@ -332,99 +331,9 @@ struct CreateListingView: View {
 
                 await authManager.loadProfile()
                 if let listing = inserted.first {
-                    // Persist tilgjengelighets-bånd + pris-overstyring per plass.
-                    // For hver plass:
-                    //   1) Default-bånd-rad per tilgjengelighets-bånd (price=basePerHour, alle uker)
-                    //   2) Override-bånd-rader for hvert bandPriceOverride (per uke-scope)
-                    //   3) Date-overrides → listing_pricing_overrides (per dato)
-                    for spot in form.spotMarkers {
-                        guard let spotId = spot.id else { continue }
-                        let avail = form.availability(for: spotId)
-                        let basePerHour = spot.pricePerHour ?? 0
-                        // 1) Default-bånd-rader (per allWeeks default-pris).
-                        // Bruk bandets egen pris hvis satt — det lar verten ha
-                        // ulike priser per bånd (f.eks. dag/kveld/natt eller
-                        // sommer/vinter for camping).
-                        for band in avail.bands {
-                            let bandBasePrice = band.price > 0 ? band.price : basePerHour
-                            if band.isSeasonal, let bStart = band.startDate, let bEnd = band.endDate {
-                                // Camping-sesongbånd → kind='season'.
-                                // dayMask=0 betyr "alle dager" (server tolker 0 som
-                                // ingen filter). Sender 0 i stedet for NULL slik at
-                                // vi unngår å avhenge av en migration som relakser
-                                // NOT NULL-constraintet.
-                                try? await PricingService.addSeasonBandRule(
-                                    listingId: listing.id,
-                                    dayMask: band.dayMask,
-                                    startDate: bStart,
-                                    endDate: bEnd,
-                                    price: bandBasePrice,
-                                    spotId: spotId,
-                                    colorIndex: band.colorIndex
-                                )
-                            } else {
-                                // Parking-time-bånd → kind='hourly'
-                                try? await PricingService.addHourlyBandRule(
-                                    listingId: listing.id,
-                                    dayMask: band.dayMask,
-                                    startHour: band.startHour,
-                                    startMinute: band.startMinute,
-                                    endHour: band.endHour,
-                                    endMinute: band.endMinute,
-                                    price: bandBasePrice,
-                                    startDate: nil,
-                                    endDate: nil,
-                                    spotId: spotId,
-                                    colorIndex: band.colorIndex
-                                )
-                            }
-                        }
-                        // 2) Override-bånd-rader: én rad per uke i scope
-                        for override in avail.bandPriceOverrides {
-                            guard let band = avail.bands.first(where: { $0.id == override.bandId }) else { continue }
-                            switch override.weekScope {
-                            case .allWeeks:
-                                try? await PricingService.addHourlyBandRule(
-                                    listingId: listing.id,
-                                    dayMask: band.dayMask,
-                                    startHour: band.startHour,
-                                    startMinute: band.startMinute,
-                                    endHour: band.endHour,
-                                    endMinute: band.endMinute,
-                                    price: override.price,
-                                    startDate: nil,
-                                    endDate: nil,
-                                    spotId: spotId
-                                )
-                            case .specificWeeks(let weeks):
-                                for week in weeks {
-                                    guard let range = WizardPricingCalendarView.dateRangeForWeek(year: week.year, week: week.weekNum) else { continue }
-                                    try? await PricingService.addHourlyBandRule(
-                                        listingId: listing.id,
-                                        dayMask: band.dayMask,
-                                        startHour: band.startHour,
-                                        startMinute: band.startMinute,
-                                        endHour: band.endHour,
-                                        endMinute: band.endMinute,
-                                        price: override.price,
-                                        startDate: range.start,
-                                        endDate: range.end,
-                                        spotId: spotId
-                                    )
-                                }
-                            }
-                        }
-                        // 3) Date-overrides
-                        for dateOverride in avail.dateOverrides {
-                            try? await PricingService.setOverride(
-                                listingId: listing.id,
-                                date: dateOverride.date,
-                                price: dateOverride.price,
-                                spotId: spotId
-                            )
-                        }
-                    }
-
+                    // Per-plass blockedDates + datePriceOverrides ligger i
+                    // spot_markers-jsonb og persist'es som del av input over.
+                    // Ingen ekstra rule-table-skrivinger trenges i ny modell.
                     newListing = listing
                 }
                 form.isSubmitting = false

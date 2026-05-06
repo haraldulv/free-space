@@ -138,17 +138,28 @@ struct PublishStep: View {
                        value: form.imageURLs.isEmpty ? "Ingen" : "\(form.imageURLs.count)") {
                 form.goTo(step: 14)
             }
-            if form.category == .camping {
-                Divider().padding(.leading, 56)
-                summaryRow(icon: "calendar", label: "Blokkerte datoer",
-                           value: form.blockedDates.isEmpty ? "Ingen" : "\(form.blockedDates.count)") {
-                    form.goTo(step: 17)
-                }
+            Divider().padding(.leading, 56)
+            summaryRow(icon: "calendar", label: "Kalender",
+                       value: calendarSummary) {
+                form.goTo(step: 11, spotIndex: 0)
             }
         }
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 1))
+    }
+
+    /// Tekst som oppsummerer kalender-tilstanden på tvers av plasser:
+    /// "Ingen begrensninger", "X blokkert", "Y prisjustert", eller en
+    /// kombinert tekst. Brukes i review-summary-raden.
+    private var calendarSummary: String {
+        let blocked = form.spotMarkers.reduce(0) { $0 + ($1.blockedDates?.count ?? 0) }
+        let overrides = form.spotMarkers.reduce(0) { $0 + ($1.datePriceOverrides?.count ?? 0) }
+        if blocked == 0 && overrides == 0 { return "Ingen begrensninger" }
+        var parts: [String] = []
+        if blocked > 0 { parts.append("\(blocked) blokkert") }
+        if overrides > 0 { parts.append("\(overrides) prisjustert") }
+        return parts.joined(separator: " · ")
     }
 
     private var priceSummary: String {

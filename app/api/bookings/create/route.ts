@@ -36,7 +36,19 @@ async function computeTotalWithBreakdown(args: {
   let discount: LongerStayResult | null = null;
 
   if (hasPerSpotPricing) {
-    baseTotal = selectedSpots.reduce((sum, s) => sum + (s.price ?? args.listingPrice) * nights, 0);
+    // Per-spot per-natt: bruk datePriceOverrides[date] hvis satt, ellers standard pris.
+    baseTotal = selectedSpots.reduce((sum, s) => {
+      const base = s.price ?? args.listingPrice;
+      const overrides = s.datePriceOverrides ?? {};
+      let spotTotal = 0;
+      const cursor = new Date(start);
+      for (let i = 0; i < nights; i++) {
+        const iso = cursor.toISOString().slice(0, 10);
+        spotTotal += overrides[iso] ?? base;
+        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      }
+      return sum + spotTotal;
+    }, 0);
   } else {
     breakdown = await getNightlyPricesWithServiceClient(
       {

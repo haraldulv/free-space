@@ -179,6 +179,11 @@ export interface SpotMarker {
    * `null` (eller fraværende) = arve listing.openingHours.
    */
   openingHours?: OpeningHours | null;
+  /**
+   * Per-dato pris-overstyringer. Nøkkel = "yyyy-MM-dd", verdi = kr.
+   * Hvis dato finnes her overstyrer den standard `price` for booking-pris.
+   */
+  datePriceOverrides?: Record<string, number>;
 }
 
 /** Returner effective vehicleTypes på en SpotMarker — håndterer backward-compat. */

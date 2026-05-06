@@ -1,53 +1,49 @@
 import SwiftUI
 
-/// Profile-kalender for parking-listings. Gjenbruker wizardens
-/// `WizardPricingCalendarView` slik at verten ser nøyaktig samme bånd-editor
-/// som under "Ny annonse". Multi-spot-picker øverst lar verten redigere alle
-/// plasser samtidig (default) eller velge én spesifikk plass.
+/// Profile-kalender for både parking og camping. Bruker den nye
+/// `SpotCalendarEditor` som erstatter den tidligere bånd-baserte kalenderen.
 ///
-/// Persistering: endringer i `form.availabilityBySpotId` autosaves med 0.8 s
-/// debounce til `listing_pricing_rules` + `listing_pricing_overrides`.
-/// Blokkerte datoer på en plass autosaves til `listings.spot_markers` (jsonb).
+/// Modell: per-plass `blockedDates` + per-plass `datePriceOverrides`. Ingen
+/// bånd, ingen ukedags-mønster, ingen åpningstid (åpningstid er listing-level
+/// og redigeres i egen Rediger-tab).
 ///
-/// For camping-listings (per natt) er bånd-editoren foreløpig ikke tilpasset
-/// sesongpriser — vi faller tilbake til den gamle `HostCalendarView`. Sesong-
-/// bånd dekkes i en senere bolk (se `project_todo_kalender_overhaul.md`).
+/// Multi-spot-picker øverst lar verten redigere alle plasser samtidig
+/// (default) eller velge én eller flere spesifikke. Endringer på den
+/// "kanoniske" plassen propagerer til alle valgte før save.
 struct ProfileCalendarView: View {
     let listing: Listing
 
-    @StateObject private var form = ListingFormModel()
+    @State private var spotMarkers: [SpotMarker] = []
     /// Tom mengde = "Alle plasser". Ellers spesifikke spotId-er.
     @State private var selectedSpotIds: Set<String> = []
     @State private var isLoading = true
     @State private var saveTask: Task<Void, Never>?
     @State private var saveStatus: SaveStatus = .idle
-    /// Holder snapshot av forrige availability slik at vi kan oppdage hvilken
-    /// spot som faktisk endret seg uten å skrive alle på en gang.
-    @State private var previousAvailability: [String: WizardSpotAvailability] = [:]
     @State private var previousSpotMarkers: [SpotMarker] = []
 
     enum SaveStatus: Equatable {
         case idle, saving, saved, error(String)
     }
 
-    private var spots: [SpotMarker] { form.spotMarkers }
+    @Environment(\.dismiss) private var dismiss
 
-    /// "Canonical" spot vi viser i kalenderen. Når flere er valgt eller alle:
-    /// bruker første spot's data som mal — endringer kopieres til alle valgte.
-    private var canonicalSpotId: String? {
-        if let first = selectedSpotIds.sorted().first { return first }
-        return spots.first?.id
+    /// Indeks for den "kanoniske" plassen som vises i editor'en. Endringer
+    /// her propageres til alle andre valgte plasser før save.
+    private var canonicalIndex: Int? {
+        if let firstSelected = selectedSpotIds.sorted().first,
+           let idx = spotMarkers.firstIndex(where: { $0.id == firstSelected }) {
+            return idx
+        }
+        return spotMarkers.indices.first
     }
 
     /// SpotIds som mottar endringer ved save. Tom selection = alle spots.
     private var effectiveTargetIds: [String] {
         if selectedSpotIds.isEmpty {
-            return spots.compactMap { $0.id }
+            return spotMarkers.compactMap { $0.id }
         }
         return Array(selectedSpotIds)
     }
-
-    @Environment(\.dismiss) private var dismiss
 
     var body: some View {
         Group {
@@ -57,34 +53,28 @@ struct ProfileCalendarView: View {
                 content
             }
         }
-        // Fullscreen-stil: skjul navigation-bar slik at kalenderen får
-        // hele skjermen og weekday-headeren låses helt øverst (matcher
-        // wizardens pris-variasjon-steg).
         .toolbar(.hidden, for: .navigationBar)
         .toolbar(.hidden, for: .tabBar)
         .task { await load() }
-        .onChange(of: form.availabilityBySpotId) { _, _ in scheduleSave() }
-        .onChange(of: form.spotMarkers) { _, _ in scheduleBlockedSave() }
+        .onChange(of: spotMarkers) { _, _ in scheduleSave() }
     }
 
     @ViewBuilder
     private var content: some View {
         ZStack(alignment: .topLeading) {
             VStack(spacing: 0) {
-                Spacer().frame(height: 56)  // plass til topbar
-                if let id = canonicalSpotId {
-                    if listing.category == .camping {
-                        WizardSeasonalCalendarView(form: form, spotId: id)
-                    } else {
-                        WizardPricingCalendarView(form: form, spotId: id)
-                    }
+                Spacer().frame(height: 56)
+                if let idx = canonicalIndex {
+                    SpotCalendarEditor(
+                        blockedDates: blockedDatesBinding(for: idx),
+                        datePriceOverrides: overridesBinding(for: idx),
+                        basePrice: spotMarkers[idx].pricePerNight ?? spotMarkers[idx].price ?? 0
+                    )
                 } else {
                     emptyState
                 }
             }
 
-            // Top-overlay: "X" + spot-pill + save-status — alle i én rad,
-            // kompakt for å ikke ta plass fra kalenderen.
             HStack(alignment: .center, spacing: 10) {
                 Button {
                     dismiss()
@@ -100,7 +90,7 @@ struct ProfileCalendarView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Lukk")
 
-                if spots.count > 1 {
+                if spotMarkers.count > 1 {
                     spotPickerPill
                 }
 
@@ -112,6 +102,56 @@ struct ProfileCalendarView: View {
             .padding(.top, 8)
         }
     }
+
+    // MARK: - Bindings
+
+    private func blockedDatesBinding(for index: Int) -> Binding<[String]> {
+        Binding(
+            get: {
+                guard spotMarkers.indices.contains(index) else { return [] }
+                return spotMarkers[index].blockedDates ?? []
+            },
+            set: { newValue in
+                guard spotMarkers.indices.contains(index) else { return }
+                let value = newValue.isEmpty ? nil : newValue
+                spotMarkers[index].blockedDates = value
+                propagateToOtherTargets(canonicalIndex: index, blocked: value, overrides: nil)
+            }
+        )
+    }
+
+    private func overridesBinding(for index: Int) -> Binding<[String: Int]> {
+        Binding(
+            get: {
+                guard spotMarkers.indices.contains(index) else { return [:] }
+                return spotMarkers[index].datePriceOverrides ?? [:]
+            },
+            set: { newValue in
+                guard spotMarkers.indices.contains(index) else { return }
+                let value = newValue.isEmpty ? nil : newValue
+                spotMarkers[index].datePriceOverrides = value
+                propagateToOtherTargets(canonicalIndex: index, blocked: nil, overrides: value)
+            }
+        )
+    }
+
+    private func propagateToOtherTargets(
+        canonicalIndex: Int,
+        blocked: [String]??,
+        overrides: [String: Int]??
+    ) {
+        let targets = effectiveTargetIds
+        guard targets.count > 1 else { return }
+        let canonicalId = spotMarkers[canonicalIndex].id
+        for i in spotMarkers.indices where spotMarkers[i].id != canonicalId {
+            if let id = spotMarkers[i].id, targets.contains(id) {
+                if let blocked { spotMarkers[i].blockedDates = blocked }
+                if let overrides { spotMarkers[i].datePriceOverrides = overrides }
+            }
+        }
+    }
+
+    // MARK: - Save indicator
 
     @ViewBuilder
     private var saveIndicator: some View {
@@ -140,20 +180,18 @@ struct ProfileCalendarView: View {
         }
     }
 
-    // MARK: - Spot-picker (kompakt pill med dropdown-meny)
+    // MARK: - Spot-picker
 
-    /// Sammendrag av valgte plasser: "Alle plasser" eller "Plass 1, Plass 3"
-    /// eller "2 av 4 plasser" for mange. Vises i pill-en.
     private var spotPickerSummary: String {
         if selectedSpotIds.isEmpty { return "Alle plasser" }
-        let labels: [String] = spots.enumerated().compactMap { idx, spot in
+        let labels: [String] = spotMarkers.enumerated().compactMap { idx, spot in
             guard let id = spot.id, selectedSpotIds.contains(id) else { return nil }
             return spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
                 ? spot.label!
                 : "Plass \(idx + 1)"
         }
         if labels.count <= 2 { return labels.joined(separator: ", ") }
-        return "\(labels.count) av \(spots.count) plasser"
+        return "\(labels.count) av \(spotMarkers.count) plasser"
     }
 
     private var spotPickerPill: some View {
@@ -164,7 +202,7 @@ struct ProfileCalendarView: View {
                 Label("Alle plasser", systemImage: selectedSpotIds.isEmpty ? "checkmark" : "rectangle.3.group.fill")
             }
             Divider()
-            ForEach(Array(spots.enumerated()), id: \.offset) { idx, spot in
+            ForEach(Array(spotMarkers.enumerated()), id: \.offset) { idx, spot in
                 if let id = spot.id {
                     let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
                         ? spot.label!
@@ -222,158 +260,55 @@ struct ProfileCalendarView: View {
 
     // MARK: - Load
 
+    @MainActor
     private func load() async {
-        // Fyll form med listing-data slik wizardens kalender forventer.
-        let markers = listing.spotMarkers ?? []
-        form.spotMarkers = markers
-        form.category = listing.category
-        form.title = listing.title
-        form.priceUnit = listing.priceUnit ?? .hour
-
-        // Last bånd + overrides for hver plass (parallelt for fart).
-        await withTaskGroup(of: (String, WizardSpotAvailability).self) { group in
-            for marker in markers {
-                guard let id = marker.id else { continue }
-                group.addTask {
-                    let avail = await PricingService.loadAvailability(listingId: listing.id, spotId: id)
-                    return (id, avail)
-                }
-            }
-            for await (id, avail) in group {
-                form.setAvailability(avail, for: id)
-            }
-        }
-
-        previousAvailability = form.availabilityBySpotId
-        previousSpotMarkers = form.spotMarkers
+        spotMarkers = listing.spotMarkers ?? []
+        previousSpotMarkers = spotMarkers
         isLoading = false
     }
 
     // MARK: - Save (debounced)
 
     private func scheduleSave() {
-        // Hopp første endring fra load (state init trigger onChange).
         guard !isLoading else { return }
-        saveTask?.cancel()
-        let snapshot = form.availabilityBySpotId
-        let prev = previousAvailability
-        saveTask = Task {
-            try? await Task.sleep(nanoseconds: 800_000_000)
-            if Task.isCancelled { return }
-            await persistAvailabilityChanges(current: snapshot, previous: prev)
-        }
-    }
-
-    @MainActor
-    private func persistAvailabilityChanges(
-        current: [String: WizardSpotAvailability],
-        previous: [String: WizardSpotAvailability]
-    ) async {
-        // Finn hvilken spot som faktisk endret seg. I "Alle plasser"-modus
-        // gjelder endringer typisk kun canonical spot — derfra propagerer vi
-        // til alle valgte.
-        let changedIds = current.keys.filter { id in
-            current[id] != previous[id]
-        }
-        guard !changedIds.isEmpty else { return }
-
-        saveStatus = .saving
-
-        // I "Alle plasser"-modus: hvis canonical-spot endret, kopier til alle
-        // andre spots i form (sync), så alle spots blir like før save.
-        if selectedSpotIds.isEmpty,
-           let canonical = canonicalSpotId,
-           changedIds.contains(canonical) {
-            let template = current[canonical] ?? WizardSpotAvailability()
-            for spot in spots where spot.id != canonical {
-                if let otherId = spot.id {
-                    form.availabilityBySpotId[otherId] = template
-                }
-            }
-        }
-
-        let targets = effectiveTargetIds
-        let templateAvail = current[canonicalSpotId ?? ""] ?? WizardSpotAvailability()
-
-        do {
-            for spotId in targets {
-                let availToSave: WizardSpotAvailability
-                if selectedSpotIds.isEmpty || targets.count > 1 {
-                    // "Alle plasser" eller multi-velg: alle får samme bånd-sett.
-                    availToSave = templateAvail
-                } else {
-                    availToSave = current[spotId] ?? WizardSpotAvailability()
-                }
-                let basePerHour = spots.first(where: { $0.id == spotId })?.pricePerHour ?? 0
-                try await PricingService.saveAvailability(
-                    listingId: listing.id,
-                    spotId: spotId,
-                    availToSave,
-                    basePerHour: basePerHour
-                )
-            }
-            previousAvailability = form.availabilityBySpotId
-            saveStatus = .saved
-            // Skjul "Lagret" etter et par sekunder.
-            Task {
-                try? await Task.sleep(nanoseconds: 2_500_000_000)
-                if case .saved = saveStatus { saveStatus = .idle }
-            }
-        } catch {
-            saveStatus = .error("Lagring feilet")
-        }
-    }
-
-    // MARK: - Blocked dates persist (autosave til listings.spot_markers)
-
-    private func scheduleBlockedSave() {
-        guard !isLoading else { return }
-        let current = form.spotMarkers
+        let current = spotMarkers
         let previous = previousSpotMarkers
-        let blockedChanged = current.enumerated().contains { idx, spot in
+        let changed = current.enumerated().contains { idx, spot in
             guard idx < previous.count else { return true }
-            return spot.blockedDates ?? [] != previous[idx].blockedDates ?? []
+            let prev = previous[idx]
+            return (spot.blockedDates ?? []) != (prev.blockedDates ?? [])
+                || (spot.datePriceOverrides ?? [:]) != (prev.datePriceOverrides ?? [:])
         }
-        guard blockedChanged else { return }
+        guard changed else { return }
 
         saveTask?.cancel()
         saveTask = Task {
             try? await Task.sleep(nanoseconds: 800_000_000)
             if Task.isCancelled { return }
-            await persistBlockedDates()
+            await persist()
         }
     }
 
     @MainActor
-    private func persistBlockedDates() async {
+    private func persist() async {
         saveStatus = .saving
-        // I "Alle plasser"-modus: kopier canonical's blockedDates til alle valgte.
-        if selectedSpotIds.isEmpty, let canonical = canonicalSpotId,
-           let canonicalIdx = spots.firstIndex(where: { $0.id == canonical }) {
-            let template = form.spotMarkers[canonicalIdx].blockedDates
-            for i in form.spotMarkers.indices where form.spotMarkers[i].id != canonical {
-                form.spotMarkers[i].blockedDates = template
-            }
-        }
-
-        // Skriv hele spot_markers-arrayet tilbake (jsonb-array).
         do {
             struct SpotMarkersUpdate: Encodable {
                 let spot_markers: [SpotMarker]
             }
             try await supabase
                 .from("listings")
-                .update(SpotMarkersUpdate(spot_markers: form.spotMarkers))
+                .update(SpotMarkersUpdate(spot_markers: spotMarkers))
                 .eq("id", value: listing.id)
                 .execute()
-            previousSpotMarkers = form.spotMarkers
+            previousSpotMarkers = spotMarkers
             saveStatus = .saved
             Task {
                 try? await Task.sleep(nanoseconds: 2_500_000_000)
                 if case .saved = saveStatus { saveStatus = .idle }
             }
         } catch {
-            saveStatus = .error("Kunne ikke lagre datoer")
+            saveStatus = .error("Kunne ikke lagre")
         }
     }
 }

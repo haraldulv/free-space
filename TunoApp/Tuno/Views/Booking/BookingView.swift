@@ -184,6 +184,29 @@ struct BookingView: View {
     private var baseTotal: Int {
         let units = unitsCount
         if hasSpotLevelPricing && !selectedSpots.isEmpty {
+            // Per-spot per-natt: bruk datePriceOverrides[date] hvis satt,
+            // ellers standard pris. For time-basert booking (parkering)
+            // er det ingen dato-overstyringer (units = timer, ikke datoer).
+            if !isHourly, let ci = checkIn, let co = checkOut, units > 0 {
+                let isoFormatter = DateFormatter()
+                isoFormatter.dateFormat = "yyyy-MM-dd"
+                isoFormatter.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+                isoFormatter.locale = Locale(identifier: "en_US_POSIX")
+                var cal = Calendar(identifier: .gregorian)
+                cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+
+                return selectedSpots.reduce(0) { sum, spot in
+                    let base = spot.price ?? listing.price ?? 0
+                    let overrides = spot.datePriceOverrides ?? [:]
+                    let spotTotal = (0..<units).reduce(0) { acc, i in
+                        guard let date = cal.date(byAdding: .day, value: i, to: ci),
+                              date < co else { return acc }
+                        let iso = isoFormatter.string(from: date)
+                        return acc + (overrides[iso] ?? base)
+                    }
+                    return sum + spotTotal
+                }
+            }
             return selectedSpots.reduce(0) { $0 + ($1.price ?? listing.price ?? 0) * units }
         }
         if isHourly, !hourlyPriceBreakdown.isEmpty {
