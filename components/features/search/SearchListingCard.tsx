@@ -4,8 +4,34 @@ import { useEffect, useRef } from "react";
 import { Star, Zap, Clock } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
-import { Listing, getDisplayPriceText } from "@/types";
+import { Listing, getDisplayPriceText, OpeningHours } from "@/types";
 import { haversineKm, formatDistance } from "@/lib/geo";
+import { parseOpeningRange } from "@/lib/opening-hours";
+
+/** Kompakt åpningstid-label for søkekort. Eks: "9-17", null for døgnåpent. */
+function compactOpeningLabel(oh: OpeningHours | null | undefined): string | null {
+  if (!oh) return null;
+  const ranges = new Set<string>();
+  let anyOpen = false;
+  for (const day of ["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const) {
+    const v = oh[day];
+    if (v) {
+      ranges.add(v);
+      anyOpen = true;
+    }
+  }
+  if (!anyOpen) return null;
+  if (ranges.size === 1) {
+    const only = Array.from(ranges)[0];
+    const parsed = parseOpeningRange(only);
+    if (parsed) {
+      // 24/7 → ingen label
+      if (parsed.start === 0 && parsed.end >= 23 * 60 + 59) return null;
+      return `${Math.floor(parsed.start / 60)}-${Math.floor(parsed.end / 60)}`;
+    }
+  }
+  return null;
+}
 import type { UserLocation } from "@/lib/hooks/useUserLocation";
 import ImageCarousel from "@/components/features/ImageCarousel";
 import FavoriteButton from "@/components/features/FavoriteButton";
@@ -104,8 +130,11 @@ export default function SearchListingCard({
             </p>
             <div className="flex items-center gap-1.5">
               {listing.openingHours && (
-                <span className="flex items-center text-[10px] font-semibold text-amber-700" title={t("limitedHours")}>
+                <span className="flex items-center gap-0.5 text-[10px] font-semibold text-amber-700" title={t("limitedHours")}>
                   <Clock className="h-3 w-3" />
+                  {compactOpeningLabel(listing.openingHours) && (
+                    <span>{compactOpeningLabel(listing.openingHours)}</span>
+                  )}
                 </span>
               )}
               {listing.instantBooking && (

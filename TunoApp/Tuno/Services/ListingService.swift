@@ -224,6 +224,25 @@ final class ListingService: ObservableObject {
                 listings = listings.filter { OpeningHoursService.hasLimitedHours($0.openingHours) }
             }
 
+            // Auto-filtrer parkering: ekskluder annonser der noen dag i
+            // søkeperioden er stengt etter åpningstid (f.eks. fre-søn på en
+            // plass med 9-17 man-fre, helg stengt → utelukkes). Camping har
+            // ingen åpningstid-modell.
+            if let checkIn, let checkOut {
+                let isoFormatter = DateFormatter()
+                isoFormatter.dateFormat = "yyyy-MM-dd"
+                isoFormatter.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+                isoFormatter.locale = Locale(identifier: "en_US_POSIX")
+                if let ci = isoFormatter.date(from: checkIn),
+                   let co = isoFormatter.date(from: checkOut) {
+                    listings = listings.filter { listing in
+                        guard listing.category == .parking else { return true }
+                        guard let oh = listing.openingHours else { return true }
+                        return OpeningHoursService.isOpenForRange(oh, checkIn: ci, checkOut: co)
+                    }
+                }
+            }
+
             searchResults = listings
         } catch {
             print("Search failed: \(error)")

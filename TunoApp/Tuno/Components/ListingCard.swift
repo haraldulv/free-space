@@ -156,11 +156,11 @@ struct ListingCard: View {
                             .background(.ultraThinMaterial)
                             .clipShape(Capsule())
                         }
-                        if OpeningHoursService.hasLimitedHours(listing.openingHours) {
+                        if let label = OpeningHoursService.compactLabel(listing.openingHours) {
                             HStack(spacing: 3) {
                                 Image(systemName: "clock.fill")
                                     .font(.system(size: 10))
-                                Text("Åpningstid")
+                                Text(label)
                                     .font(.system(size: 11, weight: .semibold))
                             }
                             .foregroundStyle(.neutral700)
