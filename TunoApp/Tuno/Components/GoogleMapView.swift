@@ -241,65 +241,68 @@ struct SearchMapView: UIViewRepresentable {
     /// så bobler står klart mot kartet uten å se ut som firkanter.
     /// Lik størrelse i alle tilstander så bobler ikke "hopper" ved tap.
     static func createPriceBubble(listing: Listing, isVisited: Bool, isSelected: Bool) -> UIView {
-        // Tuno-grønn (#46C185) som ring rundt boblen så den popper mot
-        // både lyst og satellitt-kart. Wrapper-view holder skyggen, indre
-        // pille har grønn ring + hvit/svart fyll. Større shadow-radius enn
-        // før for å gi bobla en tydelig "lift" mot kartet.
-        let wrapper = UIView()
-        wrapper.layer.shadowColor = UIColor.black.cgColor
-        wrapper.layer.shadowOpacity = 0.22
-        wrapper.layer.shadowRadius = 6
-        wrapper.layer.shadowOffset = CGSize(width: 0, height: 2)
-
-        let container = UIView()
-        container.layer.borderWidth = 1.5
-
+        // Modern Airbnb-aktig: hvit pille med Tuno-grønn ring (2pt) og
+        // dypere grønn "stack-skygge" bak — gir boblen lift uten å bruke
+        // CALayer shadow (som klippes av GMS marker-containeren til en
+        // svart firkant på standardkart).
         let tunoGreen = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1)
-
-        if isSelected {
-            container.backgroundColor = UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
-            container.layer.borderColor = tunoGreen.cgColor
-        } else if isVisited {
-            container.backgroundColor = UIColor(red: 0.93, green: 0.93, blue: 0.93, alpha: 1)
-            container.layer.borderColor = tunoGreen.withAlphaComponent(0.85).cgColor
-        } else {
-            container.backgroundColor = .white
-            container.layer.borderColor = tunoGreen.cgColor
-        }
-        container.layer.cornerRadius = 16
+        let darkGreen = UIColor(red: 0.18, green: 0.55, blue: 0.36, alpha: 1)
 
         let label = UILabel()
-        let text = NSMutableAttributedString()
         let textColor: UIColor = isSelected
             ? .white
             : UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
         let secondaryColor = textColor.withAlphaComponent(0.65)
 
+        let text = NSMutableAttributedString()
         text.append(NSAttributedString(
             string: "\(listing.displayPriceText) kr",
-            attributes: [.font: UIFont.systemFont(ofSize: 13, weight: .bold), .foregroundColor: textColor]
+            attributes: [.font: UIFont.systemFont(ofSize: 14, weight: .bold), .foregroundColor: textColor]
         ))
-
         let spots = listing.spots ?? 1
         if spots > 1 {
             text.append(NSAttributedString(
                 string: " \(spots)p",
-                attributes: [.font: UIFont.systemFont(ofSize: 11, weight: .medium), .foregroundColor: secondaryColor]
+                attributes: [.font: UIFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: secondaryColor]
             ))
         }
-
         label.attributedText = text
         label.sizeToFit()
 
-        let padding: CGFloat = 12
-        let height: CGFloat = 32
+        let padding: CGFloat = 14
+        let height: CGFloat = 36
         let width = label.frame.width + padding * 2
-        container.frame = CGRect(x: 0, y: 0, width: width, height: height)
+
+        // Wrapper er litt større enn pillen for å rom-stacke "skyggen"
+        // (mørk grønn pille bak, offset (0, 2.5)) og selve pillen.
+        let stackOffset: CGFloat = 2.5
+        let wrapper = UIView(frame: CGRect(x: 0, y: 0, width: width, height: height + stackOffset))
+        wrapper.backgroundColor = .clear
+
+        // Bakerst: mørk grønn pille som "skygge" — synlig som en grønn
+        // tråd under pillen som gir 3D-løft uten layer-shadow.
+        let shadowPill = UIView(frame: CGRect(x: 0, y: stackOffset, width: width, height: height))
+        shadowPill.backgroundColor = darkGreen
+        shadowPill.layer.cornerRadius = height / 2
+        wrapper.addSubview(shadowPill)
+
+        // Foran: selve pillen med grønn ring + hvit/svart fyll.
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: width, height: height))
+        container.layer.borderWidth = 2
+        container.layer.cornerRadius = height / 2
+        if isSelected {
+            container.backgroundColor = UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
+            container.layer.borderColor = tunoGreen.cgColor
+        } else if isVisited {
+            container.backgroundColor = UIColor(red: 0.94, green: 0.94, blue: 0.94, alpha: 1)
+            container.layer.borderColor = tunoGreen.withAlphaComponent(0.7).cgColor
+        } else {
+            container.backgroundColor = .white
+            container.layer.borderColor = tunoGreen.cgColor
+        }
+
         label.center = CGPoint(x: container.frame.width / 2, y: container.frame.height / 2)
         container.addSubview(label)
-
-        wrapper.frame = container.frame
-        wrapper.layer.shadowPath = UIBezierPath(roundedRect: container.bounds, cornerRadius: 16).cgPath
         wrapper.addSubview(container)
         return wrapper
     }
