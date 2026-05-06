@@ -99,6 +99,27 @@ struct MapListingBigCard: View {
             .indexViewStyle(.page(backgroundDisplayMode: .always))
             .frame(height: 180)
             .clipped()
+            .overlay(alignment: .bottomLeading) {
+                // Åpningstid-tag for parkering — overlay på TabView arver
+                // dens 180pt-frame og kan ikke vokse forbi. Tidligere VStack
+                // + Spacer-pattern poppet ut av image-containeren fordi
+                // ZStack-en ikke hadde høyde-constraint.
+                if listing.category == .parking,
+                   let label = OpeningHoursService.compactLabel(listing.openingHours) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 10))
+                        Text(label)
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(.neutral700)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                    .padding(10)
+                }
+            }
 
             // Top-right: hjerte + X-lukk
             HStack(spacing: 8) {
@@ -146,29 +167,9 @@ struct MapListingBigCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            // Nede-venstre: åpningstid-tag for parkering (samme stil som
-            // ListingCard på forsiden).
-            if listing.category == .parking,
-               let label = OpeningHoursService.compactLabel(listing.openingHours) {
-                VStack {
-                    Spacer()
-                    HStack(spacing: 6) {
-                        HStack(spacing: 3) {
-                            Image(systemName: "clock.fill")
-                                .font(.system(size: 10))
-                            Text(label)
-                                .font(.system(size: 11, weight: .semibold))
-                        }
-                        .foregroundStyle(.neutral700)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.ultraThinMaterial)
-                        .clipShape(Capsule())
-                        Spacer()
-                    }
-                    .padding(10)
-                }
-            }
+            // Åpningstid-tag flyttet til .overlay på TabView lenger oppe —
+            // VStack+Spacer-pattern her vil ikke fungere fordi ZStack-en
+            // ikke har høyde-constraint og overflyte image-bunnen.
         }
     }
 
