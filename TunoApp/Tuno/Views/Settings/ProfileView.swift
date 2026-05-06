@@ -657,6 +657,9 @@ struct MyListingsView: View {
     @State private var showDiscardDraftAlert = false
     /// Driver fullScreenCover'en — én state for både ny annonse og fortsett-utkast.
     @State private var wizardSheet: WizardIntent?
+    /// True når bruker tappet "+" mens et utkast var aktivt — vis dialog
+    /// som tvinger valg mellom Fortsett, Forkast eller Avbryt.
+    @State private var showDraftConflictAlert = false
 
     private static let serviceFee = 0.10
 
@@ -674,7 +677,11 @@ struct MyListingsView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
-                    wizardSheet = .new
+                    if draft != nil {
+                        showDraftConflictAlert = true
+                    } else {
+                        wizardSheet = .new
+                    }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -715,6 +722,23 @@ struct MyListingsView: View {
             Button("Avbryt", role: .cancel) {}
         }, message: {
             Text("Du mister fremdriften du har lagret. Dette kan ikke angres.")
+        })
+        .alert("Du har et aktivt utkast", isPresented: $showDraftConflictAlert, actions: {
+            Button("Fortsett utkast") {
+                if let draft {
+                    wizardSheet = .resume(draft)
+                }
+            }
+            Button("Forkast utkast", role: .destructive) {
+                if let userId = authManager.currentUser?.id.uuidString {
+                    DraftStorage.clear(userId: userId)
+                }
+                draft = nil
+                wizardSheet = .new
+            }
+            Button("Avbryt", role: .cancel) {}
+        }, message: {
+            Text("Du må fortsette eller forkaste det aktive utkastet før du kan starte en ny annonse.")
         })
         .sheet(item: $qrTarget) { listing in
             QRCodeModal(listing: listing)

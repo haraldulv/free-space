@@ -96,8 +96,8 @@ final class ListingFormModel: ObservableObject {
     @Published var priceUnit: PriceUnit = .time
     /// Listing-nivå åpningstid (parkering). nil = døgnåpent.
     @Published var openingHours: OpeningHours? = nil
-    /// Minimum antall dager bruker kan booke. nil = ingen minimum.
-    @Published var minStayDays: Int? = nil
+    /// Minimum antall dager bruker kan booke. Default 1 (nedre grense).
+    @Published var minStayDays: Int? = 1
     /// Maksimum antall dager bruker kan booke. nil = ingen maksimum.
     @Published var maxStayDays: Int? = nil
 
@@ -188,7 +188,7 @@ final class ListingFormModel: ObservableObject {
         instantBooking = draft.instantBooking
         priceUnit = draft.priceUnit
         openingHours = draft.openingHours
-        minStayDays = draft.minStayDays
+        minStayDays = draft.minStayDays ?? 1
         maxStayDays = draft.maxStayDays
         currentStep = draft.currentStep
     }

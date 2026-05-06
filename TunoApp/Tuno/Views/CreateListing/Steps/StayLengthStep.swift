@@ -12,7 +12,7 @@ struct StayLengthStep: View {
     var body: some View {
         WizardScreen(
             title: "Lengde på opphold",
-            subtitle: "Du kan kreve at gjester booker minst et visst antall \(unitWord), eller begrense maks lengde. La feltene stå tomme hvis ingen grense."
+            subtitle: "Sett minimum og maksimum antall \(unitWord) gjester kan booke. La maksimum stå tomt hvis du ikke vil ha en øvre grense."
         ) {
             VStack(spacing: 16) {
                 stayCard(
@@ -20,7 +20,8 @@ struct StayLengthStep: View {
                     value: $form.minStayDays,
                     minValue: 1,
                     maxValue: nil,
-                    description: "Korteste opphold gjest kan booke."
+                    description: "Korteste opphold gjest kan booke.",
+                    placeholder: "1"
                 )
 
                 stayCard(
@@ -28,7 +29,8 @@ struct StayLengthStep: View {
                     value: $form.maxStayDays,
                     minValue: max(form.minStayDays ?? 1, 1),
                     maxValue: nil,
-                    description: "Lengste opphold gjest kan booke."
+                    description: "Lengste opphold gjest kan booke.",
+                    placeholder: ""
                 )
 
                 if let err = validationError {
@@ -55,7 +57,8 @@ struct StayLengthStep: View {
         value: Binding<Int?>,
         minValue: Int?,
         maxValue: Int?,
-        description: String
+        description: String,
+        placeholder: String
     ) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(label)
@@ -70,7 +73,7 @@ struct StayLengthStep: View {
                 minValue: minValue,
                 maxValue: maxValue,
                 unitLabel: pluralizeUnit(for: value.wrappedValue ?? 0),
-                placeholder: "Ingen"
+                placeholder: placeholder
             )
         }
         .padding(18)
