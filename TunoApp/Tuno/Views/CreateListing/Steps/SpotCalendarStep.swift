@@ -131,50 +131,16 @@ struct SpotCalendarStep: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - Editing phase (fullscreen)
+    // MARK: - Editing phase (skjul progress-bar, behold WizardNavBar)
 
     @ViewBuilder
     private var editingPhase: some View {
-        ZStack(alignment: .top) {
-            calendarBody
-
-            // Egen top-bar med X (= tilbake) + Ferdig (= advance).
-            HStack(alignment: .center, spacing: 10) {
-                Button {
-                    if let id = currentSpotId { phasePerSpot[id] = .ask }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Color.white))
-                        .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
-                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Lukk")
-
-                Spacer()
-
-                Button {
-                    form.goNext()
-                } label: {
-                    Text("Ferdig")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 9)
-                        .background(Color.primary600)
-                        .clipShape(Capsule())
-                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 8)
-        }
-        .onAppear { form.fullscreenStep = true }
-        .onDisappear { form.fullscreenStep = false }
+        // Progress-baren skjules (form.fullscreenStep = true), men
+        // WizardNavBar i bunn beholdes — bruker navigerer med Tilbake/Neste
+        // som ellers i wizarden. Ingen egen top-bar her.
+        calendarBody
+            .onAppear { form.fullscreenStep = true }
+            .onDisappear { form.fullscreenStep = false }
     }
 
     @ViewBuilder
