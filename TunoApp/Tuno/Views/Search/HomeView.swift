@@ -200,6 +200,7 @@ struct ListingSection: View {
     let listings: [Listing]
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var favoritesService: FavoritesService
+    @StateObject private var locationManager = LocationManager()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -215,7 +216,9 @@ struct ListingSection: View {
                             ListingCard(
                                 listing: listing,
                                 isFavorited: favoritesService.favoriteIds.contains(listing.id),
-                                onFavoriteToggle: { _ in toggleFavorite(listing.id) }
+                                onFavoriteToggle: { _ in toggleFavorite(listing.id) },
+                                referenceLat: locationManager.userLocation?.latitude,
+                                referenceLng: locationManager.userLocation?.longitude
                             )
                             .frame(width: 200)
                         }
@@ -224,6 +227,7 @@ struct ListingSection: View {
                 }
                 .padding(.horizontal, 20)
             }
+            .onAppear { locationManager.requestPermission() }
         }
         // navigationDestination flyttet opp til HomeView-nivå for å unngå
         // SwiftUI-feilen "declared earlier on the stack" når flere

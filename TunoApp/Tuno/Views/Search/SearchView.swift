@@ -220,8 +220,8 @@ struct SearchView: View {
                         onSelect: { listing in
                             navigationPath.append(listing)
                         },
-                        referenceLat: originLat,
-                        referenceLng: originLng
+                        referenceLat: locationManager.userLocation?.latitude,
+                        referenceLng: locationManager.userLocation?.longitude
                     )
                     .zIndex(1)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -377,8 +377,8 @@ struct SearchView: View {
                     },
                     isFavorited: { id in favoritesService.favoriteIds.contains(id) },
                     onFavoriteToggle: toggleFavorite,
-                    referenceLat: originLat,
-                    referenceLng: originLng
+                    referenceLat: locationManager.userLocation?.latitude,
+                    referenceLng: locationManager.userLocation?.longitude
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .padding(.bottom, 12)

@@ -25,6 +25,7 @@ struct ListingDetailView: View {
     @State private var spotFullscreenStartIndex: Int = 0
     @State private var bookingSpotId: String?
     @StateObject private var chatService = ChatService()
+    @StateObject private var locationManager = LocationManager()
     @Environment(\.dismiss) private var dismiss
 
     private let heroHeight: CGFloat = 360
@@ -58,6 +59,7 @@ struct ListingDetailView: View {
         .task {
             // Mark som besøkt så bobler i kartsøket viser visited-state.
             VisitedListingsStore.shared.markVisited(listingId)
+            locationManager.requestPermission()
             let service = ListingService()
             let fetched = await service.fetchListing(id: listingId)
             listing = fetched
@@ -352,10 +354,34 @@ struct ListingDetailView: View {
         if let city = listing.city, !city.isEmpty {
             parts.append(city)
         }
+        if let label = distanceLabel(for: listing) {
+            parts.append(label)
+        }
         if let maxLen = listing.maxVehicleLength, maxLen > 0 {
             parts.append("Maks \(Int(maxLen))m")
         }
         return parts.joined(separator: " · ")
+    }
+
+    /// Speiler `lib/cancellation.ts`-policyen: 24 t før innsjekk = full
+    /// refusjon (minus servicetillegg). 0–24 t = 50 %. Etter innsjekk = 0.
+    private func cancellationSubtitle(for listing: Listing) -> String {
+        "Full refusjon hvis du kansellerer mer enn 24 t før innsjekk. 50 % refusjon innen 24 t. Ingen refusjon etter innsjekk."
+    }
+
+    /// Avstand fra brukerens GPS-posisjon til annonsen. Returnerer nil hvis
+    /// posisjon ikke er gitt (ingen permission eller ikke fixed ennå).
+    private func distanceLabel(for listing: Listing) -> String? {
+        guard let user = locationManager.userLocation,
+              let lat = listing.lat, let lng = listing.lng else { return nil }
+        let km = haversineDistanceKm(lat1: user.latitude, lng1: user.longitude, lat2: lat, lng2: lng)
+        if km < 1 {
+            return "\(Int((km * 1000).rounded())) m unna"
+        }
+        if km < 10 {
+            return String(format: "%.1f km unna", km).replacingOccurrences(of: ".", with: ",")
+        }
+        return "\(Int(km.rounded())) km unna"
     }
 
     // MARK: - Kompakt host-rad (rett under tittel, Airbnb-stil)
@@ -973,11 +999,25 @@ struct ListingDetailView: View {
 
                 thingsRow(icon: "calendar",
                           title: "Kansellering",
-                          subtitle: "Gratis avbestilling innen 48 t. Etterpå gjelder utleiers vilkår.")
+                          subtitle: cancellationSubtitle(for: listing))
 
-                thingsRow(icon: "clock",
-                          title: "Inn- og utsjekking",
-                          subtitle: "Innsjekking fra \(listing.checkInTime ?? "15:00") · Utsjekking innen \(listing.checkOutTime ?? "11:00")")
+                // Inn-/utsjekkstider gjelder kun camping. Parkering har
+                // åpningstid på listing-nivå (eller døgnåpent) som vises i
+                // "Plasser"-raden + på selve søkekortet.
+                if listing.category == .camping {
+                    thingsRow(icon: "clock",
+                              title: "Inn- og utsjekking",
+                              subtitle: "Innsjekking fra \(listing.checkInTime ?? "15:00") · Utsjekking innen \(listing.checkOutTime ?? "11:00")")
+                } else if let oh = listing.openingHours,
+                          let label = OpeningHoursService.compactLabel(oh) {
+                    thingsRow(icon: "clock",
+                              title: "Åpningstid",
+                              subtitle: label == "Begrenset" ? "Begrenset åpningstid" : "Åpent \(label)")
+                } else if listing.category == .parking {
+                    thingsRow(icon: "clock",
+                              title: "Åpningstid",
+                              subtitle: "Døgnåpent")
+                }
 
                 if let spots = listing.spots {
                     thingsRow(icon: "car.2.fill",

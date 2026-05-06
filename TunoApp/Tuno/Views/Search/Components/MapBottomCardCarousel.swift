@@ -190,6 +190,24 @@ struct MapListingBigCard: View {
                     }
                     .foregroundStyle(.neutral500)
                 }
+                if let oh = listing.openingHours,
+                   let label = OpeningHoursService.compactLabel(oh) {
+                    HStack(spacing: 3) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 10))
+                        Text(label)
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundStyle(.neutral700)
+                } else if listing.category == .parking {
+                    HStack(spacing: 3) {
+                        Image(systemName: "clock.fill")
+                            .font(.system(size: 10))
+                        Text("Døgnåpent")
+                            .font(.system(size: 12, weight: .medium))
+                    }
+                    .foregroundStyle(.neutral700)
+                }
                 if listing.instantBooking == true {
                     HStack(spacing: 3) {
                         Image(systemName: "circle.fill")
