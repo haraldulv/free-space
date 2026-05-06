@@ -17,8 +17,10 @@
 		12663C1EA3152BC7C6440902 /* CustomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E48039F546D58654A8CF5E /* CustomTabBar.swift */; };
 		13B77DCEDB9056B38179BFAE /* IBANGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */; };
 		1444FFC1C4196A4874B30662 /* StripePaymentsUI in Frameworks */ = {isa = PBXBuildFile; productRef = E4D15CE7DFF6030221CC42B9 /* StripePaymentsUI */; };
+		162F39FEDA5DF91D6C8B7864 /* StayLengthStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB8E7A5A570D7B4D68E6A9FB /* StayLengthStep.swift */; };
 		1A1B9BC09172D4EBECCDB2C3 /* PushNotificationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = FBE71C1EE64D63048F5BD2F5 /* PushNotificationManager.swift */; };
 		1C32E4CA70F86F9BAF6C8EA2 /* DescriptionStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D08232C248CE64924B19723 /* DescriptionStep.swift */; };
+		1D03DFBC9D5EC1436041C6B5 /* KrStepper.swift in Sources */ = {isa = PBXBuildFile; fileRef = BA67FD0D010724DA8884A431 /* KrStepper.swift */; };
 		1D314A0646D1BBDD98D88023 /* Globe.json in Resources */ = {isa = PBXBuildFile; fileRef = CB03B6FF2B6DA8FCAC15788C /* Globe.json */; };
 		23227ACC572BB0ECF18932ED /* ny-annonse.json in Resources */ = {isa = PBXBuildFile; fileRef = ED8BDCBFB9D65C5B686E088E /* ny-annonse.json */; };
 		234D3400830F6E45E00E0099 /* confetti.json in Resources */ = {isa = PBXBuildFile; fileRef = D3868CEAFB9411DDE736AF88 /* confetti.json */; };
@@ -244,11 +246,13 @@
 		B432FE81E7D9B6ECAB6EE3F8 /* SearchHerePill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHerePill.swift; sourceTree = "<group>"; };
 		B4FAE01C676255DD56E0570A /* SpotPriceStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotPriceStep.swift; sourceTree = "<group>"; };
 		B8D99627256D695D60592DC8 /* EditListingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditListingView.swift; sourceTree = "<group>"; };
+		BA67FD0D010724DA8884A431 /* KrStepper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KrStepper.swift; sourceTree = "<group>"; };
 		BD05EFAAFF75CA5314B3B4EE /* SpotExtrasContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotExtrasContent.swift; sourceTree = "<group>"; };
 		BE401FA37FDD4B606814F30C /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		C60A79D4D54F1069BB4CA915 /* complete-phone.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "complete-phone.png"; sourceTree = "<group>"; };
 		CB03B6FF2B6DA8FCAC15788C /* Globe.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Globe.json; sourceTree = "<group>"; };
+		CB8E7A5A570D7B4D68E6A9FB /* StayLengthStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StayLengthStep.swift; sourceTree = "<group>"; };
 		CE00FBD7C2654A066869B1E1 /* AmenitiesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmenitiesStep.swift; sourceTree = "<group>"; };
 		CE37F2B39F267A7C3F849A4C /* WizardTooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WizardTooltip.swift; sourceTree = "<group>"; };
 		CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IBANGenerator.swift; sourceTree = "<group>"; };
@@ -413,6 +417,7 @@
 		6587010B912F3F5B5BE19D5C /* Components */ = {
 			isa = PBXGroup;
 			children = (
+				BA67FD0D010724DA8884A431 /* KrStepper.swift */,
 				1C62328BAF7DE7328480EAF9 /* LottieView.swift */,
 				A54AF55D0728E58C694E0F3B /* OpeningHoursEditorView.swift */,
 				4FF267768B92B52734B7568A /* WizardNavBar.swift */,
@@ -606,6 +611,7 @@
 				E526C4504EA007084624767F /* SpotExtrasStep.swift */,
 				B4FAE01C676255DD56E0570A /* SpotPriceStep.swift */,
 				F5A37BEFB55AB36448B8AFB5 /* SpotPriceVariationStep.swift */,
+				CB8E7A5A570D7B4D68E6A9FB /* StayLengthStep.swift */,
 				867091F53CF483B9DC6E3E33 /* WelcomeStep.swift */,
 			);
 			path = Steps;
@@ -777,6 +783,7 @@
 				720B1D6584518DD3B2B802EE /* ImageDropDelegate.swift in Sources */,
 				694752864F4B0F93CA8B6433 /* InputField.swift in Sources */,
 				BFC7A0C9D7F078BDF8BC8D81 /* InstantBookingStep.swift in Sources */,
+				1D03DFBC9D5EC1436041C6B5 /* KrStepper.swift in Sources */,
 				EA6ED6282BB3420E464B2A4D /* LaunchScreen.swift in Sources */,
 				EA6458ECC1DE539DADF94299 /* ListingCard.swift in Sources */,
 				642AF85B63EEA4DB11DEA032 /* ListingDetailView.swift in Sources */,
@@ -831,6 +838,7 @@
 				53263F543ED69E31B489D2D5 /* SpotPlacementSheet.swift in Sources */,
 				D1350E52B346514BBFB120CA /* SpotPriceStep.swift in Sources */,
 				32C1A026D8113363E685FD6A /* SpotPriceVariationStep.swift in Sources */,
+				162F39FEDA5DF91D6C8B7864 /* StayLengthStep.swift in Sources */,
 				9AE9EF8B07B0FB00DF4149AF /* SupabaseService.swift in Sources */,
 				5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */,
 				C76237D5837392B271673FB3 /* Theme.swift in Sources */,
@@ -886,7 +894,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 163;
+				CURRENT_PROJECT_VERSION = 164;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1004,7 +1012,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 163;
+				CURRENT_PROJECT_VERSION = 164;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1070,7 +1078,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 163;
+				CURRENT_PROJECT_VERSION = 164;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1129,7 +1137,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 163;
+				CURRENT_PROJECT_VERSION = 164;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

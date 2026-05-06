@@ -147,23 +147,23 @@ struct SpotDiscountsStep: View {
 
     @ViewBuilder
     private func priceRow(label: String, caption: String, baseline: Int, price: Binding<Int?>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(label)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                    Text(caption)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
-                }
-                Spacer()
-                KrInput(value: price)
+        VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text(caption)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
             }
-            if baseline > 0 {
-                Text("Uten tilbud: \(formatKr(baseline))")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.neutral400)
+            HStack {
+                KrStepper(value: price, step: 50, minValue: 0, maxValue: nil, unitLabel: "kr", placeholder: "0")
+                if baseline > 0 {
+                    Text("Vanlig pris: \(formatKr(baseline))")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral400)
+                        .padding(.leading, 4)
+                }
             }
         }
     }
@@ -173,7 +173,7 @@ struct SpotDiscountsStep: View {
             Image(systemName: "info.circle.fill")
                 .font(.system(size: 14))
                 .foregroundStyle(.primary600)
-            Text("Tilbudet gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 døgn. Resten betales etter standardpris.")
+            Text("Rabatten gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 dager. Resten betales etter standardpris.")
                 .font(.system(size: 12))
                 .foregroundStyle(.neutral600)
                 .fixedSize(horizontal: false, vertical: true)
@@ -302,7 +302,7 @@ struct LongerStayPrices: Equatable {
     }
 }
 
-/// Lite preview-kort som viser hva en booking koster med og uten tilbudet,
+/// Lite preview-kort som viser hva en booking koster med og uten rabatten,
 /// for 1 døgn (24 t), 1 uke (7 d) og 1 måned (30 d). Skjules helt når ingen
 /// pris er satt, så steget ikke skummer over for verten som vil hoppe over.
 struct LongerStayPreviewCard: View {
@@ -319,7 +319,7 @@ struct LongerStayPreviewCard: View {
                     Image(systemName: "sparkles")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.primary600)
-                    Text("Slik ser tilbudene ut for gjesten")
+                    Text("Slik ser rabattene ut for gjesten")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundStyle(.neutral600)
                 }

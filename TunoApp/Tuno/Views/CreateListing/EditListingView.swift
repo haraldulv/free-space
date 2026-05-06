@@ -1110,7 +1110,7 @@ struct EditListingView: View {
                     Image(systemName: "info.circle.fill")
                         .font(.system(size: 14))
                         .foregroundStyle(.primary600)
-                    Text("Tilbudet gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 døgn. Resten betales etter standardpris.")
+                    Text("Rabatten gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 dager. Resten betales etter standardpris.")
                         .font(.system(size: 12))
                         .foregroundStyle(.neutral600)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1196,7 +1196,7 @@ struct EditListingView: View {
                 KrInput(value: price)
             }
             if baseline > 0 {
-                Text("Uten tilbud: \(formatKr(baseline))")
+                Text("Vanlig pris: \(formatKr(baseline))")
                     .font(.system(size: 11))
                     .foregroundStyle(.neutral400)
             }

@@ -123,7 +123,7 @@ struct PublishStep: View {
             }
             Divider().padding(.leading, 56)
             summaryRow(icon: "tag.fill", label: "Pris", value: priceSummary) {
-                form.goTo(step: 7, spotIndex: 0)
+                form.goTo(step: 9, spotIndex: 0)
             }
             Divider().padding(.leading, 56)
             summaryRow(
@@ -131,18 +131,18 @@ struct PublishStep: View {
                 label: "Booking",
                 value: form.instantBooking ? "Direktebooking" : "Godkjenn først"
             ) {
-                form.goTo(step: 11)
+                form.goTo(step: 5)
             }
             Divider().padding(.leading, 56)
             summaryRow(icon: "photo.stack", label: "Bilder",
                        value: form.imageURLs.isEmpty ? "Ingen" : "\(form.imageURLs.count)") {
-                form.goTo(step: 13)
+                form.goTo(step: 14)
             }
             if form.category == .camping {
                 Divider().padding(.leading, 56)
                 summaryRow(icon: "calendar", label: "Blokkerte datoer",
                            value: form.blockedDates.isEmpty ? "Ingen" : "\(form.blockedDates.count)") {
-                    form.goTo(step: 16)
+                    form.goTo(step: 17)
                 }
             }
         }
@@ -205,7 +205,7 @@ struct PublishStep: View {
             VStack(spacing: 0) {
                 ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { index, spot in
                     Button {
-                        form.goTo(step: 5, spotIndex: index)
+                        form.goTo(step: 7, spotIndex: index)
                     } label: {
                         spotRow(index: index, spot: spot)
                             .contentShape(Rectangle())
@@ -297,7 +297,7 @@ struct PublishStep: View {
                 .padding(.leading, 4)
 
             Button {
-                form.goTo(step: 14)
+                form.goTo(step: 15)
             } label: {
                 FlowLayout(spacing: 8) {
                     ForEach(Array(form.selectedAmenities), id: \.self) { rawValue in

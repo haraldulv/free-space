@@ -3,15 +3,6 @@ import SwiftUI
 struct InstantBookingStep: View {
     @ObservedObject var form: ListingFormModel
 
-    @FocusState private var focusedField: StayField?
-
-    private enum StayField { case min, max }
-
-    private var unitWord: String {
-        // dag for parkering, døgn for camping. Brukes i hjelpe-tekster.
-        form.category == .parking ? "dag" : "døgn"
-    }
-
     var body: some View {
         WizardScreen(
             title: "Hvordan vil du ta imot bestillinger?",
@@ -39,89 +30,8 @@ struct InstantBookingStep: View {
                         form.instantBooking = false
                     }
                 }
-
-                stayLengthCard
             }
         }
-        .safeAreaInset(edge: .bottom) {
-            if focusedField != nil {
-                doneBar
-            }
-        }
-    }
-
-    /// Min/maks antall dager-card.
-    private var stayLengthCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                Image(systemName: "calendar.badge.clock")
-                    .font(.system(size: 16))
-                    .foregroundStyle(.primary600)
-                Text("Lengde på opphold")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-            }
-            Text("Du kan kreve at gjester booker minst eller høyst et visst antall \(unitWord). La være tom hvis ingen grense.")
-                .font(.system(size: 13))
-                .foregroundStyle(.neutral500)
-                .lineSpacing(2)
-
-            HStack(spacing: 12) {
-                stayField(label: "Minimum", binding: $form.minStayDays, focus: .min)
-                stayField(label: "Maksimum", binding: $form.maxStayDays, focus: .max)
-            }
-        }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .overlay(RoundedRectangle(cornerRadius: 18).stroke(Color.neutral200, lineWidth: 1))
-    }
-
-    @ViewBuilder
-    private func stayField(label: String, binding: Binding<Int?>, focus: StayField) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.neutral500)
-                .textCase(.uppercase)
-            HStack(spacing: 8) {
-                TextField("Ingen", value: binding, format: .number)
-                    .focused($focusedField, equals: focus)
-                    .keyboardType(.numberPad)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                Text(unitWord)
-                    .font(.system(size: 14))
-                    .foregroundStyle(.neutral500)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color.neutral50)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    /// Floating "Ferdig"-knapp for tallpaddet (samme mønster som CreateListingView).
-    private var doneBar: some View {
-        HStack {
-            Spacer()
-            Button {
-                focusedField = nil
-            } label: {
-                Image(systemName: "keyboard.chevron.compact.down")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(Color.primary600)
-                    .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
-            }
-        }
-        .padding(.trailing, 16)
-        .padding(.bottom, 8)
     }
 }
 

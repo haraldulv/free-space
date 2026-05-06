@@ -45,6 +45,29 @@ struct DescriptionStep: View {
                                 lineWidth: titleFocused ? 1.5 : 1)
                 )
 
+            // Foreslag-knapp: tap for å fylle inn forslag-teksten direkte.
+            // Vises kun når feltet er tomt så den ikke surrer rundt etter
+            // brukeren har skrevet noe.
+            if form.title.trimmingCharacters(in: .whitespaces).isEmpty {
+                Button {
+                    form.title = suggestedTitle
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "sparkles")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text("Bruk forslag: \(suggestedTitle)")
+                            .font(.system(size: 13, weight: .medium))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(.primary700)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(Color.primary50)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
             Text("Tips: nevn beliggenhet eller noe spesielt, f.eks. \"Sjønær plass i Lofoten\".")
                 .font(.system(size: 12))
                 .foregroundStyle(.neutral500)

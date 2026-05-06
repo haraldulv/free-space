@@ -57,7 +57,7 @@ struct HostListingCard: View {
                 Rectangle().fill(Color.neutral100)
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 200)
+            .frame(height: 260)
             .clipped()
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .opacity(isActive ? 1 : 0.55)
