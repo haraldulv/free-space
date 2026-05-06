@@ -26,8 +26,6 @@ struct SearchView: View {
     private let initialQuery: String
     private let initialCheckIn: Date?
     private let initialCheckOut: Date?
-    private let initialStartMinutes: Int?
-    private let initialEndMinutes: Int?
     private let initialBookingPref: BookingPreference
     private let initialVehicles: Set<VehicleType>
     private let initialCategory: ListingCategory?
@@ -42,8 +40,6 @@ struct SearchView: View {
         initialQuery: String = "",
         initialCheckIn: Date? = nil,
         initialCheckOut: Date? = nil,
-        initialStartMinutes: Int? = nil,
-        initialEndMinutes: Int? = nil,
         initialBookingPref: BookingPreference = .all,
         initialVehicles: Set<VehicleType> = [.motorhome],
         initialCategory: ListingCategory? = nil,
@@ -54,8 +50,6 @@ struct SearchView: View {
         self.initialQuery = initialQuery
         self.initialCheckIn = initialCheckIn
         self.initialCheckOut = initialCheckOut
-        self.initialStartMinutes = initialStartMinutes
-        self.initialEndMinutes = initialEndMinutes
         self.initialBookingPref = initialBookingPref
         self.initialVehicles = initialVehicles
         self.initialCategory = initialCategory
@@ -70,8 +64,6 @@ struct SearchView: View {
         _query = State(initialValue: initialQuery)
         _checkIn = State(initialValue: initialCheckIn)
         _checkOut = State(initialValue: initialCheckOut)
-        _startMinutes = State(initialValue: initialStartMinutes)
-        _endMinutes = State(initialValue: initialEndMinutes)
         var f = SearchFilters()
         f.bookingPreference = initialBookingPref
         f.vehicleTypes = initialVehicles
@@ -85,8 +77,6 @@ struct SearchView: View {
     @State private var query = ""
     @State private var checkIn: Date?
     @State private var checkOut: Date?
-    @State private var startMinutes: Int?
-    @State private var endMinutes: Int?
     @State private var flexibility: Int = 0
     @State private var vehicles: Set<VehicleType> = [.motorhome]
     @State private var bookingPref: BookingPreference = .all
@@ -148,8 +138,6 @@ struct SearchView: View {
                     query: $query,
                     checkIn: $checkIn,
                     checkOut: $checkOut,
-                    startMinutes: $startMinutes,
-                    endMinutes: $endMinutes,
                     flexibility: $flexibility,
                     bookingPref: $bookingPref,
                     vehicles: $vehicles,
@@ -390,10 +378,6 @@ struct SearchView: View {
     private var filteredListings: [Listing] {
         listingService.searchResults.filter { listing in
             if let cat = filters.category, listing.category != cat { return false }
-            // Tidspunkt valgt → kun parkering-per-time gir mening
-            if filters.category == .parking, (startMinutes != nil || endMinutes != nil) {
-                if listing.priceUnit != .hour { return false }
-            }
             if !filters.vehicleTypes.isEmpty {
                 if let t = listing.vehicleType, !filters.vehicleTypes.contains(t) { return false }
             }
@@ -436,9 +420,6 @@ struct SearchView: View {
             parts.append("\(df.string(from: i))–\(df.string(from: o))")
         } else {
             parts.append("Når som helst")
-        }
-        if let s = startMinutes, let e = endMinutes {
-            parts.append(String(format: "%02d:%02d–%02d:%02d", s/60, s%60, e/60, e%60))
         }
         if vehicles.isEmpty {
             parts.append("Alle kjøretøy")
@@ -497,8 +478,6 @@ struct SearchView: View {
         let store = SearchContextStore.shared
         store.checkIn = checkIn
         store.checkOut = checkOut
-        store.startMinutes = startMinutes
-        store.endMinutes = endMinutes
         Task { await searchAt(lat: searchLat, lng: searchLng, radiusKm: 30) }
     }
 

@@ -13,8 +13,6 @@ struct WhereSheet: View {
     @Binding var query: String
     @Binding var checkIn: Date?
     @Binding var checkOut: Date?
-    @Binding var startMinutes: Int?
-    @Binding var endMinutes: Int?
     @Binding var flexibility: Int
     @Binding var bookingPref: BookingPreference
     @Binding var vehicles: Set<VehicleType>
@@ -166,10 +164,6 @@ struct WhereSheet: View {
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.neutral900)
                 inlineDatePicker
-                if category == .parking {
-                    Divider()
-                    timeRangeSection
-                }
             }
             .padding(20)
             .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
@@ -232,9 +226,6 @@ struct WhereSheet: View {
                 return "\(dates) · ± \(flexibility) \(flexibility == 1 ? "dag" : "dager")"
             }
             return dates
-        }
-        if category == .parking, let s = startMinutes, let e = endMinutes {
-            return String(format: "%02d:%02d–%02d:%02d", s/60, s%60, e/60, e%60)
         }
         return "Legg til datoer"
     }
@@ -432,50 +423,18 @@ struct WhereSheet: View {
                     editingCheckIn = false
                 }
             }
-            .onAppear {
-                // SwiftUI DatePicker.graphical trigges ikke onChange når initial
-                // og valgt verdi er identisk. Hvis vi lar checkIn være nil og
-                // bruker `.. ?? Date()` som default, kan ikke brukeren velge i
-                // dag (DatePicker har allerede i dag som "valgt"). Vi initialiserer
-                // proaktivt så tap på en annen dato + tilbake fungerer som forventet.
-                if checkIn == nil { checkIn = Date() }
-                if checkOut == nil {
-                    checkOut = Calendar.current.date(byAdding: .day, value: 1, to: checkIn ?? Date())
-                }
-            }
 
-            DatePicker(
-                "",
-                selection: editingCheckIn
-                    ? Binding(
-                        get: { checkIn ?? Date() },
-                        set: { newValue in
-                            checkIn = newValue
-                            // Hold Utsjekk > Innsjekk
-                            if let out = checkOut, out <= newValue {
-                                checkOut = Calendar.current.date(byAdding: .day, value: 1, to: newValue)
-                            }
-                            // Auto-bytt til Utsjekk-tab så brukeren kan velge ferdig
-                            withAnimation(.easeInOut(duration: 0.18)) { editingCheckIn = false }
-                        }
-                      )
-                    : Binding(
-                        get: { checkOut ?? Calendar.current.date(byAdding: .day, value: 1, to: checkIn ?? Date()) ?? Date() },
-                        set: { checkOut = $0 }
-                      ),
-                in: editingCheckIn
-                    ? Date()...
-                    : (checkIn.map { Calendar.current.date(byAdding: .day, value: 1, to: $0) ?? Date() } ?? Date())...,
-                displayedComponents: .date
+            // BookingCalendarView gir Airbnb-stil range-markering: tap én
+            // dato → innsjekk-anker. Tap dato 2 → utsjekk + visuell strek
+            // mellom datoene. Tap igjen = nytt range. Mye bedre enn Apple's
+            // DatePicker.graphical som ikke kan vise range.
+            BookingCalendarView(
+                checkIn: $checkIn,
+                checkOut: $checkOut,
+                blockedDates: [],
+                minDate: Date()
             )
-            .datePickerStyle(.graphical)
-            .labelsHidden()
-            .environment(\.locale, Locale(identifier: "nb_NO"))
-            .environment(\.calendar, {
-                var cal = Calendar(identifier: .gregorian)
-                cal.firstWeekday = 2
-                return cal
-            }())
+            .frame(height: 380)
 
             flexibilityChips
 
@@ -558,68 +517,6 @@ struct WhereSheet: View {
         df.dateFormat = "d. MMM"
         df.locale = Locale(identifier: "nb_NO")
         return df.string(from: date)
-    }
-
-    // MARK: - When (parkering): tidspunkt
-
-    /// Nåværende klokkeslett rundet opp til nærmeste hele 30 minutter.
-    /// Eksempler: 14:07 → 14:30, 14:32 → 15:00, 23:50 → 24:00.
-    private static func roundedNowMinutes() -> Int {
-        let comps = Calendar.current.dateComponents([.hour, .minute], from: Date())
-        let total = (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
-        let snapped = ((total + 29) / 30) * 30
-        return min(snapped, 24 * 60)
-    }
-
-    private var timeRangeSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 16) {
-                TimeWheelPicker(label: "Fra", minutes: $startMinutes)
-                    .frame(maxWidth: .infinity)
-                TimeWheelPicker(label: "Til", minutes: $endMinutes)
-                    .frame(maxWidth: .infinity)
-            }
-            .onChange(of: startMinutes) { _, newVal in
-                if let s = newVal, let e = endMinutes, e <= s {
-                    endMinutes = min(24 * 60, s + 30)
-                }
-            }
-
-            // Hurtigvalg for varighet — relative til startMinutes
-            HStack(spacing: 8) {
-                durationChip(label: "1 time", hours: 1)
-                durationChip(label: "2 timer", hours: 2)
-                durationChip(label: "4 timer", hours: 4)
-            }
-        }
-        .onAppear {
-            // Default: starttid = nå rundet opp til halvtimen, slutt = +1 time
-            if startMinutes == nil {
-                let start = Self.roundedNowMinutes()
-                startMinutes = start
-                if endMinutes == nil { endMinutes = min(24 * 60, start + 60) }
-            }
-        }
-    }
-
-    private func durationChip(label: String, hours: Int) -> some View {
-        let durationMinutes = hours * 60
-        let start = startMinutes ?? Self.roundedNowMinutes()
-        let isSelected = (endMinutes ?? -1) == min(24 * 60, start + durationMinutes)
-        return Button {
-            if startMinutes == nil { startMinutes = start }
-            endMinutes = min(24 * 60, start + durationMinutes)
-        } label: {
-            Text(label)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isSelected ? .white : .neutral900)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(isSelected ? Color.neutral900 : Color.neutral50)
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(isSelected ? Color.clear : Color.neutral200, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
     }
 
     // MARK: - Booking preference
@@ -738,8 +635,6 @@ struct WhereSheet: View {
                     query = ""
                     checkIn = nil
                     checkOut = nil
-                    startMinutes = nil
-                    endMinutes = nil
                     bookingPref = .all
                     vehicles = (category == .camping) ? [.motorhome, .campervan] : [.car]
                     placesService.clear()

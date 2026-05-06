@@ -12,8 +12,6 @@ struct HomeView: View {
     @State private var pendingQuery: String = ""
     @State private var pendingCheckIn: Date?
     @State private var pendingCheckOut: Date?
-    @State private var pendingStartMinutes: Int?
-    @State private var pendingEndMinutes: Int?
     @State private var pendingBookingPref: BookingPreference = .all
     @State private var pendingVehicles: Set<VehicleType> = [.motorhome, .campervan]
     @State private var pendingPlace: PlacePrediction?
@@ -157,8 +155,6 @@ struct HomeView: View {
                 initialQuery: pendingQuery,
                 initialCheckIn: pendingCheckIn,
                 initialCheckOut: pendingCheckOut,
-                initialStartMinutes: pendingStartMinutes,
-                initialEndMinutes: pendingEndMinutes,
                 initialBookingPref: pendingBookingPref,
                 initialVehicles: pendingVehicles,
                 initialCategory: selectedCategory,
