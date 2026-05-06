@@ -747,34 +747,39 @@ struct MyListingsView: View {
 
     private var listingsScrollView: some View {
         ScrollView {
-            LazyVStack(spacing: 24) {
+            VStack(spacing: 24) {
+                // Draft-kortet ligger UTENFOR LazyVStack — LazyVStack hadde
+                // hit-testing-bug der long-press på draft-cellen trigget
+                // contextMenu på listing-cellen under (build 165/166).
                 if let draft {
                     draftCard(draft: draft)
                 }
-                ForEach(listings) { listing in
-                    NavigationLink {
-                        EditListingRootView(listing: listing, onSaved: { updated in
-                            if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
-                                listings[idx] = updated
-                            }
-                        })
-                    } label: {
-                        HostListingCard(
-                            listing: listing,
-                            monthlyEarnings: monthlyEarnings[listing.id]
-                        )
-                    }
-                    .buttonStyle(.plain)
-                    .contextMenu {
-                        Button {
-                            qrTarget = listing
+                LazyVStack(spacing: 24) {
+                    ForEach(listings) { listing in
+                        NavigationLink {
+                            EditListingRootView(listing: listing, onSaved: { updated in
+                                if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
+                                    listings[idx] = updated
+                                }
+                            })
                         } label: {
-                            Label("Vis QR-kode", systemImage: "qrcode")
+                            HostListingCard(
+                                listing: listing,
+                                monthlyEarnings: monthlyEarnings[listing.id]
+                            )
                         }
-                        Button(role: .destructive) {
-                            deleteTarget = listing
-                        } label: {
-                            Label("Slett annonse", systemImage: "trash")
+                        .buttonStyle(.plain)
+                        .contextMenu {
+                            Button {
+                                qrTarget = listing
+                            } label: {
+                                Label("Vis QR-kode", systemImage: "qrcode")
+                            }
+                            Button(role: .destructive) {
+                                deleteTarget = listing
+                            } label: {
+                                Label("Slett annonse", systemImage: "trash")
+                            }
                         }
                     }
                 }
@@ -787,56 +792,54 @@ struct MyListingsView: View {
     /// Kort som vises øverst i Mine annonser når et utkast finnes.
     /// Tap → re-åpner wizarden med utkastet pre-lastet. Long-press →
     /// kontekstmeny med "Forkast utkast"-action.
-    ///
-    /// Bruker onTapGesture i stedet for Button — Button + contextMenu
-    /// inne i LazyVStack/ScrollView har en SwiftUI-bug der taps ikke
-    /// alltid registreres etter at fullScreenCover har vært åpnet en gang.
     @ViewBuilder
     private func draftCard(draft: DraftListing) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(Color.primary100)
-                    .frame(width: 44, height: 44)
-                Image(systemName: "doc.text")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.primary600)
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
-                    Text("Fortsett utkast")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.primary700)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 3)
-                        .background(Color.primary100)
-                        .clipShape(Capsule())
-                }
-                Text(draft.displayTitle)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                    .lineLimit(1)
-                Text(draft.displaySubtitle)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.neutral400)
-        }
-        .padding(16)
-        .background(Color.primary50)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.primary200, lineWidth: 1)
-        )
-        .contentShape(RoundedRectangle(cornerRadius: 16))
-        .onTapGesture {
+        Button {
             resumeDraft = draft
             showCreateListing = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(Color.primary100)
+                        .frame(width: 44, height: 44)
+                    Image(systemName: "doc.text")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(Color.primary600)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text("Fortsett utkast")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.primary700)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(Color.primary100)
+                            .clipShape(Capsule())
+                    }
+                    Text(draft.displayTitle)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .lineLimit(1)
+                    Text(draft.displaySubtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral400)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.primary50)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(Color.primary200, lineWidth: 1)
+            )
         }
+        .buttonStyle(.plain)
         .contextMenu {
             Button(role: .destructive) {
                 showDiscardDraftAlert = true

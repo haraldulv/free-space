@@ -1740,9 +1740,11 @@ struct EditListingRootView: View {
                 .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.6), lineWidth: 1))
             }
             .padding(16)
+            // Bunn-padding så siste rad kan scrolles forbi den flytende Vis-pillen
+            .padding(.bottom, 64)
         }
         .background(Color.neutral50)
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        .overlay(alignment: .bottom) {
             previewPill
         }
         .navigationTitle("Rediger annonse")
@@ -1790,24 +1792,22 @@ struct EditListingRootView: View {
         Button {
             showPreview = true
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 6) {
                 Image(systemName: "eye.fill")
+                    .font(.system(size: 13, weight: .semibold))
+                Text("Vis")
                     .font(.system(size: 14, weight: .semibold))
-                Text("Vis annonsen som gjest")
-                    .font(.system(size: 15, weight: .semibold))
             }
             .foregroundStyle(.neutral900)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 10)
             .background(Color.white)
             .clipShape(Capsule())
             .overlay(Capsule().stroke(Color.neutral200, lineWidth: 1))
-            .shadow(color: Color.black.opacity(0.06), radius: 8, y: 2)
+            .shadow(color: Color.black.opacity(0.18), radius: 12, y: 4)
         }
         .buttonStyle(.plain)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial)
+        .padding(.bottom, 16)
     }
 
     private func row(tab: EditListingTab) -> some View {
