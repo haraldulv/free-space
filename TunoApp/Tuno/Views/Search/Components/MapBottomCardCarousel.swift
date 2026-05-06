@@ -117,7 +117,10 @@ struct MapListingBigCard: View {
                     .padding(.vertical, 4)
                     .background(.ultraThinMaterial)
                     .clipShape(Capsule())
-                    .padding(10)
+                    // Match TabView's page-indikator (sentrert i bunn med
+                    // ~8pt fra kant) så tag og prikker ligger på samme linje.
+                    .padding(.leading, 10)
+                    .padding(.bottom, 8)
                 }
             }
 
@@ -126,7 +129,7 @@ struct MapListingBigCard: View {
                 Button(action: onFavoriteToggle) {
                     Image(systemName: isFavorited ? "heart.fill" : "heart")
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(isFavorited ? .red : .white)
+                        .foregroundStyle(isFavorited ? .red : .neutral900)
                         .frame(width: 32, height: 32)
                         .background(.white.opacity(0.92))
                         .clipShape(Circle())
