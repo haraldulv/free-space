@@ -366,7 +366,9 @@ struct ListingDetailView: View {
     /// Speiler `lib/cancellation.ts`-policyen: 24 t før innsjekk = full
     /// refusjon (minus servicetillegg). 0–24 t = 50 %. Etter innsjekk = 0.
     private func cancellationSubtitle(for listing: Listing) -> String {
-        "Full refusjon hvis du kansellerer mer enn 24 t før innsjekk. 50 % refusjon innen 24 t. Ingen refusjon etter innsjekk."
+        // Non-breaking space (\u{00A0}) holder "24 t" sammen så de ikke
+        // brytes på tvers av linjer.
+        "Full refusjon hvis du kansellerer mer enn 24\u{00A0}t før innsjekk. 50\u{00A0}% refusjon innen 24\u{00A0}t. Ingen refusjon etter innsjekk."
     }
 
     /// Naturlig undertekst for åpningstid-raden basert på compactLabel.

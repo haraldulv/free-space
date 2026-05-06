@@ -145,6 +145,30 @@ struct MapListingBigCard: View {
                 .padding(.leading, 12)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+
+            // Nede-venstre: åpningstid-tag for parkering (samme stil som
+            // ListingCard på forsiden).
+            if listing.category == .parking,
+               let label = OpeningHoursService.compactLabel(listing.openingHours) {
+                VStack {
+                    Spacer()
+                    HStack(spacing: 6) {
+                        HStack(spacing: 3) {
+                            Image(systemName: "clock.fill")
+                                .font(.system(size: 10))
+                            Text(label)
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        .foregroundStyle(.neutral700)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial)
+                        .clipShape(Capsule())
+                        Spacer()
+                    }
+                    .padding(10)
+                }
+            }
         }
     }
 
@@ -189,16 +213,6 @@ struct MapListingBigCard: View {
                             .font(.system(size: 12))
                     }
                     .foregroundStyle(.neutral500)
-                }
-                if listing.category == .parking,
-                   let label = OpeningHoursService.compactLabel(listing.openingHours) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 10))
-                        Text(label)
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundStyle(.neutral700)
                 }
                 if listing.instantBooking == true {
                     HStack(spacing: 3) {
