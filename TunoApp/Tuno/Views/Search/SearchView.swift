@@ -478,6 +478,26 @@ struct SearchView: View {
         let store = SearchContextStore.shared
         store.checkIn = checkIn
         store.checkOut = checkOut
+        store.category = filters.category?.rawValue
+        store.query = query
+        store.placeName = query.isEmpty ? nil : query
+        store.placeLat = searchLat
+        store.placeLng = searchLng
+        store.bookingPref = filters.bookingPreference.rawValue
+        store.vehicles = filters.vehicleTypes.map { $0.rawValue }
+
+        // Lagre i recent searches (ignorer "I nærheten"-søk uten konkret sted)
+        if !query.isEmpty, let lat = searchLat, let lng = searchLng {
+            RecentSearchesStore.shared.add(
+                placeName: query,
+                category: filters.category?.rawValue ?? "camping",
+                checkIn: checkIn,
+                checkOut: checkOut,
+                lat: lat,
+                lng: lng
+            )
+        }
+
         Task { await searchAt(lat: searchLat, lng: searchLng, radiusKm: 30) }
     }
 

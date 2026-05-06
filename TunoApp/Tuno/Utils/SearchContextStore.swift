@@ -1,27 +1,63 @@
 import Foundation
 import SwiftUI
 
-/// Holder valgte datoer og parkering-tidspunkter fra kartsøket så BookingView
-/// kan pre-fylle dem når brukeren tapper en annonse fra søk. Brukeren slipper
-/// å skrive inn samme info to ganger.
+/// Holder valgte søke-parametere på tvers av navigasjon. Persisteres i
+/// UserDefaults så søket gjenoppstår etter app-restart eller når bruker
+/// går tilbake til forsiden.
 ///
-/// Lagres bare i minne — ved app-restart eller manuell clear() er state borte.
+/// State som BookingView trenger (datoer) leses også herfra slik at
+/// pre-fill ikke trenger duplikat input.
 @MainActor
 final class SearchContextStore: ObservableObject {
     static let shared = SearchContextStore()
 
-    @Published var checkIn: Date?
-    @Published var checkOut: Date?
-    /// Totalminutter siden midnatt (0..1440, 30-min step). NULL = uspesifisert.
-    @Published var startMinutes: Int?
-    @Published var endMinutes: Int?
+    @Published var category: String? { didSet { persist() } }
+    @Published var query: String { didSet { persist() } }
+    @Published var checkIn: Date? { didSet { persist() } }
+    @Published var checkOut: Date? { didSet { persist() } }
+    @Published var placeName: String? { didSet { persist() } }
+    @Published var placeLat: Double? { didSet { persist() } }
+    @Published var placeLng: Double? { didSet { persist() } }
+    @Published var bookingPref: String { didSet { persist() } }
+    @Published var vehicles: [String] { didSet { persist() } }
 
-    private init() {}
+    private let key = "tuno.searchContext"
+
+    private init() {
+        let d = UserDefaults.standard
+        self.category = d.string(forKey: "\(key).category")
+        self.query = d.string(forKey: "\(key).query") ?? ""
+        self.checkIn = d.object(forKey: "\(key).checkIn") as? Date
+        self.checkOut = d.object(forKey: "\(key).checkOut") as? Date
+        self.placeName = d.string(forKey: "\(key).placeName")
+        self.placeLat = (d.object(forKey: "\(key).placeLat") as? NSNumber)?.doubleValue
+        self.placeLng = (d.object(forKey: "\(key).placeLng") as? NSNumber)?.doubleValue
+        self.bookingPref = d.string(forKey: "\(key).bookingPref") ?? "all"
+        self.vehicles = d.stringArray(forKey: "\(key).vehicles") ?? []
+    }
+
+    private func persist() {
+        let d = UserDefaults.standard
+        d.set(category, forKey: "\(key).category")
+        d.set(query, forKey: "\(key).query")
+        d.set(checkIn, forKey: "\(key).checkIn")
+        d.set(checkOut, forKey: "\(key).checkOut")
+        d.set(placeName, forKey: "\(key).placeName")
+        if let lat = placeLat { d.set(lat, forKey: "\(key).placeLat") } else { d.removeObject(forKey: "\(key).placeLat") }
+        if let lng = placeLng { d.set(lng, forKey: "\(key).placeLng") } else { d.removeObject(forKey: "\(key).placeLng") }
+        d.set(bookingPref, forKey: "\(key).bookingPref")
+        d.set(vehicles, forKey: "\(key).vehicles")
+    }
 
     func clear() {
+        category = nil
+        query = ""
         checkIn = nil
         checkOut = nil
-        startMinutes = nil
-        endMinutes = nil
+        placeName = nil
+        placeLat = nil
+        placeLng = nil
+        bookingPref = "all"
+        vehicles = []
     }
 }

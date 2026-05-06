@@ -164,6 +164,15 @@ struct HomeView: View {
             )
         }
         .task {
+            // Restore søkestate fra SearchContextStore — bruker som går tilbake
+            // til forsiden får samme parkering/sted/datoer som forrige søk.
+            let ctx = SearchContextStore.shared
+            if let cat = ctx.category, let parsed = ListingCategory(rawValue: cat) {
+                selectedCategory = parsed
+            }
+            pendingQuery = ctx.query
+            pendingCheckIn = ctx.checkIn
+            pendingCheckOut = ctx.checkOut
             await listingService.fetchHomeListings(category: selectedCategory)
         }
     }

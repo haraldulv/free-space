@@ -272,9 +272,90 @@ struct WhereSheet: View {
         } else {
             VStack(spacing: 0) {
                 nearbyShortcut
+                if !RecentSearchesStore.shared.entries.isEmpty {
+                    Divider().padding(.leading, 60)
+                    recentSearchesList
+                }
                 ForEach(Self.suggestedDestinations) { dest in
                     Divider().padding(.leading, 60)
                     suggestedRow(dest)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var recentSearchesList: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("Nylige søk")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                    .textCase(.uppercase)
+                Spacer()
+            }
+            .padding(.horizontal, 4)
+            .padding(.top, 12)
+            .padding(.bottom, 6)
+
+            ForEach(RecentSearchesStore.shared.entries) { entry in
+                Button {
+                    typing = entry.placeName
+                    query = entry.placeName
+                    if let cat = ListingCategory(rawValue: entry.category) {
+                        category = cat
+                    }
+                    checkIn = entry.checkIn
+                    checkOut = entry.checkOut
+                    placesService.autocomplete(query: entry.placeName)
+                    Task {
+                        for _ in 0..<15 {
+                            try? await Task.sleep(nanoseconds: 100_000_000)
+                            if let first = placesService.predictions.first {
+                                onSelectPlace(first)
+                                await MainActor.run {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                        activeStep = .når
+                                    }
+                                }
+                                return
+                            }
+                        }
+                        await MainActor.run {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                                activeStep = .når
+                            }
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 14) {
+                        ZStack {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.neutral100)
+                                .frame(width: 40, height: 40)
+                            Image(systemName: "clock.arrow.circlepath")
+                                .font(.system(size: 16))
+                                .foregroundStyle(.neutral600)
+                        }
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(entry.placeName)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.neutral900)
+                            if let label = entry.dateRangeLabel {
+                                Text(label)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.neutral500)
+                            }
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 6)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if entry.id != RecentSearchesStore.shared.entries.last?.id {
+                    Divider().padding(.leading, 58)
                 }
             }
         }

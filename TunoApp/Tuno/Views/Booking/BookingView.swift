@@ -542,8 +542,6 @@ struct BookingView: View {
                         hourlyEndDate = hourlyDate
                     }
                 }
-                if let s = ctx.startMinutes { startMinutes = s }
-                if let e = ctx.endMinutes { endMinutes = e }
                 syncHourlyToCheckInOut()
             }
             async let avail: () = checkAvailability()
