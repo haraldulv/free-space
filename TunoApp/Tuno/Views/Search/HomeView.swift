@@ -12,6 +12,8 @@ struct HomeView: View {
     @State private var pendingQuery: String = ""
     @State private var pendingCheckIn: Date?
     @State private var pendingCheckOut: Date?
+    @State private var pendingLat: Double?
+    @State private var pendingLng: Double?
     @State private var pendingBookingPref: BookingPreference = .all
     @State private var pendingVehicles: Set<VehicleType> = [.motorhome, .campervan]
     @State private var pendingPlace: PlacePrediction?
@@ -155,6 +157,8 @@ struct HomeView: View {
                 initialQuery: pendingQuery,
                 initialCheckIn: pendingCheckIn,
                 initialCheckOut: pendingCheckOut,
+                initialLat: pendingLat,
+                initialLng: pendingLng,
                 initialBookingPref: pendingBookingPref,
                 initialVehicles: pendingVehicles,
                 initialCategory: selectedCategory,
@@ -165,7 +169,7 @@ struct HomeView: View {
         }
         .task {
             // Restore søkestate fra SearchContextStore — bruker som går tilbake
-            // til forsiden får samme parkering/sted/datoer som forrige søk.
+            // til forsiden får samme kategori/sted/datoer/kjøretøy som forrige søk.
             let ctx = SearchContextStore.shared
             if let cat = ctx.category, let parsed = ListingCategory(rawValue: cat) {
                 selectedCategory = parsed
@@ -173,6 +177,15 @@ struct HomeView: View {
             pendingQuery = ctx.query
             pendingCheckIn = ctx.checkIn
             pendingCheckOut = ctx.checkOut
+            pendingLat = ctx.placeLat
+            pendingLng = ctx.placeLng
+            if let pref = BookingPreference(rawValue: ctx.bookingPref) {
+                pendingBookingPref = pref
+            }
+            let restoredVehicles = Set(ctx.vehicles.compactMap { VehicleType(rawValue: $0) })
+            if !restoredVehicles.isEmpty {
+                pendingVehicles = restoredVehicles
+            }
             await listingService.fetchHomeListings(category: selectedCategory)
         }
     }

@@ -26,6 +26,11 @@ struct SearchView: View {
     private let initialQuery: String
     private let initialCheckIn: Date?
     private let initialCheckOut: Date?
+    /// Hvis satt, bruker disse rett som søke-senter (uten å trenge placeId-
+    /// lookup). Brukes for å restaurere et tidligere søk fra
+    /// SearchContextStore — placeId lagres ikke der, kun lat/lng.
+    private let initialLat: Double?
+    private let initialLng: Double?
     private let initialBookingPref: BookingPreference
     private let initialVehicles: Set<VehicleType>
     private let initialCategory: ListingCategory?
@@ -40,6 +45,8 @@ struct SearchView: View {
         initialQuery: String = "",
         initialCheckIn: Date? = nil,
         initialCheckOut: Date? = nil,
+        initialLat: Double? = nil,
+        initialLng: Double? = nil,
         initialBookingPref: BookingPreference = .all,
         initialVehicles: Set<VehicleType> = [.motorhome],
         initialCategory: ListingCategory? = nil,
@@ -50,6 +57,8 @@ struct SearchView: View {
         self.initialQuery = initialQuery
         self.initialCheckIn = initialCheckIn
         self.initialCheckOut = initialCheckOut
+        self.initialLat = initialLat
+        self.initialLng = initialLng
         self.initialBookingPref = initialBookingPref
         self.initialVehicles = initialVehicles
         self.initialCategory = initialCategory
@@ -159,6 +168,14 @@ struct SearchView: View {
         .animation(.easeInOut(duration: 0.18), value: whereSheetVisible)
         .task {
             if hasInitialLocation { return }
+            // Restaurert søk fra SearchContextStore: hopp rett til lagret
+            // sted uten å vente på placeId-lookup.
+            if let lat = initialLat, let lng = initialLng {
+                setSearchCenter(lat: lat, lng: lng, zoom: 11)
+                hasInitialLocation = true
+                await searchAt(lat: lat, lng: lng)
+                return
+            }
             // Hvis brukeren valgte et sted i Hvor-modalen, gå dit først
             if let place = initialPlace {
                 if let detail = await placesService.getPlaceDetail(placeId: place.id) {
