@@ -70,10 +70,6 @@ struct ListingMapView: UIViewRepresentable {
         view.layer.cornerRadius = size / 2
         view.layer.borderWidth = 2
         view.layer.borderColor = UIColor.white.cgColor
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.3
-        view.layer.shadowOffset = CGSize(width: 0, height: 2)
-        view.layer.shadowRadius = 3
 
         let label = UILabel(frame: view.bounds)
         label.text = "\(number)"

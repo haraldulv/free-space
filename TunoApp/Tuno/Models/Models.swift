@@ -160,6 +160,10 @@ struct SpotMarker: Codable, Hashable {
     /// Per-plass åpningstid (parkering). Overstyrer listing.openingHours hvis satt.
     /// nil = arve listing-nivå.
     var openingHours: OpeningHours?
+    /// Per-dato pris-overstyringer. nøkkel = "yyyy-MM-dd", verdi = kr.
+    /// Brukes for å sette ulike priser på spesielle dager (helger, høytid,
+    /// festivaler etc.). Hvis dato ikke finnes i dict → bruk standard `price`.
+    var datePriceOverrides: [String: Int]?
 
     enum CodingKeys: String, CodingKey {
         case id, lat, lng, label, description, price, extras, images
@@ -181,6 +185,7 @@ struct SpotMarker: Codable, Hashable {
         case discountWeekPct = "discountWeekPct"
         case discountMonthPct = "discountMonthPct"
         case openingHours = "openingHours"
+        case datePriceOverrides = "datePriceOverrides"
     }
 
     /// Returner effektive kr-priser for "lengre opphold".
