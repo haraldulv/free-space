@@ -224,25 +224,11 @@ final class ListingService: ObservableObject {
                 listings = listings.filter { OpeningHoursService.hasLimitedHours($0.openingHours) }
             }
 
-            // Auto-filtrer parkering: ekskluder kun hvis check-in ELLER
-            // check-out dagen er stengt etter åpningstid — gjest må kunne
-            // droppe av og hente bilen. Mellomliggende dager kan være stengt
-            // (langtidsparkering hvor gjest ikke trenger daglig tilgang).
-            if let checkIn, let checkOut {
-                let isoFormatter = DateFormatter()
-                isoFormatter.dateFormat = "yyyy-MM-dd"
-                isoFormatter.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
-                isoFormatter.locale = Locale(identifier: "en_US_POSIX")
-                if let ci = isoFormatter.date(from: checkIn),
-                   let co = isoFormatter.date(from: checkOut) {
-                    listings = listings.filter { listing in
-                        guard listing.category == .parking else { return true }
-                        guard let oh = listing.openingHours else { return true }
-                        return OpeningHoursService.isOpen(oh, on: ci)
-                            && OpeningHoursService.isOpen(oh, on: co)
-                    }
-                }
-            }
+            // Vi auto-filtrerer IKKE på åpningstid — gjest kan justere
+            // pickup-dag, eller vert kan ha nøkkel/kode for tilgang utenfor
+            // åpningstid. Åpningstiden vises på søkekortet ("9-17"), og
+            // gjest får eksplisitt kontroll via 3-segments-filteret
+            // (Alle / Døgnåpent / Med åpningstid).
 
             searchResults = listings
         } catch {
