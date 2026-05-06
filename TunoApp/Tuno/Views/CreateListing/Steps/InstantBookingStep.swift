@@ -10,24 +10,24 @@ struct InstantBookingStep: View {
         ) {
             VStack(spacing: 16) {
                 BookingModeCard(
-                    isSelected: form.instantBooking,
-                    iconName: "bolt.fill",
-                    title: "Direktebooking",
-                    subtitle: "Gjester booker rett inn uten å vente på svar. Anbefales for flere bookinger."
+                    isSelected: !form.instantBooking,
+                    iconName: "hand.raised.fill",
+                    title: "Godkjenn først",
+                    subtitle: "Du får en forespørsel og må godkjenne hver bestilling innen 24 timer. Anbefales."
                 ) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
-                        form.instantBooking = true
+                        form.instantBooking = false
                     }
                 }
 
                 BookingModeCard(
-                    isSelected: !form.instantBooking,
-                    iconName: "hand.raised.fill",
-                    title: "Godkjenn først",
-                    subtitle: "Du får en forespørsel og må godkjenne hver bestilling innen 24 timer."
+                    isSelected: form.instantBooking,
+                    iconName: "bolt.fill",
+                    title: "Direktebooking",
+                    subtitle: "Gjester booker rett inn uten å vente på svar. Bra for travle annonser."
                 ) {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.78)) {
-                        form.instantBooking = false
+                        form.instantBooking = true
                     }
                 }
             }

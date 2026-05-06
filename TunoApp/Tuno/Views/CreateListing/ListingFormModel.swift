@@ -91,7 +91,7 @@ final class ListingFormModel: ObservableObject {
     @Published var fullscreenStep: Bool = false
 
     // MARK: - Listing-level (settes ved review)
-    @Published var instantBooking = true
+    @Published var instantBooking = false
     /// Listing-nivå priceUnit — derives fra kategori (camping=natt, parkering=time).
     @Published var priceUnit: PriceUnit = .time
     /// Listing-nivå åpningstid (parkering). nil = døgnåpent.

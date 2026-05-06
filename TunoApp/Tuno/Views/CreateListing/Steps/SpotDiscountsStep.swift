@@ -2,10 +2,10 @@ import SwiftUI
 
 /// "Lengre opphold"-steg (parkering only).
 ///
-/// Lar verten sette en fast pris (kr) for: 1 døgn, 1 uke, 1 måned. Et "døgn" =
-/// booking som dekker hele dagens band-vindu. "Uke" = 7 påfølgende fulle døgn,
-/// "måned" = 30. Booking-API stabler greedy: month tas først, så week, så
-/// enkelt-døgn — slik at en 35-dagers-booking blir 1 måned + 5 enkelt-døgn.
+/// Lar verten sette en fast pris (kr) for: 1 uke, 1 måned, 3 måneder, 6 måneder
+/// og 1 år. Tiers regnes som påfølgende fulle dager (7/30/90/180/365).
+/// Booking-API stabler greedy: lengste tier først, så ned til standard dagspris
+/// — slik at en 35-dagers-booking blir 1 måned + 5 dager til vanlig dagspris.
 ///
 /// Default-modus: "Felles for alle plasser" på, så ett pris-sett gjelder alle
 /// spots. Skrur bruker av toggle, vises per-plass-input.
@@ -17,7 +17,7 @@ struct SpotDiscountsStep: View {
     var body: some View {
         WizardScreen(
             title: "Lengre opphold",
-            subtitle: "Sett en fast pris for et fullt døgn, en uke eller en måned. Gjør det attraktivt for gjester å booke lenger."
+            subtitle: "Sett rabatterte priser for uke, måned eller lengre. Gjør det attraktivt for gjester å booke lenger."
         ) {
             VStack(spacing: 16) {
                 if form.spotMarkers.count > 1 {
@@ -302,9 +302,9 @@ struct LongerStayPrices: Equatable {
     }
 }
 
-/// Lite preview-kort som viser hva en booking koster med og uten rabatten,
-/// for 1 døgn (24 t), 1 uke (7 d) og 1 måned (30 d). Skjules helt når ingen
-/// pris er satt, så steget ikke skummer over for verten som vil hoppe over.
+/// Lite preview-kort som viser hva en booking koster med og uten rabatten
+/// for hver tier verten har satt pris på (uke/måned/3mnd/6mnd/år). Skjules
+/// helt når ingen pris er satt, så steget ikke skummer over for verten.
 struct LongerStayPreviewCard: View {
     /// Døgn-pris (kr/døgn). Beholder navn `hourlyRate` for kompatibilitet med
     /// kallsteder som ikke har migrert. Etter parkering-per-dag-refaktoren

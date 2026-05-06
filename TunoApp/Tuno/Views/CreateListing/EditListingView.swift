@@ -1706,6 +1706,7 @@ struct EditListingRootView: View {
     let listing: Listing
     var onSaved: ((Listing) -> Void)? = nil
     @State private var current: Listing
+    @State private var showPreview = false
     @Environment(\.dismiss) private var dismiss
 
     init(listing: Listing, onSaved: ((Listing) -> Void)? = nil) {
@@ -1743,36 +1744,60 @@ struct EditListingRootView: View {
         .background(Color.neutral50)
         .navigationTitle("Rediger annonse")
         .navigationBarTitleDisplayMode(.inline)
+        .fullScreenCover(isPresented: $showPreview) {
+            NavigationStack {
+                ListingDetailView(listingId: current.id)
+            }
+        }
     }
 
     private var heroCard: some View {
-        ZStack(alignment: .bottomLeading) {
-            CachedAsyncImage(url: URL(string: current.images?.first ?? "")) { image in
-                image.resizable().aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Rectangle().fill(Color.neutral100)
-            }
-            .frame(height: 180)
-            .frame(maxWidth: .infinity)
-            .clipped()
+        ZStack(alignment: .topTrailing) {
+            ZStack(alignment: .bottomLeading) {
+                CachedAsyncImage(url: URL(string: current.images?.first ?? "")) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle().fill(Color.neutral100)
+                }
+                .frame(height: 180)
+                .frame(maxWidth: .infinity)
+                .clipped()
 
-            LinearGradient(
-                colors: [Color.black.opacity(0), Color.black.opacity(0.55)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 180)
+                LinearGradient(
+                    colors: [Color.black.opacity(0), Color.black.opacity(0.55)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 180)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(current.title.isEmpty ? "Uten tittel" : current.title)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                Text(current.city ?? "")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.85))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(current.title.isEmpty ? "Uten tittel" : current.title)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                    Text(current.city ?? "")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.white.opacity(0.85))
+                }
+                .padding(16)
             }
-            .padding(16)
+
+            Button {
+                showPreview = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "eye.fill")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Vis")
+                        .font(.system(size: 13, weight: .semibold))
+                }
+                .foregroundStyle(.neutral900)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(.ultraThinMaterial, in: Capsule())
+                .overlay(Capsule().stroke(Color.white.opacity(0.4), lineWidth: 1))
+            }
+            .padding(12)
         }
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }

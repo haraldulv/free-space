@@ -226,6 +226,16 @@
         }
       }
     },
+    "%@ kr × %@ døgn" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ kr × %2$@ døgn"
+          }
+        }
+      }
+    },
     "%@ kr per %@" : {
       "localizations" : {
         "nb" : {
@@ -1236,6 +1246,9 @@
     "Bruk for alle plasser" : {
 
     },
+    "Bruk forslag: %@" : {
+
+    },
     "Bruker annonsens pris" : {
       "localizations" : {
         "de" : {
@@ -1643,6 +1656,9 @@
           }
         }
       }
+    },
+    "Du mister fremdriften du har lagret. Dette kan ikke angres." : {
+
     },
     "Du tjener" : {
 
@@ -2480,6 +2496,9 @@
           }
         }
       }
+    },
+    "Fortsett utkast" : {
+
     },
     "Fra" : {
 
@@ -3986,6 +4005,9 @@
         }
       }
     },
+    "La være tom hvis ingen grense." : {
+
+    },
     "Lagre" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4199,6 +4221,9 @@
           }
         }
       }
+    },
+    "Lengde på opphold" : {
+
     },
     "Lengre opphold" : {
 
@@ -5547,6 +5572,9 @@
     "Pris per %@" : {
 
     },
+    "Pris per døgn" : {
+
+    },
     "Pris per natt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5680,6 +5708,9 @@
           }
         }
       }
+    },
+    "Rabatten gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 dager. Resten betales etter standardpris." : {
+
     },
     "Rediger annonse" : {
       "extractionState" : "manual",
@@ -6394,7 +6425,7 @@
     "Sletting fjerner profilen din og alle tilknyttede data permanent. Aktive bookinger må avsluttes før du sletter." : {
 
     },
-    "Slik ser tilbudene ut for gjesten" : {
+    "Slik ser rabattene ut for gjesten" : {
 
     },
     "Slutt-tid må være etter start-tid." : {
@@ -6648,9 +6679,6 @@
           }
         }
       }
-    },
-    "Tilbudet gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 døgn. Resten betales etter standardpris." : {
-
     },
     "Tilgjengelig" : {
 
@@ -7033,9 +7061,6 @@
     "Utbetalinger" : {
 
     },
-    "Uten tilbud: %@" : {
-
-    },
     "Utforsk" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7126,6 +7151,9 @@
           }
         }
       }
+    },
+    "Vanlig pris: %@" : {
+
     },
     "Vanlige tillegg" : {
 
@@ -7420,6 +7448,9 @@
           }
         }
       }
+    },
+    "Vi lagrer fremdriften din som utkast så du kan fortsette senere fra Mine annonser." : {
+
     },
     "Vi sender deg et varsel så snart kontoen din er godkjent. Det tar vanligvis under en time." : {
 
