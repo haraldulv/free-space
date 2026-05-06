@@ -369,6 +369,16 @@ struct ListingDetailView: View {
         "Full refusjon hvis du kansellerer mer enn 24 t før innsjekk. 50 % refusjon innen 24 t. Ingen refusjon etter innsjekk."
     }
 
+    /// Naturlig undertekst for åpningstid-raden basert på compactLabel.
+    private func openingHoursSubtitle(label: String) -> String {
+        switch label {
+        case "24t": return "Åpent hele døgnet, alle dager"
+        case "Begrenset": return "Begrenset åpningstid"
+        case "Stengt": return "Stengt"
+        default: return "Åpent \(label)"
+        }
+    }
+
     /// Avstand fra brukerens GPS-posisjon til annonsen. Returnerer nil hvis
     /// posisjon ikke er gitt (ingen permission eller ikke fixed ennå).
     private func distanceLabel(for listing: Listing) -> String? {
@@ -376,12 +386,12 @@ struct ListingDetailView: View {
               let lat = listing.lat, let lng = listing.lng else { return nil }
         let km = haversineDistanceKm(lat1: user.latitude, lng1: user.longitude, lat2: lat, lng2: lng)
         if km < 1 {
-            return "\(Int((km * 1000).rounded())) m unna"
+            return "\(Int((km * 1000).rounded()))m"
         }
         if km < 10 {
-            return String(format: "%.1f km unna", km).replacingOccurrences(of: ".", with: ",")
+            return String(format: "%.1fkm", km).replacingOccurrences(of: ".", with: ",")
         }
-        return "\(Int(km.rounded())) km unna"
+        return "\(Int(km.rounded()))km"
     }
 
     // MARK: - Kompakt host-rad (rett under tittel, Airbnb-stil)
@@ -1001,22 +1011,17 @@ struct ListingDetailView: View {
                           title: "Kansellering",
                           subtitle: cancellationSubtitle(for: listing))
 
-                // Inn-/utsjekkstider gjelder kun camping. Parkering har
-                // åpningstid på listing-nivå (eller døgnåpent) som vises i
-                // "Plasser"-raden + på selve søkekortet.
+                // Inn-/utsjekkstider gjelder kun camping. Parkering viser
+                // åpningstid (eller "Åpent hele døgnet" hvis ingen er satt).
                 if listing.category == .camping {
                     thingsRow(icon: "clock",
                               title: "Inn- og utsjekking",
                               subtitle: "Innsjekking fra \(listing.checkInTime ?? "15:00") · Utsjekking innen \(listing.checkOutTime ?? "11:00")")
-                } else if let oh = listing.openingHours,
-                          let label = OpeningHoursService.compactLabel(oh) {
+                } else if listing.category == .parking,
+                          let label = OpeningHoursService.compactLabel(listing.openingHours) {
                     thingsRow(icon: "clock",
                               title: "Åpningstid",
-                              subtitle: label == "Begrenset" ? "Begrenset åpningstid" : "Åpent \(label)")
-                } else if listing.category == .parking {
-                    thingsRow(icon: "clock",
-                              title: "Åpningstid",
-                              subtitle: "Døgnåpent")
+                              subtitle: openingHoursSubtitle(label: label))
                 }
 
                 if let spots = listing.spots {

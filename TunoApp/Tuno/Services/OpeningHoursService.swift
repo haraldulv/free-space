@@ -67,11 +67,13 @@ enum OpeningHoursService {
     }
 
     /// Kompakt label for søkekort/ikoner. Eks:
-    /// - nil → nil (døgnåpent, ingen pille)
+    /// - nil → "24t" (ingen åpningstid satt = alltid ledig)
     /// - alle åpne dager 9-17, helg stengt → "9-17"
+    /// - 24/7 hver dag → "24t"
     /// - varierende tider → "Begrenset"
+    /// - alle dager stengt → "Stengt"
     static func compactLabel(_ oh: OpeningHours?) -> String? {
-        guard let oh else { return nil }
+        guard let oh else { return "24t" }
         var ranges: Set<String> = []
         var anyOpen = false
         for day in Weekday.allCases {
@@ -83,8 +85,8 @@ enum OpeningHoursService {
         guard anyOpen else { return "Stengt" }
         if ranges.count == 1, let only = ranges.first,
            let parsed = parseRange(only) {
-            // 24/7
-            if parsed.start == 0 && parsed.end >= 23 * 60 + 59 { return nil }
+            // 24/7 hver dag
+            if parsed.start == 0 && parsed.end >= 23 * 60 + 59 { return "24t" }
             let startH = parsed.start / 60
             let endH = parsed.end / 60
             return "\(startH)-\(endH)"

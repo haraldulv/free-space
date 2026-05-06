@@ -56,12 +56,12 @@ struct MapListingBigCard: View {
         let km = haversineDistanceKm(lat1: refLat, lng1: refLng, lat2: lat, lng2: lng)
         if km < 1 {
             let m = Int((km * 1000).rounded())
-            return "\(m) m unna"
+            return "\(m)m"
         }
         if km < 10 {
-            return String(format: "%.1f km unna", km).replacingOccurrences(of: ".", with: ",")
+            return String(format: "%.1fkm", km).replacingOccurrences(of: ".", with: ",")
         }
-        return "\(Int(km.rounded())) km unna"
+        return "\(Int(km.rounded()))km"
     }
 
     var body: some View {
@@ -190,20 +190,12 @@ struct MapListingBigCard: View {
                     }
                     .foregroundStyle(.neutral500)
                 }
-                if let oh = listing.openingHours,
-                   let label = OpeningHoursService.compactLabel(oh) {
+                if listing.category == .parking,
+                   let label = OpeningHoursService.compactLabel(listing.openingHours) {
                     HStack(spacing: 3) {
                         Image(systemName: "clock.fill")
                             .font(.system(size: 10))
                         Text(label)
-                            .font(.system(size: 12, weight: .medium))
-                    }
-                    .foregroundStyle(.neutral700)
-                } else if listing.category == .parking {
-                    HStack(spacing: 3) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 10))
-                        Text("Døgnåpent")
                             .font(.system(size: 12, weight: .medium))
                     }
                     .foregroundStyle(.neutral700)

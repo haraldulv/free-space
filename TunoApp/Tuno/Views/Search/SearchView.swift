@@ -150,6 +150,7 @@ struct SearchView: View {
                     flexibility: $flexibility,
                     bookingPref: $bookingPref,
                     vehicles: $vehicles,
+                    openingHoursFilter: $filters.openingHours,
                     placesService: placesService,
                     locationManager: locationManager,
                     onSelectPlace: handleSelectPlace,

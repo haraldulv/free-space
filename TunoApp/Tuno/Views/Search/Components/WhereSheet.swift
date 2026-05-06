@@ -16,6 +16,7 @@ struct WhereSheet: View {
     @Binding var flexibility: Int
     @Binding var bookingPref: BookingPreference
     @Binding var vehicles: Set<VehicleType>
+    @Binding var openingHoursFilter: OpeningHoursFilter
     @ObservedObject var placesService: PlacesService
     @ObservedObject var locationManager: LocationManager
     let onSelectPlace: (PlacePrediction) -> Void
@@ -182,6 +183,9 @@ struct WhereSheet: View {
                     .foregroundStyle(.neutral900)
                 vehicleSection
                 bookingPrefSection
+                if category == .parking {
+                    openingHoursSection
+                }
             }
             .padding(20)
             .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
@@ -600,6 +604,48 @@ struct WhereSheet: View {
         df.dateFormat = "d. MMM"
         df.locale = Locale(identifier: "nb_NO")
         return df.string(from: date)
+    }
+
+    // MARK: - Opening hours (parkering only)
+
+    private var openingHoursSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Tilgjengelighet")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.neutral500)
+                .textCase(.uppercase)
+
+            HStack(spacing: 0) {
+                openingHoursSegment(.any, label: "Alle")
+                openingHoursSegment(.alwaysOpen, label: "Hele dagen", icon: "clock.fill")
+            }
+            .padding(3)
+            .background(Color.neutral100)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+    }
+
+    private func openingHoursSegment(_ value: OpeningHoursFilter, label: String, icon: String? = nil) -> some View {
+        let isSelected = openingHoursFilter == value
+        return Button {
+            withAnimation(.easeInOut(duration: 0.18)) { openingHoursFilter = value }
+        } label: {
+            HStack(spacing: 5) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 11, weight: .bold))
+                }
+                Text(label)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(isSelected ? .neutral900 : .neutral500)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 9)
+            .background(isSelected ? Color.white : Color.clear)
+            .clipShape(RoundedRectangle(cornerRadius: 9))
+            .shadow(color: isSelected ? .black.opacity(0.06) : .clear, radius: 2, y: 1)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Booking preference
