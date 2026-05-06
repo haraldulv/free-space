@@ -424,17 +424,16 @@ struct WhereSheet: View {
                 }
             }
 
-            // BookingCalendarView gir Airbnb-stil range-markering: tap én
-            // dato → innsjekk-anker. Tap dato 2 → utsjekk + visuell strek
-            // mellom datoene. Tap igjen = nytt range. Mye bedre enn Apple's
-            // DatePicker.graphical som ikke kan vise range.
-            BookingCalendarView(
+            // SearchDateRangePicker: pure-SwiftUI range-kalender. Tap dato 1
+            // → checkIn (anchor). Tap dato 2 (senere) → checkOut + visuell
+            // range mellom. Tap dato 2 (tidligere) eller etter begge er satt
+            // → reset til ny anchor. Erstatter UICalendarView som hadde
+            // sizing-problemer i kort-baserte WhereSheet-layouten.
+            SearchDateRangePicker(
                 checkIn: $checkIn,
-                checkOut: $checkOut,
-                blockedDates: [],
-                minDate: Date()
+                checkOut: $checkOut
             )
-            .frame(height: 380)
+            .frame(maxHeight: 360)
 
             flexibilityChips
 

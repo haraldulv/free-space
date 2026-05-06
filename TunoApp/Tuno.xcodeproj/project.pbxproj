@@ -13,6 +13,7 @@
 		0A8748402C49449A4F0B8CE4 /* ListingFormModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB67EEF4A6A12892A1B1697E /* ListingFormModel.swift */; };
 		0B19852C5D3D617305E11C4A /* WizardSeasonalCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE101C0F1F72214EE38A5DE /* WizardSeasonalCalendarView.swift */; };
 		0B771074E8ABC573EB77837C /* GooglePlaces in Frameworks */ = {isa = PBXBuildFile; productRef = 506B5A64845B7A5C6C66721B /* GooglePlaces */; };
+		0DB672FC78BC310C5EDA3B89 /* SearchDateRangePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F92A4E3ED44C52BBEC76E34D /* SearchDateRangePicker.swift */; };
 		0FD3445EB4FD7DC8AE465DC3 /* SpotBlockedDatesSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 633F2046F5DC659D1D443A25 /* SpotBlockedDatesSection.swift */; };
 		12663C1EA3152BC7C6440902 /* CustomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E48039F546D58654A8CF5E /* CustomTabBar.swift */; };
 		13B77DCEDB9056B38179BFAE /* IBANGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */; };
@@ -279,6 +280,7 @@
 		F3BF694A798055824C4651A4 /* MessagesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesStep.swift; sourceTree = "<group>"; };
 		F65149FFDD665E73DD3401C9 /* ProfileSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSummaryCard.swift; sourceTree = "<group>"; };
 		F778AA24DE116E00B14AC035 /* Tuno-Staging.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Tuno-Staging.entitlements"; sourceTree = "<group>"; };
+		F92A4E3ED44C52BBEC76E34D /* SearchDateRangePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchDateRangePicker.swift; sourceTree = "<group>"; };
 		F9A10E906BFD039DCF513926 /* TimePickerField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePickerField.swift; sourceTree = "<group>"; };
 		F9C68D73AEFE78CC1D1DEE15 /* EarningsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarningsView.swift; sourceTree = "<group>"; };
 		FBE71C1EE64D63048F5BD2F5 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
@@ -472,6 +474,7 @@
 				30327AE07ADF79432C8F3B35 /* FiltersSheet.swift */,
 				D542E42BA6CD2042CD0922EB /* MapBottomCardCarousel.swift */,
 				DA06602EF8129BE55A4E5CEC /* PriceHistogram.swift */,
+				F92A4E3ED44C52BBEC76E34D /* SearchDateRangePicker.swift */,
 				B432FE81E7D9B6ECAB6EE3F8 /* SearchHerePill.swift */,
 				34085B6A08D14716ACA21EA1 /* SearchPill.swift */,
 				9DE80E0F57ED28043A953489 /* WhereSheet.swift */,
@@ -812,6 +815,7 @@
 				E73EE58A4F48616B26338D4E /* ReceiptBuilder.swift in Sources */,
 				30DB0664F70CAF9A54C49E83 /* RegisterView.swift in Sources */,
 				96B48987F842D9D98F4FE0F7 /* SearchContextStore.swift in Sources */,
+				0DB672FC78BC310C5EDA3B89 /* SearchDateRangePicker.swift in Sources */,
 				CCC01BD7E34A8531A3C71E2A /* SearchHerePill.swift in Sources */,
 				FE23B05A859AA8FCC5B7D037 /* SearchPill.swift in Sources */,
 				E912DD2299D28C54B1846A12 /* SearchView.swift in Sources */,
@@ -882,7 +886,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 179;
+				CURRENT_PROJECT_VERSION = 180;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1000,7 +1004,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 179;
+				CURRENT_PROJECT_VERSION = 180;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1066,7 +1070,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 179;
+				CURRENT_PROJECT_VERSION = 180;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1125,7 +1129,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 179;
+				CURRENT_PROJECT_VERSION = 180;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
