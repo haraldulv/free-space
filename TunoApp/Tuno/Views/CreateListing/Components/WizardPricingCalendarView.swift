@@ -105,6 +105,34 @@ struct WizardPricingCalendarView: View {
         return s?.price ?? s?.pricePerNight ?? s?.pricePerHour ?? 0
     }
 
+    /// Effektiv åpningstid for plassen — spot.openingHours overstyrer
+    /// listing-nivå (form.openingHours).
+    private var effectiveOpeningHours: OpeningHours? {
+        spot?.openingHours ?? form.openingHours
+    }
+
+    /// True hvis ukedagen for `date` er stengt etter åpningstid (verdien
+    /// er nil i OpeningHours for den ukedagen).
+    private func closedByOpeningHours(_ date: Date) -> Bool {
+        guard let oh = effectiveOpeningHours else { return false }
+        return !OpeningHoursService.isOpen(oh, on: date)
+    }
+
+    /// Kompakt åpningstid-label for celle, f.eks. "9–17". nil hvis
+    /// døgnåpent eller hvis dagen er stengt.
+    private func openingHoursLabel(for date: Date) -> String? {
+        guard let oh = effectiveOpeningHours else { return nil }
+        let comp = Self.osloCalendar.component(.weekday, from: date)
+        let day = Weekday.from(weekdayComponent: comp)
+        guard let raw = oh.value(for: day),
+              let parsed = OpeningHoursService.parseRange(raw) else { return nil }
+        // 24/7 → ingen label (start 00:00, end 23:59 eller 24:00)
+        if parsed.start == 0 && parsed.end >= 23 * 60 + 59 { return nil }
+        let startH = parsed.start / 60
+        let endH = parsed.end / 60
+        return "\(startH)–\(endH)"
+    }
+
     private var spot: SpotMarker? {
         form.spotMarkers.first(where: { $0.id == spotId })
     }
@@ -356,6 +384,12 @@ struct WizardPricingCalendarView: View {
         let overrideValue = dateOverrides[iso]
         let hasOverride = overrideValue != nil && overrideValue != basePerHour
         let priceInfo = priceForDate(date)
+        // Stengt etter åpningstid (f.eks. lør/søn når host har 9-17 man-fre).
+        // Visuelt: samme dimming som blokkerte dager, men viser "Stengt" i
+        // stedet for X — så bruker skjønner at det ikke er en manuell blokk.
+        let isClosedByHours = !isPast && !isBlocked && closedByOpeningHours(date)
+        let dimAsBlocked = isBlocked || isClosedByHours
+        let hoursLabel = (!isPast && !dimAsBlocked) ? openingHoursLabel(for: date) : nil
 
         Button {
             handleDayTap(iso: iso, isPast: isPast)
@@ -366,19 +400,19 @@ struct WizardPricingCalendarView: View {
                         isPast: isPast,
                         isSelected: isSelected,
                         isAnchor: isAnchor,
-                        isBlocked: isBlocked,
+                        isBlocked: dimAsBlocked,
                         hasOverride: hasOverride
                     ))
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(
-                        cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast, isBlocked: isBlocked),
-                        lineWidth: isAnchor ? 2 : (isSelected || isBlocked ? 1.5 : 1)
+                        cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast, isBlocked: dimAsBlocked),
+                        lineWidth: isAnchor ? 2 : (isSelected || dimAsBlocked ? 1.5 : 1)
                     )
 
                 VStack(spacing: 0) {
                     Text("\(day)")
                         .font(.system(size: 16, weight: (isSelected || isAnchor) ? .bold : .semibold))
-                        .foregroundStyle(cellText(isPast: isPast, isBlocked: isBlocked))
+                        .foregroundStyle(cellText(isPast: isPast, isBlocked: dimAsBlocked))
                         .padding(.top, 8)
 
                     Spacer(minLength: 0)
@@ -388,20 +422,33 @@ struct WizardPricingCalendarView: View {
                             .font(.system(size: 11, weight: .bold))
                             .foregroundStyle(.neutral500)
                             .padding(.bottom, 10)
+                    } else if isClosedByHours {
+                        Text("Stengt")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.neutral500)
+                            .padding(.bottom, 10)
                     } else if !isPast, let price = priceInfo, !(dayCoveredByBand(date) && !hasOverride) {
                         // Hopp over bottom-pris hvis et bånd dekker dagen — prisen
                         // står da på selve båndet. Date-overrides er fortsatt synlige
                         // siden de vinner over bånd.
-                        Text("\(price.amount) kr")
-                            .font(.system(size: 11, weight: hasOverride || price.isOverride ? .bold : .medium))
-                            .foregroundStyle(priceTextColor(
-                                isSelected: isSelected,
-                                isAnchor: isAnchor,
-                                isOverride: hasOverride || price.isOverride
-                            ))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .padding(.bottom, 10)
+                        VStack(spacing: 1) {
+                            Text("\(price.amount) kr")
+                                .font(.system(size: 11, weight: hasOverride || price.isOverride ? .bold : .medium))
+                                .foregroundStyle(priceTextColor(
+                                    isSelected: isSelected,
+                                    isAnchor: isAnchor,
+                                    isOverride: hasOverride || price.isOverride
+                                ))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                            if let lbl = hoursLabel {
+                                Text(lbl)
+                                    .font(.system(size: 9))
+                                    .foregroundStyle(.neutral400)
+                                    .lineLimit(1)
+                            }
+                        }
+                        .padding(.bottom, 10)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
