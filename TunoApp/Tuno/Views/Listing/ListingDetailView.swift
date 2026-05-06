@@ -372,7 +372,7 @@ struct ListingDetailView: View {
     /// Naturlig undertekst for åpningstid-raden basert på compactLabel.
     private func openingHoursSubtitle(label: String) -> String {
         switch label {
-        case "24t": return "Åpent hele døgnet, alle dager"
+        case "Hele dagen": return "Åpen hele dagen, alle dager"
         case "Begrenset": return "Begrenset åpningstid"
         case "Stengt": return "Stengt"
         default: return "Åpent \(label)"
