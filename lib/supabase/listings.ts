@@ -2,7 +2,7 @@ import { createClient } from "./server";
 import type { Listing, SearchFilters, ListingCategory, Amenity, SpotMarker, VehicleType } from "@/types";
 import { vehicleFitsIn } from "@/types";
 import { haversineKm } from "@/lib/geo";
-import { isOpenForRange } from "@/lib/opening-hours";
+import { isOpenAt } from "@/lib/opening-hours";
 
 /**
  * Deterministisk fuzz av lat/lng for listings med hide_exact_location=true.
@@ -180,15 +180,17 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
       return !requestedDates.some((d) => blockedSet.has(d));
     });
 
-    // Auto-filtrer parkering: ekskluder annonser der noen dag i søkeperioden
-    // er stengt etter åpningstid (f.eks. søk fre-søn på en plass med
-    // 9-17 man-fre, helg stengt → utelukkes). Camping har ingen åpningstid.
+    // Auto-filtrer parkering: ekskluder kun hvis check-in ELLER check-out
+    // dagen er stengt etter åpningstid — gjest må kunne droppe av og hente
+    // bilen. Mellomliggende dager kan være stengt (langtidsparkering hvor
+    // gjest ikke trenger daglig tilgang). Camping har ingen åpningstid.
     const checkInDate = new Date(filters.checkIn);
     const checkOutDate = new Date(filters.checkOut);
     listings = listings.filter((listing) => {
       if (listing.category !== "parking") return true;
       if (!listing.openingHours) return true;
-      return isOpenForRange(listing.openingHours, checkInDate, checkOutDate);
+      return isOpenAt(listing.openingHours, checkInDate)
+          && isOpenAt(listing.openingHours, checkOutDate);
     });
 
     // Enrich listings with available spots count

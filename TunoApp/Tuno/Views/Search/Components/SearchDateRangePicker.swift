@@ -10,8 +10,8 @@ struct SearchDateRangePicker: View {
     @Binding var checkOut: Date?
 
     private let monthsAhead = 12
-    private let cellHeight: CGFloat = 44
-    private let cellSpacing: CGFloat = 4
+    private let cellHeight: CGFloat = 38
+    private let cellSpacing: CGFloat = 3
 
     private static var osloCalendar: Calendar {
         var cal = Calendar(identifier: .iso8601)

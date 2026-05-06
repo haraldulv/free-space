@@ -224,10 +224,10 @@ final class ListingService: ObservableObject {
                 listings = listings.filter { OpeningHoursService.hasLimitedHours($0.openingHours) }
             }
 
-            // Auto-filtrer parkering: ekskluder annonser der noen dag i
-            // søkeperioden er stengt etter åpningstid (f.eks. fre-søn på en
-            // plass med 9-17 man-fre, helg stengt → utelukkes). Camping har
-            // ingen åpningstid-modell.
+            // Auto-filtrer parkering: ekskluder kun hvis check-in ELLER
+            // check-out dagen er stengt etter åpningstid — gjest må kunne
+            // droppe av og hente bilen. Mellomliggende dager kan være stengt
+            // (langtidsparkering hvor gjest ikke trenger daglig tilgang).
             if let checkIn, let checkOut {
                 let isoFormatter = DateFormatter()
                 isoFormatter.dateFormat = "yyyy-MM-dd"
@@ -238,7 +238,8 @@ final class ListingService: ObservableObject {
                     listings = listings.filter { listing in
                         guard listing.category == .parking else { return true }
                         guard let oh = listing.openingHours else { return true }
-                        return OpeningHoursService.isOpenForRange(oh, checkIn: ci, checkOut: co)
+                        return OpeningHoursService.isOpen(oh, on: ci)
+                            && OpeningHoursService.isOpen(oh, on: co)
                     }
                 }
             }

@@ -314,6 +314,7 @@ struct WhereSheet: View {
                         Spacer()
                     }
                     .padding(.vertical, 8)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 if prediction.id != placesService.predictions.last?.id {
@@ -353,6 +354,7 @@ struct WhereSheet: View {
                 Spacer()
             }
             .padding(.vertical, 6)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -404,6 +406,7 @@ struct WhereSheet: View {
                 Spacer()
             }
             .padding(.vertical, 6)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -433,7 +436,7 @@ struct WhereSheet: View {
                 checkIn: $checkIn,
                 checkOut: $checkOut
             )
-            .frame(maxHeight: 360)
+            .frame(maxHeight: 280)
 
             flexibilityChips
 
