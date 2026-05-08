@@ -1,9 +1,10 @@
 import SwiftUI
-import GoogleMaps
+import MapKit
 
-/// Interaktivt Google Maps-view med hovedposisjon + nummererte plass-pinner.
+/// Interaktivt kart-view med hovedposisjon + nummererte plass-pinner.
 /// I `isSpotMode = true`: tap på kartet legger til en ny pin (opp til `maxSpots`).
 /// I `isSpotMode = false`: tap flytter hovedposisjonen.
+/// Hovedmarker og spot-markers er draggable.
 struct LocationPickerMapView: UIViewRepresentable {
     @Binding var lat: Double
     @Binding var lng: Double
@@ -13,104 +14,92 @@ struct LocationPickerMapView: UIViewRepresentable {
     var updateTrigger: UUID
     var onMaxReached: (() -> Void)? = nil
     var mainMarkerDraggable: Bool = true
-    /// Kart-type — satellitt (.hybrid) som default, men kan toggles til vanlig (.normal).
-    var mapType: GMSMapViewType = .hybrid
+    /// Kart-type — satellitt (.hybrid) som default, men kan toggles til vanlig (.standard).
+    var mapType: MKMapType = .hybrid
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    func makeUIView(context: Context) -> GMSMapView {
-        let camera = GMSCameraPosition(latitude: lat, longitude: lng, zoom: 17)
-        let options = GMSMapViewOptions()
-        options.camera = camera
-        let mapView = GMSMapView(options: options)
+    func makeUIView(context: Context) -> MKMapView {
+        let mapView = MKMapView()
         mapView.mapType = mapType
-        mapView.settings.zoomGestures = true
-        mapView.settings.scrollGestures = true
-        mapView.settings.myLocationButton = false
-        mapView.settings.compassButton = false
+        mapView.isZoomEnabled = true
+        mapView.isScrollEnabled = true
+        mapView.isPitchEnabled = false
+        mapView.isRotateEnabled = false
+        mapView.showsCompass = false
+        mapView.showsScale = false
+        mapView.showsPointsOfInterest = false
         mapView.delegate = context.coordinator
-        context.coordinator.mapView = mapView
 
+        let center = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+        let region = MKCoordinateRegion(
+            center: center,
+            span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+        )
+        mapView.setRegion(region, animated: false)
+
+        // Tap-recognizer for å legge til/flytte pinner
+        let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
+        tap.delegate = context.coordinator
+        mapView.addGestureRecognizer(tap)
+        context.coordinator.tapGesture = tap
+
+        context.coordinator.mapView = mapView
         context.coordinator.latBinding = $lat
         context.coordinator.lngBinding = $lng
         context.coordinator.spotMarkersBinding = $spotMarkers
         context.coordinator.isSpotMode = isSpotMode
         context.coordinator.maxSpots = maxSpots
         context.coordinator.onMaxReached = onMaxReached
+        context.coordinator.mainMarkerDraggable = mainMarkerDraggable
 
-        addMarkers(to: mapView, coordinator: context.coordinator)
+        addAnnotations(to: mapView, coordinator: context.coordinator)
         return mapView
     }
 
-    func updateUIView(_ mapView: GMSMapView, context: Context) {
+    func updateUIView(_ mapView: MKMapView, context: Context) {
         context.coordinator.isSpotMode = isSpotMode
         context.coordinator.maxSpots = maxSpots
         context.coordinator.onMaxReached = onMaxReached
+        context.coordinator.mainMarkerDraggable = mainMarkerDraggable
+
         if mapView.mapType != mapType { mapView.mapType = mapType }
 
         if context.coordinator.lastTrigger != updateTrigger {
             context.coordinator.lastTrigger = updateTrigger
-            let camera = GMSCameraPosition(latitude: lat, longitude: lng, zoom: 17)
-            mapView.animate(to: camera)
+            let region = MKCoordinateRegion(
+                center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+                span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+            )
+            mapView.setRegion(region, animated: true)
         }
 
-        // Bare re-bygg markers når noe relevant faktisk endret seg.
-        // Tidligere kjørte vi mapView.clear() ved hver SwiftUI re-render
-        // (også ved mapType-toggle), som plutselig fjernet pinner midt i
-        // en pågående drag — det er trolig "vis frem plassene"-buggen.
         let signature = MarkerSignature(lat: lat, lng: lng, spots: spotMarkers)
         if context.coordinator.lastSignature != signature {
             context.coordinator.lastSignature = signature
-            mapView.clear()
-            context.coordinator.mainMarker = nil
-            context.coordinator.spotMarkerMap.removeAll()
-            addMarkers(to: mapView, coordinator: context.coordinator)
+            mapView.removeAnnotations(mapView.annotations.filter { !($0 is MKUserLocation) })
+            context.coordinator.mainAnnotation = nil
+            context.coordinator.spotAnnotations.removeAll()
+            addAnnotations(to: mapView, coordinator: context.coordinator)
         }
     }
 
-    private func addMarkers(to mapView: GMSMapView, coordinator: Coordinator) {
-        let main = GMSMarker()
-        main.position = CLLocationCoordinate2D(latitude: lat, longitude: lng)
-        main.isDraggable = mainMarkerDraggable
-        main.title = "Hovedposisjon"
-        main.map = mapView
-        coordinator.mainMarker = main
+    private func addAnnotations(to mapView: MKMapView, coordinator: Coordinator) {
+        // Hovedmarker (default rød pin via MKMarkerAnnotationView)
+        let main = MainPositionAnnotation(coordinate: CLLocationCoordinate2D(latitude: lat, longitude: lng))
+        mapView.addAnnotation(main)
+        coordinator.mainAnnotation = main
 
         for (i, spot) in spotMarkers.enumerated() {
-            let marker = GMSMarker()
-            marker.position = CLLocationCoordinate2D(latitude: spot.lat, longitude: spot.lng)
-            marker.isDraggable = true
-            marker.iconView = createNumberedPin(number: i + 1)
-            marker.groundAnchor = CGPoint(x: 0.5, y: 0.5)
-            marker.map = mapView
-            coordinator.spotMarkerMap[marker] = i
+            let annotation = SpotPickerAnnotation(
+                coordinate: CLLocationCoordinate2D(latitude: spot.lat, longitude: spot.lng),
+                index: i
+            )
+            mapView.addAnnotation(annotation)
+            coordinator.spotAnnotations[ObjectIdentifier(annotation)] = i
         }
     }
 
-    private func createNumberedPin(number: Int) -> UIView {
-        let size: CGFloat = 30
-        let view = UIView(frame: CGRect(x: 0, y: 0, width: size, height: size))
-        view.backgroundColor = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1) // #46C185
-        view.layer.cornerRadius = size / 2
-        view.layer.borderWidth = 2
-        view.layer.borderColor = UIColor.white.cgColor
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOpacity = 0.3
-        view.layer.shadowOffset = CGSize(width: 0, height: 2)
-        view.layer.shadowRadius = 3
-
-        let label = UILabel(frame: view.bounds)
-        label.text = "\(number)"
-        label.textColor = .white
-        label.font = .systemFont(ofSize: 13, weight: .bold)
-        label.textAlignment = .center
-        view.addSubview(label)
-
-        return view
-    }
-
-    /// Hash-friendly snapshot av posisjonene vi rendrer. Brukes for å unngå
-    /// unødvendige clear+re-add av GMSMarker i updateUIView.
     struct MarkerSignature: Equatable {
         let lat: Double
         let lng: Double
@@ -129,21 +118,83 @@ struct LocationPickerMapView: UIViewRepresentable {
         }
     }
 
-    class Coordinator: NSObject, GMSMapViewDelegate {
-        weak var mapView: GMSMapView?
-        var mainMarker: GMSMarker?
-        var spotMarkerMap: [GMSMarker: Int] = [:]
+    final class Coordinator: NSObject, MKMapViewDelegate, UIGestureRecognizerDelegate {
+        weak var mapView: MKMapView?
+        weak var tapGesture: UITapGestureRecognizer?
+        var mainAnnotation: MainPositionAnnotation?
+        var spotAnnotations: [ObjectIdentifier: Int] = [:]
         var lastTrigger: UUID?
         var lastSignature: MarkerSignature?
 
         nonisolated(unsafe) var isSpotMode = false
         nonisolated(unsafe) var maxSpots = 0
+        nonisolated(unsafe) var mainMarkerDraggable: Bool = true
         nonisolated(unsafe) var latBinding: Binding<Double>?
         nonisolated(unsafe) var lngBinding: Binding<Double>?
         nonisolated(unsafe) var spotMarkersBinding: Binding<[SpotMarker]>?
         nonisolated(unsafe) var onMaxReached: (() -> Void)?
 
-        func mapView(_ mapView: GMSMapView, didTapAt coordinate: CLLocationCoordinate2D) {
+        // MARK: Annotation views
+
+        func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
+            if annotation is MKUserLocation { return nil }
+
+            if let main = annotation as? MainPositionAnnotation {
+                let id = "main-pin"
+                let view = (mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView)
+                    ?? MKMarkerAnnotationView(annotation: main, reuseIdentifier: id)
+                view.annotation = main
+                view.markerTintColor = .red
+                view.canShowCallout = false
+                view.isDraggable = mainMarkerDraggable
+                return view
+            }
+
+            if let spot = annotation as? SpotPickerAnnotation {
+                let id = "spot-pin"
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
+                    ?? MKAnnotationView(annotation: spot, reuseIdentifier: id)
+                view.annotation = spot
+                view.image = MapBubbleRenderer.numberedPin(number: spot.index + 1)
+                view.canShowCallout = false
+                view.isDraggable = true
+                view.centerOffset = CGPoint(x: 0, y: 0)
+                return view
+            }
+
+            return nil
+        }
+
+        // MARK: Drag end
+
+        func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, didChange newState: MKAnnotationView.DragState, fromOldState oldState: MKAnnotationView.DragState) {
+            guard newState == .ending else { return }
+            guard let annotation = view.annotation else { return }
+            view.dragState = .none
+
+            if annotation is MainPositionAnnotation {
+                latBinding?.wrappedValue = annotation.coordinate.latitude
+                lngBinding?.wrappedValue = annotation.coordinate.longitude
+            } else if let spot = annotation as? SpotPickerAnnotation {
+                guard let binding = spotMarkersBinding, spot.index < binding.wrappedValue.count else { return }
+                binding.wrappedValue[spot.index].lat = annotation.coordinate.latitude
+                binding.wrappedValue[spot.index].lng = annotation.coordinate.longitude
+            }
+        }
+
+        // MARK: Tap-to-add / tap-to-move
+
+        @MainActor
+        @objc func handleTap(_ gesture: UITapGestureRecognizer) {
+            guard let mapView else { return }
+            let point = gesture.location(in: mapView)
+            // Hvis tap traff en eksisterende annotation, la den selv håndtere det
+            if let hitView = mapView.hitTest(point, with: nil),
+               hitView is MKAnnotationView || (hitView.superview is MKAnnotationView) {
+                return
+            }
+            let coordinate = mapView.convert(point, toCoordinateFrom: mapView)
+
             if isSpotMode {
                 let count = spotMarkersBinding?.wrappedValue.count ?? 0
                 if maxSpots > 0 && count >= maxSpots {
@@ -174,17 +225,27 @@ struct LocationPickerMapView: UIViewRepresentable {
             }
         }
 
-        func mapView(_ mapView: GMSMapView, didEndDragging marker: GMSMarker) {
-            if marker === mainMarker {
-                latBinding?.wrappedValue = marker.position.latitude
-                lngBinding?.wrappedValue = marker.position.longitude
-            } else if let index = spotMarkerMap[marker] {
-                guard let binding = spotMarkersBinding, index < binding.wrappedValue.count else { return }
-                // Bevar ALLE eksisterende felt (description, vehicleMaxLength,
-                // vehicleType, extras osv) — bare oppdater lat/lng.
-                binding.wrappedValue[index].lat = marker.position.latitude
-                binding.wrappedValue[index].lng = marker.position.longitude
-            }
+        // UIGestureRecognizerDelegate — ikke konsumer tap når marker dras
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            return true
         }
+    }
+}
+
+// MARK: - Annotation typer
+
+final class MainPositionAnnotation: NSObject, MKAnnotation {
+    @objc dynamic var coordinate: CLLocationCoordinate2D
+    init(coordinate: CLLocationCoordinate2D) {
+        self.coordinate = coordinate
+    }
+}
+
+final class SpotPickerAnnotation: NSObject, MKAnnotation {
+    @objc dynamic var coordinate: CLLocationCoordinate2D
+    let index: Int
+    init(coordinate: CLLocationCoordinate2D, index: Int) {
+        self.coordinate = coordinate
+        self.index = index
     }
 }

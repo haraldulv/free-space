@@ -1,10 +1,10 @@
 import SwiftUI
-import GoogleMaps
+import MapKit
 
 struct MarkSpotsStep: View {
     @ObservedObject var form: ListingFormModel
     @State private var mapTrigger = UUID()
-    @State private var mapType: GMSMapViewType = .hybrid
+    @State private var mapType: MKMapType = .hybrid
 
     private var hasAllSpots: Bool {
         form.spotMarkers.count >= form.spots
@@ -37,7 +37,7 @@ struct MarkSpotsStep: View {
                 // Floating-kontroller øverst til høyre, Apple Maps-stil.
                 VStack(spacing: 8) {
                     floatingButton(systemName: mapType == .hybrid ? "map.fill" : "globe.europe.africa.fill") {
-                        mapType = (mapType == .hybrid) ? .normal : .hybrid
+                        mapType = (mapType == .hybrid) ? .standard : .hybrid
                     }
 
                     if !form.spotMarkers.isEmpty {

@@ -153,7 +153,7 @@ struct TunoApp: App {
     @StateObject private var pushRouter = PushRouter.shared
 
     init() {
-        initializeGoogleMaps()
+        initializeMapServices()
         configureImageCache()
     }
 

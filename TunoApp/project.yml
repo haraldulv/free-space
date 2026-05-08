@@ -27,9 +27,6 @@ packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift.git
     from: "2.0.0"
-  GoogleMaps:
-    url: https://github.com/googlemaps/ios-maps-sdk.git
-    from: "9.0.0"
   GooglePlaces:
     url: https://github.com/googlemaps/ios-places-sdk.git
     from: "10.0.0"
@@ -100,8 +97,6 @@ targets:
     dependencies:
       - package: Supabase
         product: Supabase
-      - package: GoogleMaps
-        product: GoogleMaps
       - package: GooglePlaces
         product: GooglePlaces
       - package: Stripe
