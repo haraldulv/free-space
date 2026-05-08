@@ -17,9 +17,76 @@ struct ChatView: View {
     @State private var showQuickReplies = false
     @State private var showHostProfile = false
     @State private var conversationDetails: ConversationDetails?
+    @State private var bookingState: BookingNegotiationState?
     @State private var actionToast: String?
+    @State private var counterSheetData: CounterSheetContext?
+    @State private var showPaymentSheet = false
+    @State private var paymentClientSecret: String?
+    @State private var paymentBookingId: String?
+    @StateObject private var bookingService = BookingService()
     @FocusState private var isInputFocused: Bool
     @Environment(\.dismiss) private var dismiss
+
+    /// Snapshot av booking + current_offer for å drive offer-bobler og topp-banneret.
+    struct BookingNegotiationState {
+        let bookingId: String
+        let status: String
+        let currentOfferId: String?
+        let userId: String  // gjest
+        let hostId: String?
+        let totalPrice: Int
+
+        var isNegotiating: Bool {
+            ["awaiting_host", "awaiting_guest", "awaiting_payment", "requested"].contains(status)
+        }
+
+        func isMyTurn(userId: String) -> Bool {
+            switch status {
+            case "awaiting_host", "requested":
+                return hostId == userId
+            case "awaiting_guest":
+                return self.userId == userId
+            case "awaiting_payment":
+                return self.userId == userId  // gjest skal betale
+            default:
+                return false
+            }
+        }
+
+        func bannerText(isMyTurn: Bool) -> String {
+            switch status {
+            case "awaiting_host", "requested":
+                return isMyTurn ? "Din tur å svare på forespørselen" : "Venter på utleier"
+            case "awaiting_guest":
+                return isMyTurn ? "Din tur å svare på motbudet" : "Venter på gjest"
+            case "awaiting_payment":
+                return isMyTurn ? "Fullfør betalingen" : "Venter på at gjest betaler"
+            default:
+                return ""
+            }
+        }
+
+        func bannerIcon(isMyTurn: Bool) -> String {
+            if status == "awaiting_payment" {
+                return isMyTurn ? "creditcard.fill" : "hourglass"
+            }
+            return isMyTurn ? "bell.fill" : "hourglass"
+        }
+
+        func bannerColor(isMyTurn: Bool) -> Color {
+            if status == "awaiting_payment" {
+                return Color(hex: "#f59e0b")  // oransje
+            }
+            return isMyTurn ? Color.primary600 : Color(hex: "#6b7280")
+        }
+    }
+
+    struct CounterSheetContext: Identifiable {
+        let id = UUID()
+        let bookingId: String
+        let currentOfferPrice: Int
+        let currentOfferLabel: String
+    }
 
     private var currentPreview: ConversationPreview? {
         globalChat.conversations.first(where: { $0.id == conversationId })
@@ -34,6 +101,8 @@ struct ChatView: View {
             chatHeader
 
             Divider()
+
+            negotiationBanner
 
             // Messages
             ScrollViewReader { proxy in
@@ -56,14 +125,22 @@ struct ChatView: View {
                                 .padding(.leading, 44)
                             }
 
-                            MessageBubble(
-                                message: message,
-                                isMe: isMe,
-                                avatarUrl: isMe ? nil : conversationDetails?.otherAvatar,
-                                otherUserInitial: String(otherUserName.prefix(1)),
-                                useTunoPinAvatar: isSupport && !isMe
-                            )
-                            .id(message.id)
+                            if message.isOffer, let metadata = message.metadata {
+                                offerBubbleRow(message: message, metadata: metadata, isMe: isMe)
+                                    .id(message.id)
+                            } else if message.isOfferAccepted || message.isOfferDeclined || message.isSystem {
+                                systemMessageRow(message: message)
+                                    .id(message.id)
+                            } else {
+                                MessageBubble(
+                                    message: message,
+                                    isMe: isMe,
+                                    avatarUrl: isMe ? nil : conversationDetails?.otherAvatar,
+                                    otherUserInitial: String(otherUserName.prefix(1)),
+                                    useTunoPinAvatar: isSupport && !isMe
+                                )
+                                .id(message.id)
+                            }
                         }
 
                         if let typicalResponseTime = conversationDetails?.typicalResponseTime {
@@ -249,6 +326,36 @@ struct ChatView: View {
                 )
             }
         }
+        .sheet(item: $counterSheetData) { ctx in
+            CounterOfferSheet(
+                bookingId: ctx.bookingId,
+                currentOfferPrice: ctx.currentOfferPrice,
+                currentOfferLabel: ctx.currentOfferLabel,
+                onSent: {
+                    Task {
+                        await chatService.loadMessages(conversationId: conversationId)
+                        await loadBookingState()
+                    }
+                }
+            )
+        }
+        .sheet(isPresented: $showPaymentSheet) {
+            if let secret = paymentClientSecret, let bid = paymentBookingId, let state = bookingState {
+                NegotiationPaymentView(
+                    bookingId: bid,
+                    clientSecret: secret,
+                    totalPrice: state.totalPrice,
+                    listingTitle: listingTitle,
+                    onSuccess: {
+                        Task {
+                            await chatService.loadMessages(conversationId: conversationId)
+                            await loadBookingState()
+                            flashToast("Betaling fullført! Bestillingen er bekreftet.")
+                        }
+                    }
+                )
+            }
+        }
         .task {
             await chatService.loadMessages(conversationId: conversationId)
             await chatService.subscribeToMessages(conversationId: conversationId)
@@ -256,11 +363,167 @@ struct ChatView: View {
             // Support-samtaler har ikke listing/booking-kontekst; hopp over detaljhentingen.
             if !isSupport {
                 await loadConversationDetails()
+                await loadBookingState()
             }
         }
         .onDisappear {
             Task { await chatService.unsubscribe() }
         }
+    }
+
+    // MARK: - Negotiation banner
+
+    @ViewBuilder
+    private var negotiationBanner: some View {
+        if let state = bookingState, state.isNegotiating {
+            let isMyTurn = state.isMyTurn(userId: currentUserId)
+            HStack(spacing: 10) {
+                Image(systemName: state.bannerIcon(isMyTurn: isMyTurn))
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(state.bannerColor(isMyTurn: isMyTurn))
+                Text(state.bannerText(isMyTurn: isMyTurn))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Spacer()
+                Text("\(state.totalPrice.formatted(.number.locale(Locale(identifier: "nb_NO")))) kr")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.neutral900)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(state.bannerColor(isMyTurn: isMyTurn).opacity(0.08))
+            .overlay(
+                Rectangle()
+                    .frame(height: 1)
+                    .foregroundStyle(state.bannerColor(isMyTurn: isMyTurn).opacity(0.2)),
+                alignment: .bottom
+            )
+        }
+    }
+
+    // MARK: - Offer + system message rows
+
+    @ViewBuilder
+    private func offerBubbleRow(message: ChatMessage, metadata: OfferMetadata, isMe: Bool) -> some View {
+        let isActive = message.metadata?.offerId != nil
+            && bookingState?.currentOfferId == message.metadata?.offerId
+        HStack {
+            if isMe { Spacer(minLength: 40) }
+            OfferMessageBubble(
+                metadata: metadata,
+                isFromMe: isMe,
+                isActive: isActive,
+                onAccept: isActive && !isMe ? { Task { await acceptOffer(metadata: metadata) } } : nil,
+                onCounter: isActive && !isMe ? { openCounterSheet(metadata: metadata) } : nil,
+                onDecline: isActive && !isMe ? { Task { await declineOffer() } } : nil
+            )
+            if !isMe { Spacer(minLength: 40) }
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, 4)
+    }
+
+    @ViewBuilder
+    private func systemMessageRow(message: ChatMessage) -> some View {
+        HStack {
+            Spacer()
+            Text(message.content)
+                .font(.system(size: 12))
+                .foregroundStyle(.neutral500)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(Color.neutral100)
+                .clipShape(Capsule())
+            Spacer()
+        }
+        .padding(.vertical, 4)
+    }
+
+    // MARK: - Booking state
+
+    private func loadBookingState() async {
+        // Last booking knyttet til denne samtalen, hvis noen.
+        guard let listingId else { return }
+        do {
+            struct BookingRow: Decodable {
+                let id: String
+                let user_id: String
+                let host_id: String?
+                let status: String
+                let current_offer_id: String?
+                let total_price: Int
+            }
+            let rows: [BookingRow] = try await supabase
+                .from("bookings")
+                .select("id, user_id, host_id, status, current_offer_id, total_price")
+                .eq("listing_id", value: listingId)
+                .or("user_id.eq.\(currentUserId),host_id.eq.\(currentUserId)")
+                .in("status", values: ["awaiting_host", "awaiting_guest", "awaiting_payment", "requested", "confirmed", "expired", "declined", "cancelled"])
+                .order("created_at", ascending: false)
+                .limit(1)
+                .execute()
+                .value
+            if let row = rows.first {
+                bookingState = BookingNegotiationState(
+                    bookingId: row.id,
+                    status: row.status,
+                    currentOfferId: row.current_offer_id,
+                    userId: row.user_id,
+                    hostId: row.host_id,
+                    totalPrice: row.total_price
+                )
+            }
+        } catch {
+            print("loadBookingState: \(error)")
+        }
+    }
+
+    // MARK: - Negotiation actions
+
+    private func acceptOffer(metadata: OfferMetadata) async {
+        guard let bookingId = metadata.bookingId, let offerId = metadata.offerId else { return }
+        let payload = BookingService.AcceptPayload(bookingId: bookingId, offerId: offerId)
+        let response = await bookingService.acceptOffer(payload: payload)
+
+        guard response?.status == "awaiting_payment" else {
+            flashToast(bookingService.error ?? "Kunne ikke godta tilbudet")
+            return
+        }
+
+        // Hvis det er gjest som godtok, åpne PaymentSheet umiddelbart.
+        // Host får retur-data med samme felter, men trigger ikke PaymentSheet selv.
+        if response?.acceptorRole == "guest", let secret = response?.clientSecret {
+            paymentClientSecret = secret
+            paymentBookingId = bookingId
+            showPaymentSheet = true
+        } else {
+            flashToast("Godtatt — venter på betaling")
+        }
+        await chatService.loadMessages(conversationId: conversationId)
+        await loadBookingState()
+    }
+
+    private func declineOffer() async {
+        guard let bookingId = bookingState?.bookingId else { return }
+        let success = await bookingService.declineBooking(bookingId: bookingId, reason: nil)
+        if success {
+            flashToast("Avslått")
+        } else {
+            flashToast(bookingService.error ?? "Kunne ikke avslå")
+        }
+        await chatService.loadMessages(conversationId: conversationId)
+        await loadBookingState()
+    }
+
+    private func openCounterSheet(metadata: OfferMetadata) {
+        guard let bookingId = metadata.bookingId, let price = metadata.totalPrice else { return }
+        let role = metadata.proposedByRole == "host" ? "utleier" : "gjest"
+        counterSheetData = CounterSheetContext(
+            bookingId: bookingId,
+            currentOfferPrice: price,
+            currentOfferLabel: "\(price.formatted(.number.locale(Locale(identifier: "nb_NO")))) kr fra \(role)"
+        )
     }
 
     // MARK: - Header

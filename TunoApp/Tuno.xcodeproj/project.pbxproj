@@ -62,6 +62,7 @@
 		549EF8AAA48741629909C0C3 /* SpotDiscountsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5D7874F6107D21DA391AC6BD /* SpotDiscountsStep.swift */; };
 		5B59756933B0CFA0A84E11A3 /* RecentSearchesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D6E2878D5F6CA4C992D5FB /* RecentSearchesStore.swift */; };
 		5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */; };
+		5EDF76C6D90DDA30B6CE728E /* CounterOfferSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA16C264EC99BF4AD61C2FC /* CounterOfferSheet.swift */; };
 		642AF85B63EEA4DB11DEA032 /* ListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6DFB7D23F06D079D826635 /* ListingDetailView.swift */; };
 		659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CE3CB213405AF521294421 /* TunoApp.swift */; };
 		666AD7D7FA51A19DC149E1EF /* progress-pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 9BCA07B748FCC5E1497CD115 /* progress-pin.json */; };
@@ -82,6 +83,7 @@
 		7988CA1D8A60D501E4D5532E /* SpotExtrasContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD05EFAAFF75CA5314B3B4EE /* SpotExtrasContent.swift */; };
 		79F6757D7436EF3EEF1EEAC2 /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5065BE9CC3C749754F554F /* BookingsView.swift */; };
 		7AF18FF996F0B291CFB71478 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDD24B1220789582C10AF6F /* ChatView.swift */; };
+		8094B41AF970D760CD71175E /* NegotiationPaymentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68CA391C41E2F738998E3725 /* NegotiationPaymentView.swift */; };
 		80D0258D5D4F3DF9EBC406F5 /* MarkSpotsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04AE83B5E261BA41D246388 /* MarkSpotsStep.swift */; };
 		8225D7A59A196A15D1387988 /* PayoutsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D6665556989227BEA372A6 /* PayoutsService.swift */; };
 		826D4094CB6C79BB766161D3 /* PublicProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 69D03627A981C3C64EF47F06 /* PublicProfileView.swift */; };
@@ -140,6 +142,7 @@
 		EA6458ECC1DE539DADF94299 /* ListingCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 83B043C9DBACDB46B61E6148 /* ListingCard.swift */; };
 		EA6ED6282BB3420E464B2A4D /* LaunchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E87B8810AD3DEB96DEDF5A94 /* LaunchScreen.swift */; };
 		EB7B66E8A8376F8B8FF74300 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F76B3BFE9867FFEFA9DFEAB /* ForgotPasswordView.swift */; };
+		EEFFD98DE702F84FED64B4AE /* OfferMessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0383AE428114B0D4D9DC7B /* OfferMessageBubble.swift */; };
 		F5C607CAFB1A650AC022C486 /* MotorhomeIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */; };
 		F633782D650F9CAF614C16E2 /* HostOnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */; };
 		F67F9C6B23D453F78B1C7ED9 /* AuthManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2FFF7A576FF6BA28D9AC107D /* AuthManager.swift */; };
@@ -202,6 +205,7 @@
 		64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingViewModel.swift; sourceTree = "<group>"; };
 		64B6DFA8459E85A9536C1F27 /* OpeningHoursStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningHoursStep.swift; sourceTree = "<group>"; };
 		653B4F2F1D411111416483A4 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
+		68CA391C41E2F738998E3725 /* NegotiationPaymentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NegotiationPaymentView.swift; sourceTree = "<group>"; };
 		69D03627A981C3C64EF47F06 /* PublicProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicProfileView.swift; sourceTree = "<group>"; };
 		6A884CCDAD07F56994881803 /* OpeningHoursService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningHoursService.swift; sourceTree = "<group>"; };
 		6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingFlowView.swift; sourceTree = "<group>"; };
@@ -245,6 +249,7 @@
 		B4FAE01C676255DD56E0570A /* SpotPriceStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotPriceStep.swift; sourceTree = "<group>"; };
 		B8D99627256D695D60592DC8 /* EditListingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditListingView.swift; sourceTree = "<group>"; };
 		BA67FD0D010724DA8884A431 /* KrStepper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KrStepper.swift; sourceTree = "<group>"; };
+		BBA16C264EC99BF4AD61C2FC /* CounterOfferSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterOfferSheet.swift; sourceTree = "<group>"; };
 		BD05EFAAFF75CA5314B3B4EE /* SpotExtrasContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotExtrasContent.swift; sourceTree = "<group>"; };
 		BE401FA37FDD4B606814F30C /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
@@ -285,6 +290,7 @@
 		F92A4E3ED44C52BBEC76E34D /* SearchDateRangePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchDateRangePicker.swift; sourceTree = "<group>"; };
 		F9A10E906BFD039DCF513926 /* TimePickerField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePickerField.swift; sourceTree = "<group>"; };
 		F9C68D73AEFE78CC1D1DEE15 /* EarningsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EarningsView.swift; sourceTree = "<group>"; };
+		FB0383AE428114B0D4D9DC7B /* OfferMessageBubble.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfferMessageBubble.swift; sourceTree = "<group>"; };
 		FBE71C1EE64D63048F5BD2F5 /* PushNotificationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -554,7 +560,10 @@
 			isa = PBXGroup;
 			children = (
 				7DDD24B1220789582C10AF6F /* ChatView.swift */,
+				BBA16C264EC99BF4AD61C2FC /* CounterOfferSheet.swift */,
 				73BB47DB7ED9FBB036BC353A /* MessagesListView.swift */,
+				68CA391C41E2F738998E3725 /* NegotiationPaymentView.swift */,
+				FB0383AE428114B0D4D9DC7B /* OfferMessageBubble.swift */,
 			);
 			path = Messages;
 			sourceTree = "<group>";
@@ -752,6 +761,7 @@
 				23E22E74F79A0D6B738FFD7F /* ChatService.swift in Sources */,
 				7AF18FF996F0B291CFB71478 /* ChatView.swift in Sources */,
 				C3F9CCE3F4E545C318EF46A4 /* CopyFromPreviousSpotButton.swift in Sources */,
+				5EDF76C6D90DDA30B6CE728E /* CounterOfferSheet.swift in Sources */,
 				414ACCF50897E595892BBE9B /* CreateListingView.swift in Sources */,
 				12663C1EA3152BC7C6440902 /* CustomTabBar.swift in Sources */,
 				1C32E4CA70F86F9BAF6C8EA2 /* DescriptionStep.swift in Sources */,
@@ -797,7 +807,9 @@
 				2E38CBEC06F52A83F883289B /* MessagesStep.swift in Sources */,
 				4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */,
 				F5C607CAFB1A650AC022C486 /* MotorhomeIcon.swift in Sources */,
+				8094B41AF970D760CD71175E /* NegotiationPaymentView.swift in Sources */,
 				B2A276C68ACCEB05DBF4F7DB /* NotificationsView.swift in Sources */,
+				EEFFD98DE702F84FED64B4AE /* OfferMessageBubble.swift in Sources */,
 				98B32B463DB40DC1874532A3 /* OpeningHoursEditorView.swift in Sources */,
 				402B7759282C565BD0F02A60 /* OpeningHoursService.swift in Sources */,
 				427C0F0D1B37C5AF58AFAD58 /* OpeningHoursStep.swift in Sources */,

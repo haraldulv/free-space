@@ -24,6 +24,10 @@ struct CreateBookingResponse: Decodable {
     let error: String?
 }
 
+struct BookingErrorBody: Decodable {
+    let error: String?
+}
+
 @MainActor
 final class BookingService: ObservableObject {
     @Published var isProcessing = false
@@ -92,6 +96,139 @@ final class BookingService: ObservableObject {
             self.error = "Noe gikk galt: \(error.localizedDescription)"
             isProcessing = false
             return false
+        }
+    }
+
+    // MARK: - Forhandling-flyt (instant_booking=false)
+
+    struct RequestBookingPayload: Encodable {
+        let listingId: String
+        let checkIn: String
+        let checkOut: String
+        let licensePlate: String?
+        let isRentalCar: Bool
+        let selectedSpotIds: [String]?
+        let selectedExtras: SelectedExtras?
+        let message: String?
+    }
+
+    struct RequestBookingResponse: Decodable {
+        let bookingId: String?
+        let offerId: String?
+        let conversationId: String?
+        let totalPrice: Int?
+        let error: String?
+    }
+
+    /// Send forespørsel uten Stripe. Brukes for instant_booking=false-annonser.
+    /// Returnerer (bookingId, conversationId) ved suksess.
+    func requestBooking(payload: RequestBookingPayload) async -> RequestBookingResponse? {
+        return await postJSON(path: "/api/bookings/request", body: payload)
+    }
+
+    struct OfferPayload: Encodable {
+        let bookingId: String
+        let totalPrice: Int
+        let checkIn: String?
+        let checkOut: String?
+        let message: String?
+    }
+
+    struct OfferResponse: Decodable {
+        let offerId: String?
+        let round: Int?
+        let awaitingParty: String?
+        let expiresAt: String?
+        let error: String?
+    }
+
+    func sendOffer(payload: OfferPayload) async -> OfferResponse? {
+        return await postJSON(path: "/api/bookings/offer", body: payload)
+    }
+
+    struct AcceptPayload: Encodable {
+        let bookingId: String
+        let offerId: String
+    }
+
+    struct AcceptResponse: Decodable {
+        let bookingId: String?
+        let offerId: String?
+        let status: String?
+        let paymentDeadline: String?
+        let clientSecret: String?
+        let publishableKey: String?
+        let acceptorRole: String?
+        let error: String?
+    }
+
+    func acceptOffer(payload: AcceptPayload) async -> AcceptResponse? {
+        let response: AcceptResponse? = await postJSON(path: "/api/bookings/accept", body: payload)
+        if let secret = response?.clientSecret, let key = response?.publishableKey {
+            STPAPIClient.shared.publishableKey = key
+            self.bookingId = response?.bookingId
+            self.clientSecret = secret
+        }
+        return response
+    }
+
+    struct DeclinePayload: Encodable {
+        let bookingId: String
+        let reason: String?
+    }
+
+    struct DeclineResponse: Decodable {
+        let status: String?
+        let error: String?
+    }
+
+    func declineBooking(bookingId: String, reason: String? = nil) async -> Bool {
+        let payload = DeclinePayload(bookingId: bookingId, reason: reason)
+        let response: DeclineResponse? = await postJSON(path: "/api/bookings/decline", body: payload)
+        return response?.status == "declined"
+    }
+
+    struct PaymentConfirmedPayload: Encodable {
+        let bookingId: String
+    }
+
+    struct PaymentConfirmedResponse: Decodable {
+        let status: String?
+        let alreadyProcessed: Bool?
+        let error: String?
+    }
+
+    /// Notifiser server etter at PaymentSheet returnerte success. Idempotent —
+    /// kalles også via Stripe webhook for redundans.
+    func notifyPaymentConfirmed(bookingId: String) async {
+        let payload = PaymentConfirmedPayload(bookingId: bookingId)
+        let _: PaymentConfirmedResponse? = await postJSON(path: "/api/bookings/payment-confirmed", body: payload)
+    }
+
+    /// Generisk POST med Bearer-token-autentisering.
+    private func postJSON<Body: Encodable, Response: Decodable>(path: String, body: Body) async -> Response? {
+        do {
+            let session = try await supabase.auth.session
+            let token = session.accessToken
+            var req = URLRequest(url: URL(string: "\(AppConfig.siteURL)\(path)")!)
+            req.httpMethod = "POST"
+            req.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try JSONEncoder().encode(body)
+
+            let (data, response) = try await URLSession.shared.data(for: req)
+            if let http = response as? HTTPURLResponse, http.statusCode >= 400 {
+                if let parsed = try? JSONDecoder().decode(BookingErrorBody.self, from: data), let msg = parsed.error {
+                    self.error = msg
+                }
+                print("❌ \(path) returned \(http.statusCode): \(String(data: data, encoding: .utf8) ?? "")")
+                return nil
+            }
+            return try JSONDecoder().decode(Response.self, from: data)
+        } catch {
+            print("❌ postJSON \(path) error: \(error)")
+            self.error = error.localizedDescription
+            return nil
         }
     }
 

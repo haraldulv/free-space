@@ -1199,13 +1199,34 @@ struct Message: Codable, Identifiable {
     let content: String
     let read: Bool
     let createdAt: String?
+    /// "text", "offer", "offer_accepted", "offer_declined", "system" — default "text".
+    let kind: String?
+    /// Strukturert payload for offer-meldinger (offerId, totalPrice, datoer, etc.).
+    let metadata: OfferMetadata?
 
     enum CodingKeys: String, CodingKey {
-        case id, content, read
+        case id, content, read, kind, metadata
         case conversationId = "conversation_id"
         case senderId = "sender_id"
         case createdAt = "created_at"
     }
+}
+
+/// Strukturert payload for messages.kind = 'offer' / 'offer_accepted' / 'offer_declined'.
+/// Lagres i messages.metadata jsonb-kolonnen.
+struct OfferMetadata: Codable {
+    let offerId: String?
+    let bookingId: String?
+    let totalPrice: Int?
+    let checkIn: String?
+    let checkOut: String?
+    let proposedByRole: String?  // "guest" eller "host"
+    let round: Int?
+    let expiresAt: String?
+    let paymentDeadline: String?
+    let acceptorRole: String?
+    let declinedBy: String?
+    let reason: String?
 }
 
 // MARK: - Favorite

@@ -139,6 +139,8 @@ struct BookingView: View {
     @State private var showCardForm = false
     @State private var applePayHandler: ApplePayHandler?
     @State private var isApplePayLoading = false
+    @State private var requestSending = false
+    @State private var requestError: String?
     @State private var selectedSpotIds: Set<String> = []
     @State private var listingExtrasQty: [String: Int] = [:]
     @State private var spotExtrasQty: [String: [String: Int]] = [:]
@@ -512,7 +514,44 @@ struct BookingView: View {
             VStack(spacing: 8) {
                 Divider()
 
-                if showCardForm {
+                // Forespørsel-flyt for instant_booking=false: ingen Stripe ved
+                // request, bare DB. Gjest sender, host godtar/motbyr i chat,
+                // og betaling skjer først etter aksept.
+                if listing.instantBooking != true {
+                    Button {
+                        Task { await sendBookingRequest() }
+                    } label: {
+                        HStack {
+                            if requestSending {
+                                ProgressView().tint(.white)
+                            } else {
+                                Text("Send forespørsel")
+                                    .font(.system(size: 16, weight: .semibold))
+                            }
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(isFormValid && !(availableSpots == 0) && !requestSending ? Color.primary600 : Color.neutral300)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .disabled(!isFormValid || availableSpots == 0 || requestSending)
+                    .padding(.horizontal, 20)
+
+                    Text("Du betaler først når utleier godtar tilbudet.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral500)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+
+                    if let err = requestError {
+                        Text(err)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                    }
+                } else if showCardForm {
                     // Card payment button
                     Button {
                         Task { await confirmCardPayment() }
@@ -1558,6 +1597,42 @@ struct BookingView: View {
         )
 
         _ = await bookingService.createBooking(request: request)
+    }
+
+    /// Forespørsel-flyt for instant_booking=false: ingen Stripe ved request,
+    /// bare DB. Etter send navigeres vi til chat hvor host godtar/motbyr.
+    private func sendBookingRequest() async {
+        guard let ci = checkIn, let co = checkOut else { return }
+        requestSending = true
+        requestError = nil
+
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+
+        let payload = BookingService.RequestBookingPayload(
+            listingId: listing.id,
+            checkIn: dateFormatter.string(from: ci),
+            checkOut: dateFormatter.string(from: co),
+            licensePlate: isRentalCar ? nil : licensePlate.trimmingCharacters(in: .whitespaces).uppercased(),
+            isRentalCar: isRentalCar,
+            selectedSpotIds: selectedSpotIds.isEmpty ? nil : Array(selectedSpotIds),
+            selectedExtras: buildSelectedExtrasPayload(),
+            message: nil
+        )
+
+        let response = await bookingService.requestBooking(payload: payload)
+        requestSending = false
+
+        if let bookingId = response?.bookingId, let conversationId = response?.conversationId {
+            // Send signal til MainTabView om å åpne chatten med samtalen.
+            PushRouter.shared.pendingConversationId = conversationId
+            _ = bookingId
+            // Lukk BookingView så man kommer tilbake til detaljsiden, så åpnes
+            // chat-tabben automatisk via PushRouter.
+            dismiss()
+        } else {
+            requestError = bookingService.error ?? "Kunne ikke sende forespørsel"
+        }
     }
 
     private func handleApplePay() async {

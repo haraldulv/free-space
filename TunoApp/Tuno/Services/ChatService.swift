@@ -201,7 +201,9 @@ class ChatService: ObservableObject {
                     senderId: msg.senderId,
                     content: msg.content,
                     createdAt: msg.createdAt ?? "",
-                    read: msg.read
+                    read: msg.read,
+                    kind: msg.kind ?? "text",
+                    metadata: msg.metadata
                 )
             }
         } catch {
@@ -464,7 +466,9 @@ class ChatService: ObservableObject {
                     senderId: decoded.senderId,
                     content: decoded.content,
                     createdAt: decoded.createdAt ?? "",
-                    read: decoded.read
+                    read: decoded.read,
+                    kind: decoded.kind ?? "text",
+                    metadata: decoded.metadata
                 )
                 await MainActor.run {
                     if !self.messages.contains(where: { $0.id == msg.id }) {
@@ -539,6 +543,14 @@ struct ChatMessage: Identifiable {
     let content: String
     let createdAt: String
     let read: Bool
+    var kind: String = "text"
+    var metadata: OfferMetadata? = nil
+
+    var isOffer: Bool { kind == "offer" }
+    var isOfferAccepted: Bool { kind == "offer_accepted" }
+    var isOfferDeclined: Bool { kind == "offer_declined" }
+    var isSystem: Bool { kind == "system" }
+    var isStructured: Bool { kind != "text" }
 }
 
 struct BookingLite: Decodable {
