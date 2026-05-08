@@ -423,6 +423,7 @@
     "privacyPolicy": "Datenschutzerklärung",
     "and": "und",
     "mustAcceptTermsToCreate": "Du musst die Bedingungen akzeptieren, um ein Konto zu erstellen",
+    "emailAlreadyRegistered": "Ein Konto mit dieser E-Mail-Adresse existiert bereits. Versuche dich anzumelden oder nutze „Passwort vergessen", falls du es nicht mehr weißt.",
     "email": "E-Mail",
     "password": "Passwort",
     "fullName": "Vollständiger Name",

@@ -423,6 +423,7 @@
     "privacyPolicy": "privacy policy",
     "and": "and",
     "mustAcceptTermsToCreate": "You must accept the terms to create an account",
+    "emailAlreadyRegistered": "An account with this email already exists. Try signing in, or use \"Forgot password\" if you don't remember it.",
     "email": "Email",
     "password": "Password",
     "fullName": "Full name",

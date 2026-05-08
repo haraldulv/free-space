@@ -423,6 +423,7 @@
     "privacyPolicy": "personvernerklæring",
     "and": "og",
     "mustAcceptTermsToCreate": "Du må godta vilkårene for å opprette konto",
+    "emailAlreadyRegistered": "Det finnes allerede en konto med denne e-postadressen. Prøv å logge inn, eller bruk «Glemt passord» hvis du ikke husker passordet.",
     "email": "E-post",
     "password": "Passord",
     "fullName": "Fullt navn",

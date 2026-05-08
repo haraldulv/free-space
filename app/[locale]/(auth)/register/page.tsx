@@ -41,6 +41,14 @@ export default function RegisterPage() {
 
     if (error) throw new Error(error.message);
 
+    // Supabase signaliserer "e-post finnes allerede" via tom identities-array OG
+    // ingen ny bekreftelses-e-post — for å unngå email-enumeration. Vi må derfor
+    // sjekke det eksplisitt og fortelle brukeren, ellers ser det ut som suksess
+    // men ingen e-post kommer.
+    if (signUpData.user && (signUpData.user.identities?.length ?? 0) === 0) {
+      throw new Error(t("emailAlreadyRegistered"));
+    }
+
     if (signUpData.user) {
       await supabase
         .from("profiles")
