@@ -461,7 +461,7 @@ struct AirbnbConversationRow: View {
                         .lineLimit(1)
                 }
 
-                bookingStatusLine
+                bookingStatusPill
             }
 
             if conversation.unreadCount > 0 {
@@ -477,37 +477,45 @@ struct AirbnbConversationRow: View {
     }
 
     @ViewBuilder
-    private var bookingStatusLine: some View {
+    private var bookingStatusPill: some View {
         if let status = conversation.bookingStatus {
             HStack(spacing: 6) {
-                Circle()
-                    .fill(statusColor(status))
-                    .frame(width: 6, height: 6)
-                Text(statusLabel(status))
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(statusColor(status))
-                if let dates = conversation.bookingDates {
-                    Text("·").foregroundStyle(.neutral300)
-                    Text(dates)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
+                // Status-pille med farget bakgrunn
+                HStack(spacing: 4) {
+                    Image(systemName: statusIcon(status))
+                        .font(.system(size: 9, weight: .semibold))
+                    Text(statusLabel(status))
+                        .font(.system(size: 11, weight: .semibold))
                 }
-                if let city = conversation.listingCity {
-                    Text("·").foregroundStyle(.neutral300)
+                .foregroundStyle(statusColor(status))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(statusColor(status).opacity(0.12))
+                .clipShape(Capsule())
+
+                if let dates = conversation.bookingDates {
+                    Text(dates)
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral500)
+                        .lineLimit(1)
+                }
+                if let city = conversation.listingCity, conversation.bookingDates == nil {
                     Text(city)
-                        .font(.system(size: 12))
+                        .font(.system(size: 11))
                         .foregroundStyle(.neutral500)
                         .lineLimit(1)
                 }
             }
-            .padding(.top, 2)
+            .padding(.top, 4)
         }
     }
 
     private func statusColor(_ status: String) -> Color {
         switch status {
-        case "confirmed": return Color(hex: "#10b981")
-        case "requested", "pending": return Color(hex: "#f59e0b")
+        case "confirmed": return Color(hex: "#10b981")  // grønn
+        case "awaiting_payment": return Color(hex: "#f59e0b")  // oransje
+        case "awaiting_host", "awaiting_guest", "requested", "pending": return Color(hex: "#3b82f6")  // blå
+        case "expired", "declined": return Color(hex: "#ef4444")  // rød
         case "cancelled": return .neutral400
         default: return .neutral400
         }
@@ -516,10 +524,25 @@ struct AirbnbConversationRow: View {
     private func statusLabel(_ status: String) -> String {
         switch status {
         case "confirmed": return "Bekreftet"
-        case "requested": return "Venter på svar"
+        case "awaiting_host", "requested": return "Venter på utleier"
+        case "awaiting_guest": return "Venter på gjest"
+        case "awaiting_payment": return "Venter på betaling"
         case "pending": return "Ventende"
+        case "expired": return "Utløpt"
+        case "declined": return "Avvist"
         case "cancelled": return "Kansellert"
-        default: return status.capitalized
+        default: return status.capitalized.replacingOccurrences(of: "_", with: " ")
+        }
+    }
+
+    private func statusIcon(_ status: String) -> String {
+        switch status {
+        case "confirmed": return "checkmark.circle.fill"
+        case "awaiting_host", "awaiting_guest", "requested", "pending": return "hourglass"
+        case "awaiting_payment": return "creditcard.fill"
+        case "expired", "declined": return "xmark.circle.fill"
+        case "cancelled": return "xmark.circle.fill"
+        default: return "circle.fill"
         }
     }
 
