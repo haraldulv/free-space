@@ -329,12 +329,17 @@ struct SupportConversationRow: View {
         HStack(alignment: .top, spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.primary600)
+                    .fill(Color.white)
                     .frame(width: 58, height: 58)
-                Image(systemName: "lifepreserver")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(.white)
+                Image("TunoPin")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 50, height: 50)
             }
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.neutral200, lineWidth: 1)
+            )
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {

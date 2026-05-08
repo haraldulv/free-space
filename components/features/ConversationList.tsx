@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { LifeBuoy, MessageCircle, Search, X } from "lucide-react";
+import { MessageCircle, Search, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { dateFnsLocale } from "@/lib/i18n-helpers";
 import type { Conversation } from "@/types";
@@ -68,8 +68,9 @@ export default function ConversationList({
           isSelected ? "bg-primary-50" : ""
         }`}
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white">
-          <LifeBuoy className="h-5 w-5" />
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/tuno-pin.png" alt="Tuno" className="h-9 w-9 object-contain" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">

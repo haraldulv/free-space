@@ -17,6 +17,7 @@ interface ChatViewProps {
   listingTitle: string;
   listingId?: string;
   listingImage?: string;
+  isSupport?: boolean;
   onBack?: () => void;
 }
 
@@ -27,6 +28,7 @@ export default function ChatView({
   listingTitle,
   listingId,
   listingImage,
+  isSupport = false,
   onBack,
 }: ChatViewProps) {
   const t = useTranslations("messages");
@@ -127,7 +129,15 @@ export default function ChatView({
           </Link>
         ) : (
           <div className="flex flex-1 items-center gap-3 min-w-0">
-            {listingImage ? (
+            {isSupport ? (
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white">
+                <img
+                  src="/tuno-pin.png"
+                  alt="Tuno"
+                  className="h-9 w-9 object-contain"
+                />
+              </div>
+            ) : listingImage ? (
               <img
                 src={listingImage}
                 alt=""

@@ -780,6 +780,7 @@ export default function DashboardPage() {
                           listingTitle={selectedConvo.listingTitle || ""}
                           listingId={selectedConvo.listingId ?? undefined}
                           listingImage={selectedConvo.listingImage}
+                          isSupport={selectedConvo.type === "support"}
                           onBack={() => setSelectedConvo(null)}
                         />
                       ) : (

@@ -60,7 +60,8 @@ struct ChatView: View {
                                 message: message,
                                 isMe: isMe,
                                 avatarUrl: isMe ? nil : conversationDetails?.otherAvatar,
-                                otherUserInitial: String(otherUserName.prefix(1))
+                                otherUserInitial: String(otherUserName.prefix(1)),
+                                useTunoPinAvatar: isSupport && !isMe
                             )
                             .id(message.id)
                         }
@@ -273,14 +274,10 @@ struct ChatView: View {
 
             VStack(spacing: 2) {
                 if isSupport {
-                    ZStack {
-                        Circle()
-                            .fill(Color.primary600)
-                            .frame(width: 28, height: 28)
-                        Image(systemName: "lifepreserver")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
-                    }
+                    Image("TunoPin")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 28, height: 28)
 
                     HStack(spacing: 4) {
                         Text("Tuno-support")
@@ -525,12 +522,17 @@ struct MessageBubble: View {
     let isMe: Bool
     var avatarUrl: String? = nil
     var otherUserInitial: String = "?"
+    var useTunoPinAvatar: Bool = false
 
     var body: some View {
         HStack(alignment: .bottom, spacing: 8) {
             if !isMe {
                 Group {
-                    if let avatarUrl, let url = URL(string: avatarUrl) {
+                    if useTunoPinAvatar {
+                        Image("TunoPin")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                    } else if let avatarUrl, let url = URL(string: avatarUrl) {
                         CachedAsyncImage(url: url) { image in
                             image.resizable().aspectRatio(contentMode: .fill)
                         } placeholder: { avatarInitial }
