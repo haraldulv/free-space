@@ -99,15 +99,19 @@ struct ChatView: View {
             VStack(spacing: 0) {
                 Divider()
                 HStack(alignment: .bottom, spacing: 10) {
-                    Button {
-                        showQuickReplies = true
-                    } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 18, weight: .semibold))
-                            .foregroundStyle(.neutral700)
-                            .frame(width: 36, height: 36)
-                            .background(Color.neutral100)
-                            .clipShape(Circle())
+                    // Hurtigsvar er kun nyttig for verter som svarer på sine gjester.
+                    // Skjules i support-chat og for brukere uten utleier-rolle.
+                    if !isSupport && authManager.isHost {
+                        Button {
+                            showQuickReplies = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(.neutral700)
+                                .frame(width: 36, height: 36)
+                                .background(Color.neutral100)
+                                .clipShape(Circle())
+                        }
                     }
 
                     TextField("Skriv en melding...", text: $messageText, axis: .vertical)
@@ -274,10 +278,11 @@ struct ChatView: View {
 
             VStack(spacing: 2) {
                 if isSupport {
-                    Image("TunoPin")
+                    Image("TunoSupportAvatar")
                         .resizable()
-                        .aspectRatio(contentMode: .fit)
+                        .aspectRatio(contentMode: .fill)
                         .frame(width: 28, height: 28)
+                        .clipShape(Circle())
 
                     HStack(spacing: 4) {
                         Text("Tuno-support")
@@ -529,9 +534,9 @@ struct MessageBubble: View {
             if !isMe {
                 Group {
                     if useTunoPinAvatar {
-                        Image("TunoPin")
+                        Image("TunoSupportAvatar")
                             .resizable()
-                            .aspectRatio(contentMode: .fit)
+                            .aspectRatio(contentMode: .fill)
                     } else if let avatarUrl, let url = URL(string: avatarUrl) {
                         CachedAsyncImage(url: url) { image in
                             image.resizable().aspectRatio(contentMode: .fill)

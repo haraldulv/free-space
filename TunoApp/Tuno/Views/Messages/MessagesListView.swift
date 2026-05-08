@@ -327,19 +327,11 @@ struct SupportConversationRow: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.white)
-                    .frame(width: 58, height: 58)
-                Image("TunoPin")
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 50, height: 50)
-            }
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.neutral200, lineWidth: 1)
-            )
+            Image("TunoSupportAvatar")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 58, height: 58)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
