@@ -3802,6 +3802,9 @@
     "Kun synlig for deg. Nyttig hvis du har flere annonser." : {
 
     },
+    "Kundeservice" : {
+
+    },
     "Kunne ikke bekrefte" : {
 
     },
@@ -6378,6 +6381,9 @@
         }
       }
     },
+    "Spør oss om hva som helst — vi svarer fortløpende." : {
+
+    },
     "Språk" : {
       "localizations" : {
         "de" : {
@@ -6879,6 +6885,9 @@
         }
       }
     },
+    "Tuno-support" : {
+
+    },
     "Tuno-vert" : {
 
     },
@@ -7342,6 +7351,9 @@
 
     },
     "Vi sjekker med Stripe…" : {
+
+    },
+    "Vi svarer fortløpende" : {
 
     },
     "Vi trenger litt informasjon for å kunne betale ut leieinntektene dine. Alt skjer her i appen." : {

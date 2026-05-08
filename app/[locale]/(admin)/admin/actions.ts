@@ -28,7 +28,7 @@ async function requireAdmin() {
 }
 
 export async function loadAdminDataAction() {
-  const { supabase } = await requireAdmin();
+  const { supabase, user } = await requireAdmin();
 
   const [bookingRes, profileRes, listingRes, convoRes, supportRes] = await Promise.all([
     supabase
@@ -52,11 +52,56 @@ export async function loadAdminDataAction() {
       .limit(100),
     supabase
       .from("conversations")
-      .select("id, created_at, last_message_at, type, guest:guest_id(full_name, avatar_url)")
+      .select("id, created_at, last_message_at, type, guest_id, guest:guest_id(full_name, avatar_url)")
       .eq("type", "support")
       .order("last_message_at", { ascending: false })
       .limit(200),
   ]);
+
+  // Beregn ulest-tall + siste-melding-preview per support-conversation.
+  // En melding er "ulest for admin" når sender = gjesten og read=false (en hvilken
+  // som helst admin har ikke svart eller åpnet samtalen ennå).
+  const supportRows = (supportRes.data || []) as Array<{ id: string; guest_id: string; [k: string]: unknown }>;
+  const supportIds = supportRows.map((c) => c.id);
+  let unreadByConvo: Record<string, number> = {};
+  let lastMsgByConvo: Record<string, { content: string; created_at: string; sender_id: string }> = {};
+  if (supportIds.length > 0) {
+    const [unreadRes, lastMsgRes] = await Promise.all([
+      // Hent alle uleste gjest-meldinger for support-samtalene
+      supabase
+        .from("messages")
+        .select("conversation_id, sender_id")
+        .in("conversation_id", supportIds)
+        .eq("read", false),
+      supabase
+        .from("messages")
+        .select("conversation_id, content, created_at, sender_id")
+        .in("conversation_id", supportIds)
+        .order("created_at", { ascending: false }),
+    ]);
+    const guestIdByConvo = new Map(supportRows.map((c) => [c.id, c.guest_id]));
+    for (const row of unreadRes.data || []) {
+      const guestId = guestIdByConvo.get(row.conversation_id as string);
+      if (guestId && row.sender_id === guestId) {
+        unreadByConvo[row.conversation_id as string] = (unreadByConvo[row.conversation_id as string] ?? 0) + 1;
+      }
+    }
+    for (const row of lastMsgRes.data || []) {
+      const cid = row.conversation_id as string;
+      if (!lastMsgByConvo[cid]) {
+        lastMsgByConvo[cid] = {
+          content: row.content as string,
+          created_at: row.created_at as string,
+          sender_id: row.sender_id as string,
+        };
+      }
+    }
+  }
+  const supportConversations = supportRows.map((c) => ({
+    ...c,
+    unread_count: unreadByConvo[c.id] ?? 0,
+    last_message: lastMsgByConvo[c.id] ?? null,
+  }));
 
   // Fetch emails from auth.users via admin API
   const { data: authData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
@@ -77,7 +122,80 @@ export async function loadAdminDataAction() {
     users,
     listings: listingRes.data || [],
     conversations: convoRes.data || [],
-    supportConversations: supportRes.data || [],
+    supportConversations,
+    currentAdminId: user.id,
+  };
+}
+
+export async function loadSupportMessagesAction(conversationId: string) {
+  const { supabase } = await requireAdmin();
+
+  const [messagesRes] = await Promise.all([
+    supabase
+      .from("messages")
+      .select("id, content, created_at, sender_id, sender:sender_id(full_name)")
+      .eq("conversation_id", conversationId)
+      .order("created_at", { ascending: true }),
+    // Mark gjest-meldinger som read for denne samtalen — én gang admin åpner
+    // samtalen er det "sett" på vegne av support-teamet.
+    supabase
+      .from("messages")
+      .update({ read: true })
+      .eq("conversation_id", conversationId)
+      .eq("read", false),
+  ]);
+
+  return messagesRes.data || [];
+}
+
+export async function loadSupportUserInfoAction(guestId: string) {
+  const { supabase } = await requireAdmin();
+
+  const [profileRes, authUser, bookingsAsGuestRes, bookingsAsHostRes, listingsRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, full_name, avatar_url, created_at, stripe_account_id, stripe_onboarding_complete, bio, is_admin")
+      .eq("id", guestId)
+      .maybeSingle(),
+    supabase.auth.admin.getUserById(guestId),
+    supabase
+      .from("bookings")
+      .select("id, status, total_price, check_in, check_out, created_at, listing:listing_id(title)")
+      .eq("user_id", guestId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("bookings")
+      .select("id, status, total_price, check_in, check_out, created_at, listing:listing_id(title)")
+      .eq("host_id", guestId)
+      .order("created_at", { ascending: false })
+      .limit(20),
+    supabase
+      .from("listings")
+      .select("id, title, city, is_active")
+      .eq("host_id", guestId)
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const guestBookings = bookingsAsGuestRes.data || [];
+  const hostBookings = bookingsAsHostRes.data || [];
+
+  return {
+    profile: profileRes.data,
+    email: authUser.data.user?.email || null,
+    emailConfirmed: !!authUser.data.user?.email_confirmed_at,
+    createdAt: authUser.data.user?.created_at,
+    lastSignInAt: authUser.data.user?.last_sign_in_at,
+    provider: authUser.data.user?.app_metadata?.provider || "email",
+    bookingsAsGuest: guestBookings,
+    bookingsAsHost: hostBookings,
+    listings: listingsRes.data || [],
+    totalSpent: guestBookings
+      .filter((b) => b.status === "confirmed" || b.status === "completed")
+      .reduce((sum, b) => sum + (b.total_price || 0), 0),
+    totalEarned: hostBookings
+      .filter((b) => b.status === "confirmed" || b.status === "completed")
+      .reduce((sum, b) => sum + (b.total_price || 0), 0),
   };
 }
 

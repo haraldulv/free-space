@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { adminDeleteListingAction, adminCancelBookingAction, adminToggleListingAction, loadAdminDataAction, loadMessagesAction, sendSupportMessageAction } from "./actions";
+import { adminDeleteListingAction, adminCancelBookingAction, adminToggleListingAction, loadAdminDataAction, loadMessagesAction, loadSupportMessagesAction, loadSupportUserInfoAction, sendSupportMessageAction } from "./actions";
 import {
   CalendarCheck,
   Users,
@@ -83,10 +83,44 @@ interface AdminMessage {
 
 interface AdminSupportConversation {
   id: string;
+  guest_id: string;
   created_at: string;
   last_message_at: string;
   type: string;
+  unread_count: number;
+  last_message: { content: string; created_at: string; sender_id: string } | null;
   guest: { full_name: string | null; avatar_url: string | null } | null;
+}
+
+interface AdminSupportMessage {
+  id: string;
+  content: string;
+  created_at: string;
+  sender_id: string;
+  sender: { full_name: string } | null;
+}
+
+interface SupportUserInfo {
+  profile: {
+    id: string;
+    full_name: string | null;
+    avatar_url: string | null;
+    created_at: string;
+    stripe_account_id: string | null;
+    stripe_onboarding_complete: boolean | null;
+    bio: string | null;
+    is_admin: boolean;
+  } | null;
+  email: string | null;
+  emailConfirmed: boolean;
+  createdAt: string | undefined;
+  lastSignInAt: string | undefined;
+  provider: string;
+  bookingsAsGuest: Array<{ id: string; status: string; total_price: number; check_in: string; check_out: string; created_at: string; listing: { title: string } | null }>;
+  bookingsAsHost: Array<{ id: string; status: string; total_price: number; check_in: string; check_out: string; created_at: string; listing: { title: string } | null }>;
+  listings: Array<{ id: string; title: string; city: string; is_active: boolean }>;
+  totalSpent: number;
+  totalEarned: number;
 }
 
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
@@ -106,9 +140,12 @@ export default function AdminPage() {
   const [conversations, setConversations] = useState<AdminConversation[]>([]);
   const [supportConversations, setSupportConversations] = useState<AdminSupportConversation[]>([]);
   const [activeSupportId, setActiveSupportId] = useState<string | null>(null);
-  const [supportMessages, setSupportMessages] = useState<AdminMessage[]>([]);
+  const [supportMessages, setSupportMessages] = useState<AdminSupportMessage[]>([]);
+  const [supportUserInfo, setSupportUserInfo] = useState<SupportUserInfo | null>(null);
+  const [loadingUserInfo, setLoadingUserInfo] = useState(false);
   const [supportDraft, setSupportDraft] = useState("");
   const [sendingSupport, setSendingSupport] = useState(false);
+  const [currentAdminId, setCurrentAdminId] = useState<string | null>(null);
   const [expandedConvo, setExpandedConvo] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -120,19 +157,34 @@ export default function AdminPage() {
       setListings(data.listings as unknown as AdminListing[]);
       setConversations(data.conversations as unknown as AdminConversation[]);
       setSupportConversations(data.supportConversations as unknown as AdminSupportConversation[]);
+      setCurrentAdminId(data.currentAdminId);
       setLoaded(true);
     });
   }, []);
 
-  const openSupport = async (convoId: string) => {
-    if (activeSupportId === convoId) {
+  const totalSupportUnread = supportConversations.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+
+  const openSupport = async (convo: AdminSupportConversation) => {
+    if (activeSupportId === convo.id) {
       setActiveSupportId(null);
       setSupportMessages([]);
+      setSupportUserInfo(null);
       return;
     }
-    const data = await loadMessagesAction(convoId);
-    setSupportMessages(data as unknown as AdminMessage[]);
-    setActiveSupportId(convoId);
+    setActiveSupportId(convo.id);
+    setSupportUserInfo(null);
+    setLoadingUserInfo(true);
+    const [msgs, info] = await Promise.all([
+      loadSupportMessagesAction(convo.id),
+      loadSupportUserInfoAction(convo.guest_id),
+    ]);
+    setSupportMessages(msgs as unknown as AdminSupportMessage[]);
+    setSupportUserInfo(info as unknown as SupportUserInfo);
+    setLoadingUserInfo(false);
+    // Lokalt: marker som lest så badge oppdateres uten refresh.
+    setSupportConversations((prev) =>
+      prev.map((c) => c.id === convo.id ? { ...c, unread_count: 0 } : c)
+    );
   };
 
   const sendSupport = async () => {
@@ -146,12 +198,12 @@ export default function AdminPage() {
     }
     setSupportDraft("");
     // Refresh meldinger + bump samtalen til toppen.
-    const data = await loadMessagesAction(activeSupportId);
-    setSupportMessages(data as unknown as AdminMessage[]);
+    const data = await loadSupportMessagesAction(activeSupportId);
+    setSupportMessages(data as unknown as AdminSupportMessage[]);
     setSupportConversations((prev) => {
       const idx = prev.findIndex((c) => c.id === activeSupportId);
       if (idx === -1) return prev;
-      const updated = { ...prev[idx], last_message_at: new Date().toISOString() };
+      const updated = { ...prev[idx], last_message_at: new Date().toISOString(), unread_count: 0 };
       return [updated, ...prev.filter((_, i) => i !== idx)];
     });
   };
@@ -222,6 +274,7 @@ export default function AdminPage() {
         {tabs.map((t) => {
           const Icon = t.icon;
           const isActive = tab === t.key;
+          const badge = t.key === "support" ? totalSupportUnread : 0;
           return (
             <button
               key={t.key}
@@ -234,6 +287,11 @@ export default function AdminPage() {
             >
               <Icon className="h-4 w-4" />
               {t.label}
+              {badge > 0 && (
+                <span className="inline-flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-600 px-1.5 text-[10px] font-bold text-white">
+                  {badge}
+                </span>
+              )}
             </button>
           );
         })}
@@ -499,7 +557,7 @@ export default function AdminPage() {
 
         {/* Support */}
         {tab === "support" && (
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[280px_1fr_300px]">
             {/* Liste over support-samtaler */}
             <div className="rounded-xl border border-neutral-200 bg-white max-h-[70vh] overflow-y-auto">
               {supportConversations.length === 0 ? (
@@ -509,28 +567,43 @@ export default function AdminPage() {
                   .filter((c) => !q || (c.guest?.full_name || "").toLowerCase().includes(q))
                   .map((c) => {
                     const isActive = activeSupportId === c.id;
+                    const hasUnread = c.unread_count > 0 && !isActive;
                     return (
                       <button
                         key={c.id}
-                        onClick={() => openSupport(c.id)}
-                        className={`flex w-full items-center gap-3 border-b border-neutral-100 px-4 py-3 text-left transition-colors ${
+                        onClick={() => openSupport(c)}
+                        className={`flex w-full items-start gap-3 border-b border-neutral-100 px-4 py-3 text-left transition-colors ${
                           isActive ? "bg-primary-50" : "hover:bg-neutral-50"
                         }`}
                       >
                         {c.guest?.avatar_url ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.guest.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                          <img src={c.guest.avatar_url} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
                         ) : (
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-200 text-xs font-semibold text-neutral-600">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-neutral-200 text-xs font-semibold text-neutral-600">
                             {(c.guest?.full_name || "?")[0]}
                           </div>
                         )}
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium">{c.guest?.full_name || "Anonym"}</p>
-                          <p className="truncate text-xs text-neutral-400">
-                            {new Date(c.last_message_at).toLocaleString("nb-NO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                          </p>
+                          <div className="flex items-baseline justify-between gap-2">
+                            <p className={`truncate text-sm ${hasUnread ? "font-bold" : "font-medium"}`}>
+                              {c.guest?.full_name || "Anonym"}
+                            </p>
+                            <span className="shrink-0 text-[10px] text-neutral-400">
+                              {new Date(c.last_message_at).toLocaleString("nb-NO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                            </span>
+                          </div>
+                          {c.last_message?.content && (
+                            <p className={`mt-0.5 truncate text-xs ${hasUnread ? "text-neutral-700" : "text-neutral-400"}`}>
+                              {c.last_message.content}
+                            </p>
+                          )}
                         </div>
+                        {hasUnread && (
+                          <span className="mt-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-600 px-1.5 text-[10px] font-bold text-white">
+                            {c.unread_count}
+                          </span>
+                        )}
                       </button>
                     );
                   })
@@ -545,26 +618,38 @@ export default function AdminPage() {
                 </div>
               ) : (
                 <>
-                  <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                  <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
                     {supportMessages.length === 0 ? (
                       <p className="text-sm text-neutral-400">Ingen meldinger ennå</p>
                     ) : (
-                      supportMessages.map((m) => (
-                        <div key={m.id} className="flex gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-600">
-                            {(m.sender?.full_name || "?")[0]}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-sm font-semibold text-neutral-900">{m.sender?.full_name || "Anonym"}</span>
-                              <span className="text-xs text-neutral-400">
-                                {new Date(m.created_at).toLocaleString("nb-NO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                              </span>
+                      supportMessages.map((m, i) => {
+                        const isMe = m.sender_id === currentAdminId;
+                        const prev = i > 0 ? supportMessages[i - 1] : null;
+                        const showHeader = !prev || prev.sender_id !== m.sender_id;
+                        return (
+                          <div key={m.id} className={`flex flex-col ${isMe ? "items-end" : "items-start"}`}>
+                            {showHeader && (
+                              <div className={`mb-1 flex items-baseline gap-2 px-1 ${isMe ? "flex-row-reverse" : ""}`}>
+                                <span className="text-xs font-semibold text-neutral-700">
+                                  {isMe ? "Tuno-support" : (m.sender?.full_name || "Anonym")}
+                                </span>
+                                <span className="text-[10px] text-neutral-400">
+                                  {new Date(m.created_at).toLocaleString("nb-NO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              </div>
+                            )}
+                            <div
+                              className={`max-w-[75%] whitespace-pre-wrap rounded-2xl px-3.5 py-2 text-sm ${
+                                isMe
+                                  ? "bg-primary-600 text-white"
+                                  : "bg-neutral-100 text-neutral-900"
+                              }`}
+                            >
+                              {m.content}
                             </div>
-                            <p className="mt-0.5 whitespace-pre-wrap text-sm text-neutral-700">{m.content}</p>
                           </div>
-                        </div>
-                      ))
+                        );
+                      })
                     )}
                   </div>
                   <div className="border-t border-neutral-100 p-3">
@@ -593,6 +678,17 @@ export default function AdminPage() {
                     </div>
                   </div>
                 </>
+              )}
+            </div>
+
+            {/* Bruker-info-panel */}
+            <div className="rounded-xl border border-neutral-200 bg-white max-h-[70vh] overflow-y-auto">
+              {!activeSupportId ? (
+                <p className="py-12 px-4 text-center text-sm text-neutral-400">Brukerinfo vises når du velger en samtale</p>
+              ) : loadingUserInfo || !supportUserInfo ? (
+                <p className="py-12 px-4 text-center text-sm text-neutral-400">Laster brukerinfo…</p>
+              ) : (
+                <SupportUserInfoPanel info={supportUserInfo} />
               )}
             </div>
           </div>
@@ -778,6 +874,140 @@ function StatCard({ icon: Icon, label, value, sub, color }: {
         </div>
       </div>
       <p className="mt-2 text-xs text-neutral-400">{sub}</p>
+    </div>
+  );
+}
+
+function SupportUserInfoPanel({ info }: { info: SupportUserInfo }) {
+  const profile = info.profile;
+  const isHost = info.listings.length > 0 || info.bookingsAsHost.length > 0;
+  const stripeStatus = profile?.stripe_account_id
+    ? (profile.stripe_onboarding_complete ? "Onboarding ferdig" : "Onboarding pågår")
+    : "Ingen Stripe-konto";
+
+  const fmtDate = (iso?: string | null) =>
+    iso ? new Date(iso).toLocaleDateString("nb-NO", { day: "2-digit", month: "short", year: "numeric" }) : "—";
+
+  return (
+    <div className="p-4 space-y-4">
+      {/* Header */}
+      <div className="flex flex-col items-center text-center">
+        {profile?.avatar_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={profile.avatar_url} alt="" className="h-16 w-16 rounded-full object-cover" />
+        ) : (
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-200 text-xl font-semibold text-neutral-600">
+            {(profile?.full_name || "?")[0]}
+          </div>
+        )}
+        <p className="mt-2 text-base font-semibold text-neutral-900">{profile?.full_name || "Anonym"}</p>
+        {info.email && (
+          <a href={`mailto:${info.email}`} className="text-xs text-primary-600 hover:underline">
+            {info.email}
+          </a>
+        )}
+        <div className="mt-2 flex flex-wrap justify-center gap-1">
+          {profile?.is_admin && (
+            <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-semibold text-red-700">Admin</span>
+          )}
+          {isHost && (
+            <span className="rounded-full bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">Vert</span>
+          )}
+          {!info.emailConfirmed && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Ikke verifisert</span>
+          )}
+        </div>
+      </div>
+
+      {/* Konto-meta */}
+      <div className="rounded-lg bg-neutral-50 p-3 text-xs space-y-1.5">
+        <div className="flex justify-between">
+          <span className="text-neutral-500">Registrert</span>
+          <span className="text-neutral-900">{fmtDate(info.createdAt)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-neutral-500">Sist sett</span>
+          <span className="text-neutral-900">{fmtDate(info.lastSignInAt)}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-neutral-500">Pålogging</span>
+          <span className="text-neutral-900 capitalize">{info.provider}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-neutral-500">Stripe</span>
+          <span className="text-neutral-900">{stripeStatus}</span>
+        </div>
+      </div>
+
+      {/* Aktivitet */}
+      <div className="grid grid-cols-2 gap-2">
+        <div className="rounded-lg border border-neutral-100 p-2">
+          <p className="text-[10px] uppercase tracking-wide text-neutral-400">Som gjest</p>
+          <p className="mt-0.5 text-sm font-semibold">{info.bookingsAsGuest.length} bookings</p>
+          <p className="text-[10px] text-neutral-500">{info.totalSpent.toLocaleString("nb-NO")} kr brukt</p>
+        </div>
+        <div className="rounded-lg border border-neutral-100 p-2">
+          <p className="text-[10px] uppercase tracking-wide text-neutral-400">Som vert</p>
+          <p className="mt-0.5 text-sm font-semibold">{info.bookingsAsHost.length} bookings</p>
+          <p className="text-[10px] text-neutral-500">{info.totalEarned.toLocaleString("nb-NO")} kr tjent</p>
+        </div>
+      </div>
+
+      {/* Annonser */}
+      {info.listings.length > 0 && (
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-neutral-400 mb-1">Annonser ({info.listings.length})</p>
+          <div className="space-y-1">
+            {info.listings.slice(0, 5).map((l) => (
+              <div key={l.id} className="flex items-center justify-between rounded-md bg-neutral-50 px-2 py-1.5 text-xs">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-neutral-900">{l.title}</p>
+                  <p className="truncate text-[10px] text-neutral-500">{l.city}</p>
+                </div>
+                <span className={`shrink-0 text-[10px] ${l.is_active ? "text-green-600" : "text-neutral-400"}`}>
+                  {l.is_active ? "Aktiv" : "Inaktiv"}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Siste bookings */}
+      {(info.bookingsAsGuest.length > 0 || info.bookingsAsHost.length > 0) && (
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-neutral-400 mb-1">Siste bookings</p>
+          <div className="space-y-1">
+            {[...info.bookingsAsGuest, ...info.bookingsAsHost]
+              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+              .slice(0, 5)
+              .map((b) => (
+                <div key={b.id} className="rounded-md bg-neutral-50 px-2 py-1.5 text-xs">
+                  <div className="flex items-center justify-between">
+                    <p className="truncate font-medium text-neutral-900">{b.listing?.title || "—"}</p>
+                    <span className={`shrink-0 text-[10px] ${
+                      b.status === "confirmed" ? "text-green-600"
+                      : b.status === "cancelled" ? "text-red-500"
+                      : "text-amber-600"
+                    }`}>
+                      {b.status === "confirmed" ? "OK" : b.status === "cancelled" ? "✗" : "…"}
+                    </span>
+                  </div>
+                  <p className="truncate text-[10px] text-neutral-500">
+                    {b.check_in} → {b.check_out} · {b.total_price.toLocaleString("nb-NO")} kr
+                  </p>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
+
+      {profile?.bio && (
+        <div>
+          <p className="text-[10px] uppercase tracking-wide text-neutral-400 mb-1">Bio</p>
+          <p className="text-xs text-neutral-700 whitespace-pre-wrap">{profile.bio}</p>
+        </div>
+      )}
     </div>
   );
 }
