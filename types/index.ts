@@ -432,6 +432,23 @@ export interface Conversation {
   unreadCount?: number;
 }
 
+export type MessageKind = "text" | "offer" | "offer_accepted" | "offer_declined" | "system";
+
+export interface OfferMessageMetadata {
+  offerId?: string;
+  bookingId?: string;
+  totalPrice?: number;
+  checkIn?: string;
+  checkOut?: string;
+  proposedByRole?: "guest" | "host";
+  round?: number;
+  expiresAt?: string;
+  paymentDeadline?: string;
+  acceptorRole?: "guest" | "host";
+  declinedBy?: "guest" | "host";
+  reason?: string;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
@@ -439,6 +456,9 @@ export interface Message {
   content: string;
   read: boolean;
   createdAt: string;
+  /** "text" | "offer" | "offer_accepted" | "offer_declined" | "system". Default "text". */
+  kind?: MessageKind;
+  metadata?: OfferMessageMetadata;
   senderName?: string;
   senderAvatar?: string;
 }

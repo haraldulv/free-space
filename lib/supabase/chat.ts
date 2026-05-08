@@ -111,6 +111,8 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
       content: row.content,
       read: row.read,
       createdAt: row.created_at,
+      kind: row.kind ?? "text",
+      metadata: row.metadata ?? undefined,
       senderName: (sender?.full_name as string) || "Anonym",
       senderAvatar: (sender?.avatar_url as string) || "",
     };

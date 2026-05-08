@@ -252,7 +252,9 @@ export default function BookPage() {
     });
   }, [listing, nights, searchParams]);
 
-  // Create booking + payment intent once vehicle info is submitted
+  // Create booking + payment intent once vehicle info is submitted.
+  // Forhandling-flyten (instant_booking=false): hopp over Stripe — send forespørsel
+  // og redirect til chat. Ingen kort før utleier godtar.
   useEffect(() => {
     if (!listing || nights <= 0 || clientSecret || !vehicleReady) return;
 
@@ -265,6 +267,51 @@ export default function BookPage() {
     const checkOutDate = new Date(checkOutStr);
     const formatDate = (d: Date) =>
       `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+    if (listing.instantBooking === false) {
+      (async () => {
+        try {
+          const { createClient } = await import("@/lib/supabase/client");
+          const supabase = createClient();
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            setError("Du må være innlogget");
+            setCreatingPayment(false);
+            return;
+          }
+          const res = await fetch("/api/bookings/request", {
+            method: "POST",
+            headers: {
+              "Authorization": `Bearer ${session.access_token}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              listingId: listing.id,
+              checkIn: formatDate(checkInDate),
+              checkOut: formatDate(checkOutDate),
+              licensePlate: isRentalCar ? undefined : licensePlate.trim().toUpperCase(),
+              isRentalCar,
+              selectedSpotIds: selectedSpotIds.length > 0 ? selectedSpotIds : undefined,
+              selectedExtras: buildSelectedExtras(),
+            }),
+          });
+          const json = await res.json();
+          if (!res.ok || json.error) {
+            setError(json.error || "Kunne ikke sende forespørsel");
+          } else if (json.conversationId) {
+            window.location.href = `/dashboard?tab=messages&conversationId=${json.conversationId}`;
+            return;
+          } else {
+            window.location.href = `/dashboard?tab=messages`;
+            return;
+          }
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Noe gikk galt");
+        }
+        setCreatingPayment(false);
+      })();
+      return;
+    }
 
     createBookingAction({
       listingId: listing.id,
