@@ -208,20 +208,45 @@ export async function POST(request: NextRequest) {
     await supabase.from("bookings").update({ current_offer_id: offer.id }).eq("id", booking.id);
 
     // Conversation + chat-melding kind='offer'.
-    const { data: convo } = await supabase
+    // Bruker select-then-insert i stedet for upsert siden vi droppet
+    // (listing_id, guest_id)-unique-constraint i support-chat-migrasjonen
+    // (erstattet med partial unique-indeks som ikke fungerer som
+    // onConflict-target via PostgREST).
+    let conversationId: string | null = null;
+    const { data: existingConvo } = await supabase
       .from("conversations")
-      .upsert(
-        {
+      .select("id")
+      .eq("listing_id", listingId)
+      .eq("guest_id", user.id)
+      .eq("type", "booking")
+      .maybeSingle();
+
+    if (existingConvo?.id) {
+      conversationId = existingConvo.id;
+      // Oppdater booking_id slik at samtalen knyttes til den nye bookingen.
+      await supabase
+        .from("conversations")
+        .update({ booking_id: booking.id })
+        .eq("id", conversationId);
+    } else {
+      const { data: newConvo, error: convoError } = await supabase
+        .from("conversations")
+        .insert({
           listing_id: listingId,
           guest_id: user.id,
           host_id: listing.host_id,
           booking_id: booking.id,
           type: "booking",
-        },
-        { onConflict: "listing_id,guest_id" },
-      )
-      .select("id")
-      .single();
+        })
+        .select("id")
+        .single();
+      if (convoError) {
+        console.error("[Request] Failed to create conversation:", convoError);
+      } else {
+        conversationId = newConvo?.id ?? null;
+      }
+    }
+    const convo = conversationId ? { id: conversationId } : null;
 
     if (convo?.id) {
       await supabase.from("messages").insert({
