@@ -172,12 +172,18 @@ struct ProfileView: View {
             // så ingen 0 → 3 flicker. Nye verdier kommer uten visuelt sprang.
             guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
             await profileStats.refresh(userId: userId, isHost: authManager.isHost)
+            // Re-load profile fra DB i tilfelle in-memory state er utdatert
+            // (f.eks. etter logg-ut/inn med ulik konto, eller stale avatar).
+            await authManager.loadProfile()
         }
         .onAppear {
             if pushRouter.pendingBookingType == "booking_request" {
                 navigateToHostRequests = true
                 pushRouter.clearBooking()
             }
+            // Trigger profile-reload når Profil-tab kommer til syne, slik at
+            // avatar/navn alltid speiler aktiv konto i DB.
+            Task { await authManager.loadProfile() }
         }
         .onChange(of: pushRouter.pendingBookingType) { _, newType in
             if newType == "booking_request" {
