@@ -139,6 +139,18 @@ struct MessagesListView: View {
                 await chatService.loadConversations(userId: userId.uuidString)
             }
         }
+        .onAppear {
+            // Hver gang meldinger-tab blir synlig, refresh listen så
+            // nyopprettede samtaler (f.eks. forespørsel-flyt) dukker opp.
+            guard let userId = authManager.currentUser?.id else { return }
+            Task { await chatService.loadConversations(userId: userId.uuidString) }
+        }
+        .onChange(of: pushRouter.pendingConversationId) { _, newId in
+            // Når en ny samtale pushes onto path (etter forespørsel/push-deep-link),
+            // sørg for at den finnes i listen så det er noe å gå tilbake til.
+            guard newId != nil, let userId = authManager.currentUser?.id else { return }
+            Task { await chatService.loadConversations(userId: userId.uuidString) }
+        }
         .refreshable {
             guard let userId = authManager.currentUser?.id else { return }
             await chatService.loadConversations(userId: userId.uuidString)

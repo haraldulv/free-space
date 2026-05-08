@@ -405,8 +405,15 @@ struct ChatView: View {
 
     @ViewBuilder
     private func offerBubbleRow(message: ChatMessage, metadata: OfferMetadata, isMe: Bool) -> some View {
-        let isActive = message.metadata?.offerId != nil
-            && bookingState?.currentOfferId == message.metadata?.offerId
+        // Default til aktivt når booking-state ikke er lastet ennå (unngår å vise
+        // "Erstattet av nyere tilbud" mens vi venter på query). Bruk current_offer_id
+        // når den finnes; hvis booking ikke finnes (chat uten booking), anta at
+        // siste melding er aktiv.
+        let isActive: Bool = {
+            guard message.metadata?.offerId != nil else { return false }
+            guard let state = bookingState else { return true }
+            return state.currentOfferId == message.metadata?.offerId
+        }()
         HStack {
             if isMe { Spacer(minLength: 40) }
             OfferMessageBubble(

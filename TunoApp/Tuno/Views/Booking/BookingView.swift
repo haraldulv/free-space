@@ -98,6 +98,7 @@ struct BookingView: View {
     var preSelectedSpotId: String? = nil
 
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var chatService: ChatService
     @StateObject private var bookingService = BookingService()
     @Environment(\.dismiss) var dismiss
 
@@ -1624,7 +1625,12 @@ struct BookingView: View {
         requestSending = false
 
         if let bookingId = response?.bookingId, let conversationId = response?.conversationId {
-            // Send signal til MainTabView om å åpne chatten med samtalen.
+            // Refresh chatService FØR vi navigerer, så ChatView finner samtalen i
+            // listen og kan vise riktig header (otherUserName, listingTitle, avatar).
+            // Uten dette ble headeren stående tom (en grønn placeholder-prikk).
+            if let userId = authManager.currentUser?.id {
+                await chatService.loadConversations(userId: userId.uuidString.lowercased())
+            }
             PushRouter.shared.pendingConversationId = conversationId
             _ = bookingId
             // Lukk BookingView så man kommer tilbake til detaljsiden, så åpnes
