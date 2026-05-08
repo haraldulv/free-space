@@ -173,13 +173,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Du kan ikke booke din egen annonse" }, { status: 400 });
     }
 
-    // Min/maks antall dager-validering. Opphold-lengde i hele dager basert
-    // på UTC midnight-til-midnight-konvertering for å unngå DST-skjev.
+    // Min/maks antall dager-validering. Inclusive begge endepunkter (samme
+    // konvensjon som pris-utregning): 5. juni → 4. juli = 30 dager.
     const stayDays = Math.max(
       1,
       Math.round(
         (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24),
-      ),
+      ) + 1,
     );
     if (listing.min_stay_days != null && stayDays < listing.min_stay_days) {
       return NextResponse.json(

@@ -809,6 +809,9 @@
         }
       }
     },
+    "Avslå" : {
+
+    },
     "Badstue" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -880,6 +883,9 @@
         }
       }
     },
+    "Begrunnelse (valgfritt)" : {
+
+    },
     "Bekreft datoer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -933,6 +939,9 @@
           }
         }
       }
+    },
+    "Bekreftet pris fra forhandlingen" : {
+
     },
     "Belønn gjester som booker hele dagen, uken eller måneden. La feltene stå tomme for ingen rabatt." : {
 
@@ -1520,10 +1529,16 @@
         }
       }
     },
+    "Ditt motbud" : {
+
+    },
     "Dra og slipp for å endre rekkefølge. Bildet lengst til venstre er forsidebildet." : {
 
     },
     "Dra og slipp for å endre rekkefølge. Første bilde er forsidebildet." : {
+
+    },
+    "Du betaler først når utleier godtar tilbudet." : {
 
     },
     "Du er godkjent!" : {
@@ -1891,6 +1906,9 @@
           }
         }
       }
+    },
+    "Erstattet av nyere tilbud" : {
+
     },
     "Etter publisering vises annonsen din i søk umiddelbart. Du kan deaktivere den når som helst fra \"Mine annonser\"." : {
 
@@ -2372,6 +2390,9 @@
         }
       }
     },
+    "Forrige tilbud" : {
+
+    },
     "Forside" : {
 
     },
@@ -2727,6 +2748,9 @@
           }
         }
       }
+    },
+    "Godta og betal" : {
+
     },
     "Google" : {
 
@@ -5930,6 +5954,9 @@
         }
       }
     },
+    "Send forespørsel" : {
+
+    },
     "Send melding til utleier" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5946,6 +5973,9 @@
           }
         }
       }
+    },
+    "Send motbud" : {
+
     },
     "Send tilbakestillingslenke" : {
       "extractionState" : "manual",
@@ -7300,6 +7330,9 @@
           }
         }
       }
+    },
+    "Venter på svar fra %@" : {
+
     },
     "Versjon" : {
 

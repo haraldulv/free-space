@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
 
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, user_id, host_id, status, current_offer_id, listing_id, listing:listing_id(title)")
+      .select("id, user_id, host_id, status, current_offer_id, listing_id, check_in_time, listing:listing_id(title)")
       .eq("id", bookingId)
       .single();
     if (!booking) {
@@ -105,7 +105,17 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const paymentDeadline = new Date(Date.now() + PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000).toISOString();
+    // Klipp payment_deadline tidligst på check_in - 1 time, slik at parkeringen
+    // aldri kan starte uten at betaling er fullført.
+    const checkInTime = (booking as { check_in_time?: string | null }).check_in_time || "15:00";
+    const checkInISO = `${offer.check_in}T${checkInTime}:00+02:00`;
+    const checkInMs = new Date(checkInISO).getTime();
+    const standardDeadline = Date.now() + PAYMENT_DEADLINE_HOURS * 60 * 60 * 1000;
+    const cappedDeadline = !isNaN(checkInMs) ? checkInMs - 60 * 60 * 1000 : standardDeadline;
+    const deadlineMs = Math.min(standardDeadline, cappedDeadline);
+    // Hvis check_in allerede er passert eller mindre enn 1t fra nå: 30 min minimum-frist.
+    const finalDeadlineMs = Math.max(deadlineMs, Date.now() + 30 * 60 * 1000);
+    const paymentDeadline = new Date(finalDeadlineMs).toISOString();
 
     // Oppdater booking — optimistic lock på current_offer_id.
     const { data: updatedBooking, error: updateError } = await supabase

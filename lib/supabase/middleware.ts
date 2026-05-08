@@ -51,7 +51,7 @@ export async function updateSession(request: NextRequest) {
   const prefix = localePrefix(locale);
 
   // Auth guard for protected routes — redirect to login with return URL
-  if (!user && (path.startsWith("/dashboard") || path.startsWith("/bli-utleier") || path.startsWith("/settings") || path.startsWith("/admin"))) {
+  if (!user && (path.startsWith("/dashboard") || path.startsWith("/bli-utleier") || path.startsWith("/settings") || path.startsWith("/admin") || path.startsWith("/book"))) {
     const url = request.nextUrl.clone();
     const returnTo = request.nextUrl.pathname + request.nextUrl.search;
     url.pathname = `${prefix}/login`;
