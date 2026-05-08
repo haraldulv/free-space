@@ -1,11 +1,20 @@
 import { searchListings } from "@/lib/supabase/listings";
-import { ListingCategory, VehicleType } from "@/types";
+import { ListingCategory, VehicleType, PricePackagePeriodType } from "@/types";
 import SearchResultsView from "@/components/features/search/SearchResultsView";
 
 export const dynamic = "force-dynamic";
 
 interface SearchPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}
+
+const VALID_PERIOD_TYPES: ReadonlyArray<PricePackagePeriodType> = ["DAY", "WEEK", "MONTH", "YEAR"];
+
+function parsePeriodTypes(raw: string | string[] | undefined): PricePackagePeriodType[] | undefined {
+  if (!raw) return undefined;
+  const parts = (Array.isArray(raw) ? raw.join(",") : raw).split(",").map((s) => s.trim()).filter(Boolean);
+  const valid = parts.filter((p): p is PricePackagePeriodType => VALID_PERIOD_TYPES.includes(p as PricePackagePeriodType));
+  return valid.length > 0 ? valid : undefined;
 }
 
 export default async function SearchPage({ searchParams }: SearchPageProps) {
@@ -33,7 +42,19 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       ? params.openingHours
       : "any";
 
-  const listings = await searchListings({ query, category, vehicleType, checkIn, checkOut, lat, lng, openingHours });
+  const rentalPeriodTypes = parsePeriodTypes(params.period);
+
+  const listings = await searchListings({
+    query,
+    category,
+    vehicleType,
+    checkIn,
+    checkOut,
+    lat,
+    lng,
+    openingHours,
+    rentalPeriodTypes,
+  });
 
   return (
     <SearchResultsView
@@ -44,6 +65,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       checkIn={checkIn}
       checkOut={checkOut}
       openingHours={openingHours}
+      rentalPeriodTypes={rentalPeriodTypes}
     />
   );
 }

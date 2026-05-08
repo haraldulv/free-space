@@ -18,6 +18,9 @@ struct HomeView: View {
     @State private var pendingVehicles: Set<VehicleType> = [.motorhome, .campervan]
     @State private var pendingPlace: PlacePrediction?
     @State private var pendingUseMyLocation: Bool = false
+    /// Når satt til true åpner SearchView direkte til kart (uten WhereSheet).
+    /// Brukes for "Se alle"-knappene som skal hoppe rett til kart-resultater.
+    @State private var pendingSkipWhereSheet: Bool = false
     @StateObject private var placesService = PlacesService()
     @StateObject private var locationManager = LocationManager()
 
@@ -64,7 +67,7 @@ struct HomeView: View {
                                     // Reset default kjøretøy for senere søk via pillen.
                                     pendingVehicles = (category == .camping) ? [.motorhome, .campervan] : [.car]
                                 }
-                                Task { await listingService.fetchHomeListings(category: category) }
+                                Task { await listingService.fetchHomeListings(category: category, userLat: locationManager.userLocation?.latitude, userLng: locationManager.userLocation?.longitude) }
                             } label: {
                                 VStack(spacing: 7) {
                                     Image(category.categoryIcon)
@@ -120,6 +123,49 @@ struct HomeView: View {
                     }
                     .padding(.top, 40)
                 } else {
+                    // Nær deg — kun for parkering, og kun hvis brukerlokasjon finnes
+                    if selectedCategory == .parking, !listingService.nearbyListings.isEmpty {
+                        ListingSection(
+                            title: "Nær deg",
+                            listings: listingService.nearbyListings,
+                            onSeeAll: {
+                                // Åpne kart-søket direkte (skip WhereSheet) sentrert på brukerens posisjon
+                                if let loc = locationManager.userLocation {
+                                    pendingLat = loc.latitude
+                                    pendingLng = loc.longitude
+                                    pendingUseMyLocation = true
+                                }
+                                pendingQuery = "Min posisjon"
+                                pendingCheckIn = nil
+                                pendingCheckOut = nil
+                                pendingSkipWhereSheet = true
+                                showSearch = true
+                            }
+                        )
+                    }
+
+                    // Ledige nå — kun for parkering
+                    if selectedCategory == .parking, !listingService.availableNowListings.isEmpty {
+                        ListingSection(
+                            title: "Ledige nå",
+                            listings: listingService.availableNowListings,
+                            onSeeAll: {
+                                // Åpne kart direkte rundt brukerens posisjon — ingen datoer
+                                // (vis ALLE som er ledige uavhengig av dato, hurtig oversikt).
+                                pendingCheckIn = nil
+                                pendingCheckOut = nil
+                                if let loc = locationManager.userLocation {
+                                    pendingLat = loc.latitude
+                                    pendingLng = loc.longitude
+                                    pendingUseMyLocation = true
+                                }
+                                pendingQuery = "Min posisjon"
+                                pendingSkipWhereSheet = true
+                                showSearch = true
+                            }
+                        )
+                    }
+
                     // Nye plasser (alle ekte bruker-annonser, sortert nyest først)
                     if !listingService.featuredListings.isEmpty {
                         ListingSection(
@@ -137,7 +183,7 @@ struct HomeView: View {
                     }
 
                     // Tilgjengelig i dag (direktebestilling, ikke blokkert)
-                    if !listingService.availableTodayListings.isEmpty {
+                    if selectedCategory != .parking, !listingService.availableTodayListings.isEmpty {
                         ListingSection(
                             title: "Tilgjengelig i dag",
                             listings: listingService.availableTodayListings
@@ -164,8 +210,13 @@ struct HomeView: View {
                 initialCategory: selectedCategory,
                 initialPlace: pendingPlace,
                 useMyLocationOnAppear: pendingUseMyLocation,
-                openWhereSheetOnAppear: true
+                openWhereSheetOnAppear: !pendingSkipWhereSheet
             )
+        }
+        .onChange(of: showSearch) { _, isShown in
+            // Reset skip-flagget når SearchView lukkes så neste vanlig søk
+            // (via "Start søket"-pillen) åpner WhereSheet som før.
+            if !isShown { pendingSkipWhereSheet = false }
         }
         .task {
             // Restore søkestate fra SearchContextStore — bruker som går tilbake
@@ -186,7 +237,21 @@ struct HomeView: View {
             if !restoredVehicles.isEmpty {
                 pendingVehicles = restoredVehicles
             }
-            await listingService.fetchHomeListings(category: selectedCategory)
+            // Be om location-permission for "Nær deg"-seksjonen.
+            locationManager.requestPermission()
+            await listingService.fetchHomeListings(category: selectedCategory, userLat: locationManager.userLocation?.latitude, userLng: locationManager.userLocation?.longitude)
+        }
+        .onReceive(locationManager.$userLocation) { newLoc in
+            // Når brukerlokasjon kommer inn (etter permission-prompt eller GPS-fix),
+            // re-fetch så "Nær deg"-seksjonen kan populeres.
+            guard newLoc != nil else { return }
+            Task {
+                await listingService.fetchHomeListings(
+                    category: selectedCategory,
+                    userLat: newLoc?.latitude,
+                    userLng: newLoc?.longitude
+                )
+            }
         }
     }
 }
@@ -198,19 +263,33 @@ extension String: @retroactive Identifiable {
 struct ListingSection: View {
     let title: String
     let listings: [Listing]
+    /// Valgfri "Se alle"-handler. Hvis satt vises en pil-knapp ved siden av tittelen.
+    var onSeeAll: (() -> Void)? = nil
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var favoritesService: FavoritesService
     @StateObject private var locationManager = LocationManager()
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text(title)
-                .font(.system(size: 20, weight: .bold))
-                .foregroundStyle(.neutral900)
-                .padding(.horizontal, 20)
+            HStack(spacing: 4) {
+                Text(title)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                if let onSeeAll {
+                    Button(action: onSeeAll) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundStyle(.neutral400)
+                            .padding(.leading, 2)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+            .padding(.horizontal, 20)
 
             ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) {
+                LazyHStack(alignment: .top, spacing: 12) {
                     ForEach(listings) { listing in
                         NavigationLink(value: listing) {
                             ListingCard(
@@ -220,7 +299,8 @@ struct ListingSection: View {
                                 referenceLat: locationManager.userLocation?.latitude,
                                 referenceLng: locationManager.userLocation?.longitude
                             )
-                            .frame(width: 200)
+                            .frame(width: 185, height: 250)
+                            .clipped()
                         }
                         .buttonStyle(.plain)
                     }
@@ -229,9 +309,6 @@ struct ListingSection: View {
             }
             .onAppear { locationManager.requestPermission() }
         }
-        // navigationDestination flyttet opp til HomeView-nivå for å unngå
-        // SwiftUI-feilen "declared earlier on the stack" når flere
-        // ListingSections er på samme skjerm.
     }
 
     private func toggleFavorite(_ listingId: String) {

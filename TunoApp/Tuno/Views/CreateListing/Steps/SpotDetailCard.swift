@@ -20,7 +20,7 @@ struct SpotVehicleContent: View {
                     get: { spot?.description ?? "" },
                     set: { form.spotMarkers[index].description = $0.isEmpty ? nil : $0 }
                 ))
-                .frame(minHeight: 70)
+                .frame(minHeight: 120)
                 .padding(8)
                 .background(Color.neutral50)
                 .overlay(
@@ -30,14 +30,11 @@ struct SpotVehicleContent: View {
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
 
-            // Kjøretøytype (multi-select)
-            VStack(alignment: .leading, spacing: 8) {
+            // Kjøretøytype (multi-select) — samme card-stil som ParkingType
+            VStack(alignment: .leading, spacing: 10) {
                 Text("Kjøretøytyper")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.neutral900)
-                Text("Velg én eller flere typer kjøretøy som passer her.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.neutral500)
 
                 let availableTypes = VehicleType.available(for: form.category ?? .camping)
                 let selectedTypes = spot?.effectiveVehicleTypes ?? []
@@ -54,20 +51,25 @@ struct SpotVehicleContent: View {
                             form.spotMarkers[index].vehicleTypes = current
                             form.spotMarkers[index].vehicleType = nil
                         } label: {
-                            HStack(spacing: 5) {
+                            VStack(spacing: 6) {
                                 Image(type.lucideIcon)
                                     .renderingMode(.template)
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
-                                    .frame(width: 14, height: 14)
-                                Text(type.displayName).font(.system(size: 13, weight: .medium))
+                                    .frame(width: 28, height: 28)
+                                    .foregroundStyle(selected ? Color.primary700 : Color.neutral600)
+                                Text(type.displayName)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(selected ? Color.primary700 : Color.neutral700)
                             }
-                            .foregroundStyle(selected ? .white : .neutral700)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(selected ? Color.primary600 : Color.white)
-                            .clipShape(Capsule())
-                            .overlay(Capsule().stroke(selected ? Color.primary600 : Color.neutral200, lineWidth: 1))
+                            .frame(width: 96)
+                            .padding(.vertical, 12)
+                            .background(selected ? Color.primary50 : Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                    .stroke(selected ? Color.primary600 : Color.neutral200, lineWidth: selected ? 1.5 : 1)
+                            )
                         }
                         .buttonStyle(.plain)
                     }
@@ -90,10 +92,10 @@ struct SpotVehicleContent: View {
 
     @ViewBuilder
     private func field<Content: View>(label: String, optional: Bool = false, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Text(label)
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.neutral900)
                 if optional {
                     Text("(valgfritt)")

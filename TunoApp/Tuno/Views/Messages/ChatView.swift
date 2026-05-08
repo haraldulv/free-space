@@ -6,6 +6,7 @@ struct ChatView: View {
     let listingTitle: String
     var listingId: String? = nil
     var listingImage: String? = nil
+    var isSupport: Bool = false
 
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var globalChat: ChatService
@@ -247,7 +248,10 @@ struct ChatView: View {
             await chatService.loadMessages(conversationId: conversationId)
             await chatService.subscribeToMessages(conversationId: conversationId)
             await chatService.markAsRead(conversationId: conversationId, userId: currentUserId)
-            await loadConversationDetails()
+            // Support-samtaler har ikke listing/booking-kontekst; hopp over detaljhentingen.
+            if !isSupport {
+                await loadConversationDetails()
+            }
         }
         .onDisappear {
             Task { await chatService.unsubscribe() }
@@ -268,50 +272,79 @@ struct ChatView: View {
             }
 
             VStack(spacing: 2) {
-                // Avatar stack (kun én avatar i Tuno — 1-on-1)
-                HStack(spacing: 0) {
-                    if let avatar = conversationDetails?.otherAvatar, let url = URL(string: avatar) {
-                        CachedAsyncImage(url: url) { image in
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        } placeholder: { avatarPlaceholder }
-                        .frame(width: 28, height: 28)
-                        .clipShape(Circle())
-                    } else {
-                        avatarPlaceholder
+                if isSupport {
+                    ZStack {
+                        Circle()
+                            .fill(Color.primary600)
+                            .frame(width: 28, height: 28)
+                        Image(systemName: "lifepreserver")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+
+                    HStack(spacing: 4) {
+                        Text("Tuno-support")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.neutral900)
+                        Image(systemName: "checkmark.seal.fill")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.primary600)
+                    }
+
+                    Text("Vi svarer fortløpende")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.neutral500)
+                        .lineLimit(1)
+                } else {
+                    HStack(spacing: 0) {
+                        if let avatar = conversationDetails?.otherAvatar, let url = URL(string: avatar) {
+                            CachedAsyncImage(url: url) { image in
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            } placeholder: { avatarPlaceholder }
                             .frame(width: 28, height: 28)
                             .clipShape(Circle())
+                        } else {
+                            avatarPlaceholder
+                                .frame(width: 28, height: 28)
+                                .clipShape(Circle())
+                        }
                     }
-                }
 
-                Text(otherUserName)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.neutral900)
+                    Text(otherUserName)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.neutral900)
 
-                if let details = conversationDetails, let dates = details.bookingDates {
-                    Text("\(dates) · \(listingTitle)")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.neutral500)
-                        .lineLimit(1)
-                } else if !listingTitle.isEmpty {
-                    Text(listingTitle)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.neutral500)
-                        .lineLimit(1)
+                    if let details = conversationDetails, let dates = details.bookingDates {
+                        Text("\(dates) · \(listingTitle)")
+                            .font(.system(size: 11))
+                            .foregroundStyle(.neutral500)
+                            .lineLimit(1)
+                    } else if !listingTitle.isEmpty {
+                        Text(listingTitle)
+                            .font(.system(size: 11))
+                            .foregroundStyle(.neutral500)
+                            .lineLimit(1)
+                    }
                 }
             }
             .frame(maxWidth: .infinity)
 
-            Button {
-                showOpplysninger = true
-            } label: {
-                Text("Opplysninger")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 7)
-                    .overlay(
-                        Capsule().stroke(Color.neutral300, lineWidth: 1)
-                    )
+            if !isSupport {
+                Button {
+                    showOpplysninger = true
+                } label: {
+                    Text("Opplysninger")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .overlay(
+                            Capsule().stroke(Color.neutral300, lineWidth: 1)
+                        )
+                }
+            } else {
+                // Symmetrisk plass slik at navnet forblir sentrert.
+                Color.clear.frame(width: 36, height: 36)
             }
         }
         .padding(.horizontal, 12)
@@ -344,7 +377,8 @@ struct ChatView: View {
         await chatService.sendMessage(
             conversationId: conversationId,
             senderId: currentUserId,
-            content: text
+            content: text,
+            isSupport: isSupport
         )
     }
 

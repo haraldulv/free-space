@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { adminDeleteListingAction, adminCancelBookingAction, adminToggleListingAction, loadAdminDataAction, loadMessagesAction } from "./actions";
+import { adminDeleteListingAction, adminCancelBookingAction, adminToggleListingAction, loadAdminDataAction, loadMessagesAction, sendSupportMessageAction } from "./actions";
 import {
   CalendarCheck,
   Users,
@@ -17,10 +17,12 @@ import {
   TrendingUp,
   DollarSign,
   UserPlus,
+  LifeBuoy,
+  Send,
 } from "lucide-react";
 import { SERVICE_FEE_RATE } from "@/lib/config";
 
-type Tab = "overview" | "bookings" | "users" | "listings" | "messages";
+type Tab = "overview" | "bookings" | "users" | "listings" | "messages" | "support";
 
 interface AdminBooking {
   id: string;
@@ -79,12 +81,21 @@ interface AdminMessage {
   sender: { full_name: string } | null;
 }
 
+interface AdminSupportConversation {
+  id: string;
+  created_at: string;
+  last_message_at: string;
+  type: string;
+  guest: { full_name: string | null; avatar_url: string | null } | null;
+}
+
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "overview", label: "Oversikt", icon: BarChart3 },
   { key: "bookings", label: "Bookings", icon: CalendarCheck },
   { key: "users", label: "Brukere", icon: Users },
   { key: "listings", label: "Annonser", icon: Megaphone },
   { key: "messages", label: "Meldinger", icon: MessageCircle },
+  { key: "support", label: "Support", icon: LifeBuoy },
 ];
 
 export default function AdminPage() {
@@ -93,6 +104,11 @@ export default function AdminPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [listings, setListings] = useState<AdminListing[]>([]);
   const [conversations, setConversations] = useState<AdminConversation[]>([]);
+  const [supportConversations, setSupportConversations] = useState<AdminSupportConversation[]>([]);
+  const [activeSupportId, setActiveSupportId] = useState<string | null>(null);
+  const [supportMessages, setSupportMessages] = useState<AdminMessage[]>([]);
+  const [supportDraft, setSupportDraft] = useState("");
+  const [sendingSupport, setSendingSupport] = useState(false);
   const [expandedConvo, setExpandedConvo] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [loaded, setLoaded] = useState(false);
@@ -103,9 +119,42 @@ export default function AdminPage() {
       setUsers(data.users as unknown as AdminUser[]);
       setListings(data.listings as unknown as AdminListing[]);
       setConversations(data.conversations as unknown as AdminConversation[]);
+      setSupportConversations(data.supportConversations as unknown as AdminSupportConversation[]);
       setLoaded(true);
     });
   }, []);
+
+  const openSupport = async (convoId: string) => {
+    if (activeSupportId === convoId) {
+      setActiveSupportId(null);
+      setSupportMessages([]);
+      return;
+    }
+    const data = await loadMessagesAction(convoId);
+    setSupportMessages(data as unknown as AdminMessage[]);
+    setActiveSupportId(convoId);
+  };
+
+  const sendSupport = async () => {
+    if (!activeSupportId || !supportDraft.trim()) return;
+    setSendingSupport(true);
+    const result = await sendSupportMessageAction(activeSupportId, supportDraft);
+    setSendingSupport(false);
+    if (result.error) {
+      alert(result.error);
+      return;
+    }
+    setSupportDraft("");
+    // Refresh meldinger + bump samtalen til toppen.
+    const data = await loadMessagesAction(activeSupportId);
+    setSupportMessages(data as unknown as AdminMessage[]);
+    setSupportConversations((prev) => {
+      const idx = prev.findIndex((c) => c.id === activeSupportId);
+      if (idx === -1) return prev;
+      const updated = { ...prev[idx], last_message_at: new Date().toISOString() };
+      return [updated, ...prev.filter((_, i) => i !== idx)];
+    });
+  };
 
   const loadMessages = async (convoId: string) => {
     if (expandedConvo === convoId) {
@@ -445,6 +494,107 @@ export default function AdminPage() {
             {conversations.length === 0 && (
               <p className="py-12 text-center text-neutral-400">Ingen samtaler ennå</p>
             )}
+          </div>
+        )}
+
+        {/* Support */}
+        {tab === "support" && (
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
+            {/* Liste over support-samtaler */}
+            <div className="rounded-xl border border-neutral-200 bg-white max-h-[70vh] overflow-y-auto">
+              {supportConversations.length === 0 ? (
+                <p className="py-12 px-4 text-center text-sm text-neutral-400">Ingen support-samtaler ennå</p>
+              ) : (
+                supportConversations
+                  .filter((c) => !q || (c.guest?.full_name || "").toLowerCase().includes(q))
+                  .map((c) => {
+                    const isActive = activeSupportId === c.id;
+                    return (
+                      <button
+                        key={c.id}
+                        onClick={() => openSupport(c.id)}
+                        className={`flex w-full items-center gap-3 border-b border-neutral-100 px-4 py-3 text-left transition-colors ${
+                          isActive ? "bg-primary-50" : "hover:bg-neutral-50"
+                        }`}
+                      >
+                        {c.guest?.avatar_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={c.guest.avatar_url} alt="" className="h-9 w-9 rounded-full object-cover" />
+                        ) : (
+                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-neutral-200 text-xs font-semibold text-neutral-600">
+                            {(c.guest?.full_name || "?")[0]}
+                          </div>
+                        )}
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium">{c.guest?.full_name || "Anonym"}</p>
+                          <p className="truncate text-xs text-neutral-400">
+                            {new Date(c.last_message_at).toLocaleString("nb-NO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                          </p>
+                        </div>
+                      </button>
+                    );
+                  })
+              )}
+            </div>
+
+            {/* Chat-panel */}
+            <div className="flex h-[70vh] flex-col rounded-xl border border-neutral-200 bg-white">
+              {!activeSupportId ? (
+                <div className="flex flex-1 items-center justify-center text-sm text-neutral-400">
+                  Velg en samtale fra venstre for å lese og svare
+                </div>
+              ) : (
+                <>
+                  <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
+                    {supportMessages.length === 0 ? (
+                      <p className="text-sm text-neutral-400">Ingen meldinger ennå</p>
+                    ) : (
+                      supportMessages.map((m) => (
+                        <div key={m.id} className="flex gap-3">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-xs font-semibold text-neutral-600">
+                            {(m.sender?.full_name || "?")[0]}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-baseline gap-2">
+                              <span className="text-sm font-semibold text-neutral-900">{m.sender?.full_name || "Anonym"}</span>
+                              <span className="text-xs text-neutral-400">
+                                {new Date(m.created_at).toLocaleString("nb-NO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                              </span>
+                            </div>
+                            <p className="mt-0.5 whitespace-pre-wrap text-sm text-neutral-700">{m.content}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="border-t border-neutral-100 p-3">
+                    <div className="flex items-end gap-2">
+                      <textarea
+                        value={supportDraft}
+                        onChange={(e) => setSupportDraft(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
+                            e.preventDefault();
+                            sendSupport();
+                          }
+                        }}
+                        rows={2}
+                        placeholder="Svar som Tuno-support…"
+                        className="flex-1 resize-none rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+                      />
+                      <button
+                        onClick={sendSupport}
+                        disabled={sendingSupport || !supportDraft.trim()}
+                        className="flex items-center gap-1 rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                      >
+                        <Send className="h-4 w-4" />
+                        Send
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         )}
       </div>

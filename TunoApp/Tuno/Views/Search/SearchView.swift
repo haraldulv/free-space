@@ -296,10 +296,13 @@ struct SearchView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.neutral900)
                         .frame(width: 40, height: 40)
-                        .background(Color.white)
-                        .clipShape(Circle())
-                        .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
-                        .shadow(color: .black.opacity(0.1), radius: 6, y: 2)
+                        .background {
+                            Circle()
+                                .fill(Color.white.opacity(0.85))
+                                .background(.regularMaterial, in: Circle())
+                        }
+                        .overlay(Circle().stroke(Color.white.opacity(0.7), lineWidth: 0.5))
+                        .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
                 }
                 .buttonStyle(.plain)
 
@@ -350,22 +353,18 @@ struct SearchView: View {
         VStack {
             Spacer()
 
-            if let idx = selectedListingIndex, !filteredListings.isEmpty {
+            if let idx = selectedListingIndex, !carouselListings.isEmpty {
+                // Clamp idx hvis carousel-set har endret seg (f.eks. ved pan)
+                let safeIdx = min(max(idx, 0), carouselListings.count - 1)
                 MapBottomCardCarousel(
-                    listings: filteredListings,
+                    listings: carouselListings,
                     selectedIndex: Binding(
-                        get: { idx },
+                        get: { safeIdx },
                         set: { newIdx in
                             selectedListingIndex = newIdx
-                            // Pann kartet til den nye listingens posisjon — uten å
-                            // overstyre brukerens zoom-nivå (kart-coordinatoren
-                            // beholder current zoom når kun center endres).
-                            if filteredListings.indices.contains(newIdx),
-                               let lat = filteredListings[newIdx].lat,
-                               let lng = filteredListings[newIdx].lng {
-                                searchLat = lat
-                                searchLng = lng
-                            }
+                            // Ingen pan/zoom på sveip — vi viser kun listings
+                            // som er i synlig kart-område (carouselListings)
+                            // så brukeren havner aldri "langt vekk".
                         }
                     ),
                     onTap: { listing in
@@ -399,7 +398,9 @@ struct SearchView: View {
             if !filters.vehicleTypes.isEmpty {
                 if let t = listing.vehicleType, !filters.vehicleTypes.contains(t) { return false }
             }
-            let price = listing.price ?? 0
+            // Bruk cached displayPrice (samme kilde som histogrammet) — fall
+            // tilbake på listing.price for backward compat med eldre annonser.
+            let price = listing.displayPrice ?? listing.price ?? 0
             if price < filters.priceMin || (filters.priceMax > 0 && price > filters.priceMax) { return false }
             switch filters.bookingPreference {
             case .all: break
@@ -410,19 +411,45 @@ struct SearchView: View {
                 let listingAmenities = Set((listing.amenities ?? []).compactMap(AmenityType.init(rawValue:)))
                 if !filters.amenities.isSubset(of: listingAmenities) { return false }
             }
+            if !filters.rentalPeriodTypes.isEmpty {
+                let derived = Set(listing.derivedPeriodTypes)
+                if filters.rentalPeriodTypes.isDisjoint(with: derived) { return false }
+            }
             return true
         }
     }
 
+    /// Listings begrenset til de som er i (eller nær) synlig kart-område.
+    /// Brukes som carousel-data slik at sveip ikke hopper langt vekk.
+    /// Heuristikk: ~50% av lastSearchedRadius dekker typisk synlig zoom-område.
+    private var carouselListings: [Listing] {
+        guard let center = lastSearchedCenter else { return filteredListings }
+        let limitKm = max(lastSearchedRadius * 0.5, 1.5)
+        let nearby = filteredListings.compactMap { l -> (Listing, Double)? in
+            guard let lat = l.lat, let lng = l.lng else { return nil }
+            let d = haversineDistanceKm(lat1: center.latitude, lng1: center.longitude, lat2: lat, lng2: lng)
+            return d <= limitKm ? (l, d) : nil
+        }
+        let sorted = nearby.sorted { $0.1 < $1.1 }.map { $0.0 }
+        // Hvis 0 listings i visible zone (f.eks. ny pan før search), fall
+        // tilbake på alle filteredListings så carousel ikke blir tom
+        return sorted.isEmpty ? filteredListings : sorted
+    }
+
     private var priceArray: [Int] {
-        listingService.searchResults.compactMap { $0.price }.filter { $0 > 0 }
+        // Bruker displayPrice (cached headline-pris) når tilgjengelig så også
+        // måneds-/års-pakker er med i histogrammet. Faller tilbake på price for
+        // gamle annonser før migrasjonen.
+        listingService.searchResults
+            .compactMap { $0.displayPrice ?? $0.price }
+            .filter { $0 > 0 }
     }
 
     /// Beregner samme dynamicMaxPrice som FiltersSheet bruker, så badge på
     /// filter-knappen reflekterer korrekt om pris-filteret er aktivt.
     private var dynamicMaxPriceForBadge: Int {
         guard let m = priceArray.max() else { return 1000 }
-        return ((m + 99) / 100) * 100
+        return ((m + 999) / 1000) * 1000
     }
 
     private var searchPillSubtitle: String {

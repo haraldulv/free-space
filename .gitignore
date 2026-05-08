@@ -48,3 +48,6 @@ ios/App/DerivedData/
 
 # claude code (per-maskin tillatelser, kan inneholde tokens)
 .claude/settings.local.json
+
+# scraped imports (store rådata-filer, ikke for git)
+/data/external_imports/

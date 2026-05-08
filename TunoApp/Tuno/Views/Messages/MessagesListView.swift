@@ -10,15 +10,23 @@ enum MessagesFilter: String, CaseIterable {
 struct MessagesListView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var chatService: ChatService
+    @EnvironmentObject var pushRouter: PushRouter
     @State private var showLogin = false
     @State private var filter: MessagesFilter = .all
     @State private var searchActive = false
     @State private var searchText = ""
     @State private var showSettings = false
+    @State private var creatingSupport = false
     @FocusState private var searchFocused: Bool
 
+    /// Brukerens støtte-samtale (hvis den finnes). Vises som pinned rad — ikke i hovedlisten.
+    private var supportConversation: ConversationPreview? {
+        chatService.conversations.first(where: { $0.isSupport })
+    }
+
     private var filtered: [ConversationPreview] {
-        var result = chatService.conversations
+        // Støtte-rader pinnes øverst manuelt — ekskluder dem fra hovedlisten her.
+        var result = chatService.conversations.filter { !$0.isSupport }
         switch filter {
         case .all:
             result = result.filter { !$0.isArchived }
@@ -38,6 +46,14 @@ struct MessagesListView: View {
             }
         }
         return result
+    }
+
+    /// Når brukeren ennå ikke har en støtte-samtale, viser vi en placeholder-rad.
+    /// Ved tap opprettes samtalen og vi naviger til ChatView via NavigationStack-id'en.
+    private var showSupportPlaceholder: Bool {
+        // Vis kun på "Alle" og når søk ikke er aktiv — søk skal ikke avsløre placeholder
+        guard filter == .all, searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
+        return supportConversation == nil
     }
 
     private var archivedCount: Int {
@@ -107,7 +123,8 @@ struct MessagesListView: View {
                 otherUserName: convo?.otherUserName ?? "",
                 listingTitle: convo?.listingTitle ?? "",
                 listingId: convo?.listingId,
-                listingImage: convo?.listingImage
+                listingImage: convo?.listingImage,
+                isSupport: convo?.isSupport ?? false
             )
         }
         .fullScreenCover(isPresented: $showLogin) {
@@ -190,66 +207,174 @@ struct MessagesListView: View {
     private var content: some View {
         if chatService.isLoading && chatService.conversations.isEmpty {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if filtered.isEmpty {
-            VStack(spacing: 12) {
-                Image(systemName: "bubble.left")
-                    .font(.system(size: 40))
-                    .foregroundStyle(.neutral300)
-                Text(searchText.isEmpty ? "Ingen meldinger" : "Ingen treff på \"\(searchText)\"")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.neutral500)
-                if searchText.isEmpty {
-                    Text("Meldinger fra utleiere og gjester vises her")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.neutral400)
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else if filtered.isEmpty && supportConversation == nil && !showSupportPlaceholder {
+            emptyState
         } else {
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    ForEach(filtered) { conversation in
-                        NavigationLink(value: conversation.id) {
-                            AirbnbConversationRow(conversation: conversation)
-                        }
-                        .buttonStyle(.plain)
-                        .contextMenu {
-                            Button {
-                                Task { await chatService.toggleStar(conversation: conversation) }
-                            } label: {
-                                Label(conversation.isStarred ? "Fjern stjerne" : "Stjernemerk",
-                                      systemImage: conversation.isStarred ? "star.slash" : "star.fill")
-                            }
-                            Button {
-                                Task {
-                                    guard let userId = authManager.currentUser?.id else { return }
-                                    await chatService.markLatestAsUnread(
-                                        conversationId: conversation.id,
-                                        currentUserId: userId.uuidString.lowercased()
-                                    )
-                                }
-                            } label: {
-                                Label("Merk som ulest", systemImage: "envelope.badge")
-                            }
-                            Button {
-                                Task { await chatService.toggleMute(conversation: conversation) }
-                            } label: {
-                                Label(conversation.isMuted ? "Slå på varsler" : "Slå av varsler",
-                                      systemImage: conversation.isMuted ? "bell" : "bell.slash")
-                            }
-                            Button(role: .destructive) {
-                                Task { await chatService.toggleArchive(conversation: conversation) }
-                            } label: {
-                                Label(conversation.isArchived ? "Flytt ut av arkiv" : "Arkiver",
-                                      systemImage: conversation.isArchived ? "tray.and.arrow.up" : "archivebox")
-                            }
-                        }
-                        Divider().padding(.leading, 82)
-                    }
+                    pinnedSupportSection
+                    conversationsList
                 }
                 .padding(.top, 4)
             }
         }
+    }
+
+    @ViewBuilder
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "bubble.left")
+                .font(.system(size: 40))
+                .foregroundStyle(.neutral300)
+            Text(searchText.isEmpty ? "Ingen meldinger" : "Ingen treff på \"\(searchText)\"")
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.neutral500)
+            if searchText.isEmpty {
+                Text("Meldinger fra utleiere og gjester vises her")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral400)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    @ViewBuilder
+    private var pinnedSupportSection: some View {
+        let showPinned = filter == .all && searchText.trimmingCharacters(in: .whitespaces).isEmpty
+        if showPinned {
+            if let support = supportConversation {
+                NavigationLink(value: support.id) {
+                    SupportConversationRow(conversation: support)
+                }
+                .buttonStyle(.plain)
+                Divider().padding(.leading, 82)
+            } else {
+                Button {
+                    Task { await openOrCreateSupport() }
+                } label: {
+                    SupportConversationRow(conversation: nil)
+                }
+                .buttonStyle(.plain)
+                .disabled(creatingSupport)
+                Divider().padding(.leading, 82)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var conversationsList: some View {
+        ForEach(filtered) { conversation in
+            NavigationLink(value: conversation.id) {
+                AirbnbConversationRow(conversation: conversation)
+            }
+            .buttonStyle(.plain)
+            .contextMenu { conversationContextMenu(conversation) }
+            Divider().padding(.leading, 82)
+        }
+    }
+
+    @ViewBuilder
+    private func conversationContextMenu(_ conversation: ConversationPreview) -> some View {
+        Button {
+            Task { await chatService.toggleStar(conversation: conversation) }
+        } label: {
+            Label(conversation.isStarred ? "Fjern stjerne" : "Stjernemerk",
+                  systemImage: conversation.isStarred ? "star.slash" : "star.fill")
+        }
+        Button {
+            Task {
+                guard let userId = authManager.currentUser?.id else { return }
+                await chatService.markLatestAsUnread(
+                    conversationId: conversation.id,
+                    currentUserId: userId.uuidString.lowercased()
+                )
+            }
+        } label: {
+            Label("Merk som ulest", systemImage: "envelope.badge")
+        }
+        Button {
+            Task { await chatService.toggleMute(conversation: conversation) }
+        } label: {
+            Label(conversation.isMuted ? "Slå på varsler" : "Slå av varsler",
+                  systemImage: conversation.isMuted ? "bell" : "bell.slash")
+        }
+        Button(role: .destructive) {
+            Task { await chatService.toggleArchive(conversation: conversation) }
+        } label: {
+            Label(conversation.isArchived ? "Flytt ut av arkiv" : "Arkiver",
+                  systemImage: conversation.isArchived ? "tray.and.arrow.up" : "archivebox")
+        }
+    }
+
+    private func openOrCreateSupport() async {
+        guard let userId = authManager.currentUser?.id else { return }
+        creatingSupport = true
+        defer { creatingSupport = false }
+        if let id = await chatService.getOrCreateSupportConversation(guestId: userId.uuidString.lowercased()) {
+            // Refresh listen så raden dukker opp som pinned conversation, så naviger via PushRouter
+            // (MainTabView lytter på pendingConversationId og pusher den onto messagesNavPath).
+            await chatService.loadConversations(userId: userId.uuidString.lowercased())
+            pushRouter.pendingConversationId = id
+        }
+    }
+}
+
+// MARK: - Pinned support row
+
+struct SupportConversationRow: View {
+    /// nil = placeholder før samtale opprettes; ellers reell conversation-rad.
+    let conversation: ConversationPreview?
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.primary600)
+                    .frame(width: 58, height: 58)
+                Image(systemName: "lifepreserver")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("Tuno-support")
+                        .font(.system(size: 15, weight: (conversation?.unreadCount ?? 0) > 0 ? .bold : .semibold))
+                        .foregroundStyle(.neutral900)
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.primary600)
+                    Spacer()
+                }
+
+                Text("Kundeservice")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
+                    .lineLimit(1)
+
+                if let convo = conversation, !convo.lastMessage.isEmpty {
+                    Text(convo.lastMessage)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral500)
+                        .lineLimit(1)
+                } else {
+                    Text("Spør oss om hva som helst — vi svarer fortløpende.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral500)
+                        .lineLimit(1)
+                }
+            }
+
+            if let convo = conversation, convo.unreadCount > 0 {
+                Circle()
+                    .fill(Color.primary600)
+                    .frame(width: 8, height: 8)
+                    .padding(.top, 6)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 }
 

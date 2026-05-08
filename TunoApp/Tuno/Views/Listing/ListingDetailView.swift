@@ -119,6 +119,8 @@ struct ListingDetailView: View {
 
                         combinedSpotsSection(listing: listing)
 
+                        pricePackagesCard(listing: listing)
+
                         if let oh = listing.openingHours {
                             openingHoursCard(hours: oh)
                         }
@@ -283,10 +285,32 @@ struct ListingDetailView: View {
                 .foregroundStyle(.neutral600)
                 .multilineTextAlignment(.center)
 
+            if let pt = listing.parkingType {
+                HStack(spacing: 6) {
+                    Image(systemName: parkingTypeIcon(pt))
+                        .font(.system(size: 11, weight: .semibold))
+                    Text(pt.displayName)
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                .foregroundStyle(.neutral700)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color.neutral100)
+                .clipShape(Capsule())
+            }
+
             ratingPillRow(listing: listing)
                 .padding(.top, 6)
         }
         .frame(maxWidth: .infinity)
+    }
+
+    private func parkingTypeIcon(_ pt: ParkingType) -> String {
+        switch pt {
+        case .garage: return "house.fill"
+        case .outdoor: return "tree.fill"
+        case .parkingHouse: return "building.2.fill"
+        }
     }
 
     @ViewBuilder
@@ -790,7 +814,7 @@ struct ListingDetailView: View {
         if let lat = listing.lat, let lng = listing.lng {
             sectionCard {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Hvor du kommer")
+                    Text("Plassering")
                         .font(.system(size: 18, weight: .bold))
                         .foregroundStyle(.neutral900)
 
@@ -1067,12 +1091,24 @@ struct ListingDetailView: View {
         HStack(alignment: .center, spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 4) {
-                    Text("\(listing.displayPriceText) kr")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(.neutral900)
-                    Text("/ \(listing.priceUnit?.displayName ?? "døgn")")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.neutral600)
+                    if let h = listing.headlinePrice {
+                        Text("\(h.price) kr")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.neutral900)
+                        if h.suffix.isEmpty {
+                            Text("/ \(listing.priceUnit?.displayName ?? "døgn")")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.neutral600)
+                        } else {
+                            Text(h.suffix)
+                                .font(.system(size: 14))
+                                .foregroundStyle(.neutral600)
+                        }
+                    } else {
+                        Text("—")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(.neutral500)
+                    }
                 }
                 if listing.instantBooking == true {
                     HStack(spacing: 3) {
@@ -1149,6 +1185,101 @@ struct ListingDetailView: View {
         .overlay(alignment: .top) {
             Rectangle().fill(Color.neutral200.opacity(0.7)).frame(height: 0.5)
         }
+    }
+
+    // MARK: - Pris-pakker
+
+    /// Vises hvis annonsen har minst én pris-pakke (DAY/WEEK/MONTH/YEAR) på en av spotene.
+    /// Speiler designet "PRISER FOR ALLE PERIODER" (1 dag, 3 dager, 7 dager osv. som chips).
+    @ViewBuilder
+    private func pricePackagesCard(listing: Listing) -> some View {
+        let allPackages = aggregatedPackages(listing: listing)
+        if !allPackages.isEmpty {
+            sectionCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("PRISER FOR ALLE PERIODER")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(.neutral500)
+                        .tracking(1)
+                    Text("Velg dager i kalenderen for å se eksakt pris.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral600)
+                    FlowLayout(spacing: 10) {
+                        ForEach(allPackages) { pkg in
+                            VStack(spacing: 4) {
+                                Text("\(pkg.priceNok) kr")
+                                    .font(.system(size: 18, weight: .bold))
+                                    .foregroundStyle(.neutral900)
+                                Text(pkg.label)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.neutral500)
+                            }
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 12)
+                            .frame(minWidth: 90)
+                            .background(Color.neutral50)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.neutral200, lineWidth: 1)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /// Slå sammen pris-pakker fra alle spots: hvis flere spots har samme periodType+periodValue,
+    /// vis laveste pris. Inkluderer også synthetic 1-dag-pakke fra spot.price.
+    private func aggregatedPackages(listing: Listing) -> [PricePackage] {
+        var byKey: [String: PricePackage] = [:]
+        let spots = listing.spotMarkers ?? []
+
+        // Synthetic "1 dag" fra basisprisen
+        let isParking = listing.category == .parking
+        let dailyPrices = spots.compactMap { spot -> Int? in
+            isParking ? spot.price : (spot.pricePerNight ?? spot.price)
+        }.filter { $0 > 0 }
+        if let lowestDaily = dailyPrices.min() {
+            let pkg = PricePackage(periodType: .day, periodValue: 1, priceNok: lowestDaily)
+            byKey[pkg.id] = pkg
+        }
+
+        for spot in spots {
+            for pkg in spot.pricePackages ?? [] {
+                if let existing = byKey[pkg.id] {
+                    if pkg.priceNok < existing.priceNok { byKey[pkg.id] = pkg }
+                } else {
+                    byKey[pkg.id] = pkg
+                }
+            }
+            // Legacy fallback hvis pricePackages er tom
+            if (spot.pricePackages ?? []).isEmpty {
+                if let p = spot.weeklyPrice, p > 0 {
+                    let pkg = PricePackage(periodType: .week, periodValue: 1, priceNok: p)
+                    byKey[pkg.id] = byKey[pkg.id].map { $0.priceNok < pkg.priceNok ? $0 : pkg } ?? pkg
+                }
+                if let p = spot.monthlyPrice, p > 0 {
+                    let pkg = PricePackage(periodType: .month, periodValue: 1, priceNok: p)
+                    byKey[pkg.id] = byKey[pkg.id].map { $0.priceNok < pkg.priceNok ? $0 : pkg } ?? pkg
+                }
+                if let p = spot.threeMonthPrice, p > 0 {
+                    let pkg = PricePackage(periodType: .month, periodValue: 3, priceNok: p)
+                    byKey[pkg.id] = byKey[pkg.id].map { $0.priceNok < pkg.priceNok ? $0 : pkg } ?? pkg
+                }
+                if let p = spot.sixMonthPrice, p > 0 {
+                    let pkg = PricePackage(periodType: .month, periodValue: 6, priceNok: p)
+                    byKey[pkg.id] = byKey[pkg.id].map { $0.priceNok < pkg.priceNok ? $0 : pkg } ?? pkg
+                }
+                if let p = spot.yearPrice, p > 0 {
+                    let pkg = PricePackage(periodType: .year, periodValue: 1, priceNok: p)
+                    byKey[pkg.id] = byKey[pkg.id].map { $0.priceNok < pkg.priceNok ? $0 : pkg } ?? pkg
+                }
+            }
+        }
+
+        return Array(byKey.values).sortedForDisplay
     }
 
     // MARK: - Helpers

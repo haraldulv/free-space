@@ -66,6 +66,8 @@ struct EditListingView: View {
     @State private var openingHours: OpeningHours? = nil
     @State private var minStayDays: Int? = nil
     @State private var maxStayDays: Int? = nil
+    @State private var parkingType: ParkingType? = nil
+    @State private var addPackageContext: AddPackageContext? = nil
 
     /// Tab-tittler. Åpningstid vises kun for parkering (legges til runtime i `visibleTabs`).
     private var tabs: [String] {
@@ -209,6 +211,20 @@ struct EditListingView: View {
             Text("Endringene dine blir ikke lagret.")
         }
         .onAppear { populateFields() }
+        .sheet(item: $addPackageContext) { ctx in
+            AddPricePackageSheet(
+                existing: spotMarkers.indices.contains(ctx.spotIndex) ? (spotMarkers[ctx.spotIndex].pricePackages ?? []) : [],
+                onAdd: { pkg in
+                    upsertPackageInEdit(pkg, spotIndex: ctx.spotIndex)
+                    addPackageContext = nil
+                },
+                onCancel: { addPackageContext = nil }
+            )
+            .presentationDetents([.height(360)])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.regularMaterial)
+            .presentationCornerRadius(28)
+        }
     }
 
     // MARK: - Tab Views
@@ -1126,52 +1142,61 @@ struct EditListingView: View {
 
     @ViewBuilder
     private func spotDiscountCard(index: Int, title: String) -> some View {
-        let prices = Binding<LongerStayPrices>(
-            get: {
-                guard spotMarkers.indices.contains(index) else { return LongerStayPrices() }
-                let s = spotMarkers[index]
-                return LongerStayPrices(
-                    daily: s.dailyPrice,
-                    weekly: s.weeklyPrice,
-                    monthly: s.monthlyPrice,
-                    threeMonth: s.threeMonthPrice,
-                    sixMonth: s.sixMonthPrice,
-                    year: s.yearPrice
-                )
-            },
-            set: { newValue in
-                guard spotMarkers.indices.contains(index) else { return }
-                spotMarkers[index].dailyPrice = newValue.daily
-                spotMarkers[index].weeklyPrice = newValue.weekly
-                spotMarkers[index].monthlyPrice = newValue.monthly
-                spotMarkers[index].threeMonthPrice = newValue.threeMonth
-                spotMarkers[index].sixMonthPrice = newValue.sixMonth
-                spotMarkers[index].yearPrice = newValue.year
-                // Fjern legacy %-felter når host setter kr-priser, så det ikke
-                // ligger dobbel-konfig i DB.
-                spotMarkers[index].discountDayPct = nil
-                spotMarkers[index].discountWeekPct = nil
-                spotMarkers[index].discountMonthPct = nil
-            }
-        )
         let dailyRate = spotMarkers.indices.contains(index) ? (spotMarkers[index].price ?? 0) : 0
         VStack(alignment: .leading, spacing: 14) {
             Text(title)
                 .font(.system(size: 17, weight: .bold))
                 .foregroundStyle(.neutral900)
 
-            VStack(spacing: 10) {
-                priceRow(label: "1 uke", caption: "Pris for 7 påfølgende fulle dager", baseline: dailyRate * 7, price: prices.weekly)
-                priceRow(label: "1 måned", caption: "Pris for 30 påfølgende fulle dager", baseline: dailyRate * 30, price: prices.monthly)
-                priceRow(label: "3 måneder", caption: "Pris for 90 påfølgende fulle dager", baseline: dailyRate * 90, price: prices.threeMonth)
-                priceRow(label: "6 måneder", caption: "Pris for 180 påfølgende fulle dager", baseline: dailyRate * 180, price: prices.sixMonth)
-                priceRow(label: "1 år", caption: "Pris for 365 påfølgende fulle dager", baseline: dailyRate * 365, price: prices.year)
+            // 1 dag (locked, vises som info)
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("1 dag")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text("Standard pris")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                Text("\(dailyRate) kr")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.neutral700)
+            }
+            .padding(12)
+            .background(Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            standardPackageRow(periodType: .week, periodValue: 1, label: "1 uke", caption: "Pris for 7 påfølgende fulle dager", spotIndex: index)
+            standardPackageRow(periodType: .month, periodValue: 1, label: "1 måned", caption: "Pris for 30 påfølgende fulle dager", spotIndex: index)
+
+            let custom = customPackages(at: index)
+            if !custom.isEmpty {
+                Divider().padding(.vertical, 4)
+                Text("Egne pakker")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                ForEach(custom) { pkg in
+                    customPackageRow(pkg, spotIndex: index)
+                }
             }
 
-            LongerStayPreviewCard(
-                hourlyRate: dailyRate,
-                prices: prices.wrappedValue
-            )
+            Button {
+                addPackageContext = AddPackageContext(spotIndex: index, applyToAll: false)
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "plus.circle")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text("Legg til pakke")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .foregroundStyle(.primary600)
+                .padding(.vertical, 10)
+                .frame(maxWidth: .infinity)
+                .background(Color.primary50)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1181,26 +1206,112 @@ struct EditListingView: View {
     }
 
     @ViewBuilder
-    private func priceRow(label: String, caption: String, baseline: Int, price: Binding<Int?>) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 12) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(label)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                    Text(caption)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
+    private func standardPackageRow(periodType: PricePackagePeriodType, periodValue: Int, label: String, caption: String, spotIndex: Int) -> some View {
+        let binding = Binding<Int?>(
+            get: {
+                guard spotMarkers.indices.contains(spotIndex) else { return nil }
+                return spotMarkers[spotIndex].pricePackages?.first { $0.periodType == periodType && $0.periodValue == periodValue }?.priceNok
+            },
+            set: { newValue in
+                if let v = newValue, v > 0 {
+                    upsertPackageInEdit(.init(periodType: periodType, periodValue: periodValue, priceNok: v), spotIndex: spotIndex)
+                } else {
+                    removePackageInEdit(periodType: periodType, periodValue: periodValue, spotIndex: spotIndex)
                 }
-                Spacer()
-                KrInput(value: price)
             }
-            if baseline > 0 {
-                Text("Vanlig pris: \(formatKr(baseline))")
-                    .font(.system(size: 11))
-                    .foregroundStyle(.neutral400)
+        )
+        let isEnabled = (binding.wrappedValue ?? 0) > 0
+
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(isEnabled ? .neutral900 : .neutral500)
+                Text(caption)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
             }
+            Spacer()
+            KrStepper(value: binding, step: 50, minValue: 0, maxValue: nil, unitLabel: "kr", placeholder: "0")
         }
+        .padding(12)
+        .background(isEnabled ? Color.white : Color.neutral50)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(isEnabled ? Color.primary300 : Color.neutral200, lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private func customPackageRow(_ pkg: PricePackage, spotIndex: Int) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(pkg.label)
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text("\(pkg.priceNok) kr")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.primary600)
+            }
+            Spacer()
+            Button {
+                removePackageInEdit(periodType: pkg.periodType, periodValue: pkg.periodValue, spotIndex: spotIndex)
+            } label: {
+                Image(systemName: "trash")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.neutral500)
+                    .padding(8)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(12)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.neutral200, lineWidth: 1)
+        )
+    }
+
+    private func customPackages(at spotIndex: Int) -> [PricePackage] {
+        guard spotMarkers.indices.contains(spotIndex) else { return [] }
+        let all = spotMarkers[spotIndex].pricePackages ?? []
+        return all.filter { pkg in
+            !(pkg.periodType == .week && pkg.periodValue == 1)
+                && !(pkg.periodType == .month && pkg.periodValue == 1)
+        }.sortedForDisplay
+    }
+
+    private func upsertPackageInEdit(_ pkg: PricePackage, spotIndex: Int) {
+        guard spotMarkers.indices.contains(spotIndex) else { return }
+        var packages = spotMarkers[spotIndex].pricePackages ?? []
+        packages.removeAll { $0.periodType == pkg.periodType && $0.periodValue == pkg.periodValue }
+        packages.append(pkg)
+        spotMarkers[spotIndex].pricePackages = packages.sortedForDisplay
+        mirrorLegacyFieldsInEdit(spotIndex: spotIndex)
+    }
+
+    private func removePackageInEdit(periodType: PricePackagePeriodType, periodValue: Int, spotIndex: Int) {
+        guard spotMarkers.indices.contains(spotIndex) else { return }
+        var packages = spotMarkers[spotIndex].pricePackages ?? []
+        packages.removeAll { $0.periodType == periodType && $0.periodValue == periodValue }
+        spotMarkers[spotIndex].pricePackages = packages.isEmpty ? nil : packages
+        mirrorLegacyFieldsInEdit(spotIndex: spotIndex)
+    }
+
+    private func mirrorLegacyFieldsInEdit(spotIndex: Int) {
+        guard spotMarkers.indices.contains(spotIndex) else { return }
+        let pkgs = spotMarkers[spotIndex].pricePackages ?? []
+        spotMarkers[spotIndex].weeklyPrice = pkgs.first { $0.periodType == .week && $0.periodValue == 1 }?.priceNok
+        spotMarkers[spotIndex].monthlyPrice = pkgs.first { $0.periodType == .month && $0.periodValue == 1 }?.priceNok
+        spotMarkers[spotIndex].threeMonthPrice = pkgs.first { $0.periodType == .month && $0.periodValue == 3 }?.priceNok
+        spotMarkers[spotIndex].sixMonthPrice = pkgs.first { $0.periodType == .month && $0.periodValue == 6 }?.priceNok
+        spotMarkers[spotIndex].yearPrice = pkgs.first { $0.periodType == .year && $0.periodValue == 1 }?.priceNok
+        spotMarkers[spotIndex].dailyPrice = nil
+        spotMarkers[spotIndex].discountDayPct = nil
+        spotMarkers[spotIndex].discountWeekPct = nil
+        spotMarkers[spotIndex].discountMonthPct = nil
     }
 
     private var availabilityTab: some View {
@@ -1296,6 +1407,23 @@ struct EditListingView: View {
         openingHours = listing.openingHours
         minStayDays = listing.minStayDays
         maxStayDays = listing.maxStayDays
+        parkingType = listing.parkingType
+        // Backfill: konverter legacy weeklyPrice/monthlyPrice/threeMonth/sixMonth/year
+        // til pricePackages-array slik at den nye rabatter-UI'en kan vise dem.
+        for i in spotMarkers.indices {
+            var pkgs = spotMarkers[i].pricePackages ?? []
+            func upsert(_ pt: PricePackagePeriodType, _ pv: Int, _ price: Int?) {
+                guard let p = price, p > 0 else { return }
+                if pkgs.contains(where: { $0.periodType == pt && $0.periodValue == pv }) { return }
+                pkgs.append(PricePackage(periodType: pt, periodValue: pv, priceNok: p))
+            }
+            upsert(.week, 1, spotMarkers[i].weeklyPrice)
+            upsert(.month, 1, spotMarkers[i].monthlyPrice)
+            upsert(.month, 3, spotMarkers[i].threeMonthPrice)
+            upsert(.month, 6, spotMarkers[i].sixMonthPrice)
+            upsert(.year, 1, spotMarkers[i].yearPrice)
+            spotMarkers[i].pricePackages = pkgs.isEmpty ? nil : pkgs.sortedForDisplay
+        }
         // Set perSpotPricing om noen spot har egen pris
         perSpotPricing = (listing.spotMarkers ?? []).contains { $0.price != nil }
         // Set perSpotCheckinMessage om noen spot har egen melding
@@ -1320,6 +1448,74 @@ struct EditListingView: View {
             }
             .padding(16)
         }
+    }
+
+    private func derivePeriodTypeRawValues(from spots: [SpotMarker]) -> [String] {
+        var seen: Set<PricePackagePeriodType> = []
+        for s in spots {
+            for p in s.pricePackages ?? [] { seen.insert(p.periodType) }
+            if s.weeklyPrice != nil { seen.insert(.week) }
+            if s.monthlyPrice != nil || s.threeMonthPrice != nil || s.sixMonthPrice != nil { seen.insert(.month) }
+            if s.yearPrice != nil { seen.insert(.year) }
+            if s.price != nil || s.pricePerNight != nil || s.dailyPrice != nil { seen.insert(.day) }
+        }
+        return seen.map { $0.rawValue }.sorted()
+    }
+
+    /// Avled minimum opphold (dager) fra korteste tilbudte pakke.
+    private func deriveMinStayDays(from spots: [SpotMarker]) -> Int? {
+        var hasDay = false, hasWeek = false, hasMonth = false, hasYear = false
+        for s in spots {
+            for p in s.pricePackages ?? [] {
+                switch p.periodType {
+                case .day: hasDay = true
+                case .week: hasWeek = true
+                case .month: hasMonth = true
+                case .year: hasYear = true
+                }
+            }
+            if s.weeklyPrice != nil { hasWeek = true }
+            if s.monthlyPrice != nil { hasMonth = true }
+            if s.yearPrice != nil { hasYear = true }
+            if s.price != nil && (s.price ?? 0) > 0 { hasDay = true }
+            if (s.pricePerNight ?? 0) > 0 { hasDay = true }
+        }
+        if hasDay { return 1 }
+        if hasWeek { return 7 }
+        if hasMonth { return 30 }
+        if hasYear { return 365 }
+        return nil
+    }
+
+    /// Avled cached headline-pris fra spot_markers' pricePackages.
+    /// Prioritet: DAY > WEEK > MONTH > YEAR.
+    private func deriveDisplayPrice(from spots: [SpotMarker], fallback: Int) -> (price: Int?, suffix: String) {
+        var minDay: Int?
+        var minWeek: Int?
+        var minMonth: Int?
+        var minYear: Int?
+        for s in spots {
+            for p in s.pricePackages ?? [] {
+                switch p.periodType {
+                case .day: minDay = min(minDay ?? Int.max, p.priceNok)
+                case .week: minWeek = min(minWeek ?? Int.max, p.priceNok)
+                case .month: minMonth = min(minMonth ?? Int.max, p.priceNok)
+                case .year: minYear = min(minYear ?? Int.max, p.priceNok)
+                }
+            }
+            if let p = s.weeklyPrice, p > 0 { minWeek = min(minWeek ?? Int.max, p) }
+            if let p = s.monthlyPrice, p > 0 { minMonth = min(minMonth ?? Int.max, p) }
+            if let p = s.yearPrice, p > 0 { minYear = min(minYear ?? Int.max, p) }
+            let basePrice = listing.category == .parking
+                ? (s.price ?? 0)
+                : (s.pricePerNight ?? s.price ?? 0)
+            if basePrice > 0 { minDay = min(minDay ?? Int.max, basePrice) }
+        }
+        if let d = minDay { return (d, "") }
+        if let w = minWeek { return (w, "/uke") }
+        if let m = minMonth { return (m, "/mnd") }
+        if let y = minYear { return (y, "/år") }
+        return (fallback > 0 ? fallback : nil, "")
     }
 
     private func saveChanges() {
@@ -1356,8 +1552,12 @@ struct EditListingView: View {
                     maxVehicleLength: listing.category == .camping ? maxVehicleLength : nil,
                     isActive: isActive,
                     openingHours: listing.category == .parking ? openingHours : nil,
-                    minStayDays: minStayDays,
-                    maxStayDays: maxStayDays
+                    minStayDays: minStayDays ?? deriveMinStayDays(from: spotMarkers),
+                    maxStayDays: maxStayDays,
+                    parkingType: listing.category == .parking ? parkingType?.rawValue : nil,
+                    rentalPeriodTypes: derivePeriodTypeRawValues(from: spotMarkers),
+                    displayPrice: deriveDisplayPrice(from: spotMarkers, fallback: Int(price) ?? 0).price,
+                    displayPriceSuffix: deriveDisplayPrice(from: spotMarkers, fallback: Int(price) ?? 0).suffix
                 )
 
                 let updated: [Listing] = try await supabase
@@ -1872,6 +2072,10 @@ private struct UpdateListingInput: Encodable {
     let openingHours: OpeningHours?
     let minStayDays: Int?
     let maxStayDays: Int?
+    let parkingType: String?
+    let rentalPeriodTypes: [String]
+    let displayPrice: Int?
+    let displayPriceSuffix: String
 
     enum CodingKeys: String, CodingKey {
         case title, description, spots, address, city, region, lat, lng, price, amenities, images, extras
@@ -1891,6 +2095,10 @@ private struct UpdateListingInput: Encodable {
         case openingHours = "opening_hours"
         case minStayDays = "min_stay_days"
         case maxStayDays = "max_stay_days"
+        case parkingType = "parking_type"
+        case rentalPeriodTypes = "rental_period_types"
+        case displayPrice = "display_price"
+        case displayPriceSuffix = "display_price_suffix"
     }
 }
 

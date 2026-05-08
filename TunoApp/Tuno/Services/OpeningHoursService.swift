@@ -23,7 +23,21 @@ enum OpeningHoursService {
     }
 
     /// True hvis listing/spot er åpen på datoen (helt eller delvis).
-    static func isOpen(_ oh: OpeningHours?, on date: Date) -> Bool {
+    /// `overrides` (per-dato) trumfer ukedags-åpningstider hvis satt for samme dato.
+    static func isOpen(
+        _ oh: OpeningHours?,
+        on date: Date,
+        overrides: [String: DayOpeningOverride]? = nil
+    ) -> Bool {
+        // 1) Per-dato overstyring trumfer alt annet
+        if let overrides {
+            let iso = isoDateString(date)
+            if let ov = overrides[iso] {
+                if ov.isClosed { return false }
+                if let _ = ov.open { return true }
+            }
+        }
+        // 2) Ukedags-default
         guard let oh else { return true } // ingen begrensning = døgnåpent
         let cal = Calendar(identifier: .iso8601)
         let comp = cal.component(.weekday, from: date)
@@ -32,15 +46,49 @@ enum OpeningHoursService {
     }
 
     /// Sjekk om alle dager i datoperioden (checkIn inklusiv, checkOut eksklusiv) er åpne.
-    static func isOpenForRange(_ oh: OpeningHours?, checkIn: Date, checkOut: Date) -> Bool {
-        guard let oh else { return true }
+    static func isOpenForRange(
+        _ oh: OpeningHours?,
+        checkIn: Date,
+        checkOut: Date,
+        overrides: [String: DayOpeningOverride]? = nil
+    ) -> Bool {
+        // Hvis ingen åpningstid OG ingen overrides → døgnåpent
+        if oh == nil && (overrides?.isEmpty ?? true) { return true }
         var cursor = Calendar.current.startOfDay(for: checkIn)
         let end = Calendar.current.startOfDay(for: checkOut)
         while cursor < end {
-            if !isOpen(oh, on: cursor) { return false }
+            if !isOpen(oh, on: cursor, overrides: overrides) { return false }
             cursor = Calendar.current.date(byAdding: .day, value: 1, to: cursor) ?? cursor
         }
         return true
+    }
+
+    /// Returnerer effektiv åpningstid for en gitt dato — overstyringen tar
+    /// presedens over ukedags-default.
+    static func effectiveTime(
+        _ oh: OpeningHours?,
+        on date: Date,
+        overrides: [String: DayOpeningOverride]? = nil
+    ) -> String? {
+        if let overrides {
+            let iso = isoDateString(date)
+            if let ov = overrides[iso] {
+                if ov.isClosed { return nil }
+                if let t = ov.open { return t }
+            }
+        }
+        guard let oh else { return "00:00-24:00" } // døgnåpent
+        let cal = Calendar(identifier: .iso8601)
+        let comp = cal.component(.weekday, from: date)
+        let day = Weekday.from(weekdayComponent: comp)
+        return oh.value(for: day)
+    }
+
+    private static func isoDateString(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+        return f.string(from: date)
     }
 
     /// Parser "HH:MM-HH:MM" til (start, end) minutter siden midnatt.

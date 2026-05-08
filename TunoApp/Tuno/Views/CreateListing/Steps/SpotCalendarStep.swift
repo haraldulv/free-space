@@ -48,23 +48,23 @@ struct SpotCalendarStep: View {
                     .padding(.top, 8)
 
                 askChoiceCard(
-                    icon: "calendar.badge.checkmark",
+                    icon: "arrow.right",
+                    title: "Hopp over",
+                    subtitle: "Du kan sette opp dette senere",
+                    accent: .neutral900
+                ) {
+                    form.goNext()
+                }
+
+                askChoiceCard(
+                    icon: "calendar",
                     title: "Sett opp kalender",
-                    subtitle: "Blokker datoer eller sett egne priser for spesielle perioder.",
+                    subtitle: "Blokker datoer eller sett egne priser",
                     accent: Color.primary600
                 ) {
                     if let id = currentSpotId {
                         phasePerSpot[id] = .editing
                     }
-                }
-
-                askChoiceCard(
-                    icon: "arrow.right.circle.fill",
-                    title: "Hopp over",
-                    subtitle: "Annonsen blir åpen alle datoer til standardpris. Du kan justere når som helst fra Profil → Kalender etter publisering.",
-                    accent: .neutral900
-                ) {
-                    form.goNext()
                 }
 
                 Spacer(minLength: 0)
@@ -77,16 +77,12 @@ struct SpotCalendarStep: View {
     private var askHeader: some View {
         let total = form.spotMarkers.count
         let title = total == 1
-            ? "Vil du sette opp kalender?"
+            ? "Sett opp kalender?"
             : "Kalender for plass \(form.currentSpotIndex + 1)"
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 0) {
             Text(title)
                 .font(.system(size: 24, weight: .bold))
                 .foregroundStyle(.neutral900)
-            Text("Du kan blokkere enkeltdager eller sette egne priser for spesielle perioder. Eller bare hoppe over og gjøre dette senere — annonsen er da åpen alle datoer til standardpris.")
-                .font(.system(size: 14))
-                .foregroundStyle(.neutral500)
-                .lineSpacing(2)
         }
     }
 

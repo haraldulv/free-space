@@ -129,6 +129,8 @@ struct BookingView: View {
     }
     @State private var licensePlate = ""
     @State private var isRentalCar = false
+    @State private var editingCheckIn: Bool = true
+    @State private var wheelPickerField: DateWheelField? = nil
     @State private var availableSpots: Int?
     @State private var totalSpots: Int?
     @State private var showConfirmation = false
@@ -158,8 +160,11 @@ struct BookingView: View {
     }
 
     private var nights: Int {
+        // Antall dager i bookingen — INKLUDERER begge endepunkter (parkering teller dag, ikke natt).
+        // 7. mai → 7. mai = 1 dag. 7. mai → 13. mai = 7 dager. 7. mai → 5. juni = 30 dager.
         guard let ci = checkIn, let co = checkOut else { return 0 }
-        return max(1, Calendar.current.dateComponents([.day], from: ci, to: co).day ?? 1)
+        let span = Calendar.current.dateComponents([.day], from: ci, to: co).day ?? 0
+        return max(1, span + 1)
     }
 
     private var hours: Int {
@@ -216,12 +221,81 @@ struct BookingView: View {
             return hourlyPriceBreakdown.reduce(0) { $0 + $1.price }
         }
         if !nightlyPriceBreakdown.isEmpty, !isHourly {
-            // nightlyPriceBreakdown brukes kun for camping/døgn (regler-basert per-natt-pris).
+            // For parkering: anvend tier-stabling på breakdown (matcher server).
+            // Månedsannonser uten DAY-pris får 0 i breakdown → tier overstyrer til pakke-pris.
+            if listing.category == .parking {
+                let appliedTotal = applyTiersToBreakdown(nightlyPriceBreakdown)
+                let spotMultiplier = selectedSpots.count > 1 ? selectedSpots.count : 1
+                return appliedTotal * spotMultiplier
+            }
+            // Camping: bare per-natt × N (ingen tier-stabling).
             let perNight = nightlyPriceBreakdown.reduce(0) { $0 + $1.price }
             let spotMultiplier = selectedSpots.count > 1 ? selectedSpots.count : 1
             return perNight * spotMultiplier
         }
-        return units * (listing.price ?? 0)
+        // Fallback når breakdown ikke er lastet ennå.
+        return localTotalWithTiers(units: units)
+    }
+
+    /// Anvender pakke-tier-stabling på en eksisterende breakdown. Brukes for
+    /// parkering så månedsannonser uten DAY-pris får riktig total.
+    private func applyTiersToBreakdown(_ breakdown: [NightlyPriceEntry]) -> Int {
+        let targetSpot = selectedSpots.first ?? listing.spotMarkers?.first
+        let longerStay = targetSpot?.effectiveLongerStayPrices(baseHourly: 0)
+            ?? (daily: 0, weekly: 0, monthly: 0)
+        let pkgs = targetSpot?.pricePackages ?? []
+        let pkg3 = pkgs.first { $0.periodType == .month && $0.periodValue == 3 }?.priceNok
+            ?? targetSpot?.threeMonthPrice ?? 0
+        let pkg6 = pkgs.first { $0.periodType == .month && $0.periodValue == 6 }?.priceNok
+            ?? targetSpot?.sixMonthPrice ?? 0
+        let pkgYear = pkgs.first { $0.periodType == .year && $0.periodValue == 1 }?.priceNok
+            ?? targetSpot?.yearPrice ?? 0
+        let tiers = PricingService.LongerStayTiers(
+            weeklyPrice: longerStay.weekly,
+            monthlyPrice: longerStay.monthly,
+            threeMonthPrice: pkg3,
+            sixMonthPrice: pkg6,
+            yearPrice: pkgYear
+        )
+        if !tiers.hasAny {
+            return breakdown.reduce(0) { $0 + $1.price }
+        }
+        let result = PricingService.applyLongerStayPricing(breakdown: breakdown, tiers: tiers)
+        return result.total
+    }
+
+    /// Beregner total ved å multiplisere basis-pris × dager og deretter
+    /// anvende tier-stabling fra spot.pricePackages (eller legacy-felter).
+    private func localTotalWithTiers(units: Int) -> Int {
+        guard units > 0 else { return 0 }
+        let targetSpot = selectedSpots.first ?? listing.spotMarkers?.first
+        let basePerDay = (listing.price ?? targetSpot?.price ?? 0)
+        let breakdown = (0..<units).map { _ in
+            NightlyPriceEntry(date: "", price: basePerDay, source: "base")
+        }
+        let longerStay = targetSpot?.effectiveLongerStayPrices(baseHourly: 0)
+            ?? (daily: 0, weekly: 0, monthly: 0)
+        // Hent også 3mnd/6mnd/year direkte fra pakker eller legacy
+        let pkgs = targetSpot?.pricePackages ?? []
+        let pkg3 = pkgs.first { $0.periodType == .month && $0.periodValue == 3 }?.priceNok
+            ?? targetSpot?.threeMonthPrice ?? 0
+        let pkg6 = pkgs.first { $0.periodType == .month && $0.periodValue == 6 }?.priceNok
+            ?? targetSpot?.sixMonthPrice ?? 0
+        let pkgYear = pkgs.first { $0.periodType == .year && $0.periodValue == 1 }?.priceNok
+            ?? targetSpot?.yearPrice ?? 0
+
+        let tiers = PricingService.LongerStayTiers(
+            weeklyPrice: longerStay.weekly,
+            monthlyPrice: longerStay.monthly,
+            threeMonthPrice: pkg3,
+            sixMonthPrice: pkg6,
+            yearPrice: pkgYear
+        )
+        if !tiers.hasAny {
+            return basePerDay * units
+        }
+        let result = PricingService.applyLongerStayPricing(breakdown: breakdown, tiers: tiers)
+        return result.total
     }
 
     private func loadPriceBreakdown() {
@@ -330,17 +404,18 @@ struct BookingView: View {
     }
 
     private var isFormValid: Bool {
-        let vehicleOK = isRentalCar || !licensePlate.trimmingCharacters(in: .whitespaces).isEmpty
+        // Regnr er fjernet fra booking-flyten — vehicleOK er alltid sant.
+        let vehicleOK = true
         let spotOK = !hasSpotLevelPricing || !selectedSpotIds.isEmpty
         let datesOK = isHourly ? (hourlyDate != nil && endMinutes > startMinutes) : hasDates
         return datesOK && vehicleOK && spotOK && stayLengthError == nil
     }
 
     /// Returnerer en feilmelding hvis valgte datoer bryter min/maks dager-grenser.
-    /// Bruker stay-dager (samme som server: round(check_out - check_in)).
+    /// Bruker `nights`-property som inkluderer begge endepunkter (parkering teller dager).
     private var stayLengthError: String? {
-        guard let ci = checkIn, let co = checkOut else { return nil }
-        let days = max(1, Calendar.current.dateComponents([.day], from: ci, to: co).day ?? 1)
+        guard checkIn != nil, checkOut != nil else { return nil }
+        let days = nights
         if let minD = listing.minStayDays, days < minD {
             return "Annonsen krever minimum \(minD) \(days == 1 ? "dag" : "dager")."
         }
@@ -376,11 +451,8 @@ struct BookingView: View {
                     .background(Color.orange.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                Divider()
-                vehicleSection
-                Divider()
-
-                if !hasSpotLevelPricing, let available = availableSpots, let total = totalSpots {
+                if !hasSpotLevelPricing, let available = availableSpots, let total = totalSpots, total > 1 {
+                    Divider()
                     HStack(spacing: 6) {
                         Image(systemName: available > 0 ? "checkmark.circle.fill" : "xmark.circle.fill")
                             .foregroundStyle(available > 0 ? .green : .red)
@@ -516,6 +588,19 @@ struct BookingView: View {
         .sheet(isPresented: $showCalendar) {
             calendarSheet
         }
+        .sheet(item: $wheelPickerField) { field in
+            DateWheelSheet(
+                field: field,
+                checkIn: $checkIn,
+                checkOut: $checkOut,
+                allowSameDayCheckOut: true,
+                onClose: { wheelPickerField = nil }
+            )
+            .presentationDetents([.height(380)])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
+            .presentationCornerRadius(28)
+        }
         .task {
             // Forvalg plass hvis brukeren klikket seg inn fra et Plasser-kort.
             if let preId = preSelectedSpotId, selectedSpotIds.isEmpty {
@@ -644,11 +729,17 @@ struct BookingView: View {
                         .foregroundStyle(.neutral500)
                 }
                 HStack(spacing: 4) {
-                    Text("\(listing.displayPriceText) kr")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("/ \(listing.priceUnit?.displayName ?? "døgn")")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral500)
+                    if let h = listing.headlinePrice {
+                        Text("\(h.price) kr")
+                            .font(.system(size: 14, weight: .bold))
+                        Text(h.suffix.isEmpty ? "/ \(listing.priceUnit?.displayName ?? "døgn")" : h.suffix)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.neutral500)
+                    } else {
+                        Text("—")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.neutral500)
+                    }
                 }
             }
             Spacer()
@@ -662,46 +753,153 @@ struct BookingView: View {
 
     private var nightlyDateSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Datoer")
+            Text("Hvor lenge?")
                 .font(.system(size: 18, weight: .semibold))
-            Button {
-                showCalendar = true
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "calendar")
-                        .foregroundStyle(.neutral500)
-                    if let ci = checkIn, let co = checkOut {
-                        Text("\(formatShort(ci)) – \(formatShort(co))")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(.neutral900)
-                    } else if let ci = checkIn {
-                        Text("Fra \(formatShort(ci)), velg utsjekk")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(.neutral700)
-                    } else {
-                        Text("Velg datoer")
-                            .font(.system(size: 15))
-                            .foregroundStyle(.neutral500)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.neutral400)
+
+            // Periode-toggle — kun de periodene annonsen tilbyr.
+            // Setter checkOut = checkIn + N dager (samme som søket).
+            availablePeriodToggle
+
+            // Innsjekk/Utsjekk-pillar — tap åpner wheel-picker for direkte dato-valg
+            HStack(spacing: 8) {
+                bookingDatePill(label: "Innsjekk", date: checkIn, isActive: editingCheckIn) {
+                    editingCheckIn = true
+                    wheelPickerField = .checkIn
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 14)
-                .background(Color.neutral50)
-                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                bookingDatePill(label: "Utsjekk", date: checkOut, isActive: !editingCheckIn) {
+                    editingCheckIn = false
+                    wheelPickerField = .checkOut
+                }
             }
-            .buttonStyle(.plain)
+
+            // Inline-kalender (samme komponent som i søket). Bruker en fast
+            // høyde som rommer ~3 måneder. For å hoppe lenger frem i tid kan
+            // bruker tappe Innsjekk/Utsjekk-pillene → wheel-picker.
+            SearchDateRangePicker(
+                checkIn: $checkIn,
+                checkOut: $checkOut
+            )
+            .frame(height: 540)
+            .scrollDisabled(true)
 
             if hasDates {
                 Text("\(nights) \(effectiveBookingPriceUnit.pluralized(count: nights))")
-                    .font(.system(size: 14))
+                    .font(.system(size: 13))
                     .foregroundStyle(.neutral500)
             }
         }
+    }
+
+    // MARK: - Periode-toggle (booking-flyten)
+
+    private var availablePeriods: [(label: String, days: Int)] {
+        // Vis kun periode-presets som annonsen faktisk tilbyr.
+        let derived = Set(listing.derivedPeriodTypes)
+        var result: [(String, Int)] = []
+        if derived.contains(.day) { result.append(("1 dag", 1)) }
+        if derived.contains(.week) { result.append(("1 uke", 7)) }
+        if derived.contains(.month) { result.append(("1 måned", 30)) }
+        if derived.contains(.year) { result.append(("1 år", 365)) }
+        return result
+    }
+
+    @ViewBuilder
+    private var availablePeriodToggle: some View {
+        let periods = availablePeriods
+        if periods.count > 1 {
+            // Flere perioder tilbys → vis chips for valg
+            HStack(spacing: 8) {
+                ForEach(periods, id: \.days) { p in
+                    bookingPeriodChip(label: p.label, days: p.days)
+                }
+            }
+        } else if let only = periods.first {
+            // Én periode tilbys → kompakt info-pille (ingen valg å gjøre)
+            HStack(spacing: 6) {
+                Image(systemName: "info.circle")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+                Text("Tilbys som \(only.label.lowercased())")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral600)
+                Spacer()
+            }
+            .padding(.horizontal, 4)
+            .onAppear {
+                // Auto-velg perioden første gang sheet åpnes
+                if checkIn == nil || checkOut == nil {
+                    applyBookingPeriodPreset(days: only.days)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func bookingPeriodChip(label: String, days: Int) -> some View {
+        let isActive = isBookingPeriodActive(days: days)
+        Button {
+            applyBookingPeriodPreset(days: days)
+        } label: {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isActive ? Color.primary700 : Color.neutral700)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(isActive ? Color.primary50 : Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(isActive ? Color.primary600 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func isBookingPeriodActive(days: Int) -> Bool {
+        guard let inDate = checkIn, let outDate = checkOut else { return false }
+        let cal = Calendar(identifier: .gregorian)
+        let span = cal.dateComponents([.day], from: inDate, to: outDate).day ?? 0
+        // span+1 = totalt dager (begge endepunkter inkludert)
+        return span == days - 1
+    }
+
+    private func applyBookingPeriodPreset(days: Int) {
+        // Booking-flyten teller begge endepunkter inklusive (samme som wizarden).
+        // 1 dag = 7. mai → 7. mai. 1 måned = 7. mai → 5. juni (30 dager totalt).
+        let cal = Calendar(identifier: .gregorian)
+        let today = cal.startOfDay(for: Date())
+        let anchor = checkIn.map(cal.startOfDay(for:)) ?? today
+        checkIn = anchor
+        if days == 1 {
+            checkOut = anchor
+        } else {
+            checkOut = cal.date(byAdding: .day, value: days - 1, to: anchor) ?? anchor
+        }
+        editingCheckIn = false
+    }
+
+    @ViewBuilder
+    private func bookingDatePill(label: String, date: Date?, isActive: Bool, onTap: @escaping () -> Void) -> some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(isActive ? Color.primary700 : Color.neutral500)
+                Text(date.map(formatShort) ?? "Velg dato")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(date == nil ? .neutral400 : .neutral900)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(isActive ? Color.primary50 : Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isActive ? Color.primary600 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     private var hourlyDateSection: some View {
@@ -1112,7 +1310,13 @@ struct BookingView: View {
         if hasSpotLevelPricing && !selectedSpots.isEmpty {
             return "\(selectedSpots.count) plass\(selectedSpots.count > 1 ? "er" : "") × \(nights) \(perDayUnitLabel(count: nights))"
         }
-        return "\(listing.price ?? 0) kr × \(nights) \(perDayUnitLabel(count: nights))"
+        // Vis "X dager" hvis basis-prisen er 0 (typisk månedsannonse uten dagspris).
+        // Total beregnes via tier-stabling i baseTotal.
+        let basePrice = listing.price ?? 0
+        if basePrice == 0 {
+            return "\(nights) \(perDayUnitLabel(count: nights))"
+        }
+        return "\(basePrice) kr × \(nights) \(perDayUnitLabel(count: nights))"
     }
 
     /// "dag"/"dager" for parkering, "døgn"/"døgn" for camping.

@@ -35,8 +35,15 @@ class ChatService: ObservableObject {
                 return
             }
 
-            let otherUserIds = Array(Set(convos.map { $0.guestId == userId ? $0.hostId : $0.guestId }))
-            let listingIds = Array(Set(convos.map { $0.listingId }))
+            let otherUserIds: [String] = Array(Set(convos.compactMap { convo -> String? in
+                // Support-samtaler har ingen "andre bruker" på frontend — vi viser Tuno-support som motpart.
+                guard !convo.isSupport else { return nil }
+                if convo.guestId == userId {
+                    return convo.hostId
+                }
+                return convo.guestId
+            }))
+            let listingIds: [String] = Array(Set(convos.compactMap { $0.listingId }))
             let convoIds = convos.map { $0.id }
 
             // Query 2-4: batch-henting parallelt
@@ -100,12 +107,40 @@ class ChatService: ObservableObject {
             }
 
             let previews: [ConversationPreview] = convos.map { convo in
-                let otherUserId = convo.guestId == userId ? convo.hostId : convo.guestId
+                if convo.isSupport {
+                    // Tuno-support har ingen listing/host. Vi bruker "guest"-flaggene for arkiv/star/mute.
+                    let isArchived = convo.archivedByGuest ?? false
+                    let isStarred = convo.starredByGuest ?? false
+                    let isMuted = convo.mutedByGuest ?? false
+                    return ConversationPreview(
+                        id: convo.id,
+                        listingId: nil,
+                        guestId: convo.guestId,
+                        hostId: nil,
+                        otherUserName: "Tuno-support",
+                        otherUserAvatar: nil,
+                        lastMessage: lastMessageByConvo[convo.id]?.content ?? "",
+                        lastMessageAt: convo.lastMessageAt,
+                        unreadCount: unreadByConvo[convo.id] ?? 0,
+                        listingTitle: "Kundeservice",
+                        listingImage: nil,
+                        selfRole: "guest",
+                        bookingStatus: nil,
+                        bookingDates: nil,
+                        listingCity: nil,
+                        isArchived: isArchived,
+                        isStarred: isStarred,
+                        isMuted: isMuted,
+                        kind: "support"
+                    )
+                }
+
+                let otherUserId = convo.guestId == userId ? (convo.hostId ?? "") : convo.guestId
                 let profile = profileMap[otherUserId]
-                let listing = listingMap[convo.listingId]
+                let listing = convo.listingId.flatMap { listingMap[$0] }
                 let isHost = convo.hostId == userId
                 let selfRole = isHost ? "host" : "guest"
-                let bookingKey = "\(convo.listingId)|\(convo.guestId)"
+                let bookingKey = "\(convo.listingId ?? "")|\(convo.guestId)"
                 let booking = latestBookingByPair[bookingKey]
                 let isArchived = isHost
                     ? (convo.archivedByHost ?? false)
@@ -134,7 +169,8 @@ class ChatService: ObservableObject {
                     listingCity: listing?.city,
                     isArchived: isArchived,
                     isStarred: isStarred,
-                    isMuted: isMuted
+                    isMuted: isMuted,
+                    kind: "booking"
                 )
             }
 
@@ -175,7 +211,7 @@ class ChatService: ObservableObject {
 
     // MARK: - Send message
 
-    func sendMessage(conversationId: String, senderId: String, content: String) async {
+    func sendMessage(conversationId: String, senderId: String, content: String, isSupport: Bool = false) async {
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
 
@@ -195,9 +231,73 @@ class ChatService: ObservableObject {
                 .update(["last_message_at": ISO8601DateFormatter().string(from: Date())])
                 .eq("id", value: conversationId)
                 .execute()
+
+            if isSupport {
+                await notifySupport(conversationId: conversationId, content: trimmed)
+            }
         } catch {
             self.error = "Kunne ikke sende melding"
             print("Failed to send message: \(error)")
+        }
+    }
+
+    /// Pinger Tuno-server om at en support-melding er sendt, slik at admins får push.
+    /// Direkte Supabase-insert gir ikke push-trigger, så vi gjør et server-call etterpå.
+    private func notifySupport(conversationId: String, content: String) async {
+        do {
+            let session = try await supabase.auth.session
+            guard let url = URL(string: "\(AppConfig.siteURL)/api/messages/notify-support") else { return }
+            var req = URLRequest(url: url)
+            req.httpMethod = "POST"
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+            let body: [String: String] = [
+                "conversationId": conversationId,
+                "content": content,
+            ]
+            req.httpBody = try JSONSerialization.data(withJSONObject: body)
+            _ = try await URLSession.shared.data(for: req)
+        } catch {
+            print("notifySupport failed (non-fatal): \(error)")
+        }
+    }
+
+    // MARK: - Support conversation
+
+    /// Henter eller oppretter brukerens support-samtale med Tuno-support.
+    /// type='support', host_id og listing_id er null (DB-skjema tillater det fra 2026-05-08-migrasjonen).
+    func getOrCreateSupportConversation(guestId: String) async -> String? {
+        do {
+            let existing: [Conversation] = try await supabase
+                .from("conversations")
+                .select()
+                .eq("guest_id", value: guestId)
+                .eq("type", value: "support")
+                .limit(1)
+                .execute()
+                .value
+
+            if let convo = existing.first {
+                return convo.id
+            }
+
+            struct SupportInsert: Encodable {
+                let guest_id: String
+                let type: String
+            }
+            let newConvo: Conversation = try await supabase
+                .from("conversations")
+                .insert(SupportInsert(guest_id: guestId, type: "support"))
+                .select()
+                .single()
+                .execute()
+                .value
+
+            return newConvo.id
+        } catch {
+            self.error = "Kunne ikke åpne kundeservice-chat"
+            print("getOrCreateSupportConversation: \(error)")
+            return nil
         }
     }
 
@@ -294,16 +394,7 @@ class ChatService: ObservableObject {
         let column = conversation.selfRole == "host" ? "archived_by_host" : "archived_by_guest"
         let newValue = !conversation.isArchived
         await updateConversationFlag(conversationId: conversation.id, column: column, value: newValue) { old in
-            ConversationPreview(
-                id: old.id, listingId: old.listingId, guestId: old.guestId, hostId: old.hostId,
-                otherUserName: old.otherUserName, otherUserAvatar: old.otherUserAvatar,
-                lastMessage: old.lastMessage, lastMessageAt: old.lastMessageAt,
-                unreadCount: old.unreadCount, listingTitle: old.listingTitle,
-                listingImage: old.listingImage, selfRole: old.selfRole,
-                bookingStatus: old.bookingStatus, bookingDates: old.bookingDates,
-                listingCity: old.listingCity,
-                isArchived: newValue, isStarred: old.isStarred, isMuted: old.isMuted
-            )
+            old.with(isArchived: newValue)
         }
     }
 
@@ -311,16 +402,7 @@ class ChatService: ObservableObject {
         let column = conversation.selfRole == "host" ? "starred_by_host" : "starred_by_guest"
         let newValue = !conversation.isStarred
         await updateConversationFlag(conversationId: conversation.id, column: column, value: newValue) { old in
-            ConversationPreview(
-                id: old.id, listingId: old.listingId, guestId: old.guestId, hostId: old.hostId,
-                otherUserName: old.otherUserName, otherUserAvatar: old.otherUserAvatar,
-                lastMessage: old.lastMessage, lastMessageAt: old.lastMessageAt,
-                unreadCount: old.unreadCount, listingTitle: old.listingTitle,
-                listingImage: old.listingImage, selfRole: old.selfRole,
-                bookingStatus: old.bookingStatus, bookingDates: old.bookingDates,
-                listingCity: old.listingCity,
-                isArchived: old.isArchived, isStarred: newValue, isMuted: old.isMuted
-            )
+            old.with(isStarred: newValue)
         }
     }
 
@@ -328,16 +410,7 @@ class ChatService: ObservableObject {
         let column = conversation.selfRole == "host" ? "muted_by_host" : "muted_by_guest"
         let newValue = !conversation.isMuted
         await updateConversationFlag(conversationId: conversation.id, column: column, value: newValue) { old in
-            ConversationPreview(
-                id: old.id, listingId: old.listingId, guestId: old.guestId, hostId: old.hostId,
-                otherUserName: old.otherUserName, otherUserAvatar: old.otherUserAvatar,
-                lastMessage: old.lastMessage, lastMessageAt: old.lastMessageAt,
-                unreadCount: old.unreadCount, listingTitle: old.listingTitle,
-                listingImage: old.listingImage, selfRole: old.selfRole,
-                bookingStatus: old.bookingStatus, bookingDates: old.bookingDates,
-                listingCity: old.listingCity,
-                isArchived: old.isArchived, isStarred: old.isStarred, isMuted: newValue
-            )
+            old.with(isMuted: newValue)
         }
     }
 
@@ -363,16 +436,7 @@ class ChatService: ObservableObject {
     }
 
     private func replaceUnread(_ old: ConversationPreview, with count: Int) -> ConversationPreview {
-        ConversationPreview(
-            id: old.id, listingId: old.listingId, guestId: old.guestId, hostId: old.hostId,
-            otherUserName: old.otherUserName, otherUserAvatar: old.otherUserAvatar,
-            lastMessage: old.lastMessage, lastMessageAt: old.lastMessageAt,
-            unreadCount: count, listingTitle: old.listingTitle,
-            listingImage: old.listingImage, selfRole: old.selfRole,
-            bookingStatus: old.bookingStatus, bookingDates: old.bookingDates,
-            listingCity: old.listingCity,
-            isArchived: old.isArchived, isStarred: old.isStarred, isMuted: old.isMuted
-        )
+        old.with(unreadCount: count)
     }
 
     // MARK: - Realtime
@@ -423,9 +487,9 @@ class ChatService: ObservableObject {
 
 struct ConversationPreview: Identifiable {
     let id: String
-    let listingId: String
+    let listingId: String?
     let guestId: String
-    let hostId: String
+    let hostId: String?
     let otherUserName: String
     let otherUserAvatar: String?
     let lastMessage: String
@@ -433,7 +497,7 @@ struct ConversationPreview: Identifiable {
     let unreadCount: Int
     let listingTitle: String
     let listingImage: String?
-    /// Brukerens egen rolle i denne samtalen — "host" hvis utleier, "guest" hvis leietaker.
+    /// Brukerens egen rolle i denne samtalen — "host" hvis utleier, "guest" hvis leietaker, "support" for Tuno-support.
     let selfRole: String
     /// Status på sist bekreftede/ventende booking ("confirmed"/"requested"/"cancelled"/nil).
     let bookingStatus: String?
@@ -447,6 +511,26 @@ struct ConversationPreview: Identifiable {
     let isStarred: Bool
     /// Har gjeldende bruker slått av push for denne samtalen.
     let isMuted: Bool
+    /// "booking" eller "support". Default "booking" for bakoverkompatibilitet.
+    let kind: String
+
+    var isSupport: Bool { kind == "support" }
+
+    /// Memberwise-copy som lar oss oppdatere ett felt om gangen uten å re-skrive alle parameterne.
+    func with(unreadCount: Int? = nil, isArchived: Bool? = nil, isStarred: Bool? = nil, isMuted: Bool? = nil) -> ConversationPreview {
+        ConversationPreview(
+            id: id, listingId: listingId, guestId: guestId, hostId: hostId,
+            otherUserName: otherUserName, otherUserAvatar: otherUserAvatar,
+            lastMessage: lastMessage, lastMessageAt: lastMessageAt,
+            unreadCount: unreadCount ?? self.unreadCount,
+            listingTitle: listingTitle, listingImage: listingImage, selfRole: selfRole,
+            bookingStatus: bookingStatus, bookingDates: bookingDates, listingCity: listingCity,
+            isArchived: isArchived ?? self.isArchived,
+            isStarred: isStarred ?? self.isStarred,
+            isMuted: isMuted ?? self.isMuted,
+            kind: kind
+        )
+    }
 }
 
 struct ChatMessage: Identifiable {

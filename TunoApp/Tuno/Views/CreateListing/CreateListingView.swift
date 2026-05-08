@@ -161,6 +161,9 @@ struct CreateListingView: View {
     /// styres flyten utelukkende av WizardNavBar-knappene.
     @ViewBuilder
     private func currentStepView() -> some View {
+        // StayLengthStep er fjernet fra wizard-flyten — min/maks-opphold deriveres
+        // automatisk fra korteste tilbudte pris-pakke. Utleier kan justere senere
+        // fra Rediger-annonse hvis ønskelig.
         switch form.currentStep {
         case 0: WelcomeStep(form: form)
         case 1: CategoryStep(form: form)
@@ -168,18 +171,17 @@ struct CreateListingView: View {
         case 3: SpotCountStep(form: form)
         case 4: MarkSpotsStep(form: form)
         case 5: InstantBookingStep(form: form)
-        case 6: StayLengthStep(form: form)
-        case 7: SpotDetailsStep(form: form)
-        case 8: OpeningHoursStep(form: form)
-        case 9: SpotPriceStep(form: form)
-        case 10: SpotExtrasStep(form: form)
-        case 11: SpotCalendarStep(form: form)
-        case 12: SpotDiscountsStep(form: form)
-        case 13: DescriptionStep(form: form)
-        case 14: PhotosStep(form: form)
-        case 15: AmenitiesStep(form: form)
-        case 16: MessagesStep(form: form)
-        case 17: PublishStep(form: form)
+        case 6: SpotDetailsStep(form: form)
+        case 7: OpeningHoursStep(form: form)
+        case 8: SpotPriceStep(form: form)
+        case 9: SpotExtrasStep(form: form)
+        case 10: SpotCalendarStep(form: form)
+        case 11: SpotDiscountsStep(form: form)
+        case 12: DescriptionStep(form: form)
+        case 13: PhotosStep(form: form)
+        case 14: AmenitiesStep(form: form)
+        case 15: MessagesStep(form: form)
+        case 16: PublishStep(form: form)
         default: EmptyView()
         }
     }

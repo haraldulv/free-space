@@ -12,6 +12,10 @@ struct HostListingCard: View {
     /// Inntekt host har tjent på denne annonsen sist måned. Skjuler banneren
     /// når nil eller 0.
     let monthlyEarnings: Int?
+    /// Vis QR-kode for denne annonsen.
+    var onShowQR: (() -> Void)? = nil
+    /// Slett denne annonsen.
+    var onDelete: (() -> Void)? = nil
 
     private var isActive: Bool { listing.isActive == true }
 
@@ -44,26 +48,64 @@ struct HostListingCard: View {
             heroImage
             metadata
         }
-        .padding(.bottom, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+        .clipped()
     }
 
-    // MARK: - Hero image med status-pill
+    // MARK: - Hero image med status-pill og handlinger-meny
 
     private var heroImage: some View {
-        ZStack(alignment: .topLeading) {
-            CachedAsyncImage(url: URL(string: listing.images?.first ?? "")) { image in
-                image.resizable().aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Rectangle().fill(Color.neutral100)
-            }
+        // Aspect-ratio-styrt høyde gir konsistent kort-størrelse uavhengig av
+        // det faktiske bildet sin orientering. 16:10 ≈ 220pt på iPhone-bredder
+        // og holder seg lesbart uten å dominere skjermen.
+        Color.neutral100
+            .aspectRatio(16.0 / 10.0, contentMode: .fit)
             .frame(maxWidth: .infinity)
-            .frame(height: 260)
+            .overlay(
+                CachedAsyncImage(url: URL(string: listing.images?.first ?? "")) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle().fill(Color.neutral100)
+                }
+            )
             .clipped()
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .opacity(isActive ? 1 : 0.55)
+            .overlay(alignment: .topLeading) {
+                statusPill.padding(12)
+            }
+            .overlay(alignment: .topTrailing) {
+                if onShowQR != nil || onDelete != nil {
+                    actionsMenu.padding(12)
+                }
+            }
+    }
 
-            statusPill
-                .padding(12)
+    /// SwiftUI Menu — pop-up'er ved selve ...-knappen, ikke som stor sentrert dialog.
+    private var actionsMenu: some View {
+        Menu {
+            if let onShowQR {
+                Button {
+                    onShowQR()
+                } label: {
+                    Label("Vis QR-kode", systemImage: "qrcode")
+                }
+            }
+            if let onDelete {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Slett annonse", systemImage: "trash")
+                }
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.neutral900)
+                .frame(width: 34, height: 34)
+                .background(.ultraThinMaterial)
+                .clipShape(Circle())
         }
     }
 
@@ -89,13 +131,17 @@ struct HostListingCard: View {
             Text(primaryLine)
                 .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.neutral900)
-                .lineLimit(1)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
 
             if let secondaryLine, !secondaryLine.isEmpty {
                 Text(secondaryLine)
                     .font(.system(size: 14))
                     .foregroundStyle(.neutral500)
                     .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
 
             metadataRow
@@ -105,6 +151,7 @@ struct HostListingCard: View {
                     .padding(.top, 4)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private var metadataRow: some View {

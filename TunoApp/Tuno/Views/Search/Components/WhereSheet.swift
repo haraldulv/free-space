@@ -26,6 +26,8 @@ struct WhereSheet: View {
     @State private var activeStep: Step = .hvor
     @State private var typing: String = ""
     @State private var editingCheckIn: Bool = true
+    /// Hvilket date-felt som åpnes i wheel-picker — nil = lukket.
+    @State private var wheelPickerField: DateWheelField? = nil
 
     private static let suggestedDestinations: [SuggestedDestination] = [
         .init(name: "Oslo", subtitle: "Hovedstaden", icon: "building.2.fill",
@@ -50,16 +52,25 @@ struct WhereSheet: View {
                     .padding(.top, 8)
                     .padding(.bottom, 4)
 
-                ScrollView(.vertical, showsIndicators: false) {
-                    VStack(spacing: 12) {
-                        whereCard
-                        whenCard
-                        whoCard
+                ScrollViewReader { proxy in
+                    ScrollView(.vertical, showsIndicators: false) {
+                        VStack(spacing: 12) {
+                            whereCard.id(Step.hvor)
+                            whenCard.id(Step.når)
+                            whoCard.id(Step.hvem)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: activeStep)
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
-                    .padding(.bottom, 24)
-                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: activeStep)
+                    .onChange(of: activeStep) { _, newStep in
+                        // Scroll det aktive cardet helt opp i viewet så bruker
+                        // får full plass — collapserte cards over forsvinner.
+                        withAnimation(.spring(response: 0.4, dampingFraction: 0.85)) {
+                            proxy.scrollTo(newStep, anchor: .top)
+                        }
+                    }
                 }
 
                 bottomBar
@@ -72,6 +83,19 @@ struct WhereSheet: View {
             } else {
                 placesService.autocomplete(query: newValue)
             }
+        }
+        .sheet(item: $wheelPickerField) { field in
+            DateWheelSheet(
+                field: field,
+                checkIn: $checkIn,
+                checkOut: $checkOut,
+                allowSameDayCheckOut: false,
+                onClose: { wheelPickerField = nil }
+            )
+            .presentationDetents([.height(380)])
+            .presentationDragIndicator(.visible)
+            .presentationBackground(.ultraThinMaterial)
+            .presentationCornerRadius(28)
         }
     }
 
@@ -161,7 +185,7 @@ struct WhereSheet: View {
     private var whenCard: some View {
         if activeStep == .når {
             VStack(alignment: .leading, spacing: 16) {
-                Text("Når?")
+                Text("Hvor lenge?")
                     .font(.system(size: 22, weight: .bold))
                     .foregroundStyle(.neutral900)
                 inlineDatePicker
@@ -183,9 +207,6 @@ struct WhereSheet: View {
                     .foregroundStyle(.neutral900)
                 vehicleSection
                 bookingPrefSection
-                if category == .parking {
-                    openingHoursSection
-                }
             }
             .padding(20)
             .background(RoundedRectangle(cornerRadius: 18, style: .continuous).fill(Color.white))
@@ -499,16 +520,20 @@ struct WhereSheet: View {
     // MARK: - When (camping)
 
     /// Inline date picker — embedded direkte i whenCard (ingen separat sheet).
-    /// Innsjekk/Utsjekk-tabs øverst styrer hvilken dato som redigeres,
-    /// graphical kalender-grid under viser månedsoversikt.
+    /// Periode-toggle (Dag/Uke/Måned/År) på toppen som auto-velger range i kalenderen,
+    /// så Innsjekk/Utsjekk-tabs og graphical kalender-grid under for fin-justering.
     private var inlineDatePicker: some View {
         VStack(spacing: 12) {
+            rentalPeriodToggle
+
             HStack(spacing: 8) {
                 dateTab(label: "Innsjekk", date: checkIn, isActive: editingCheckIn) {
                     editingCheckIn = true
+                    wheelPickerField = .checkIn
                 }
                 dateTab(label: "Utsjekk", date: checkOut, isActive: !editingCheckIn) {
                     editingCheckIn = false
+                    wheelPickerField = .checkOut
                 }
             }
 
@@ -536,6 +561,73 @@ struct WhereSheet: View {
                 .foregroundStyle(.neutral600)
             }
         }
+    }
+
+    /// Periode-velger (1 dag / 1 uke / 1 måned / 1 år) — auto-strekker checkOut.
+    /// Default = 1 dag (i dag → i dag).
+    private var rentalPeriodToggle: some View {
+        HStack(spacing: 8) {
+            periodChip(label: "1 dag", icon: "sun.max", days: 1)
+            periodChip(label: "1 uke", icon: "calendar.badge.clock", days: 7)
+            periodChip(label: "1 måned", icon: "calendar", days: 30)
+            periodChip(label: "1 år", icon: "infinity", days: 365)
+        }
+    }
+
+    @ViewBuilder
+    private func periodChip(label: String, icon: String, days: Int) -> some View {
+        let isActive = isPeriodActive(days: days)
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+                applyPeriodPreset(days: days)
+            }
+        } label: {
+            VStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .frame(width: 24, height: 24)
+                    .foregroundStyle(isActive ? Color.primary700 : Color.neutral600)
+                Text(label)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(isActive ? Color.primary700 : Color.neutral700)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(isActive ? Color.primary50 : Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .stroke(isActive ? Color.primary600 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func isPeriodActive(days: Int) -> Bool {
+        guard let inDate = checkIn, let outDate = checkOut else {
+            // "1 dag" er aktiv hvis ingen datoer er satt (default-tilstand).
+            return days == 1 && checkIn == nil && checkOut == nil
+        }
+        let cal = Calendar(identifier: .gregorian)
+        let span = cal.dateComponents([.day], from: inDate, to: outDate).day ?? 0
+        // Vi teller antall dager inklusivt begge endepunkter: 7-7 = 1 dag,
+        // 7-13 = 7 dager (1 uke), 7-8 = 2 dager. Så span+1 = total dager.
+        return span == days - 1
+    }
+
+    private func applyPeriodPreset(days: Int) {
+        let cal = Calendar(identifier: .gregorian)
+        let today = cal.startOfDay(for: Date())
+        let anchor = checkIn.map(cal.startOfDay(for:)) ?? today
+        checkIn = anchor
+        // 1 dag = samme dag (7. mai → 7. mai). 1 uke = X → X+6 (begge dager teller, totalt 7).
+        // 1 måned = X → X+29 (30 dager). 1 år = X → X+364 (365 dager).
+        if days == 1 {
+            checkOut = anchor
+        } else {
+            checkOut = cal.date(byAdding: .day, value: days - 1, to: anchor) ?? anchor
+        }
+        editingCheckIn = false
     }
 
     /// "Jeg er fleksibel"-chips. Lar brukeren utvide søket med ±N dager
@@ -569,9 +661,9 @@ struct WhereSheet: View {
                 .foregroundStyle(active ? .white : .neutral800)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(active ? Color.primary600 : Color.neutral50)
+                .background(active ? Color.neutral900 : Color.neutral50)
                 .clipShape(Capsule())
-                .overlay(Capsule().stroke(active ? Color.primary600 : Color.neutral200, lineWidth: 1))
+                .overlay(Capsule().stroke(active ? Color.neutral900 : Color.neutral200, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }
@@ -581,7 +673,7 @@ struct WhereSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(isActive ? .primary600 : .neutral500)
+                    .foregroundStyle(isActive ? Color.primary700 : Color.neutral500)
                 Text(date.map(formatDate) ?? "Velg dato")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(date == nil ? .neutral400 : .neutral900)
@@ -589,7 +681,7 @@ struct WhereSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(isActive ? Color.primary50 : Color.neutral50)
+            .background(isActive ? Color.primary50 : Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -695,11 +787,6 @@ struct WhereSheet: View {
 
     private var vehicleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Kjøretøytype (velg flere)")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(.neutral500)
-                .textCase(.uppercase)
-
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
                 ForEach(VehicleType.allCases, id: \.self) { type in
                     vehicleChip(type)
@@ -876,6 +963,109 @@ struct TimeWheelPicker: View {
             .background(Color.neutral50)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+        }
+    }
+}
+
+// MARK: - Date wheel-picker sheet
+
+/// Identifier for hvilket date-felt wheel-pickeren åpnes for.
+enum DateWheelField: Identifiable {
+    case checkIn, checkOut
+    var id: Self { self }
+}
+
+/// Wheel-picker for direkte dato-valg på Innsjekk eller Utsjekk.
+/// Glassmorphism-sheet (ultraThinMaterial) — speiler resten av søke-modal-stilen.
+/// Brukes både i WhereSheet (søk) og BookingView.
+struct DateWheelSheet: View {
+    let field: DateWheelField
+    @Binding var checkIn: Date?
+    @Binding var checkOut: Date?
+    /// I booking-konteksten er checkOut samme dag tillatt (1-dag-booking).
+    /// I søk-konteksten kreves checkOut > checkIn (range med ≥1 natt).
+    /// Default true (samme dag = OK) — bookings setter dette eksplisitt.
+    var allowSameDayCheckOut: Bool = true
+    let onClose: () -> Void
+
+    @State private var draftDate: Date = Date()
+
+    private var fieldLabel: String {
+        switch field {
+        case .checkIn: return "Innsjekk"
+        case .checkOut: return "Utsjekk"
+        }
+    }
+
+    private var minDate: Date {
+        let cal = Calendar(identifier: .gregorian)
+        switch field {
+        case .checkIn: return cal.startOfDay(for: Date())
+        case .checkOut:
+            if let ci = checkIn {
+                let offset = allowSameDayCheckOut ? 0 : 1
+                return cal.date(byAdding: .day, value: offset, to: cal.startOfDay(for: ci)) ?? Date()
+            }
+            return cal.startOfDay(for: Date())
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            Text(fieldLabel)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(.neutral900)
+                .padding(.top, 18)
+
+            DatePicker(
+                "",
+                selection: $draftDate,
+                in: minDate...,
+                displayedComponents: .date
+            )
+            .datePickerStyle(.wheel)
+            .labelsHidden()
+            .environment(\.locale, Locale(identifier: "nb_NO"))
+
+            Button {
+                let cal = Calendar(identifier: .gregorian)
+                let normalized = cal.startOfDay(for: draftDate)
+                switch field {
+                case .checkIn:
+                    checkIn = normalized
+                    if let co = checkOut {
+                        let coStart = cal.startOfDay(for: co)
+                        // Hvis utsjekk er nå før innsjekk, eller (i søk-modus) samme dag → reset
+                        if coStart < normalized || (!allowSameDayCheckOut && coStart == normalized) {
+                            checkOut = nil
+                        }
+                    }
+                case .checkOut:
+                    checkOut = normalized
+                    if checkIn == nil {
+                        checkIn = cal.startOfDay(for: Date())
+                    }
+                }
+                onClose()
+            } label: {
+                Text("Bruk \(fieldLabel.lowercased())")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 16)
+                    .background(Color.neutral900)
+                    .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 24)
+        }
+        .frame(maxWidth: .infinity)
+        .onAppear {
+            switch field {
+            case .checkIn: draftDate = checkIn ?? Date()
+            case .checkOut: draftDate = checkOut ?? minDate
+            }
         }
     }
 }

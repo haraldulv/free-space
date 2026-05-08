@@ -1,10 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Map, List, Maximize2, Minimize2, Clock } from "lucide-react";
+import { Map, List, Maximize2, Minimize2, Clock, Calendar } from "lucide-react";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { Listing, ListingCategory, VehicleType } from "@/types";
+import { Listing, ListingCategory, VehicleType, PricePackagePeriodType, PRICE_PACKAGE_PERIOD_LABELS } from "@/types";
 import { getUserFavorites } from "@/lib/supabase/favorites";
 import { useUserLocation } from "@/lib/hooks/useUserLocation";
 import { haversineKm } from "@/lib/geo";
@@ -19,11 +19,15 @@ interface SearchResultsViewProps {
   checkIn?: string;
   checkOut?: string;
   openingHours?: "any" | "always" | "limited";
+  rentalPeriodTypes?: PricePackagePeriodType[];
 }
+
+const PERIOD_TYPE_OPTIONS: ReadonlyArray<PricePackagePeriodType> = ["DAY", "WEEK", "MONTH", "YEAR"];
 
 export default function SearchResultsView({
   listings,
   openingHours = "any",
+  rentalPeriodTypes,
 }: SearchResultsViewProps) {
   const t = useTranslations("search");
   const tFilter = useTranslations("searchFilter.openingHours");
@@ -38,6 +42,18 @@ export default function SearchResultsView({
     const qs = params.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname);
   };
+
+  const togglePeriodType = (value: PricePackagePeriodType) => {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    const current = new Set(rentalPeriodTypes ?? []);
+    if (current.has(value)) current.delete(value);
+    else current.add(value);
+    if (current.size === 0) params.delete("period");
+    else params.set("period", Array.from(current).join(","));
+    const qs = params.toString();
+    router.push(qs ? `${pathname}?${qs}` : pathname);
+  };
+  const activePeriodTypes = useMemo(() => new Set(rentalPeriodTypes ?? []), [rentalPeriodTypes]);
   const [hoveredListingId, setHoveredListingId] = useState<string | null>(null);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(
     null,
@@ -108,7 +124,7 @@ export default function SearchResultsView({
           mobileView === "map" || mapFullscreen ? "hidden lg:hidden" : "block lg:block right-0 lg:right-auto"
         }`}
       >
-        <div className="sticky top-0 z-10 border-b border-neutral-200 bg-white px-4 py-3">
+        <div className="sticky top-0 z-10 space-y-2 border-b border-neutral-200 bg-white px-4 py-3">
           <div className="flex items-center gap-2 overflow-x-auto">
             <Clock className="h-4 w-4 flex-none text-neutral-400" />
             {(["any", "always", "limited"] as const).map((v) => (
@@ -125,6 +141,26 @@ export default function SearchResultsView({
                 {tFilter(v)}
               </button>
             ))}
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto">
+            <Calendar className="h-4 w-4 flex-none text-neutral-400" />
+            {PERIOD_TYPE_OPTIONS.map((p) => {
+              const active = activePeriodTypes.has(p);
+              return (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => togglePeriodType(p)}
+                  className={`shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                    active
+                      ? "border-primary-600 bg-primary-50 text-primary-700"
+                      : "border-neutral-200 bg-white text-neutral-700 hover:bg-neutral-50"
+                  }`}
+                >
+                  {PRICE_PACKAGE_PERIOD_LABELS[p]}
+                </button>
+              );
+            })}
           </div>
         </div>
         <SearchResultsList

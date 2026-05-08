@@ -43,24 +43,52 @@ export async function getConversations(userId: string): Promise<Conversation[]> 
       .eq("read", false)
       .neq("sender_id", userId);
 
+    const isSupport = row.type === "support";
     conversations.push({
       id: row.id,
       listingId: row.listing_id,
       guestId: row.guest_id,
       hostId: row.host_id,
       bookingId: row.booking_id,
+      type: row.type ?? "booking",
       lastMessageAt: row.last_message_at,
       createdAt: row.created_at,
-      otherUserName: (otherUser?.full_name as string) || "Anonym",
-      otherUserAvatar: (otherUser?.avatar_url as string) || "",
-      listingTitle: (listing?.title as string) || "",
-      listingImage: ((listing?.images as string[]) || [])[0] || "",
+      otherUserName: isSupport ? "Tuno-support" : ((otherUser?.full_name as string) || "Anonym"),
+      otherUserAvatar: isSupport ? "" : ((otherUser?.avatar_url as string) || ""),
+      listingTitle: isSupport ? "Kundeservice" : ((listing?.title as string) || ""),
+      listingImage: isSupport ? "" : (((listing?.images as string[]) || [])[0] || ""),
       lastMessageText: lastMsg?.content || "",
       unreadCount: count || 0,
     });
   }
 
   return conversations;
+}
+
+/**
+ * Henter eller oppretter brukerens støtte-samtale med Tuno-support.
+ * Krever at conversations-skjemaet har type='support'-støtte (migrasjon 2026-05-08).
+ */
+export async function getOrCreateSupportConversation(guestId: string): Promise<string | null> {
+  const supabase = createClient();
+  const { data: existing } = await supabase
+    .from("conversations")
+    .select("id")
+    .eq("guest_id", guestId)
+    .eq("type", "support")
+    .maybeSingle();
+  if (existing?.id) return existing.id;
+
+  const { data: created, error } = await supabase
+    .from("conversations")
+    .insert({ guest_id: guestId, type: "support" })
+    .select("id")
+    .single();
+  if (error) {
+    console.error("getOrCreateSupportConversation:", error);
+    return null;
+  }
+  return created.id;
 }
 
 export async function getMessages(conversationId: string): Promise<Message[]> {

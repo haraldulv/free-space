@@ -178,7 +178,8 @@ function buildBreakdown(
   const breakdown: NightlyPrice[] = [];
   const cursor = parseDate(input.checkIn);
   const end = parseDate(input.checkOut);
-  while (cursor < end) {
+  // Inkluderer begge endepunkter (parkering teller dager). 7. mai → 5. juni = 30 entries.
+  while (cursor <= end) {
     const { price, source } = resolveNightlyPrice(cursor, input.basePrice, rules, overrides);
     breakdown.push({ date: formatDate(cursor), price, source });
     cursor.setDate(cursor.getDate() + 1);
@@ -250,6 +251,7 @@ export function spotLongerStayTiers(
     threeMonthPrice?: number | null;
     sixMonthPrice?: number | null;
     yearPrice?: number | null;
+    pricePackages?: { periodType: string; periodValue: number; priceNok: number }[] | null;
   } | null | undefined,
 ): {
   dailyPrice: number;
@@ -259,13 +261,20 @@ export function spotLongerStayTiers(
   sixMonthPrice: number;
   yearPrice: number;
 } {
+  // pricePackages er moderne kilde — la den gå foran legacy-feltene.
+  // Importerte annonser (Hygglo/Finn) lagrer kun i pricePackages.
+  const pkgs = spot?.pricePackages ?? [];
+  const findPkg = (type: string, value: number): number => {
+    const p = pkgs.find((x) => x.periodType === type && x.periodValue === value);
+    return p?.priceNok ?? 0;
+  };
   return {
-    dailyPrice: spot?.dailyPrice ?? 0,
-    weeklyPrice: spot?.weeklyPrice ?? 0,
-    monthlyPrice: spot?.monthlyPrice ?? 0,
-    threeMonthPrice: spot?.threeMonthPrice ?? 0,
-    sixMonthPrice: spot?.sixMonthPrice ?? 0,
-    yearPrice: spot?.yearPrice ?? 0,
+    dailyPrice: findPkg("DAY", 1) || (spot?.dailyPrice ?? 0),
+    weeklyPrice: findPkg("WEEK", 1) || (spot?.weeklyPrice ?? 0),
+    monthlyPrice: findPkg("MONTH", 1) || (spot?.monthlyPrice ?? 0),
+    threeMonthPrice: findPkg("MONTH", 3) || (spot?.threeMonthPrice ?? 0),
+    sixMonthPrice: findPkg("MONTH", 6) || (spot?.sixMonthPrice ?? 0),
+    yearPrice: findPkg("YEAR", 1) || (spot?.yearPrice ?? 0),
   };
 }
 
@@ -351,7 +360,13 @@ export function applyLongerStayPricing(input: LongerStayInput): LongerStayResult
   const tiers = { years: 0, sixMonths: 0, threeMonths: 0, months: 0, weeks: 0, days: 0 };
 
   const tierSavings = (baseSum: number, tierPrice: number): number => {
-    if (tierPrice <= 0 || tierPrice >= baseSum) return 0;
+    if (tierPrice <= 0) return 0;
+    // Spesialtilfelle: annonser uten DAY-pris (typisk månedsannonser).
+    // Tier-prisen ER selve prisen for perioden — savings = baseSum (0) - tierPrice (negativ).
+    // Etter total = baseTotal - savings havner tier-prisen som riktig total.
+    if (baseSum <= 0) return -tierPrice;
+    // Standard: tier er kun en rabatt hvis billigere enn basis.
+    if (tierPrice >= baseSum) return 0;
     return baseSum - tierPrice;
   };
 

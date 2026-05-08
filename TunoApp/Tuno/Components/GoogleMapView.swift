@@ -195,7 +195,7 @@ struct SearchMapView: UIViewRepresentable {
                 }
                 for (marker, id) in context.coordinator.markerToId where idsToUpdate.contains(id) {
                     guard let listing = listings.first(where: { $0.id == id }) else { continue }
-                    marker.iconView = Self.createPriceBubble(
+                    marker.icon = Self.createPriceBubble(
                         listing: listing,
                         isVisited: visitedIds.contains(id),
                         isSelected: id == selectedListingId
@@ -219,99 +219,253 @@ struct SearchMapView: UIViewRepresentable {
         let validListings = listings.filter { $0.lat != nil && $0.lng != nil }
         let activeSelectedId = selectedId ?? selectedListingId
 
-        for listing in validListings {
-            let marker = GMSMarker()
-            marker.position = CLLocationCoordinate2D(latitude: listing.lat!, longitude: listing.lng!)
-            marker.iconView = Self.createPriceBubble(
-                listing: listing,
-                isVisited: visitedIds.contains(listing.id),
-                isSelected: activeSelectedId == listing.id
+        coordinator.allListingsForClustering = validListings
+        coordinator.lastClusterZoom = mapView.camera.zoom
+
+        // Sett opp et re-cluster-callback som idleAt kan trigge
+        let visited = visitedIds
+        let onSelectCallback = onSelect
+        let onSelectListingId: String? = activeSelectedId
+        coordinator.clusterRebuildBlock = { [weak coordinator, weak mapView] in
+            guard let coordinator, let mapView else { return }
+            // Fjern eksisterende markers, sett inn nye basert på nytt zoom-nivå
+            for (marker, _) in coordinator.markerToCluster {
+                marker.map = nil
+            }
+            coordinator.markerToCluster.removeAll()
+            coordinator.markerToId.removeAll()
+            Self.applyMarkers(
+                to: mapView,
+                listings: coordinator.allListingsForClustering,
+                visited: visited,
+                selectedId: onSelectListingId,
+                coordinator: coordinator
             )
+            _ = onSelectCallback // capture
+        }
+
+        Self.applyMarkers(
+            to: mapView,
+            listings: validListings,
+            visited: visited,
+            selectedId: activeSelectedId,
+            coordinator: coordinator
+        )
+    }
+
+    /// Beregn clusters fra current zoom og legg dem på kartet. Trygg å kalle igjen
+    /// — kalleren rydder eksisterende markers først.
+    static func applyMarkers(
+        to mapView: GMSMapView,
+        listings: [Listing],
+        visited: Set<String>,
+        selectedId: String?,
+        coordinator: Coordinator
+    ) {
+        let zoom = mapView.camera.zoom
+        let clusters = clusterListings(listings, zoom: zoom)
+        for cluster in clusters {
+            let marker = GMSMarker()
+            marker.position = cluster.center
+            if cluster.listings.count == 1, let listing = cluster.listings.first {
+                marker.icon = createPriceBubble(
+                    listing: listing,
+                    isVisited: visited.contains(listing.id),
+                    isSelected: selectedId == listing.id
+                )
+                coordinator.markerToId[marker] = listing.id
+            } else {
+                marker.icon = createClusterBubble(count: cluster.listings.count)
+            }
             marker.groundAnchor = CGPoint(x: 0.5, y: 0.5)
             marker.map = mapView
-            coordinator.markerToId[marker] = listing.id
+            coordinator.markerToCluster[marker] = cluster
         }
+    }
+
+    /// Grupper listings i grid-celler basert på zoom-nivå. Cellen er liten nok
+    /// til at flesteparten av bobler vises individuelt — clusters dukker kun
+    /// opp når flere annonser faktisk overlapper visuelt.
+    static func clusterListings(_ listings: [Listing], zoom: Float) -> [MarkerCluster] {
+        guard !listings.isEmpty else { return [] }
+        // Mercator: én verden er 256 piksler ved zoom 0. Ved zoom Z er det 256 * 2^Z piksler
+        // for 360°. Cellsize tilsvarer ca. boble-bredden (~50 px) så annonser som
+        // *faktisk* overlapper grupperes, ikke bare nære.
+        let pixelsPerDegree = (256.0 * pow(2.0, Double(zoom))) / 360.0
+        let cellPixels = 35.0
+        let cellSizeDeg = cellPixels / max(pixelsPerDegree, 0.000001)
+
+        var bins: [String: [Listing]] = [:]
+        for listing in listings {
+            guard let lat = listing.lat, let lng = listing.lng else { continue }
+            let latBin = Int(floor(lat / cellSizeDeg))
+            let lngBin = Int(floor(lng / cellSizeDeg))
+            let key = "\(latBin),\(lngBin)"
+            bins[key, default: []].append(listing)
+        }
+
+        return bins.values.map { listingsInBin in
+            let lat = listingsInBin.compactMap { $0.lat }.reduce(0, +) / Double(listingsInBin.count)
+            let lng = listingsInBin.compactMap { $0.lng }.reduce(0, +) / Double(listingsInBin.count)
+            return MarkerCluster(
+                center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
+                listings: listingsInBin
+            )
+        }
+    }
+
+    /// Cluster-marker — rund grønn pille med antall annonser. Brukes når
+    /// flere listings overlapper visuelt på samme zoom-nivå.
+    /// Returnerer UIImage (ikke UIView) — Google Maps SDK rendrer images mye
+    /// raskere enn iconView (som krever full UIView-stack per markør).
+    static func createClusterBubble(count: Int) -> UIImage {
+        if let cached = clusterBubbleCache[count] { return cached }
+
+        let tunoGreen = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1)
+        let darkGreen = UIColor(red: 0.18, green: 0.55, blue: 0.36, alpha: 1)
+
+        let scale: CGFloat = count >= 100 ? 1.25 : count >= 25 ? 1.1 : 1.0
+        let diameter: CGFloat = 42 * scale
+        let stackOffset: CGFloat = 2.5
+        let size = CGSize(width: diameter, height: diameter + stackOffset)
+
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { ctx in
+            // Skygge bakerst (mørk grønn pille)
+            ctx.cgContext.setFillColor(darkGreen.cgColor)
+            ctx.cgContext.fillEllipse(in: CGRect(x: 0, y: stackOffset, width: diameter, height: diameter))
+            // Hovedpille (Tuno-grønn fyll, hvit ring)
+            let mainRect = CGRect(x: 0, y: 0, width: diameter, height: diameter)
+            ctx.cgContext.setFillColor(tunoGreen.cgColor)
+            ctx.cgContext.fillEllipse(in: mainRect)
+            ctx.cgContext.setStrokeColor(UIColor.white.cgColor)
+            ctx.cgContext.setLineWidth(2.5)
+            ctx.cgContext.strokeEllipse(in: mainRect.insetBy(dx: 1.25, dy: 1.25))
+            // Tekst sentrert
+            let label = "\(count)"
+            let font = UIFont.systemFont(ofSize: count >= 100 ? 13 : 14, weight: .bold)
+            let attrs: [NSAttributedString.Key: Any] = [
+                .font: font,
+                .foregroundColor: UIColor.white,
+            ]
+            let textSize = (label as NSString).size(withAttributes: attrs)
+            let textRect = CGRect(
+                x: (diameter - textSize.width) / 2,
+                y: (diameter - textSize.height) / 2,
+                width: textSize.width,
+                height: textSize.height
+            )
+            (label as NSString).draw(in: textRect, withAttributes: attrs)
+        }
+        clusterBubbleCache[count] = image
+        return image
+    }
+
+    /// Cache av cluster-bobler per count. UIImage er thread-safe og
+    /// rendring av samme telling er identisk → kun lager én gang per count.
+    private static var clusterBubbleCache: [Int: UIImage] = [:]
+
+    struct MarkerCluster {
+        let center: CLLocationCoordinate2D
+        let listings: [Listing]
     }
 
     /// Bygger en pris-boble i Airbnb-stil med 3 tilstander:
     /// - **Default** (hvit + svart tekst): nøytral, ikke besøkt
     /// - **Visited** (lys grå + svart tekst): brukeren har trykket på denne før
     /// - **Selected** (svart + hvit tekst): aktivt valgt — kort vises
-    /// Alle tilstander har 0.5px subtil border og lett "soft glow"-skygge,
-    /// så bobler står klart mot kartet uten å se ut som firkanter.
-    /// Lik størrelse i alle tilstander så bobler ikke "hopper" ved tap.
-    static func createPriceBubble(listing: Listing, isVisited: Bool, isSelected: Bool) -> UIView {
-        // Modern Airbnb-aktig: hvit pille med Tuno-grønn ring (2pt) og
-        // dypere grønn "stack-skygge" bak — gir boblen lift uten å bruke
-        // CALayer shadow (som klippes av GMS marker-containeren til en
-        // svart firkant på standardkart).
+    /// Returnerer UIImage (ikke UIView) — Google Maps Marker.icon er ~10x raskere
+    /// enn Marker.iconView, fordi GMS slipper å håndtere full UIView-hierarchy
+    /// per markør. Cache resultatet per (price+suffix+state) så vi unngår å
+    /// rendre samme bobble flere ganger.
+    static func createPriceBubble(listing: Listing, isVisited: Bool, isSelected: Bool) -> UIImage {
+        let h = listing.headlinePrice
+        let priceText = h.map { "\($0.price) kr" } ?? "—"
+        let suffix = h?.suffix ?? ""
+        let spots = listing.spots ?? 1
+        let cacheKey = "\(priceText)|\(suffix)|\(spots)|\(isSelected)|\(isVisited)"
+        if let cached = priceBubbleCache[cacheKey] { return cached }
+
         let tunoGreen = UIColor(red: 0.275, green: 0.757, blue: 0.522, alpha: 1)
         let darkGreen = UIColor(red: 0.18, green: 0.55, blue: 0.36, alpha: 1)
-
-        let label = UILabel()
         let textColor: UIColor = isSelected
             ? .white
             : UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
         let secondaryColor = textColor.withAlphaComponent(0.65)
 
+        // Bygg attributed string først for å måle bredden
         let text = NSMutableAttributedString()
         text.append(NSAttributedString(
-            string: "\(listing.displayPriceText) kr",
+            string: priceText,
             attributes: [.font: UIFont.systemFont(ofSize: 14, weight: .bold), .foregroundColor: textColor]
         ))
-        let spots = listing.spots ?? 1
-        if spots > 1 {
+        if !suffix.isEmpty {
             text.append(NSAttributedString(
-                string: " \(spots)p",
+                string: suffix,
                 attributes: [.font: UIFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: secondaryColor]
             ))
         }
-        label.attributedText = text
-        label.sizeToFit()
+        if spots > 1 {
+            text.append(NSAttributedString(
+                string: " · \(spots)p",
+                attributes: [.font: UIFont.systemFont(ofSize: 11, weight: .semibold), .foregroundColor: secondaryColor]
+            ))
+        }
+        let textSize = text.size()
 
         let padding: CGFloat = 14
         let height: CGFloat = 36
-        let width = label.frame.width + padding * 2
-
-        // Wrapper er litt større enn pillen for å rom-stacke "skyggen"
-        // (mørk grønn pille bak, offset (0, 2.5)) og selve pillen.
+        let width = ceil(textSize.width) + padding * 2
         let stackOffset: CGFloat = 2.5
-        let wrapper = UIView(frame: CGRect(x: 0, y: 0, width: width, height: height + stackOffset))
-        wrapper.backgroundColor = .clear
+        let size = CGSize(width: width, height: height + stackOffset)
 
-        // Bakerst: mørk grønn pille som "skygge" — synlig som en grønn
-        // tråd under pillen som gir 3D-løft uten layer-shadow.
-        let shadowPill = UIView(frame: CGRect(x: 0, y: stackOffset, width: width, height: height))
-        shadowPill.backgroundColor = darkGreen
-        shadowPill.layer.cornerRadius = height / 2
-        wrapper.addSubview(shadowPill)
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { ctx in
+            // Skygge bakerst (mørk grønn pille)
+            let shadowRect = CGRect(x: 0, y: stackOffset, width: width, height: height)
+            let shadowPath = UIBezierPath(roundedRect: shadowRect, cornerRadius: height / 2)
+            darkGreen.setFill()
+            shadowPath.fill()
 
-        // Foran: selve pillen med grønn ring + hvit/svart fyll.
-        let container = UIView(frame: CGRect(x: 0, y: 0, width: width, height: height))
-        container.layer.borderWidth = 2
-        container.layer.cornerRadius = height / 2
-        if isSelected {
-            container.backgroundColor = UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
-            container.layer.borderColor = tunoGreen.cgColor
-        } else if isVisited {
-            container.backgroundColor = UIColor(red: 0.94, green: 0.94, blue: 0.94, alpha: 1)
-            container.layer.borderColor = tunoGreen.withAlphaComponent(0.7).cgColor
-        } else {
-            container.backgroundColor = .white
-            container.layer.borderColor = tunoGreen.cgColor
+            // Hovedpille
+            let mainRect = CGRect(x: 0, y: 0, width: width, height: height)
+            let mainPath = UIBezierPath(roundedRect: mainRect, cornerRadius: height / 2)
+            if isSelected {
+                UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1).setFill()
+            } else if isVisited {
+                UIColor(red: 0.94, green: 0.94, blue: 0.94, alpha: 1).setFill()
+            } else {
+                UIColor.white.setFill()
+            }
+            mainPath.fill()
+            // Ring
+            ctx.cgContext.setStrokeColor((isVisited && !isSelected ? tunoGreen.withAlphaComponent(0.7) : tunoGreen).cgColor)
+            ctx.cgContext.setLineWidth(2)
+            let ringPath = UIBezierPath(roundedRect: mainRect.insetBy(dx: 1, dy: 1), cornerRadius: (height - 2) / 2)
+            ringPath.stroke()
+
+            // Tekst sentrert i hovedpillen
+            let textOrigin = CGPoint(
+                x: (width - textSize.width) / 2,
+                y: (height - textSize.height) / 2
+            )
+            text.draw(at: textOrigin)
         }
-
-        label.center = CGPoint(x: container.frame.width / 2, y: container.frame.height / 2)
-        container.addSubview(label)
-        wrapper.addSubview(container)
-        return wrapper
+        priceBubbleCache[cacheKey] = image
+        // Begrens cache så minnet ikke vokser ubegrenset
+        if priceBubbleCache.count > 1000 { priceBubbleCache.removeAll(keepingCapacity: true) }
+        return image
     }
+
+    /// Cache av pris-bobler. Lik bobble (samme pris/suffix/spots/state) gjenbrukes.
+    private static var priceBubbleCache: [String: UIImage] = [:]
 
     class Coordinator: NSObject, GMSMapViewDelegate {
         let onSelect: ((String?) -> Void)?
         nonisolated(unsafe) let onRegionChanged: ((_ lat: Double, _ lng: Double, _ radiusKm: Double) -> Void)?
         nonisolated(unsafe) let onCameraIdle: ((_ lat: Double, _ lng: Double, _ zoom: Float) -> Void)?
         var markerToId: [GMSMarker: String] = [:]
+        var markerToCluster: [GMSMarker: MarkerCluster] = [:]
         var selectedMarker: GMSMarker?
         weak var mapView: GMSMapView?
         var lastCenterLat: Double?
@@ -320,6 +474,9 @@ struct SearchMapView: UIViewRepresentable {
         var lastListingIdsKey: String = ""
         var lastSelectedListingId: String?
         var lastVisitedIds: Set<String> = []
+        var lastClusterZoom: Float = 0
+        var allListingsForClustering: [Listing] = []
+        var clusterRebuildBlock: (() -> Void)?
         var userMovedMap = false
         var debounceWorkItem: DispatchWorkItem?
 
@@ -334,6 +491,13 @@ struct SearchMapView: UIViewRepresentable {
         }
 
         func mapView(_ mapView: GMSMapView, didTap marker: GMSMarker) -> Bool {
+            // Cluster med flere annonser → zoom inn til senter for å se enkelte bobler
+            if let cluster = markerToCluster[marker], cluster.listings.count > 1 {
+                let targetZoom = min(mapView.camera.zoom + 2, 18)
+                let camera = GMSCameraPosition(target: marker.position, zoom: targetZoom)
+                mapView.animate(to: camera)
+                return true
+            }
             guard let id = markerToId[marker] else { return false }
             selectedMarker = marker
             onSelect?(id)
@@ -355,6 +519,13 @@ struct SearchMapView: UIViewRepresentable {
         func mapView(_ mapView: GMSMapView, idleAt position: GMSCameraPosition) {
             // Persister kamera-state (også om bruker ikke har pannet — får fitBounds-resultat etter første render)
             onCameraIdle?(position.target.latitude, position.target.longitude, position.zoom)
+
+            // Re-cluster hvis zoom har endret seg vesentlig (>= 0.5 zoom-stopp)
+            // — bobler omfordeles så solo og clusters holder seg konsistente.
+            if abs(position.zoom - lastClusterZoom) >= 0.5 {
+                lastClusterZoom = position.zoom
+                clusterRebuildBlock?()
+            }
 
             guard userMovedMap else { return }
             userMovedMap = false

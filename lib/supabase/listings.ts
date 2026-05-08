@@ -1,6 +1,6 @@
 import { createClient } from "./server";
-import type { Listing, SearchFilters, ListingCategory, Amenity, SpotMarker, VehicleType } from "@/types";
-import { vehicleFitsIn } from "@/types";
+import type { Listing, SearchFilters, ListingCategory, Amenity, SpotMarker, VehicleType, ParkingType, PricePackagePeriodType } from "@/types";
+import { vehicleFitsIn, derivePeriodTypesFromSpots } from "@/types";
 import { haversineKm } from "@/lib/geo";
 
 /**
@@ -60,6 +60,7 @@ export interface CreateListingData {
   perSpotPricing?: boolean;
   /** UI-only flag — bestemmer om velkomstmelding settes per-plass eller uniform. Persisteres ikke. */
   perSpotCheckinMessage?: boolean;
+  parkingType?: ParkingType | null;
 }
 
 /**
@@ -122,6 +123,12 @@ function rowToListing(row: Record<string, unknown>): Listing {
     checkoutMessageSendHoursBefore: row.checkout_message_send_hours_before as number | undefined,
     extras: (row.extras as Listing["extras"]) || [],
     openingHours: (row.opening_hours as Listing["openingHours"]) ?? null,
+    minStayDays: (row.min_stay_days as number | null) ?? null,
+    maxStayDays: (row.max_stay_days as number | null) ?? null,
+    parkingType: (row.parking_type as ParkingType | null) ?? null,
+    rentalPeriodTypes: (row.rental_period_types as PricePackagePeriodType[] | null) ?? [],
+    source: (row.source as string | null) ?? null,
+    sourceId: (row.source_id as string | null) ?? null,
   };
 }
 
@@ -149,6 +156,11 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
     query = query.is("opening_hours", null);
   } else if (filters.openingHours === "limited") {
     query = query.not("opening_hours", "is", null);
+  }
+
+  if (filters.rentalPeriodTypes && filters.rentalPeriodTypes.length > 0) {
+    // Array overlap (OR-semantikk: vis annonser som tilbyr minst én av valgte perioder)
+    query = query.overlaps("rental_period_types", filters.rentalPeriodTypes);
   }
 
   const { data, error } = await query.limit(500);
@@ -553,6 +565,8 @@ export async function createListing(input: CreateListingData, hostId: string): P
 
   const id = crypto.randomUUID();
 
+  const rentalPeriodTypes = derivePeriodTypesFromSpots(input.spotMarkers);
+
   const { error } = await supabase.from("listings").insert({
     id,
     host_id: hostId,
@@ -583,6 +597,8 @@ export async function createListing(input: CreateListingData, hostId: string): P
     checkout_message_send_hours_before: input.checkoutMessageSendHoursBefore ?? 2,
     extras: input.extras || [],
     opening_hours: input.openingHours ?? null,
+    parking_type: input.parkingType ?? null,
+    rental_period_types: rentalPeriodTypes,
     host_name: profile?.full_name || "Anonym",
     host_avatar: profile?.avatar_url || "",
     host_response_rate: profile?.response_rate || 0,
@@ -628,6 +644,11 @@ export async function updateListing(id: string, input: Partial<CreateListingData
   }
   if (input.extras !== undefined) updateData.extras = input.extras;
   if (input.openingHours !== undefined) updateData.opening_hours = input.openingHours ?? null;
+  if (input.parkingType !== undefined) updateData.parking_type = input.parkingType ?? null;
+  // Re-deriver rental_period_types hvis spotMarkers oppdateres
+  if (input.spotMarkers !== undefined) {
+    updateData.rental_period_types = derivePeriodTypesFromSpots(input.spotMarkers);
+  }
 
   const { error } = await supabase
     .from("listings")

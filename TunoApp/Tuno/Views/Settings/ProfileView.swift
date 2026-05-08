@@ -652,6 +652,11 @@ struct MyListingsView: View {
     @State private var isLoading = true
     @State private var deleteTarget: Listing?
     @State private var qrTarget: Listing?
+    /// Annonse som har trigget ...-knappen — viser confirmationDialog med QR/slett-handlinger.
+    @State private var actionsTarget: Listing?
+    /// Pagineringstilstand for "Mine annonser". Vi laster i batches av 20.
+    @State private var hasMoreListings: Bool = true
+    @State private var isLoadingMoreListings: Bool = false
     /// Eksisterende utkast som verten kan fortsette med. nil = ingen utkast.
     @State private var draft: DraftListing?
     @State private var showDiscardDraftAlert = false
@@ -756,6 +761,28 @@ struct MyListingsView: View {
         } message: {
             Text("Denne handlingen kan ikke angres.")
         }
+        .confirmationDialog(
+            actionsTarget?.title ?? "Annonse",
+            isPresented: .init(
+                get: { actionsTarget != nil },
+                set: { if !$0 { actionsTarget = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Vis QR-kode") {
+                if let target = actionsTarget {
+                    qrTarget = target
+                }
+                actionsTarget = nil
+            }
+            Button("Slett annonse", role: .destructive) {
+                if let target = actionsTarget {
+                    deleteTarget = target
+                }
+                actionsTarget = nil
+            }
+            Button("Avbryt", role: .cancel) { actionsTarget = nil }
+        }
         .task {
             loadDraft()
             await loadListings()
@@ -807,7 +834,7 @@ struct MyListingsView: View {
             }
             ScrollView {
                 LazyVStack(spacing: 24) {
-                    ForEach(listings) { listing in
+                    ForEach(Array(listings.enumerated()), id: \.element.id) { idx, listing in
                         NavigationLink {
                             EditListingRootView(listing: listing, onSaved: { updated in
                                 if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
@@ -817,22 +844,21 @@ struct MyListingsView: View {
                         } label: {
                             HostListingCard(
                                 listing: listing,
-                                monthlyEarnings: monthlyEarnings[listing.id]
+                                monthlyEarnings: monthlyEarnings[listing.id],
+                                onShowQR: { qrTarget = listing },
+                                onDelete: { deleteTarget = listing }
                             )
                         }
                         .buttonStyle(.plain)
-                        .contextMenu {
-                            Button {
-                                qrTarget = listing
-                            } label: {
-                                Label("Vis QR-kode", systemImage: "qrcode")
-                            }
-                            Button(role: .destructive) {
-                                deleteTarget = listing
-                            } label: {
-                                Label("Slett annonse", systemImage: "trash")
+                        .onAppear {
+                            // Trigger paginering når brukeren scroller forbi nest siste kortet
+                            if idx == listings.count - 3 && hasMoreListings && !isLoadingMoreListings {
+                                Task { await loadMoreListings() }
                             }
                         }
+                    }
+                    if isLoadingMoreListings {
+                        ProgressView().padding(.vertical, 16)
                     }
                 }
                 .padding(.horizontal, 16)
@@ -904,23 +930,53 @@ struct MyListingsView: View {
     }
 
     @MainActor
+    private static let listingsPageSize = 20
+
     private func loadListings() async {
         guard let userId = authManager.currentUser?.id else {
             isLoading = false
             return
         }
         do {
-            listings = try await supabase
+            // Første side: 0..pageSize-1
+            let page: [Listing] = try await supabase
                 .from("listings")
                 .select()
                 .eq("host_id", value: userId.uuidString.lowercased())
                 .order("created_at", ascending: false)
+                .range(from: 0, to: Self.listingsPageSize - 1)
                 .execute()
                 .value
+            listings = page
+            hasMoreListings = page.count == Self.listingsPageSize
         } catch {
             print("Failed to load listings: \(error)")
         }
         isLoading = false
+    }
+
+    @MainActor
+    private func loadMoreListings() async {
+        guard !isLoadingMoreListings, hasMoreListings,
+              let userId = authManager.currentUser?.id else { return }
+        isLoadingMoreListings = true
+        defer { isLoadingMoreListings = false }
+        let from = listings.count
+        let to = from + Self.listingsPageSize - 1
+        do {
+            let page: [Listing] = try await supabase
+                .from("listings")
+                .select()
+                .eq("host_id", value: userId.uuidString.lowercased())
+                .order("created_at", ascending: false)
+                .range(from: from, to: to)
+                .execute()
+                .value
+            listings.append(contentsOf: page)
+            hasMoreListings = page.count == Self.listingsPageSize
+        } catch {
+            print("Failed to load more listings: \(error)")
+        }
     }
 
     /// Henter siste 30 dagers bookinger for verten og aggregerer inntekt

@@ -49,7 +49,44 @@ export interface SearchFilters {
   radiusKm?: number;
   /** Filter på åpningstid. `any` = alle (default), `always` = kun døgnåpne, `limited` = kun med begrenset åpningstid. */
   openingHours?: "any" | "always" | "limited";
+  /** Multi-select: vis kun annonser som tilbyr minst én av disse pris-pakke-periodene. */
+  rentalPeriodTypes?: PricePackagePeriodType[];
 }
+
+/** Type for pris-pakker (DAY/WEEK/MONTH/YEAR). Brukes både i annonse og søk. */
+export type PricePackagePeriodType = "DAY" | "WEEK" | "MONTH" | "YEAR";
+
+export const PRICE_PACKAGE_PERIOD_LABELS: Record<PricePackagePeriodType, string> = {
+  DAY: "Dag",
+  WEEK: "Uke",
+  MONTH: "Måned",
+  YEAR: "År",
+};
+
+/** Tillatt antall enheter per periode-type (DAY 1-6, WEEK 1-3, MONTH 1-11, YEAR 1-3). */
+export const PRICE_PACKAGE_VALUE_RANGES: Record<PricePackagePeriodType, { min: number; max: number }> = {
+  DAY: { min: 1, max: 6 },
+  WEEK: { min: 1, max: 3 },
+  MONTH: { min: 1, max: 11 },
+  YEAR: { min: 1, max: 3 },
+};
+
+export interface PricePackage {
+  periodType: PricePackagePeriodType;
+  /** DAY 1-6, WEEK 1-3, MONTH 1-11, YEAR 1-3 (jf. PRICE_PACKAGE_VALUE_RANGES). */
+  periodValue: number;
+  /** Pris i kroner (heltall). */
+  priceNok: number;
+}
+
+/** Type for parking_type på listings. NULL = ikke oppgitt. */
+export type ParkingType = "GARAGE" | "OUTDOOR" | "PARKING_HOUSE";
+
+export const PARKING_TYPE_LABELS: Record<ParkingType, string> = {
+  GARAGE: "Garasje",
+  OUTDOOR: "Utendørs",
+  PARKING_HOUSE: "Parkeringshus",
+};
 
 export type Amenity =
   | "ev_charging"
@@ -184,6 +221,24 @@ export interface SpotMarker {
    * Hvis dato finnes her overstyrer den standard `price` for booking-pris.
    */
   datePriceOverrides?: Record<string, number>;
+  /**
+   * Pris-pakker som tilbys for denne plassen.
+   * Standard-pakkene (1 dag / 1 uke / 1 måned) ligger her, og utleier kan legge
+   * til custom-pakker (DAY 1-6, WEEK 1-3, MONTH 1-11, YEAR 1-3).
+   * Duplikater (samme periodType+periodValue) er ikke tillatt.
+   */
+  pricePackages?: PricePackage[];
+  /**
+   * Per-dato overstyring av åpningstid. Trumfer ukedags-default fra openingHours.
+   * Eks: `{ "2026-05-17": { closed: true }, "2026-07-01": { open: "12:00-22:00" } }`.
+   */
+  openingHoursOverrides?: Record<string, DayOpeningOverride>;
+}
+
+/** Per-dato åpningstid-overstyring. closed=true → stengt. open="HH:MM-HH:MM" → annen tid. */
+export interface DayOpeningOverride {
+  closed?: boolean;
+  open?: string;
 }
 
 /** Returner effective vehicleTypes på en SpotMarker — håndterer backward-compat. */
@@ -278,6 +333,31 @@ export interface Listing {
   minStayDays?: number | null;
   /** Maksimum antall dager bruker kan booke. NULL = ingen maksimum. */
   maxStayDays?: number | null;
+  /** Type parkering. NULL = ikke oppgitt. */
+  parkingType?: ParkingType | null;
+  /** Cached liste av periode-typer som annonsen tilbyr (avledet fra spotMarkers[].pricePackages). */
+  rentalPeriodTypes?: PricePackagePeriodType[];
+  /** Kilde for importerte annonser (f.eks. "hygglo", "finn"). */
+  source?: string | null;
+  /** Stabil unik id i kildens system. */
+  sourceId?: string | null;
+}
+
+/** Returnér unik liste av PricePackage-perioder fra alle spots. */
+export function derivePeriodTypesFromSpots(spots: SpotMarker[] | undefined | null): PricePackagePeriodType[] {
+  if (!spots || spots.length === 0) return [];
+  const seen = new Set<PricePackagePeriodType>();
+  for (const s of spots) {
+    if (s.pricePackages) {
+      for (const pkg of s.pricePackages) seen.add(pkg.periodType);
+    }
+    // Fallback for legacy data: tier-pris-felter implisitt mapper til periode-type.
+    if (s.weeklyPrice != null) seen.add("WEEK");
+    if (s.monthlyPrice != null || s.threeMonthPrice != null || s.sixMonthPrice != null) seen.add("MONTH");
+    if (s.yearPrice != null) seen.add("YEAR");
+    if (s.price != null || s.pricePerNight != null || s.dailyPrice != null) seen.add("DAY");
+  }
+  return Array.from(seen);
 }
 
 export interface Booking {
@@ -336,10 +416,12 @@ export interface Review {
 
 export interface Conversation {
   id: string;
-  listingId: string;
+  listingId: string | null;
   guestId: string;
-  hostId: string;
+  hostId: string | null;
   bookingId?: string;
+  /** "booking" eller "support". Default "booking" for bakoverkompatibilitet. */
+  type?: "booking" | "support";
   lastMessageAt: string;
   createdAt: string;
   otherUserName?: string;

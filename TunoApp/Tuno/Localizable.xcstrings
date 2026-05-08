@@ -17,6 +17,9 @@
     "–" : {
 
     },
+    "—" : {
+
+    },
     ":" : {
 
     },
@@ -528,6 +531,9 @@
     "00" : {
 
     },
+    "1 dag" : {
+
+    },
     "1 time før" : {
 
     },
@@ -602,6 +608,9 @@
           }
         }
       }
+    },
+    "Aktive overstyringer (%@)" : {
+
     },
     "Alle %@ plassert" : {
 
@@ -968,9 +977,6 @@
     "Beregning" : {
 
     },
-    "Beskriv plassen kort og velg hvilke kjøretøy som passer. Tenk på dybde, høyde og tilgjengelighet." : {
-
-    },
     "Beskrivelse" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1214,6 +1220,9 @@
         }
       }
     },
+    "Bruk %@" : {
+
+    },
     "Bruk forslag: %@" : {
 
     },
@@ -1361,6 +1370,9 @@
           }
         }
       }
+    },
+    "Dato" : {
+
     },
     "Datoer" : {
       "extractionState" : "manual",
@@ -1568,9 +1580,6 @@
         }
       }
     },
-    "Du kan blokkere enkeltdager eller sette egne priser for spesielle perioder. Eller bare hoppe over og gjøre dette senere — annonsen er da åpen alle datoer til standardpris." : {
-
-    },
     "Du må fortsette eller forkaste det aktive utkastet før du kan starte en ny annonse." : {
 
     },
@@ -1705,6 +1714,9 @@
     "E-posten er bekreftet" : {
 
     },
+    "Egen pakke" : {
+
+    },
     "Egendefinert navn" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1740,6 +1752,9 @@
       }
     },
     "Egendefinerte tillegg" : {
+
+    },
+    "Egne pakker" : {
 
     },
     "Eksakt adresse deles etter bekreftet booking." : {
@@ -2488,9 +2503,6 @@
         }
       }
     },
-    "Fra %@, velg utsjekk" : {
-
-    },
     "Fremhevede i Norge" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2595,9 +2607,6 @@
           }
         }
       }
-    },
-    "Gjest sparer %@" : {
-
     },
     "Gjeste-favoritt" : {
 
@@ -2876,6 +2885,9 @@
     "Hva passer her" : {
 
     },
+    "Hva skjer denne dagen?" : {
+
+    },
     "Hva slags plass leier du ut?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2924,9 +2936,6 @@
         }
       }
     },
-    "Hvor du kommer" : {
-
-    },
     "Hvor er plassen?" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2943,6 +2952,9 @@
           }
         }
       }
+    },
+    "Hvor lenge?" : {
+
     },
     "Hvor skal du?" : {
       "extractionState" : "manual",
@@ -3552,9 +3564,6 @@
     "Kjøretøytype" : {
 
     },
-    "Kjøretøytype (velg flere)" : {
-
-    },
     "Kjøretøytyper" : {
 
     },
@@ -3986,6 +3995,9 @@
         }
       }
     },
+    "Lagre overstyring" : {
+
+    },
     "Lagrer …" : {
 
     },
@@ -4119,6 +4131,9 @@
           }
         }
       }
+    },
+    "Legg til pakke" : {
+
     },
     "Legitimasjon (kommer senere — du kan opprette annonse nå)" : {
       "extractionState" : "manual",
@@ -4595,9 +4610,6 @@
     "Når ankommer du?" : {
 
     },
-    "Når?" : {
-
-    },
     "natt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5023,6 +5035,9 @@
       }
     },
     "På vei inn" : {
+
+    },
+    "Pakkene gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 dager til standardpris." : {
 
     },
     "Parkering" : {
@@ -5549,6 +5564,9 @@
         }
       }
     },
+    "PRISER FOR ALLE PERIODER" : {
+
+    },
     "Profil" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6030,6 +6048,9 @@
         }
       }
     },
+    "Sett åpningstid for spesifikke datoer som overstyrer din vanlige uke-plan." : {
+
+    },
     "Sett en pris du synes er rettferdig. Du kan endre den senere." : {
 
     },
@@ -6320,9 +6341,6 @@
     "Sletting fjerner profilen din og alle tilknyttede data permanent. Aktive bookinger må avsluttes før du sletter." : {
 
     },
-    "Slik ser rabattene ut for gjesten" : {
-
-    },
     "Slutt-tid må være etter start-tid." : {
 
     },
@@ -6379,6 +6397,9 @@
           }
         }
       }
+    },
+    "Standard pris" : {
+
     },
     "Standardpris per natt" : {
       "extractionState" : "manual",
@@ -6537,6 +6558,9 @@
         }
       }
     },
+    "Tider" : {
+
+    },
     "Tidspunkt" : {
 
     },
@@ -6562,6 +6586,9 @@
           }
         }
       }
+    },
+    "Tilbys som %@" : {
+
     },
     "Tilgjengelig" : {
 
@@ -7026,9 +7053,6 @@
         }
       }
     },
-    "Vanlig pris: %@" : {
-
-    },
     "Vanlige tillegg" : {
 
     },
@@ -7117,6 +7141,9 @@
         }
       }
     },
+    "Velg dager i kalenderen for å se eksakt pris." : {
+
+    },
     "Velg datoer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -7133,9 +7160,6 @@
           }
         }
       }
-    },
-    "Velg én eller flere typer kjøretøy som passer her." : {
-
     },
     "Velg en kategori" : {
       "extractionState" : "manual",

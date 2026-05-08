@@ -636,7 +636,9 @@ enum PricingService {
         var cursor = cal.startOfDay(for: checkIn)
         let end = cal.startOfDay(for: checkOut)
 
-        while cursor < end {
+        // Inkluderer begge endepunkter (parkering teller dager).
+        // 7. mai → 7. mai = 1 entry. 7. mai → 5. juni = 30 entries.
+        while cursor <= end {
             let iso = format(cursor)
             result.append(resolve(
                 date: cursor,
@@ -870,7 +872,13 @@ enum PricingService {
         var years = 0, sixMonths = 0, threeMonths = 0, months = 0, weeks = 0
 
         func tierSavings(_ baseSum: Int, _ tierPrice: Int) -> Int {
-            if tierPrice <= 0 || tierPrice >= baseSum { return 0 }
+            if tierPrice <= 0 { return 0 }
+            // Spesialtilfelle: annonser uten DAY-pris. Tier-prisen ER prisen
+            // for perioden — savings blir negativ slik at total = baseTotal - savings
+            // havner på tier-prisen.
+            if baseSum <= 0 { return -tierPrice }
+            // Standard: tier er kun en rabatt hvis billigere enn basis.
+            if tierPrice >= baseSum { return 0 }
             return baseSum - tierPrice
         }
 

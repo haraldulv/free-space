@@ -128,12 +128,12 @@ struct SearchDateRangePicker: View {
             handleTap(date)
         } label: {
             ZStack {
-                // Range-fyll bak (til venstre/høyre for endepunkt-sirkel)
+                // Range-fyll bak (til venstre/høyre for endepunkt-sirkel) — lett grønn
                 if inRange && !isStart && !isEnd {
                     Rectangle()
-                        .fill(Color.primary100)
+                        .fill(Color.primary50)
                 }
-                // Endepunkt-bakgrunn
+                // Endepunkt-bakgrunn — Tuno-grønn sirkel
                 if isStart || isEnd {
                     Circle()
                         .fill(Color.primary600)
@@ -193,8 +193,21 @@ struct SearchDateRangePicker: View {
             }
             return
         }
-        // Begge satt — restart med ny anchor.
-        checkIn = tapped
-        checkOut = nil
+        // Begge satt — utvide ranget istedenfor å resette.
+        // Tap etter checkOut → flytt checkOut frem til tapped.
+        // Tap før checkIn → flytt checkIn tilbake til tapped.
+        // Tap inne i ranget → start nytt range fra den dagen (ny anchor).
+        if let ci = checkIn, let co = checkOut {
+            let s = cal.startOfDay(for: ci)
+            let e = cal.startOfDay(for: co)
+            if tapped > e {
+                checkOut = tapped
+            } else if tapped < s {
+                checkIn = tapped
+            } else {
+                checkIn = tapped
+                checkOut = nil
+            }
+        }
     }
 }

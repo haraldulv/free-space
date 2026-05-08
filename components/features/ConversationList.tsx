@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { MessageCircle, Search, X } from "lucide-react";
+import { LifeBuoy, MessageCircle, Search, X } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { dateFnsLocale } from "@/lib/i18n-helpers";
 import type { Conversation } from "@/types";
@@ -11,12 +11,15 @@ interface ConversationListProps {
   conversations: Conversation[];
   selectedId?: string;
   onSelect: (conversation: Conversation) => void;
+  /** Tap-handler for "Kontakt support"-pinned-rad. Når denne er definert, renderes raden alltid øverst. */
+  onOpenSupport?: () => void;
 }
 
 export default function ConversationList({
   conversations,
   selectedId,
   onSelect,
+  onOpenSupport,
 }: ConversationListProps) {
   const t = useTranslations("messages");
   const locale = useLocale();
@@ -24,19 +27,74 @@ export default function ConversationList({
   const [query, setQuery] = useState("");
   const [unreadOnly, setUnreadOnly] = useState(false);
 
-  const totalUnread = conversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
+  // Filtrer ut eksisterende support-conversation fra hovedlisten — den vises alltid pinnet øverst.
+  const supportConvo = useMemo(
+    () => conversations.find((c) => c.type === "support"),
+    [conversations],
+  );
+  const nonSupportConversations = useMemo(
+    () => conversations.filter((c) => c.type !== "support"),
+    [conversations],
+  );
+
+  const totalUnread = nonSupportConversations.reduce((sum, c) => sum + (c.unreadCount || 0), 0);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return conversations.filter((c) => {
+    return nonSupportConversations.filter((c) => {
       if (unreadOnly && !(c.unreadCount && c.unreadCount > 0)) return false;
       if (!q) return true;
       const hay = `${c.otherUserName ?? ""} ${c.listingTitle ?? ""} ${c.lastMessageText ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [conversations, query, unreadOnly]);
+  }, [nonSupportConversations, query, unreadOnly]);
 
-  if (conversations.length === 0) {
+  const showSupportPin = !!onOpenSupport && !query && !unreadOnly;
+
+  const renderSupportRow = () => {
+    if (!showSupportPin) return null;
+    const isSelected = supportConvo && selectedId === supportConvo.id;
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (supportConvo) {
+            onSelect(supportConvo);
+          } else {
+            onOpenSupport?.();
+          }
+        }}
+        className={`flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-neutral-50 ${
+          isSelected ? "bg-primary-50" : ""
+        }`}
+      >
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary-600 text-white">
+          <LifeBuoy className="h-5 w-5" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-neutral-900 truncate">Tuno-support</p>
+            {supportConvo?.lastMessageAt && (
+              <span className="shrink-0 text-[10px] text-neutral-400">
+                {formatDistanceToNow(new Date(supportConvo.lastMessageAt), { addSuffix: true, locale: dateLocale })}
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-neutral-500 truncate">Kundeservice</p>
+          <p className="mt-0.5 text-xs text-neutral-400 truncate">
+            {supportConvo?.lastMessageText || "Spør oss om hva som helst — vi svarer fortløpende."}
+          </p>
+        </div>
+        {(supportConvo?.unreadCount || 0) > 0 && (
+          <span className="mt-1 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-primary-600 px-1.5 text-[10px] font-bold text-white">
+            {supportConvo!.unreadCount}
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  if (conversations.length === 0 && !onOpenSupport) {
     return (
       <div className="flex flex-col items-center justify-center py-16 text-center">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-neutral-100">
@@ -102,9 +160,13 @@ export default function ConversationList({
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      <div className="divide-y divide-neutral-100">
+        {renderSupportRow()}
+      </div>
+
+      {filtered.length === 0 && nonSupportConversations.length > 0 ? (
         <p className="px-4 py-8 text-center text-xs text-neutral-400">{t("noFilterMatches")}</p>
-      ) : (
+      ) : filtered.length === 0 ? null : (
       <div className="divide-y divide-neutral-100">
       {filtered.map((convo) => (
         <button

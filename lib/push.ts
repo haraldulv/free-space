@@ -131,6 +131,40 @@ export async function sendPushToUser(
 }
 
 /**
+ * Sender push til alle Tuno-administratorer (profiles.is_admin=true).
+ * Brukes for support-meldinger fra brukere — kunden trenger raskt svar
+ * og vi har ingen vakt-rotasjon ennå, så alle admins pinges samtidig.
+ */
+export async function sendPushToAllAdmins(
+  title: string,
+  body: string,
+  data?: Record<string, string>,
+) {
+  try {
+    const { createClient } = await import("@supabase/supabase-js");
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+    const { data: admins } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("is_admin", true);
+
+    if (!admins || admins.length === 0) {
+      console.log("[Push] No admins to notify");
+      return;
+    }
+
+    await Promise.all(
+      admins.map((a) => sendPushToUser(a.id, title, body, data)),
+    );
+  } catch (err) {
+    console.error("[Push] sendPushToAllAdmins error:", err);
+  }
+}
+
+/**
  * Returnerer en string-grunn for å blokkere push (for logging), eller null hvis OK å sende.
  * - Globalt: profiles.push_notifications_enabled = false → "global_disabled"
  * - Per-samtale: conversations.muted_by_host|guest = true (avhengig av mottakerens rolle) → "conversation_muted"

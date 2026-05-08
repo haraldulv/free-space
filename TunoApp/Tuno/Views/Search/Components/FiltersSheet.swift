@@ -29,6 +29,8 @@ struct SearchFilters: Equatable {
     var bookingPreference: BookingPreference = .all
     var amenities: Set<AmenityType> = []
     var openingHours: OpeningHoursFilter = .any
+    /// Multi-select pris-pakke-perioder. Tom = ingen filter (vis alle).
+    var rentalPeriodTypes: Set<PricePackagePeriodType> = []
 
     /// Antall aktive filtre — driver badge på FilterCircleButton.
     /// `dynamicMaxPrice` er øvre grense fra current listings; den brukes
@@ -40,7 +42,6 @@ struct SearchFilters: Equatable {
         if priceMin > 0 || (priceMax > 0 && priceMax < dynamicMaxPrice) { n += 1 }
         if bookingPreference != .all { n += 1 }
         if !amenities.isEmpty { n += 1 }
-        if openingHours != .any { n += 1 }
         return n
     }
 }
@@ -59,11 +60,12 @@ struct FiltersSheet: View {
 
     /// Maks pris å bruke som histogram-bound. Tar høyeste pris fra current
     /// listings, eller 1000 som fallback hvis ingen listings.
+    /// Rund opp til nærmeste 1000 så slider-bounds blir lesbare for store priser
+    /// (f.eks. 5000 kr/mnd → 5000, ikke 4900).
     private var dynamicMaxPrice: Int {
         let valid = prices.filter { $0 > 0 }
         guard let m = valid.max() else { return 1000 }
-        // Rund opp til nærmeste hundre for et fint slider-bound.
-        return ((m + 99) / 100) * 100
+        return ((m + 999) / 1000) * 1000
     }
 
     /// Fasiliteter relevant for valgt kategori. Parkering: sikkerhet/komfort.
@@ -87,9 +89,6 @@ struct FiltersSheet: View {
                     typeSection
                     vehicleSection
                     bookingPrefSection
-                    if draft.category == .parking || draft.category == nil {
-                        openingHoursSection
-                    }
                     priceSection
                     amenitiesSection
                 }
@@ -179,33 +178,14 @@ struct FiltersSheet: View {
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.neutral900)
             HStack(spacing: 8) {
-                segmentButton(label: "Alle", isSelected: draft.bookingPreference == .all) {
+                segmentButton(label: "Alle", icon: nil, isSelected: draft.bookingPreference == .all) {
                     draft.bookingPreference = .all
                 }
-                segmentButton(label: "Direkte", isSelected: draft.bookingPreference == .directOnly) {
+                segmentButton(label: "Direkte", icon: "bolt.fill", isSelected: draft.bookingPreference == .directOnly) {
                     draft.bookingPreference = .directOnly
                 }
-                segmentButton(label: "Forespørsel", isSelected: draft.bookingPreference == .requestOnly) {
+                segmentButton(label: "Forespørsel", icon: "clock", isSelected: draft.bookingPreference == .requestOnly) {
                     draft.bookingPreference = .requestOnly
-                }
-            }
-        }
-    }
-
-    private var openingHoursSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Åpningstid")
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.neutral900)
-            HStack(spacing: 8) {
-                segmentButton(label: "Alle", isSelected: draft.openingHours == .any) {
-                    draft.openingHours = .any
-                }
-                segmentButton(label: "Døgnåpent", isSelected: draft.openingHours == .alwaysOpen) {
-                    draft.openingHours = .alwaysOpen
-                }
-                segmentButton(label: "Med åpningstid", isSelected: draft.openingHours == .limitedHours) {
-                    draft.openingHours = .limitedHours
                 }
             }
         }
@@ -269,19 +249,25 @@ struct FiltersSheet: View {
 
     // MARK: - UI helpers
 
-    private func segmentButton(label: String, isSelected: Bool, action: @escaping () -> Void) -> some View {
+    private func segmentButton(label: String, icon: String? = nil, isSelected: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Text(label)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isSelected ? .neutral900 : .neutral500)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(isSelected ? Color.white : Color.neutral50)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(isSelected ? Color.neutral900 : Color.neutral200, lineWidth: isSelected ? 2 : 1)
-                )
+            HStack(spacing: 6) {
+                if let icon {
+                    Image(systemName: icon)
+                        .font(.system(size: 12, weight: .semibold))
+                }
+                Text(label)
+                    .font(.system(size: 13, weight: .semibold))
+            }
+            .foregroundStyle(isSelected ? .neutral900 : .neutral500)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(isSelected ? Color.white : Color.neutral50)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.neutral900 : Color.neutral200, lineWidth: isSelected ? 2 : 1)
+            )
         }
         .buttonStyle(.plain)
     }

@@ -12,6 +12,11 @@ final class ListingService: ObservableObject {
     @Published var popularListings: [Listing] = []
     @Published var featuredListings: [Listing] = []
     @Published var availableTodayListings: [Listing] = []
+    /// Nær deg — sortert etter avstand fra brukerens lokasjon. Tom hvis ingen lokasjon.
+    @Published var nearbyListings: [Listing] = []
+    /// Ledige nå — random utvalg av listings som ikke er blokkert i dag.
+    /// I motsetning til availableTodayListings krever ikke instant_booking.
+    @Published var availableNowListings: [Listing] = []
     @Published var searchResults: [Listing] = []
     @Published var isLoading = false
 
@@ -98,15 +103,19 @@ final class ListingService: ObservableObject {
         }
     }
 
-    func fetchHomeListings(category: ListingCategory? = nil, vehicleType: VehicleType? = nil) async {
+    func fetchHomeListings(
+        category: ListingCategory? = nil,
+        vehicleType: VehicleType? = nil,
+        userLat: Double? = nil,
+        userLng: Double? = nil
+    ) async {
         isLoading = true
 
-        // Viser kun ekte bruker-annonser. Seeds (uten host_id) filtreres ut.
-        let all = await fetchRealListings(category: category, vehicleType: vehicleType, limit: 40)
+        // Hent flere listings (50) når vi har brukerlokasjon — vil sortere på avstand.
+        let limit = userLat != nil ? 50 : 40
+        let all = await fetchRealListings(category: category, vehicleType: vehicleType, limit: limit)
 
         // "Populære" = score-sortert: rating × reviews + tag-bonus + instant-bonus.
-        // Ingen hard reviewCount > 0 filter, ellers blir seksjonen ofte tom mens
-        // vi bygger opp kritisk masse. Begrens til 12 for å unngå overlapp med "Nye".
         popularListings = Array(all.sorted { Self.popularityScore($0) > Self.popularityScore($1) }.prefix(12))
         // "Nye" = alle nyeste, som er standard rekkefølge
         featuredListings = all
@@ -117,13 +126,40 @@ final class ListingService: ObservableObject {
             f.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
             return f.string(from: Date())
         }()
-        // En listing teller som "tilgjengelig i dag" dersom dagens dato ikke er BLOKKERT SOM HELE DAGEN.
-        // Time-blokker (yyyy-MM-dd HH) på parkering teller ikke — gjest kan fortsatt booke andre timer.
         availableTodayListings = all.filter { listing in
             guard listing.instantBooking == true else { return false }
             let blockedSet = Set(listing.blockedDates ?? [])
             return !blockedSet.isFullDayBlocked(todayIso)
         }
+
+        // "Nær deg" — sortert etter avstand fra brukerens lokasjon
+        if let userLat, let userLng {
+            nearbyListings = all.compactMap { listing -> (Listing, Double)? in
+                guard let lat = listing.lat, let lng = listing.lng else { return nil }
+                let d = haversineDistanceKm(lat1: userLat, lng1: userLng, lat2: lat, lng2: lng)
+                return (listing, d)
+            }
+            .sorted { $0.1 < $1.1 }
+            .prefix(12)
+            .map { $0.0 }
+        } else {
+            nearbyListings = []
+        }
+
+        // "Ledige nå" — listings som ikke er blokkert i dag, shuffled for variasjon
+        // mot "Nær deg" (som er sortert etter avstand). Ekskluderer de 6 nærmeste
+        // fra Nær deg så de to seksjonene ikke overlapper.
+        let availableFiltered = all.filter { listing in
+            let blockedSet = Set(listing.blockedDates ?? [])
+            return !blockedSet.isFullDayBlocked(todayIso)
+        }
+        let nearbyTopIds = Set(nearbyListings.prefix(6).map { $0.id })
+        availableNowListings = Array(
+            availableFiltered
+                .filter { !nearbyTopIds.contains($0.id) }
+                .shuffled()
+                .prefix(12)
+        )
 
         isLoading = false
     }
@@ -160,8 +196,10 @@ final class ListingService: ObservableObject {
                 request = request.or("title.ilike.%\(query)%,city.ilike.%\(query)%,region.ilike.%\(query)%,address.ilike.%\(query)%")
             }
 
-            // Fetch more when doing geo-search to ensure coverage
-            let fetchLimit = lat != nil ? 500 : 50
+            // Fetch limit kalibrert mot 410-listing-staging:
+            // - Geo-søk: 250 dekker rundt-omkring i Norge med god margin uten å overlaste klient
+            // - Tom-query: 50 (forsiden / "alle"-søk)
+            let fetchLimit = lat != nil ? 250 : 50
 
             var listings: [Listing] = try await request
                 .limit(fetchLimit)
@@ -185,19 +223,28 @@ final class ListingService: ObservableObject {
             // For parkering: kun HELE-DAG-blokker ekskluderer — time-blokker beholdes
             // siden gjest fortsatt kan booke andre timer. Eksakt time-validering skjer i booking-flow.
             if let checkIn, let checkOut {
+                let nights = nightsBetween(checkIn: checkIn, checkOut: checkOut)
+                let totalDays = max(nights, 1) + (nights == 0 ? 0 : 0) // 7-7 = 1 dag, 7-13 = 7 dager (begge inkl)
+                let bookedDays = nights + 1 // antall dager bruker leier (begge endepunkter inkludert)
+
                 listings = listings.filter { listing in
+                    // 1) Min-stay sjekk: hvis annonsen krever lenger leie enn det
+                    // brukeren ønsker, ekskluder. Eks: månedsannonse (min 30) treffer
+                    // ikke på 7-dagers søk.
+                    if let minStay = listing.minStayDays, minStay > 0 {
+                        if bookedDays < minStay { return false }
+                    }
+
+                    // 2) Blocked-dates sjekk
                     guard let blocked = listing.blockedDates, !blocked.isEmpty else { return true }
                     let blockedSet = Set(blocked)
-                    // Med fleksibilitet: vi godtar listingen hvis det finnes ≥1 ledig
-                    // start-dato i [checkIn-flex, checkIn+flex] der hele oppholdet
-                    // [start, start+nights] er ledig. Eksakt søk er flex=0.
                     let candidateStarts = shiftedStartDates(checkIn: checkIn, flexibilityDays: flexibilityDays)
-                    let nights = nightsBetween(checkIn: checkIn, checkOut: checkOut)
                     return candidateStarts.contains { startISO in
                         let dates = dateRange(fromISO: startISO, nights: nights)
                         return dates.allSatisfy { !blockedSet.isFullDayBlocked($0) }
                     }
                 }
+                _ = totalDays // avoid unused-warning hvis vi bruker bookedDays direkte over
             }
 
             // Filter by amenities — listing must have ALL selected amenities

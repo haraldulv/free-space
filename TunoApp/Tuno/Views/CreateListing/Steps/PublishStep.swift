@@ -25,8 +25,6 @@ struct PublishStep: View {
                 if !form.selectedAmenities.isEmpty {
                     amenitiesSection
                 }
-
-                tipCard
             }
         }
     }
@@ -123,7 +121,7 @@ struct PublishStep: View {
             }
             Divider().padding(.leading, 56)
             summaryRow(icon: "tag.fill", label: "Pris", value: priceSummary) {
-                form.goTo(step: 9, spotIndex: 0)
+                form.goTo(step: 8, spotIndex: 0)
             }
             Divider().padding(.leading, 56)
             summaryRow(
@@ -136,12 +134,12 @@ struct PublishStep: View {
             Divider().padding(.leading, 56)
             summaryRow(icon: "photo.stack", label: "Bilder",
                        value: form.imageURLs.isEmpty ? "Ingen" : "\(form.imageURLs.count)") {
-                form.goTo(step: 14)
+                form.goTo(step: 13)
             }
             Divider().padding(.leading, 56)
             summaryRow(icon: "calendar", label: "Kalender",
                        value: calendarSummary) {
-                form.goTo(step: 11, spotIndex: 0)
+                form.goTo(step: 10, spotIndex: 0)
             }
         }
         .background(Color.white)
@@ -216,7 +214,7 @@ struct PublishStep: View {
             VStack(spacing: 0) {
                 ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { index, spot in
                     Button {
-                        form.goTo(step: 7, spotIndex: index)
+                        form.goTo(step: 6, spotIndex: index)
                     } label: {
                         spotRow(index: index, spot: spot)
                             .contentShape(Rectangle())
@@ -308,7 +306,7 @@ struct PublishStep: View {
                 .padding(.leading, 4)
 
             Button {
-                form.goTo(step: 15)
+                form.goTo(step: 14)
             } label: {
                 FlowLayout(spacing: 8) {
                     ForEach(Array(form.selectedAmenities), id: \.self) { rawValue in

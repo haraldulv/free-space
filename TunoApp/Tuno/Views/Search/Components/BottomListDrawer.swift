@@ -165,10 +165,13 @@ struct MapTypeToggleButton: View {
                 .font(.system(size: 16, weight: .semibold))
                 .foregroundStyle(.neutral900)
                 .frame(width: 48, height: 48)
-                .background(Color.white)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
-                .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
+                .background {
+                    Circle()
+                        .fill(Color.white.opacity(0.85))
+                        .background(.regularMaterial, in: Circle())
+                }
+                .overlay(Circle().stroke(Color.white.opacity(0.7), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
         }
         .buttonStyle(.plain)
     }
@@ -185,10 +188,13 @@ struct MyLocationButton: View {
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(.neutral900)
                 .frame(width: 48, height: 48)
-                .background(Color.white)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
-                .shadow(color: .black.opacity(0.10), radius: 6, y: 2)
+                .background {
+                    Circle()
+                        .fill(Color.white.opacity(0.85))
+                        .background(.regularMaterial, in: Circle())
+                }
+                .overlay(Circle().stroke(Color.white.opacity(0.7), lineWidth: 0.5))
+                .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
         }
         .buttonStyle(.plain)
         .accessibilityLabel("Min posisjon")

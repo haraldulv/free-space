@@ -30,7 +30,7 @@ async function requireAdmin() {
 export async function loadAdminDataAction() {
   const { supabase } = await requireAdmin();
 
-  const [bookingRes, profileRes, listingRes, convoRes] = await Promise.all([
+  const [bookingRes, profileRes, listingRes, convoRes, supportRes] = await Promise.all([
     supabase
       .from("bookings")
       .select("*, guest:user_id(full_name), host:host_id(full_name), listing:listing_id(title)")
@@ -46,9 +46,16 @@ export async function loadAdminDataAction() {
       .order("created_at", { ascending: false }),
     supabase
       .from("conversations")
-      .select("id, created_at, last_message_at, guest:guest_id(full_name), host:host_id(full_name), listing:listing_id(title)")
+      .select("id, created_at, last_message_at, type, guest:guest_id(full_name), host:host_id(full_name), listing:listing_id(title)")
+      .eq("type", "booking")
       .order("last_message_at", { ascending: false })
       .limit(100),
+    supabase
+      .from("conversations")
+      .select("id, created_at, last_message_at, type, guest:guest_id(full_name, avatar_url)")
+      .eq("type", "support")
+      .order("last_message_at", { ascending: false })
+      .limit(200),
   ]);
 
   // Fetch emails from auth.users via admin API
@@ -70,7 +77,67 @@ export async function loadAdminDataAction() {
     users,
     listings: listingRes.data || [],
     conversations: convoRes.data || [],
+    supportConversations: supportRes.data || [],
   };
+}
+
+export async function sendSupportMessageAction(
+  conversationId: string,
+  content: string,
+): Promise<{ error?: string }> {
+  try {
+    const { supabase, user } = await requireAdmin();
+
+    const trimmed = content.trim();
+    if (!trimmed) return { error: "Tom melding" };
+
+    // Verifiser at samtalen faktisk er en support-samtale, ellers åpner vi en
+    // tilgang admin ikke skal ha (booking-samtaler er strengt 2-parts).
+    const { data: convo } = await supabase
+      .from("conversations")
+      .select("id, type, guest_id")
+      .eq("id", conversationId)
+      .single();
+
+    if (!convo || convo.type !== "support") {
+      return { error: "Ugyldig samtale" };
+    }
+
+    const { error: insertError } = await supabase
+      .from("messages")
+      .insert({
+        conversation_id: conversationId,
+        sender_id: user.id,
+        content: trimmed,
+      });
+    if (insertError) return { error: insertError.message };
+
+    await supabase
+      .from("conversations")
+      .update({
+        last_message_at: new Date().toISOString(),
+        assigned_admin_id: user.id,
+      })
+      .eq("id", conversationId);
+
+    // Push til gjest om at support har svart.
+    try {
+      const { sendPushToUser } = await import("@/lib/push");
+      await sendPushToUser(
+        convo.guest_id,
+        "Tuno-support svarte",
+        trimmed.slice(0, 120),
+        { conversationId, type: "support_reply" },
+        { conversationId },
+      );
+    } catch (err) {
+      console.warn("[Admin] support push failed:", err);
+    }
+
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
 }
 
 export async function loadMessagesAction(conversationId: string) {

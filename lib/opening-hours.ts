@@ -60,8 +60,20 @@ export function isOpenAllDay(oh: OpeningHours | null | undefined, date: Date): b
   return r.start === 0 && r.end === 24 * 60;
 }
 
-/** True hvis åpen i det hele tatt på datoen. */
-export function isOpenAt(oh: OpeningHours | null | undefined, date: Date): boolean {
+/** True hvis åpen i det hele tatt på datoen. Per-dato overstyring trumfer ukedags-default. */
+export function isOpenAt(
+  oh: OpeningHours | null | undefined,
+  date: Date,
+  overrides?: Record<string, { closed?: boolean; open?: string }> | null,
+): boolean {
+  if (overrides) {
+    const iso = isoDateString(date);
+    const ov = overrides[iso];
+    if (ov) {
+      if (ov.closed) return false;
+      if (ov.open) return true;
+    }
+  }
   if (!oh) return true;
   const v = oh[weekdayOf(date)];
   if (!v) return false;
@@ -73,17 +85,25 @@ export function isOpenForRange(
   oh: OpeningHours | null | undefined,
   checkIn: Date,
   checkOut: Date,
+  overrides?: Record<string, { closed?: boolean; open?: string }> | null,
 ): boolean {
-  if (!oh) return true;
+  if (!oh && !overrides) return true;
   const cur = new Date(checkIn);
   cur.setHours(0, 0, 0, 0);
   const end = new Date(checkOut);
   end.setHours(0, 0, 0, 0);
   while (cur < end) {
-    if (!isOpenAt(oh, cur)) return false;
+    if (!isOpenAt(oh, cur, overrides)) return false;
     cur.setDate(cur.getDate() + 1);
   }
   return true;
+}
+
+function isoDateString(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 /** Validerer åpningstid — alle ikke-null verdier må være gyldige "HH:MM-HH:MM". */

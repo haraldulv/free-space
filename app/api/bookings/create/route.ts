@@ -24,7 +24,11 @@ async function computeTotalWithBreakdown(args: {
 }): Promise<{ total: number; breakdown: NightlyPrice[] | null; discount?: LongerStayResult | null }> {
   const start = new Date(args.checkIn);
   const end = new Date(args.checkOut);
-  const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  // Begge endepunkter inkludert (parkering teller dager). 7. mai → 5. juni = 30 dager.
+  const nights = Math.max(
+    1,
+    Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1
+  );
 
   const selectedSpots = (args.spotMarkers || []).filter(
     (s) => s.id && args.selectedSpotIds?.includes(s.id),
@@ -36,7 +40,8 @@ async function computeTotalWithBreakdown(args: {
   let discount: LongerStayResult | null = null;
 
   if (hasPerSpotPricing) {
-    // Per-spot per-natt: bruk datePriceOverrides[date] hvis satt, ellers standard pris.
+    // Per-spot: bruk datePriceOverrides[date] hvis satt, ellers standard pris.
+    // `nights` her er totalt antall dager (inkluderer begge endepunkter).
     baseTotal = selectedSpots.reduce((sum, s) => {
       const base = s.price ?? args.listingPrice;
       const overrides = s.datePriceOverrides ?? {};

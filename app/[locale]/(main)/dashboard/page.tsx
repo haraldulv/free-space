@@ -23,7 +23,7 @@ import { bcpLocale, numberLocale } from "@/lib/i18n-helpers";
 import { createClient } from "@/lib/supabase/client";
 import { deleteListingAction, toggleListingActiveAction } from "@/app/[locale]/(main)/bli-utleier/actions";
 import { cancelBookingAction, approveBookingAction, declineBookingAction } from "@/app/[locale]/(main)/book/actions";
-import { getConversations, subscribeToUserMessages } from "@/lib/supabase/chat";
+import { getConversations, getOrCreateSupportConversation, subscribeToUserMessages } from "@/lib/supabase/chat";
 import { useBrowserNotifications } from "@/lib/hooks/useBrowserNotifications";
 import Container from "@/components/ui/Container";
 import Button from "@/components/ui/Button";
@@ -759,6 +759,16 @@ export default function DashboardPage() {
                         conversations={conversations}
                         selectedId={selectedConvo?.id}
                         onSelect={setSelectedConvo}
+                        onOpenSupport={async () => {
+                          if (!userId) return;
+                          const id = await getOrCreateSupportConversation(userId);
+                          if (!id) return;
+                          // Refresh + selecter
+                          const next = await getConversations(userId);
+                          setConversations(next);
+                          const supportConvo = next.find((c) => c.id === id) || null;
+                          if (supportConvo) setSelectedConvo(supportConvo);
+                        }}
                       />
                     </div>
                     <div className={`${selectedConvo ? "" : "hidden lg:flex"} flex-1 flex flex-col`}>
@@ -768,7 +778,7 @@ export default function DashboardPage() {
                           currentUserId={userId}
                           otherUserName={selectedConvo.otherUserName || t("anonymous")}
                           listingTitle={selectedConvo.listingTitle || ""}
-                          listingId={selectedConvo.listingId}
+                          listingId={selectedConvo.listingId ?? undefined}
                           listingImage={selectedConvo.listingImage}
                           onBack={() => setSelectedConvo(null)}
                         />

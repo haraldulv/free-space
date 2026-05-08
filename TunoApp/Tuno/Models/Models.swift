@@ -56,9 +56,21 @@ struct Listing: Codable, Identifiable, Hashable {
     let hostListingsCount: Int?
     let tags: [String]?
     let createdAt: String?
+    /// Type parkering. nil = ikke oppgitt.
+    let parkingType: ParkingType?
+    /// Cached liste av periode-typer som annonsen tilbyr (avledet fra spotMarkers[].pricePackages).
+    let rentalPeriodTypes: [PricePackagePeriodType]?
+    /// Kilde for importerte annonser (f.eks. "hygglo", "finn").
+    let source: String?
+    /// Stabil unik id i kildens system.
+    let sourceId: String?
+    /// Cached headline-pris (kr) for kart-bobler og kort. nil hvis ikke beregnet.
+    let displayPrice: Int?
+    /// Suffix: tom for DAY, "/uke", "/mnd", "/år".
+    let displayPriceSuffix: String?
 
     enum CodingKeys: String, CodingKey {
-        case id, title, description, category, city, region, address, lat, lng, price, amenities, spots, images, rating, tags
+        case id, title, description, category, city, region, address, lat, lng, price, amenities, spots, images, rating, tags, source
         case hostId = "host_id"
         case internalName = "internal_name"
         case vehicleType = "vehicle_type"
@@ -89,6 +101,11 @@ struct Listing: Codable, Identifiable, Hashable {
         case hostJoinedYear = "host_joined_year"
         case hostListingsCount = "host_listings_count"
         case createdAt = "created_at"
+        case parkingType = "parking_type"
+        case rentalPeriodTypes = "rental_period_types"
+        case sourceId = "source_id"
+        case displayPrice = "display_price"
+        case displayPriceSuffix = "display_price_suffix"
     }
 }
 
@@ -164,6 +181,15 @@ struct SpotMarker: Codable, Hashable {
     /// Brukes for å sette ulike priser på spesielle dager (helger, høytid,
     /// festivaler etc.). Hvis dato ikke finnes i dict → bruk standard `price`.
     var datePriceOverrides: [String: Int]?
+    /// Pris-pakker som tilbys for denne plassen (DAY/WEEK/MONTH/YEAR).
+    /// Standard 1 dag/1 uke/1 måned-pakkene ligger her, og utleier kan legge til
+    /// custom pakker via "Legg til pakke"-knappen. Duplikater (samme periodType
+    /// + periodValue) er ikke tillatt.
+    var pricePackages: [PricePackage]?
+    /// Per-dato overstyring av åpningstid. Nøkkel = "yyyy-MM-dd".
+    /// Hver verdi: { closed: true } eller { open: "HH:MM-HH:MM" }.
+    /// Når overstyring finnes for en gitt dato → trumfer ukedags-default fra openingHours.
+    var openingHoursOverrides: [String: DayOpeningOverride]?
 
     enum CodingKeys: String, CodingKey {
         case id, lat, lng, label, description, price, extras, images
@@ -186,11 +212,22 @@ struct SpotMarker: Codable, Hashable {
         case discountMonthPct = "discountMonthPct"
         case openingHours = "openingHours"
         case datePriceOverrides = "datePriceOverrides"
+        case pricePackages = "pricePackages"
+        case openingHoursOverrides = "openingHoursOverrides"
     }
 
     /// Returner effektive kr-priser for "lengre opphold".
+    /// Foretrekker pricePackages-arrayen (moderne), faller tilbake på legacy-felter.
     func effectiveLongerStayPrices(baseHourly: Int) -> (daily: Int, weekly: Int, monthly: Int) {
-        return (daily: dailyPrice ?? 0, weekly: weeklyPrice ?? 0, monthly: monthlyPrice ?? 0)
+        let pkgs = pricePackages ?? []
+        let pkgDay = pkgs.first(where: { $0.periodType == .day && $0.periodValue == 1 })?.priceNok ?? 0
+        let pkgWeek = pkgs.first(where: { $0.periodType == .week && $0.periodValue == 1 })?.priceNok ?? 0
+        let pkgMonth = pkgs.first(where: { $0.periodType == .month && $0.periodValue == 1 })?.priceNok ?? 0
+        return (
+            daily: pkgDay > 0 ? pkgDay : (dailyPrice ?? 0),
+            weekly: pkgWeek > 0 ? pkgWeek : (weeklyPrice ?? 0),
+            monthly: pkgMonth > 0 ? pkgMonth : (monthlyPrice ?? 0)
+        )
     }
 
     /// Backward-compat: returner vehicleTypes hvis satt, ellers wrap singel vehicleType.
@@ -686,6 +723,189 @@ enum PriceUnit: String, Codable {
     }
 }
 
+// MARK: - DayOpeningOverride
+
+/// Per-dato overstyring av åpningstid. Brukes i SpotMarker.openingHoursOverrides.
+/// JSONB-format: `{ "closed": true }` eller `{ "open": "08:00-22:00" }`.
+struct DayOpeningOverride: Codable, Hashable {
+    /// Hvis true → plassen er stengt denne dagen, uavhengig av ukedags-default.
+    var closed: Bool?
+    /// Format "HH:MM-HH:MM". Hvis satt og closed != true → erstatter ukedags-tid.
+    var open: String?
+
+    static let stengt = DayOpeningOverride(closed: true, open: nil)
+    static func openTimes(_ time: String) -> DayOpeningOverride {
+        DayOpeningOverride(closed: false, open: time)
+    }
+
+    /// True hvis denne overstyrelsen sier at plassen er stengt på dato.
+    var isClosed: Bool { closed == true }
+}
+
+// MARK: - ParkingType
+
+enum ParkingType: String, Codable, CaseIterable, Hashable {
+    case garage = "GARAGE"
+    case outdoor = "OUTDOOR"
+    case parkingHouse = "PARKING_HOUSE"
+
+    var displayName: String {
+        switch self {
+        case .garage: return "Garasje"
+        case .outdoor: return "Utendørs"
+        case .parkingHouse: return "Parkeringshus"
+        }
+    }
+}
+
+// MARK: - PricePackage
+
+enum PricePackagePeriodType: String, Codable, CaseIterable, Hashable {
+    case day = "DAY"
+    case week = "WEEK"
+    case month = "MONTH"
+    case year = "YEAR"
+
+    var displayName: String {
+        switch self {
+        case .day: return "Dag"
+        case .week: return "Uke"
+        case .month: return "Måned"
+        case .year: return "År"
+        }
+    }
+
+    /// Tillatt antall enheter per periode (DAY 1-6, WEEK 1-3, MONTH 1-11, YEAR 1-3).
+    var allowedValues: ClosedRange<Int> {
+        switch self {
+        case .day: return 1...6
+        case .week: return 1...3
+        case .month: return 1...11
+        case .year: return 1...3
+        }
+    }
+}
+
+struct PricePackage: Codable, Hashable, Identifiable {
+    var periodType: PricePackagePeriodType
+    /// DAY 1-6, WEEK 1-3, MONTH 1-11, YEAR 1-3.
+    var periodValue: Int
+    /// Pris i kr (heltall).
+    var priceNok: Int
+
+    var id: String { "\(periodType.rawValue)-\(periodValue)" }
+
+    /// Norsk label: "1 dag", "3 dager", "1 uke", "2 måneder", "1 år" osv.
+    var label: String {
+        switch periodType {
+        case .day:
+            return periodValue == 1 ? "1 dag" : "\(periodValue) dager"
+        case .week:
+            return periodValue == 1 ? "1 uke" : "\(periodValue) uker"
+        case .month:
+            return periodValue == 1 ? "1 måned" : "\(periodValue) måneder"
+        case .year:
+            return periodValue == 1 ? "1 år" : "\(periodValue) år"
+        }
+    }
+}
+
+extension Array where Element == PricePackage {
+    /// Sorter pakker logisk: DAY < WEEK < MONTH < YEAR, deretter etter periodValue.
+    var sortedForDisplay: [PricePackage] {
+        let order: [PricePackagePeriodType] = [.day, .week, .month, .year]
+        return self.sorted { lhs, rhs in
+            let li = order.firstIndex(of: lhs.periodType) ?? 99
+            let ri = order.firstIndex(of: rhs.periodType) ?? 99
+            if li != ri { return li < ri }
+            return lhs.periodValue < rhs.periodValue
+        }
+    }
+
+    /// True hvis arrayet allerede inneholder en pakke med samme (periodType, periodValue).
+    func hasDuplicate(_ candidate: PricePackage) -> Bool {
+        return self.contains { $0.periodType == candidate.periodType && $0.periodValue == candidate.periodValue }
+    }
+}
+
+extension Listing {
+    /// Returner unik liste av PricePackage-perioder fra alle spots.
+    /// Brukes til badges på listing-detail og som derived rental_period_types.
+    var derivedPeriodTypes: [PricePackagePeriodType] {
+        var seen: Set<PricePackagePeriodType> = []
+        for s in spotMarkers ?? [] {
+            for p in s.pricePackages ?? [] { seen.insert(p.periodType) }
+            if s.weeklyPrice != nil { seen.insert(.week) }
+            if s.monthlyPrice != nil || s.threeMonthPrice != nil || s.sixMonthPrice != nil { seen.insert(.month) }
+            if s.yearPrice != nil { seen.insert(.year) }
+            if s.price != nil || s.pricePerNight != nil || s.dailyPrice != nil { seen.insert(.day) }
+        }
+        return Array(seen)
+    }
+
+    /// Hovedpris for kort/bobler. Foretrekker cached `display_price`-kolonne
+    /// (DB-side), faller tilbake på spot-traversering hvis ikke satt.
+    /// Returnerer (price, suffix). Suffix er tom for DAY, ellers "/uke", "/mnd", "/år".
+    /// Returnerer nil hvis ingen pris finnes (tom annonse).
+    var headlinePrice: (price: Int, suffix: String)? {
+        // Cached fra DB — raskeste path
+        if let cached = displayPrice, cached > 0 {
+            return (cached, displayPriceSuffix ?? "")
+        }
+        return computedHeadlinePrice
+    }
+
+    /// Computed fallback når displayPrice ikke er satt. Traverserer spotMarkers.
+    /// Ikke kall direkte fra hot paths (kart-rendering) — bruk headlinePrice.
+    private var computedHeadlinePrice: (price: Int, suffix: String)? {
+        // Samle alle pakker fra alle spots, pluss synthetic DAY-pakke fra spot.price
+        var dayPrices: [Int] = []
+        var weekPrices: [Int] = []
+        var monthPrices: [Int] = []
+        var yearPrices: [Int] = []
+
+        let isParking = category == .parking
+
+        for spot in spotMarkers ?? [] {
+            // Synthetic DAY fra basis-pris
+            let basePrice = isParking
+                ? (spot.price ?? 0)
+                : (spot.pricePerNight ?? spot.price ?? 0)
+            if basePrice > 0 { dayPrices.append(basePrice) }
+
+            for pkg in spot.pricePackages ?? [] {
+                switch pkg.periodType {
+                case .day: dayPrices.append(pkg.priceNok)
+                case .week: weekPrices.append(pkg.priceNok)
+                case .month: monthPrices.append(pkg.priceNok)
+                case .year: yearPrices.append(pkg.priceNok)
+                }
+            }
+
+            // Legacy fallback for eldre rader
+            if let p = spot.weeklyPrice, p > 0 { weekPrices.append(p) }
+            if let p = spot.monthlyPrice, p > 0 { monthPrices.append(p) }
+            if let p = spot.yearPrice, p > 0 { yearPrices.append(p) }
+        }
+
+        // Listing-nivå basis-pris (for annonser uten spotMarkers eller med 0 på spots)
+        if let lp = price, lp > 0 { dayPrices.append(lp) }
+        if let pn = pricePerNight, pn > 0 { dayPrices.append(pn) }
+
+        if let min = dayPrices.min() { return (min, "") }
+        if let min = weekPrices.min() { return (min, "/uke") }
+        if let min = monthPrices.min() { return (min, "/mnd") }
+        if let min = yearPrices.min() { return (min, "/år") }
+        return nil
+    }
+
+    /// Tekstrepresentasjon: "120 kr", "1968 kr/mnd", "—" hvis ingen pris.
+    var headlinePriceText: String {
+        guard let h = headlinePrice else { return "—" }
+        return "\(h.price) kr\(h.suffix)"
+    }
+}
+
 // MARK: - OpeningHours
 //
 // Åpningstid per ukedag (parkering). nil/manglende felt = stengt.
@@ -938,10 +1158,11 @@ struct ReviewProfile: Codable {
 
 struct Conversation: Codable, Identifiable {
     let id: String
-    let listingId: String
+    let listingId: String?
     let guestId: String
-    let hostId: String
+    let hostId: String?
     let bookingId: String?
+    let type: String?
     let lastMessageAt: String?
     let createdAt: String?
     let archivedByGuest: Bool?
@@ -951,8 +1172,11 @@ struct Conversation: Codable, Identifiable {
     let mutedByGuest: Bool?
     let mutedByHost: Bool?
 
+    /// True hvis dette er en support-samtale (gjest ↔ Tuno-support).
+    var isSupport: Bool { type == "support" }
+
     enum CodingKeys: String, CodingKey {
-        case id
+        case id, type
         case listingId = "listing_id"
         case guestId = "guest_id"
         case hostId = "host_id"

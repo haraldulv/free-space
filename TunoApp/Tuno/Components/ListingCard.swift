@@ -139,7 +139,9 @@ struct ListingCard: View {
                     .padding(10)
                 }
 
-                // Bunn-badges: instant booking + 🕒 åpningstid
+                // Bunn-badge: kun instant booking. Åpningstid og parking_type
+                // vises på selve listing-detail (ikke på kortet) — gjest skal
+                // ikke bekymre seg om dette før de er inne på annonsen.
                 VStack {
                     Spacer()
                     HStack(spacing: 6) {
@@ -148,20 +150,6 @@ struct ListingCard: View {
                                 Image(systemName: "bolt.fill")
                                     .font(.system(size: 10))
                                 Text("Direktebestilling")
-                                    .font(.system(size: 11, weight: .semibold))
-                            }
-                            .foregroundStyle(.neutral700)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(.ultraThinMaterial)
-                            .clipShape(Capsule())
-                        }
-                        if listing.category == .parking,
-                           let label = OpeningHoursService.compactLabel(listing.openingHours) {
-                            HStack(spacing: 3) {
-                                Image(systemName: "clock.fill")
-                                    .font(.system(size: 10))
-                                Text(label)
                                     .font(.system(size: 11, weight: .semibold))
                             }
                             .foregroundStyle(.neutral700)
@@ -204,13 +192,29 @@ struct ListingCard: View {
                     .lineLimit(1)
 
                 HStack(spacing: 4) {
-                    Text("\(listing.displayPriceText) kr")
-                        .font(.system(size: 14, weight: .bold))
-                    Text("/ \(listing.priceUnit?.displayName ?? "døgn")")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
+                    if let h = listing.headlinePrice {
+                        Text("\(h.price) kr")
+                            .font(.system(size: 14, weight: .bold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                        if h.suffix.isEmpty {
+                            Text("/ \(listing.priceUnit?.displayName ?? "døgn")")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral500)
+                                .lineLimit(1)
+                        } else {
+                            Text(h.suffix)
+                                .font(.system(size: 12))
+                                .foregroundStyle(.neutral500)
+                                .lineLimit(1)
+                        }
+                    } else {
+                        Text("—")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.neutral500)
+                    }
 
-                    Spacer()
+                    Spacer(minLength: 4)
 
                     if let label = distanceLabel {
                         HStack(spacing: 3) {
@@ -218,8 +222,10 @@ struct ListingCard: View {
                                 .font(.system(size: 10))
                             Text(label)
                                 .font(.system(size: 11, weight: .medium))
+                                .lineLimit(1)
                         }
                         .foregroundStyle(.neutral500)
+                        .layoutPriority(0) // distance gir plass til pris først
                     }
                 }
                 .padding(.top, 2)
@@ -229,4 +235,5 @@ struct ListingCard: View {
             .padding(.bottom, 4)
         }
     }
+
 }

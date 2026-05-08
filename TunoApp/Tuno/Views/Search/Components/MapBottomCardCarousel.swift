@@ -113,26 +113,6 @@ struct MapListingBigCard: View {
                     .padding(.bottom, 12)
                 }
             }
-            .overlay(alignment: .bottomLeading) {
-                // Åpningstid-tag for parkering — overlay på TabView arver
-                // dens 180pt-frame og kan ikke vokse forbi.
-                if listing.category == .parking,
-                   let label = OpeningHoursService.compactLabel(listing.openingHours) {
-                    HStack(spacing: 3) {
-                        Image(systemName: "clock.fill")
-                            .font(.system(size: 10))
-                        Text(label)
-                            .font(.system(size: 11, weight: .semibold))
-                    }
-                    .foregroundStyle(.neutral700)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.ultraThinMaterial)
-                    .clipShape(Capsule())
-                    .padding(.leading, 10)
-                    .padding(.bottom, 8)
-                }
-            }
 
             // Top-right: hjerte + X-lukk
             HStack(spacing: 8) {
@@ -240,10 +220,14 @@ struct MapListingBigCard: View {
                 }
             }
 
-            Text("\(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "døgn")")
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(.neutral900)
-                .padding(.top, 2)
+            if let h = listing.headlinePrice {
+                Text(h.suffix.isEmpty
+                    ? "\(h.price) kr/\(listing.priceUnit?.displayName ?? "døgn")"
+                    : "\(h.price) kr\(h.suffix)")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                    .padding(.top, 2)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

@@ -1,7 +1,7 @@
 "use server";
 
 import { createClient } from "@/lib/supabase/server";
-import { sendPushToUser } from "@/lib/push";
+import { sendPushToAllAdmins, sendPushToUser } from "@/lib/push";
 
 async function getAuthUser() {
   const supabase = await createClient();
@@ -61,13 +61,30 @@ export async function sendMessageAction(data: {
     // Verify user is participant
     const { data: convo } = await supabase
       .from("conversations")
-      .select("id, guest_id, host_id, listing_id")
+      .select("id, guest_id, host_id, listing_id, type")
       .eq("id", data.conversationId)
       .single();
 
     if (!convo) return { error: "Samtale ikke funnet" };
-    if (convo.guest_id !== user.id && convo.host_id !== user.id) {
-      return { error: "Ikke tilgang" };
+
+    // Sjekk sender's profil for admin-rolle (kun relevant for support).
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name, is_admin")
+      .eq("id", user.id)
+      .single();
+    const senderIsAdmin = profile?.is_admin === true;
+
+    const isSupport = convo.type === "support";
+    if (!isSupport) {
+      if (convo.guest_id !== user.id && convo.host_id !== user.id) {
+        return { error: "Ikke tilgang" };
+      }
+    } else {
+      // Support: gjest eller admin kan sende.
+      if (convo.guest_id !== user.id && !senderIsAdmin) {
+        return { error: "Ikke tilgang" };
+      }
     }
 
     const { error } = await supabase.from("messages").insert({
@@ -78,21 +95,48 @@ export async function sendMessageAction(data: {
 
     if (error) return { error: error.message };
 
-    // Notify the other user
-    const recipientId = convo.guest_id === user.id ? convo.host_id : convo.guest_id;
+    const senderName = profile?.full_name || "Noen";
+    const preview = data.content.slice(0, 100);
 
-    // Get sender name
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("full_name")
-      .eq("id", user.id)
-      .single();
+    if (isSupport) {
+      if (senderIsAdmin) {
+        // Admin svarer → push + notifikasjonsrad til gjest.
+        await supabase.from("conversations")
+          .update({ assigned_admin_id: user.id })
+          .eq("id", data.conversationId);
+        await supabase.from("notifications").insert({
+          user_id: convo.guest_id,
+          type: "new_message",
+          title: "Tuno-support svarte",
+          body: preview,
+          metadata: { conversationId: data.conversationId },
+        });
+        await sendPushToUser(
+          convo.guest_id,
+          "Tuno-support svarte",
+          preview,
+          { type: "new_message", conversationId: data.conversationId },
+          { conversationId: data.conversationId },
+        );
+      } else {
+        // Gjest spør → push til alle admins.
+        await sendPushToAllAdmins(
+          `Support: ${senderName}`,
+          preview,
+          { type: "support_request", conversationId: data.conversationId },
+        );
+      }
+      return {};
+    }
+
+    // Booking-samtale (originaloppførsel)
+    const recipientId = convo.guest_id === user.id ? convo.host_id : convo.guest_id;
 
     const { error: notifError } = await supabase.from("notifications").insert({
       user_id: recipientId,
       type: "new_message",
       title: "Ny melding",
-      body: `${profile?.full_name || "Noen"}: ${data.content.slice(0, 100)}`,
+      body: `${senderName}: ${preview}`,
       metadata: { conversationId: data.conversationId },
     });
 
@@ -100,12 +144,10 @@ export async function sendMessageAction(data: {
       console.error("Notification insert error:", notifError.message, "recipientId:", recipientId);
     }
 
-    // Send push notification to recipient's device
-    const senderName = profile?.full_name || "Noen";
     await sendPushToUser(
       recipientId,
       "Ny melding",
-      `${senderName}: ${data.content.slice(0, 100)}`,
+      `${senderName}: ${preview}`,
       { type: "new_message", conversationId: data.conversationId },
     );
 
