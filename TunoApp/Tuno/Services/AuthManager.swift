@@ -182,7 +182,10 @@ final class AuthManager: ObservableObject {
             )
 
             // Google leverer fullt navn + profilbilde i user_metadata.
-            // Upsert profilen så verten får navn + bilde i appen.
+            // Upsert profilen så verten får navn + bilde i appen — MEN bare
+            // sett avatar_url hvis brukeren ikke allerede har lastet opp et
+            // eget bilde via Supabase Storage. Ellers ville Google's avatar
+            // overskrive brukerens valg ved hver innlogging.
             if let user = try? await supabase.auth.session.user {
                 let metadata = user.userMetadata
                 let fullName = metadata["full_name"]?.stringValue
@@ -194,7 +197,11 @@ final class AuthManager: ObservableObject {
                         "id": user.id.uuidString.lowercased(),
                         "full_name": fullName,
                     ]
-                    if let avatarURL, !avatarURL.isEmpty {
+                    // Sjekk eksisterende profile: behold custom avatar (Storage-URL)
+                    // og bare sett Google-avatar hvis avatar_url er nil/tom.
+                    let existingAvatar = await currentAvatarUrl(userId: user.id.uuidString)
+                    if let avatarURL, !avatarURL.isEmpty,
+                       (existingAvatar?.isEmpty ?? true) {
                         payload["avatar_url"] = avatarURL
                     }
                     try? await supabase.from("profiles").upsert(payload).execute()
@@ -241,6 +248,24 @@ final class AuthManager: ObservableObject {
             if (error as NSError).code != ASAuthorizationError.canceled.rawValue {
                 self.error = "Apple-innlogging feilet"
             }
+        }
+    }
+
+    /// Henter eksisterende avatar_url for brukeren slik at OAuth-login ikke
+    /// overskriver et brukervalgt bilde.
+    private func currentAvatarUrl(userId: String) async -> String? {
+        struct Row: Decodable { let avatar_url: String? }
+        do {
+            let rows: [Row] = try await supabase
+                .from("profiles")
+                .select("avatar_url")
+                .eq("id", value: userId)
+                .limit(1)
+                .execute()
+                .value
+            return rows.first?.avatar_url
+        } catch {
+            return nil
         }
     }
 
