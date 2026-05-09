@@ -215,7 +215,7 @@ struct SearchView: View {
 
                 if selectedListingIndex == nil {
                     BottomListDrawer(
-                        listings: filteredListings,
+                        listings: visibleListings,
                         isFavorited: { id in favoritesService.favoriteIds.contains(id) },
                         onFavorite: toggleFavorite,
                         onSelect: { listing in
@@ -417,6 +417,22 @@ struct SearchView: View {
             }
             return true
         }
+    }
+
+    /// Listings begrenset til de som er i synlig kart-område. Brukes av
+    /// bottom-sheet-listen så telleren ("X annonser") og lista oppdateres
+    /// når brukeren zoomer/paner kartet — uten å trigge nytt server-søk.
+    /// Tom hvis ingen annonser er i synlig viewport (i motsetning til
+    /// carouselListings som faller tilbake til alle).
+    private var visibleListings: [Listing] {
+        guard let center = lastSearchedCenter else { return filteredListings }
+        let limitKm = max(lastSearchedRadius * 0.5, 1.5)
+        let nearby = filteredListings.compactMap { l -> (Listing, Double)? in
+            guard let lat = l.lat, let lng = l.lng else { return nil }
+            let d = haversineDistanceKm(lat1: center.latitude, lng1: center.longitude, lat2: lat, lng2: lng)
+            return d <= limitKm ? (l, d) : nil
+        }
+        return nearby.sorted { $0.1 < $1.1 }.map { $0.0 }
     }
 
     /// Listings begrenset til de som er i (eller nær) synlig kart-område.
