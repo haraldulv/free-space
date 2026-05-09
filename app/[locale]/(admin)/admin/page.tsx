@@ -631,7 +631,7 @@ export default function AdminPage() {
                             {showHeader && (
                               <div className={`mb-1 flex items-baseline gap-2 px-1 ${isMe ? "flex-row-reverse" : ""}`}>
                                 <span className="text-xs font-semibold text-neutral-700">
-                                  {isMe ? "Tuno-support" : (m.sender?.full_name || "Anonym")}
+                                  {isMe ? "Tuno support" : (m.sender?.full_name || "Anonym")}
                                 </span>
                                 <span className="text-[10px] text-neutral-400">
                                   {new Date(m.created_at).toLocaleString("nb-NO", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
@@ -664,7 +664,7 @@ export default function AdminPage() {
                           }
                         }}
                         rows={2}
-                        placeholder="Svar som Tuno-support…"
+                        placeholder="Svar som Tuno support…"
                         className="flex-1 resize-none rounded-lg border border-neutral-200 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
                       />
                       <button

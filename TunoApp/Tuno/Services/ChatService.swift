@@ -117,7 +117,7 @@ class ChatService: ObservableObject {
                         listingId: nil,
                         guestId: convo.guestId,
                         hostId: nil,
-                        otherUserName: "Tuno-support",
+                        otherUserName: "Tuno support",
                         otherUserAvatar: nil,
                         lastMessage: lastMessageByConvo[convo.id]?.content ?? "",
                         lastMessageAt: convo.lastMessageAt,

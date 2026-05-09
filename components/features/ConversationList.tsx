@@ -74,7 +74,7 @@ export default function ConversationList({
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-neutral-900 truncate">Tuno-support</p>
+            <p className="text-sm font-semibold text-neutral-900 truncate">Tuno support</p>
             {supportConvo?.lastMessageAt && (
               <span className="shrink-0 text-[10px] text-neutral-400">
                 {formatDistanceToNow(new Date(supportConvo.lastMessageAt), { addSuffix: true, locale: dateLocale })}

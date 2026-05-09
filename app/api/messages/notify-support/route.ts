@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       // Admin svarer → push til gjest
       await sendPushToUser(
         convo.guest_id,
-        "Tuno-support svarte",
+        "Tuno support svarte",
         preview,
         { conversationId, type: "support_reply" },
         { conversationId },

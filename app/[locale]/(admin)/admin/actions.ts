@@ -243,7 +243,7 @@ export async function sendSupportMessageAction(
       const { sendPushToUser } = await import("@/lib/push");
       await sendPushToUser(
         convo.guest_id,
-        "Tuno-support svarte",
+        "Tuno support svarte",
         trimmed.slice(0, 120),
         { conversationId, type: "support_reply" },
         { conversationId },

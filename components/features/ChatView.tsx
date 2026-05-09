@@ -332,7 +332,7 @@ export default function ChatView({
                       ? bookingState.hostId === currentUserId ? "host" : "guest"
                       : null
                   }
-                  hideActions={shouldHideOfferActions(bookingState)}
+                  hideActions={bookingState === null ? true : shouldHideOfferActions(bookingState)}
                   isConfirmed={isActive && bookingState?.status === "confirmed"}
                   accepting={accepting}
                   onAccept={isActive && !isOwn ? () => acceptOffer(msg.metadata!) : undefined}

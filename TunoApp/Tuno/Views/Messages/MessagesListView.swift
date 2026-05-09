@@ -347,7 +347,7 @@ struct SupportConversationRow: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("Tuno-support")
+                    Text("Tuno support")
                         .font(.system(size: 15, weight: (conversation?.unreadCount ?? 0) > 0 ? .bold : .semibold))
                         .foregroundStyle(.neutral900)
                     Image(systemName: "checkmark.seal.fill")

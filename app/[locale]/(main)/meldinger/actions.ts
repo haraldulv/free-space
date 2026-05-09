@@ -107,13 +107,13 @@ export async function sendMessageAction(data: {
         await supabase.from("notifications").insert({
           user_id: convo.guest_id,
           type: "new_message",
-          title: "Tuno-support svarte",
+          title: "Tuno support svarte",
           body: preview,
           metadata: { conversationId: data.conversationId },
         });
         await sendPushToUser(
           convo.guest_id,
-          "Tuno-support svarte",
+          "Tuno support svarte",
           preview,
           { type: "new_message", conversationId: data.conversationId },
           { conversationId: data.conversationId },

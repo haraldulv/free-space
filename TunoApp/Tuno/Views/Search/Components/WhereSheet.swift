@@ -618,7 +618,10 @@ struct WhereSheet: View {
     private func applyPeriodPreset(days: Int) {
         let cal = Calendar(identifier: .gregorian)
         let today = cal.startOfDay(for: Date())
-        let anchor = checkIn.map(cal.startOfDay(for:)) ?? today
+        // Anchor = eksisterende checkIn, men aldri i fortiden — klampes til
+        // today så preset-knappene aldri stretcher en stale dato.
+        let storedAnchor = checkIn.map(cal.startOfDay(for:))
+        let anchor = (storedAnchor.map { max($0, today) }) ?? today
         checkIn = anchor
         // 1 dag = samme dag (7. mai → 7. mai). 1 uke = X → X+6 (begge dager teller, totalt 7).
         // 1 måned = X → X+29 (30 dager). 1 år = X → X+364 (365 dager).

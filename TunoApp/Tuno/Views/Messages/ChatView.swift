@@ -514,7 +514,11 @@ struct ChatView: View {
                 isFromMe: isMe,
                 isActive: isActive,
                 viewerRole: viewerRole,
-                hideActions: bookingState?.hideOfferActions ?? false,
+                // Default til å skjule under første load — bedre å la knappene
+                // dukke opp etter at vi VET status, enn å vise stale knapper for
+                // en confirmed/cancelled booking i 0.5 sek mens loadBookingState
+                // er underveis.
+                hideActions: bookingState?.hideOfferActions ?? true,
                 isConfirmed: isActive && bookingState?.status == "confirmed",
                 accepting: accepting,
                 onAccept: isActive && !isMe ? { Task { await acceptOffer(metadata: metadata) } } : nil,
@@ -683,7 +687,7 @@ struct ChatView: View {
                         .clipShape(Circle())
 
                     HStack(spacing: 4) {
-                        Text("Tuno-support")
+                        Text("Tuno support")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(.neutral900)
                         Image(systemName: "checkmark.seal.fill")

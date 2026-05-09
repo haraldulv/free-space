@@ -27,8 +27,14 @@ final class SearchContextStore: ObservableObject {
         let d = UserDefaults.standard
         self.category = d.string(forKey: "\(key).category")
         self.query = d.string(forKey: "\(key).query") ?? ""
-        self.checkIn = d.object(forKey: "\(key).checkIn") as? Date
-        self.checkOut = d.object(forKey: "\(key).checkOut") as? Date
+        // Restorerte datoer som er i fortiden er ubrukelige (kalenderen
+        // blokkerer dem og en booking-forespørsel for fortiden gir ikke
+        // mening). Drop dem ved init.
+        let today = Calendar.current.startOfDay(for: Date())
+        let storedIn = d.object(forKey: "\(key).checkIn") as? Date
+        let storedOut = d.object(forKey: "\(key).checkOut") as? Date
+        self.checkIn = storedIn.flatMap { Calendar.current.startOfDay(for: $0) >= today ? $0 : nil }
+        self.checkOut = storedOut.flatMap { Calendar.current.startOfDay(for: $0) >= today ? $0 : nil }
         self.placeName = d.string(forKey: "\(key).placeName")
         self.placeLat = (d.object(forKey: "\(key).placeLat") as? NSNumber)?.doubleValue
         self.placeLng = (d.object(forKey: "\(key).placeLng") as? NSNumber)?.doubleValue

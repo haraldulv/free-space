@@ -53,7 +53,7 @@ export async function getConversations(userId: string): Promise<Conversation[]> 
       type: row.type ?? "booking",
       lastMessageAt: row.last_message_at,
       createdAt: row.created_at,
-      otherUserName: isSupport ? "Tuno-support" : ((otherUser?.full_name as string) || "Anonym"),
+      otherUserName: isSupport ? "Tuno support" : ((otherUser?.full_name as string) || "Anonym"),
       otherUserAvatar: isSupport ? "" : ((otherUser?.avatar_url as string) || ""),
       listingTitle: isSupport ? "Kundeservice" : ((listing?.title as string) || ""),
       listingImage: isSupport ? "" : (((listing?.images as string[]) || [])[0] || ""),
@@ -66,7 +66,7 @@ export async function getConversations(userId: string): Promise<Conversation[]> 
 }
 
 /**
- * Henter eller oppretter brukerens støtte-samtale med Tuno-support.
+ * Henter eller oppretter brukerens støtte-samtale med Tuno support.
  * Krever at conversations-skjemaet har type='support'-støtte (migrasjon 2026-05-08).
  */
 export async function getOrCreateSupportConversation(guestId: string): Promise<string | null> {
