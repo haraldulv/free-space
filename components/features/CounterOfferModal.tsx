@@ -69,7 +69,7 @@ export default function CounterOfferModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-neutral-900">Send motbud</h2>
+          <h2 className="text-lg font-semibold text-neutral-900">Endre pris</h2>
           <button onClick={onClose} className="text-neutral-500 hover:text-neutral-900">
             <X className="h-5 w-5" />
           </button>
@@ -82,7 +82,7 @@ export default function CounterOfferModal({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Ditt motbud</label>
+            <label className="block text-sm font-semibold text-neutral-700 mb-1.5">Ny pris</label>
             <div className="flex items-center gap-2">
               <input
                 type="text"
@@ -114,7 +114,7 @@ export default function CounterOfferModal({
             disabled={!canSend}
             className="w-full rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-50 transition-colors"
           >
-            {sending ? "Sender…" : "Send motbud"}
+            {sending ? "Sender…" : "Send forslag"}
           </button>
         </div>
       </div>

@@ -244,11 +244,13 @@ struct SearchMapView: UIViewRepresentable {
 
         let listingsKey = listings.compactMap { $0.lat != nil && $0.lng != nil ? $0.id : nil }.sorted().joined(separator: ",")
         if listingsKey != context.coordinator.lastListingIdsKey {
-            // Full rebuild — listing-settet endret seg
+            // Full reset — listing-settet endret seg. applyMarkers gjør deretter
+            // en diff fra den tomme tilstanden og legger til alle på nytt.
             mapView.removeAnnotations(mapView.annotations.filter { !($0 is MKUserLocation) })
             context.coordinator.markerToId.removeAll()
             context.coordinator.markerToCluster.removeAll()
             context.coordinator.allAnnotations.removeAll()
+            context.coordinator.annotationsByStableId.removeAll()
             addMarkers(to: mapView, coordinator: context.coordinator, selectedId: selectedListingId)
             context.coordinator.lastListingIdsKey = listingsKey
             context.coordinator.lastSelectedListingId = selectedListingId
@@ -308,6 +310,11 @@ struct SearchMapView: UIViewRepresentable {
         )
     }
 
+    /// Diff-basert annotation-oppdatering. Bare annotation-er hvis stabile id
+    /// har endret seg fjernes/legges til. Solo-bobler beholder samme stableId
+    /// på tvers av zoom-nivåer (basert på listing-id), så pris-tallet blinker
+    /// ikke når zoom krysser cluster-terskelen. Cluster-bobler endrer stableId
+    /// når de reformer på nytt grid — det er forventet og uunngåelig.
     static func applyMarkers(
         to mapView: MKMapView,
         listings: [Listing],
@@ -319,7 +326,29 @@ struct SearchMapView: UIViewRepresentable {
         let clusters = clusterListings(listings, zoom: zoom)
         coordinator.lastClusterZoom = zoom
 
-        for cluster in clusters {
+        let newStableIds = Set(clusters.map(\.stableId))
+        let currentStableIds = Set(coordinator.annotationsByStableId.keys)
+
+        // 1. Fjern annotation-er som ikke er i den nye settingen
+        let removedIds = currentStableIds.subtracting(newStableIds)
+        var toRemove: [MKAnnotation] = []
+        toRemove.reserveCapacity(removedIds.count)
+        for id in removedIds {
+            guard let anno = coordinator.annotationsByStableId.removeValue(forKey: id) else { continue }
+            let key = AnnotationKey(anno as AnyObject)
+            coordinator.markerToId.removeValue(forKey: key)
+            coordinator.markerToCluster.removeValue(forKey: key)
+            coordinator.allAnnotations.removeAll { ($0 as AnyObject) === (anno as AnyObject) }
+            toRemove.append(anno)
+        }
+        if !toRemove.isEmpty {
+            mapView.removeAnnotations(toRemove)
+        }
+
+        // 2. Legg til nye annotation-er. Eksisterende stable id-er hopper vi
+        //    over — de er allerede på kartet med riktig posisjon.
+        var toAdd: [MKAnnotation] = []
+        for cluster in clusters where coordinator.annotationsByStableId[cluster.stableId] == nil {
             if cluster.listings.count == 1, let listing = cluster.listings.first {
                 let annotation = ListingPriceAnnotation(
                     coordinate: cluster.center,
@@ -327,18 +356,23 @@ struct SearchMapView: UIViewRepresentable {
                     isVisited: visited.contains(listing.id),
                     isSelected: selectedId == listing.id
                 )
-                mapView.addAnnotation(annotation)
                 let key = AnnotationKey(annotation)
                 coordinator.markerToId[key] = listing.id
                 coordinator.markerToCluster[key] = cluster
+                coordinator.annotationsByStableId[cluster.stableId] = annotation
                 coordinator.allAnnotations.append(annotation)
+                toAdd.append(annotation)
             } else {
                 let annotation = ClusterAnnotation(coordinate: cluster.center, count: cluster.listings.count)
-                mapView.addAnnotation(annotation)
                 let key = AnnotationKey(annotation)
                 coordinator.markerToCluster[key] = cluster
+                coordinator.annotationsByStableId[cluster.stableId] = annotation
                 coordinator.allAnnotations.append(annotation)
+                toAdd.append(annotation)
             }
+        }
+        if !toAdd.isEmpty {
+            mapView.addAnnotations(toAdd)
         }
     }
 
@@ -357,10 +391,17 @@ struct SearchMapView: UIViewRepresentable {
             bins[key, default: []].append(listing)
         }
 
-        return bins.values.map { listingsInBin in
+        return bins.map { (binKey, listingsInBin) in
             let lat = listingsInBin.compactMap { $0.lat }.reduce(0, +) / Double(listingsInBin.count)
             let lng = listingsInBin.compactMap { $0.lng }.reduce(0, +) / Double(listingsInBin.count)
+            // Solo: stabil på listing-id på tvers av zoom. Cluster: stabil
+            // bin-key — endres når grid-cellestørrelsen endres (= ved zoom-
+            // overgang), men hopper ikke "innad i samme zoom-nivå".
+            let stableId = listingsInBin.count == 1
+                ? "listing:\(listingsInBin[0].id)"
+                : "cluster:\(binKey)"
             return MarkerCluster(
+                stableId: stableId,
                 center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
                 listings: listingsInBin
             )
@@ -368,6 +409,7 @@ struct SearchMapView: UIViewRepresentable {
     }
 
     struct MarkerCluster {
+        let stableId: String
         let center: CLLocationCoordinate2D
         let listings: [Listing]
     }
@@ -383,6 +425,10 @@ struct SearchMapView: UIViewRepresentable {
         var markerToId: [AnnotationKey: String] = [:]
         var markerToCluster: [AnnotationKey: MarkerCluster] = [:]
         var allAnnotations: [MKAnnotation] = []  // sterk referanse
+        /// Mapper stableId (fra MarkerCluster) til annotation-instans.
+        /// Brukes til diff-basert oppdatering så pris-bobler ikke blinker
+        /// når kun zoom endrer seg innenfor samme cluster-grid.
+        var annotationsByStableId: [String: MKAnnotation] = [:]
         weak var mapView: MKMapView?
         var lastCenterLat: Double?
         var lastCenterLng: Double?
@@ -394,6 +440,7 @@ struct SearchMapView: UIViewRepresentable {
         var allListingsForClustering: [Listing] = []
         var userMovedMap = false
         var debounceWorkItem: DispatchWorkItem?
+        var clusterDebounceWorkItem: DispatchWorkItem?
 
         init(
             onSelect: ((String?) -> Void)?,
@@ -479,6 +526,9 @@ struct SearchMapView: UIViewRepresentable {
                 userMovedMap = true
                 debounceWorkItem?.cancel()
             }
+            // Cluster-rebuild settes alltid på pause mens region endrer seg.
+            // Den siste regionDidChange (etter pinch settler) re-armerer den.
+            clusterDebounceWorkItem?.cancel()
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
@@ -487,11 +537,19 @@ struct SearchMapView: UIViewRepresentable {
             let span = mapView.region.span.latitudeDelta
             onCameraIdle?(center.latitude, center.longitude, span)
 
-            // Re-cluster hvis zoom har endret seg vesentlig
+            // Re-cluster når zoom har endret seg vesentlig OG region har stabilisert
+            // seg. Debouncen unngår at bobler reformer mens fingeren fortsatt er
+            // på skjermen — det er den primære kilden til flicker under pinch.
             let zoom = SearchMapView.zoomForSpan(span)
-            if abs(zoom - lastClusterZoom) >= 0.5 {
-                lastClusterZoom = zoom
-                rebuildClusters()
+            if abs(zoom - lastClusterZoom) >= 1.0 {
+                clusterDebounceWorkItem?.cancel()
+                let work = DispatchWorkItem { [weak self] in
+                    guard let self, let mv = self.mapView else { return }
+                    self.lastClusterZoom = SearchMapView.zoomForSpan(mv.region.span.latitudeDelta)
+                    self.rebuildClusters()
+                }
+                clusterDebounceWorkItem = work
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
             }
 
             guard userMovedMap else { return }
@@ -524,21 +582,14 @@ struct SearchMapView: UIViewRepresentable {
 
         private func rebuildClusters() {
             guard let mapView else { return }
-            let visited = lastVisitedIds
-            let selectedId = lastSelectedListingId
-
-            // Fjern alle annotation-er bortsett fra MKUserLocation
-            let toRemove = mapView.annotations.filter { !($0 is MKUserLocation) }
-            mapView.removeAnnotations(toRemove)
-            markerToId.removeAll()
-            markerToCluster.removeAll()
-            allAnnotations.removeAll()
-
+            // applyMarkers gjør diff mot annotationsByStableId — vi trenger
+            // ikke å fjerne alt først. Solo-bobler (samme listing.id) beholdes,
+            // og kun bobler hvis cluster-medlemskap virkelig endret seg byttes ut.
             SearchMapView.applyMarkers(
                 to: mapView,
                 listings: allListingsForClustering,
-                visited: visited,
-                selectedId: selectedId,
+                visited: lastVisitedIds,
+                selectedId: lastSelectedListingId,
                 coordinator: self
             )
         }

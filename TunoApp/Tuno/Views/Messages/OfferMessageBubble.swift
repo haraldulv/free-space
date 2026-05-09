@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Strukturert offer-boble i chatten. Brukes for messages.kind == 'offer'.
-/// Viser pris, datoer, avsender, utløp, og handlinger (Godta / Send motbud)
+/// Viser pris, datoer, avsender, utløp, og handlinger (Godta / Endre pris)
 /// for mottakeren.
 struct OfferMessageBubble: View {
     let metadata: OfferMetadata
@@ -9,6 +9,10 @@ struct OfferMessageBubble: View {
     let isFromMe: Bool
     /// True hvis dette er det aktive tilbudet i forhandlingen (current_offer_id).
     let isActive: Bool
+    /// Hvilken rolle den innloggede har i denne samtalen ("host" eller "guest").
+    /// Brukes til å rendre riktig accept-label — host godtar uten å betale,
+    /// gjest betaler ved aksept.
+    let viewerRole: String?
     /// Handlinger — bare relevant når tilbudet er aktivt og isFromMe == false.
     let onAccept: (() -> Void)?
     let onCounter: (() -> Void)?
@@ -76,7 +80,7 @@ struct OfferMessageBubble: View {
     private var actionButtons: some View {
         VStack(spacing: 8) {
             Button(action: { onAccept?() }) {
-                Text("Godta og betal")
+                Text(acceptLabel)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -87,7 +91,7 @@ struct OfferMessageBubble: View {
 
             HStack(spacing: 8) {
                 Button(action: { onCounter?() }) {
-                    Text("Send motbud")
+                    Text("Endre pris")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.neutral900)
                         .frame(maxWidth: .infinity)
@@ -110,6 +114,12 @@ struct OfferMessageBubble: View {
                 }
             }
         }
+    }
+
+    /// "Godta og betal" for gjest (gjest betaler ved aksept), "Godta forespørselen"
+    /// for host (host trigger payment-flyt hos gjest, betaler ikke selv).
+    private var acceptLabel: String {
+        viewerRole == "host" ? "Godta forespørselen" : "Godta og betal"
     }
 
     private var statusBadge: some View {

@@ -15,7 +15,7 @@ struct ChatView: View {
     @State private var showListingDetail = false
     @State private var showOpplysninger = false
     @State private var showQuickReplies = false
-    @State private var showHostProfile = false
+    @State private var showOtherProfile = false
     @State private var conversationDetails: ConversationDetails?
     @State private var bookingState: BookingNegotiationState?
     @State private var actionToast: String?
@@ -94,6 +94,26 @@ struct ChatView: View {
 
     private var currentUserId: String {
         authManager.currentUser?.id.uuidString.lowercased() ?? ""
+    }
+
+    /// "host" hvis innlogget bruker er utleier i denne samtalen, "guest" ellers.
+    /// Bruker booking-state først (kommer fra DB med riktig host_id), faller
+    /// tilbake til conversationDetails for støtte-chats / pre-booking.
+    private var viewerRole: String? {
+        if let hostId = bookingState?.hostId {
+            return hostId.lowercased() == currentUserId ? "host" : "guest"
+        }
+        if let details = conversationDetails {
+            return details.hostId.lowercased() == currentUserId ? "host" : "guest"
+        }
+        return nil
+    }
+
+    /// User-id til den andre parten i samtalen (motstykket til currentUserId).
+    /// nil for support-chat eller før conversationDetails er lastet.
+    private var otherPartyId: String? {
+        guard let d = conversationDetails else { return nil }
+        return d.hostId.lowercased() == currentUserId ? d.guestId : d.hostId
     }
 
     var body: some View {
@@ -260,7 +280,7 @@ struct ChatView: View {
                 onShowHostProfile: {
                     showOpplysninger = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        showHostProfile = true
+                        showOtherProfile = true
                     }
                 },
                 onMarkUnread: {
@@ -315,13 +335,19 @@ struct ChatView: View {
             )
             .presentationDetents([.medium, .large])
         }
-        .sheet(isPresented: $showHostProfile) {
-            if let hostId = conversationDetails?.hostId {
+        .sheet(isPresented: $showOtherProfile) {
+            // Den andre parten i samtalen — host hvis viewer er guest,
+            // guest hvis viewer er host. PublicProfileView's `hostId`-prop
+            // er bare et "userId"-felt og funker for begge roller.
+            if let otherId = otherPartyId {
+                let isOtherTheHost = conversationDetails.map { $0.hostId.lowercased() != currentUserId } ?? false
                 PublicProfileView(
-                    hostId: hostId,
-                    initialName: conversationDetails?.hostName,
-                    initialAvatar: conversationDetails?.hostAvatar,
-                    initialJoinedYear: conversationDetails?.hostJoinedYear,
+                    hostId: otherId,
+                    initialName: otherUserName,
+                    initialAvatar: conversationDetails?.otherAvatar,
+                    // hostJoinedYear gjelder annonse-host. Pre-fyll bare
+                    // når vi vet other = host (dvs. viewer er guest).
+                    initialJoinedYear: isOtherTheHost ? conversationDetails?.hostJoinedYear : nil,
                     initialListingsCount: nil
                 )
             }
@@ -420,6 +446,7 @@ struct ChatView: View {
                 metadata: metadata,
                 isFromMe: isMe,
                 isActive: isActive,
+                viewerRole: viewerRole,
                 onAccept: isActive && !isMe ? { Task { await acceptOffer(metadata: metadata) } } : nil,
                 onCounter: isActive && !isMe ? { openCounterSheet(metadata: metadata) } : nil,
                 onDecline: isActive && !isMe ? { Task { await declineOffer() } } : nil
@@ -568,35 +595,43 @@ struct ChatView: View {
                         .foregroundStyle(.neutral500)
                         .lineLimit(1)
                 } else {
-                    HStack(spacing: 0) {
-                        if let avatar = conversationDetails?.otherAvatar, let url = URL(string: avatar) {
-                            CachedAsyncImage(url: url) { image in
-                                image.resizable().aspectRatio(contentMode: .fill)
-                            } placeholder: { avatarPlaceholder }
-                            .frame(width: 28, height: 28)
-                            .clipShape(Circle())
-                        } else {
-                            avatarPlaceholder
-                                .frame(width: 28, height: 28)
-                                .clipShape(Circle())
+                    Button {
+                        if otherPartyId != nil { showOtherProfile = true }
+                    } label: {
+                        VStack(spacing: 2) {
+                            HStack(spacing: 0) {
+                                if let avatar = conversationDetails?.otherAvatar, let url = URL(string: avatar) {
+                                    CachedAsyncImage(url: url) { image in
+                                        image.resizable().aspectRatio(contentMode: .fill)
+                                    } placeholder: { avatarPlaceholder }
+                                    .frame(width: 28, height: 28)
+                                    .clipShape(Circle())
+                                } else {
+                                    avatarPlaceholder
+                                        .frame(width: 28, height: 28)
+                                        .clipShape(Circle())
+                                }
+                            }
+
+                            Text(otherUserName)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.neutral900)
+
+                            if let details = conversationDetails, let dates = details.bookingDates {
+                                Text("\(dates) · \(listingTitle)")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.neutral500)
+                                    .lineLimit(1)
+                            } else if !listingTitle.isEmpty {
+                                Text(listingTitle)
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.neutral500)
+                                    .lineLimit(1)
+                            }
                         }
                     }
-
-                    Text(otherUserName)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-
-                    if let details = conversationDetails, let dates = details.bookingDates {
-                        Text("\(dates) · \(listingTitle)")
-                            .font(.system(size: 11))
-                            .foregroundStyle(.neutral500)
-                            .lineLimit(1)
-                    } else if !listingTitle.isEmpty {
-                        Text(listingTitle)
-                            .font(.system(size: 11))
-                            .foregroundStyle(.neutral500)
-                            .lineLimit(1)
-                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Rectangle())
                 }
             }
             .frame(maxWidth: .infinity)

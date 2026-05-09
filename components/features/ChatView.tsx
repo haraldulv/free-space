@@ -306,6 +306,11 @@ export default function ChatView({
                   metadata={msg.metadata}
                   isFromMe={isOwn}
                   isActive={isActive}
+                  viewerRole={
+                    bookingState?.hostId
+                      ? bookingState.hostId === currentUserId ? "host" : "guest"
+                      : null
+                  }
                   onAccept={isActive && !isOwn ? () => acceptOffer(msg.metadata!) : undefined}
                   onCounter={isActive && !isOwn ? () => openCounter(msg.metadata!) : undefined}
                   onDecline={isActive && !isOwn ? () => declineOffer() : undefined}

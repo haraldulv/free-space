@@ -1,7 +1,9 @@
 import SwiftUI
 
-/// Sheet hvor en part skriver et motbud — pris (og evt. valgfri begrunnelse).
-/// Datoer/spots/extras arves fra forrige tilbud serverside.
+/// Sheet hvor en part endrer prisen i en forhandling — pris (og evt. valgfri
+/// begrunnelse). Datoer/spots/extras arves fra forrige tilbud serverside.
+/// Bruker `KrStepper` (samme +/- input som resten av appen) for at det skal
+/// være enkelt å justere prisen i klare trinn, men også kunne taste fritt.
 struct CounterOfferSheet: View {
     let bookingId: String
     let currentOfferPrice: Int
@@ -12,19 +14,13 @@ struct CounterOfferSheet: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var bookingService = BookingService()
 
-    @State private var priceText: String = ""
+    @State private var proposedPrice: Int?
     @State private var note: String = ""
     @State private var sending = false
     @State private var errorMessage: String?
 
-    private var priceValue: Int? {
-        let cleaned = priceText.replacingOccurrences(of: " ", with: "")
-            .replacingOccurrences(of: "kr", with: "")
-        return Int(cleaned)
-    }
-
     private var canSend: Bool {
-        guard let p = priceValue else { return false }
+        guard let p = proposedPrice else { return false }
         return p >= 3 && !sending
     }
 
@@ -46,21 +42,19 @@ struct CounterOfferSheet: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Ditt motbud")
+                        Text("Ny pris")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(.neutral700)
-                        HStack(spacing: 8) {
-                            TextField("F.eks. \(currentOfferPrice)", text: $priceText)
-                                .keyboardType(.numberPad)
-                                .font(.system(size: 18, weight: .semibold))
-                                .padding(.vertical, 12)
-                                .padding(.horizontal, 14)
-                                .background(Color.neutral50)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
-                            Text("kr")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.neutral500)
-                        }
+                        KrStepper(
+                            value: $proposedPrice,
+                            step: 50,
+                            minValue: 0,
+                            unitLabel: "kr",
+                            placeholder: "\(currentOfferPrice)"
+                        )
+                        Text("Justeres i trinn på 50 kr — eller tap tallet for å skrive selv.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral500)
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -89,7 +83,7 @@ struct CounterOfferSheet: View {
                                 ProgressView()
                                     .tint(.white)
                             } else {
-                                Text("Send motbud")
+                                Text("Send forslag")
                                     .font(.system(size: 15, weight: .semibold))
                             }
                         }
@@ -103,18 +97,21 @@ struct CounterOfferSheet: View {
                 }
                 .padding(20)
             }
-            .navigationTitle("Send motbud")
+            .navigationTitle("Endre pris")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Avbryt") { dismiss() }
                 }
             }
+            .onAppear {
+                if proposedPrice == nil { proposedPrice = currentOfferPrice }
+            }
         }
     }
 
     private func send() async {
-        guard let p = priceValue else { return }
+        guard let p = proposedPrice else { return }
         sending = true
         errorMessage = nil
 
@@ -132,7 +129,7 @@ struct CounterOfferSheet: View {
             onSent()
             dismiss()
         } else {
-            errorMessage = bookingService.error ?? "Kunne ikke sende motbud"
+            errorMessage = bookingService.error ?? "Kunne ikke sende forslag"
         }
     }
 }

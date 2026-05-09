@@ -10,6 +10,8 @@ interface OfferMessageBubbleProps {
   isFromMe: boolean;
   /** True hvis dette er current_offer_id (siste aktive tilbud). */
   isActive: boolean;
+  /** Hvilken rolle den innloggede har i denne samtalen. Brukes for accept-label. */
+  viewerRole?: "host" | "guest" | null;
   onAccept?: () => void;
   onCounter?: () => void;
   onDecline?: () => void;
@@ -19,6 +21,7 @@ export default function OfferMessageBubble({
   metadata,
   isFromMe,
   isActive,
+  viewerRole,
   onAccept,
   onCounter,
   onDecline,
@@ -34,6 +37,8 @@ export default function OfferMessageBubble({
         : "Tilbud";
 
   const opposingPartyLabel = metadata.proposedByRole === "host" ? "gjest" : "utleier";
+  // Host godtar uten å betale (gjest betaler etterpå); gjest betaler ved aksept.
+  const acceptLabel = viewerRole === "host" ? "Godta forespørselen" : "Godta og betal";
 
   return (
     <div
@@ -77,14 +82,14 @@ export default function OfferMessageBubble({
             onClick={onAccept}
             className="w-full rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 transition-colors"
           >
-            Godta og betal
+            {acceptLabel}
           </button>
           <div className="flex gap-2">
             <button
               onClick={onCounter}
               className="flex-1 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-900 hover:bg-neutral-50 transition-colors"
             >
-              Send motbud
+              Endre pris
             </button>
             <button
               onClick={onDecline}
