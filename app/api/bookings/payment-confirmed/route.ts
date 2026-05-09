@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, user_id, host_id, status, payment_intent_id, total_price, listing:listing_id(title)")
+      .select("id, user_id, host_id, status, payment_intent_id, total_price, current_offer_id, listing:listing_id(title)")
       .eq("id", bookingId)
       .single();
     if (!booking) {
@@ -50,7 +50,9 @@ export async function POST(request: NextRequest) {
     if (booking.status === "confirmed") {
       return NextResponse.json({ status: "confirmed", alreadyProcessed: true });
     }
-    if (booking.status !== "awaiting_payment") {
+    // Atomisk gjest-aksept beholder awaiting_guest til betaling fullført.
+    // Host-aksept setter awaiting_payment. Begge er gyldige overganger.
+    if (!["awaiting_payment", "awaiting_guest"].includes(booking.status)) {
       return NextResponse.json({ error: "Bestillingen er ikke klar for betaling" }, { status: 400 });
     }
     if (!booking.payment_intent_id) {
@@ -72,6 +74,16 @@ export async function POST(request: NextRequest) {
         payment_deadline: null,
       })
       .eq("id", bookingId);
+
+    // Marker eventuelt aksepterte offer som accepted (atomic gjest-flow lar
+    // offer stå 'pending' frem til betaling fullføres).
+    if (booking.current_offer_id) {
+      await supabase
+        .from("booking_offers")
+        .update({ status: "accepted" })
+        .eq("id", booking.current_offer_id)
+        .eq("status", "pending");
+    }
 
     // Post system-melding i chat.
     const { data: convo } = await supabase

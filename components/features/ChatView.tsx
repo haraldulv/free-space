@@ -49,6 +49,7 @@ export default function ChatView({
     currentOfferLabel: string;
   } | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [accepting, setAccepting] = useState(false);
 
   useEffect(() => {
     getMessages(conversationId).then((msgs) => {
@@ -90,7 +91,7 @@ export default function ChatView({
       const supabase = createSupabaseClient();
       const { data, error } = await supabase
         .from("bookings")
-        .select("id, user_id, host_id, status, current_offer_id, total_price")
+        .select("id, user_id, host_id, status, current_offer_id, total_price, payment_intent_id")
         .eq("listing_id", listingId)
         .or(`user_id.eq.${currentUserId},host_id.eq.${currentUserId}`)
         .in("status", ["awaiting_host", "awaiting_guest", "awaiting_payment", "requested", "confirmed", "expired", "declined", "cancelled"])
@@ -108,6 +109,7 @@ export default function ChatView({
         userId: data.user_id,
         hostId: data.host_id,
         totalPrice: data.total_price,
+        paymentIntentId: data.payment_intent_id,
         isNegotiating: ["awaiting_host", "awaiting_guest", "awaiting_payment", "requested"].includes(data.status),
       });
     } catch (err) {
@@ -123,6 +125,7 @@ export default function ChatView({
   const acceptOffer = async (metadata: OfferMessageMetadata) => {
     if (!metadata.bookingId || !metadata.offerId) return;
     setActionError(null);
+    setAccepting(true);
     try {
       const supabase = createSupabaseClient();
       const { data: { session } } = await supabase.auth.getSession();
@@ -143,8 +146,8 @@ export default function ChatView({
         setActionError(json.error || "Kunne ikke godta tilbudet");
         return;
       }
-      // Hvis gjest godtok, har vi clientSecret + skal redirecte til betalings-side.
-      // Hvis host godtok, returneres bare status — gjest får push og må fullføre selv.
+      // Atomisk gjest-flyt eller idempotent retry: redirect til /book/payment
+      // med eksisterende eller nyopprettet clientSecret.
       if (json.acceptorRole === "guest" && json.clientSecret && json.bookingId) {
         const params = new URLSearchParams({
           bookingId: json.bookingId,
@@ -157,7 +160,20 @@ export default function ChatView({
       await Promise.all([reloadMessages(), reloadBookingState()]);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : "Noe gikk galt");
+    } finally {
+      setAccepting(false);
     }
+  };
+
+  /// Banner-tap når status=awaiting_payment (eller atomic awaiting_guest + PI).
+  /// Gjenbruker accept-API idempotent for å hente eksisterende clientSecret.
+  const resumePayment = async () => {
+    if (!bookingState?.bookingId || !bookingState.currentOfferId) return;
+    await acceptOffer({
+      bookingId: bookingState.bookingId,
+      offerId: bookingState.currentOfferId,
+      totalPrice: bookingState.totalPrice,
+    } as OfferMessageMetadata);
   };
 
   const declineOffer = async () => {
@@ -287,7 +303,12 @@ export default function ChatView({
       </div>
 
       {bookingState && bookingState.isNegotiating && (
-        <NegotiationBanner state={bookingState} userId={currentUserId} />
+        <NegotiationBanner
+          state={bookingState}
+          userId={currentUserId}
+          accepting={accepting}
+          onResumePayment={resumePayment}
+        />
       )}
 
       <div ref={messagesContainerRef} className="flex-1 overflow-y-auto p-4 space-y-3">
@@ -311,6 +332,8 @@ export default function ChatView({
                       ? bookingState.hostId === currentUserId ? "host" : "guest"
                       : null
                   }
+                  awaitingPayment={isAwaitingPayment(bookingState)}
+                  accepting={accepting}
                   onAccept={isActive && !isOwn ? () => acceptOffer(msg.metadata!) : undefined}
                   onCounter={isActive && !isOwn ? () => openCounter(msg.metadata!) : undefined}
                   onDecline={isActive && !isOwn ? () => declineOffer() : undefined}
@@ -392,17 +415,42 @@ interface NegotiationState {
   userId: string;
   hostId: string | null;
   totalPrice: number;
+  /// Settes når server har opprettet PaymentIntent. For atomisk gjest-flow
+  /// betyr det at gjest har trigget accept (kanskje avbrutt påfølgende betaling).
+  paymentIntentId: string | null;
   isNegotiating: boolean;
 }
 
-function NegotiationBanner({ state, userId }: { state: NegotiationState; userId: string }) {
+/// True når banneret skal vise "Fullfør betalingen". Dekker både host-aksept
+/// (status = awaiting_payment) og atomisk gjest-flow hvor gjest har trigget
+/// PI men ikke betalt enda (awaiting_guest + PI).
+function isAwaitingPayment(state: NegotiationState | null): boolean {
+  if (!state) return false;
+  if (state.status === "awaiting_payment") return true;
+  if (state.status === "awaiting_guest" && state.paymentIntentId) return true;
+  return false;
+}
+
+function NegotiationBanner({
+  state,
+  userId,
+  accepting,
+  onResumePayment,
+}: {
+  state: NegotiationState;
+  userId: string;
+  accepting: boolean;
+  onResumePayment: () => void;
+}) {
+  const awaitingPayment = isAwaitingPayment(state);
+
   const isMyTurn = (() => {
+    if (awaitingPayment) return state.userId === userId;
     switch (state.status) {
       case "awaiting_host":
       case "requested":
         return state.hostId === userId;
       case "awaiting_guest":
-      case "awaiting_payment":
         return state.userId === userId;
       default:
         return false;
@@ -410,31 +458,48 @@ function NegotiationBanner({ state, userId }: { state: NegotiationState; userId:
   })();
 
   const text = (() => {
+    if (awaitingPayment) {
+      return isMyTurn ? "Fullfør betalingen" : "Venter på at gjest betaler";
+    }
     switch (state.status) {
       case "awaiting_host":
       case "requested":
         return isMyTurn ? "Din tur å svare på forespørselen" : "Venter på utleier";
       case "awaiting_guest":
-        return isMyTurn ? "Din tur å svare på motbudet" : "Venter på gjest";
-      case "awaiting_payment":
-        return isMyTurn ? "Fullfør betalingen" : "Venter på at gjest betaler";
+        return isMyTurn ? "Din tur å svare på prisforslaget" : "Venter på gjest";
       default:
         return "";
     }
   })();
 
-  const isPaymentPending = state.status === "awaiting_payment";
-  const Icon = isPaymentPending ? CreditCard : isMyTurn ? Bell : Hourglass;
-  const colorClasses = isPaymentPending
+  const Icon = awaitingPayment ? CreditCard : isMyTurn ? Bell : Hourglass;
+  const colorClasses = awaitingPayment
     ? "bg-amber-50 border-b-amber-200 text-amber-900"
     : isMyTurn
       ? "bg-primary-50 border-b-primary-200 text-primary-900"
       : "bg-neutral-50 border-b-neutral-200 text-neutral-700";
 
+  const canResume = isMyTurn && awaitingPayment;
+  const displayText = accepting && canResume ? "Forbereder betaling…" : text;
+
+  if (canResume) {
+    return (
+      <button
+        onClick={onResumePayment}
+        disabled={accepting}
+        className={`flex w-full items-center gap-2.5 border-b px-4 py-2.5 text-left transition-colors hover:brightness-95 disabled:opacity-60 ${colorClasses}`}
+      >
+        <Icon className="h-4 w-4 shrink-0" />
+        <span className="flex-1 text-sm font-semibold">{displayText}</span>
+        <span className="text-sm font-bold">{state.totalPrice.toLocaleString("nb-NO")} kr</span>
+      </button>
+    );
+  }
+
   return (
     <div className={`flex items-center gap-2.5 border-b px-4 py-2.5 ${colorClasses}`}>
       <Icon className="h-4 w-4 shrink-0" />
-      <span className="flex-1 text-sm font-semibold">{text}</span>
+      <span className="flex-1 text-sm font-semibold">{displayText}</span>
       <span className="text-sm font-bold">{state.totalPrice.toLocaleString("nb-NO")} kr</span>
     </div>
   );

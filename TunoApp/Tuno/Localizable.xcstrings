@@ -1532,9 +1532,6 @@
         }
       }
     },
-    "Ditt motbud" : {
-
-    },
     "Dra og slipp for å endre rekkefølge. Bildet lengst til venstre er forsidebildet." : {
 
     },
@@ -1844,6 +1841,9 @@
       }
     },
     "eller med e-post" : {
+
+    },
+    "Endre pris" : {
 
     },
     "Endringene dine blir ikke lagret." : {
@@ -2752,9 +2752,6 @@
         }
       }
     },
-    "Godta og betal" : {
-
-    },
     "Google" : {
 
     },
@@ -3464,6 +3461,9 @@
       }
     },
     "Juridisk" : {
+
+    },
+    "Justeres i trinn på 50 kr — eller tap tallet for å skrive selv." : {
 
     },
     "Kajakk" : {
@@ -4918,6 +4918,9 @@
         }
       }
     },
+    "Ny pris" : {
+
+    },
     "Nylige søk" : {
 
     },
@@ -5960,6 +5963,9 @@
     "Send forespørsel" : {
 
     },
+    "Send forslag" : {
+
+    },
     "Send melding til utleier" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5976,9 +5982,6 @@
           }
         }
       }
-    },
-    "Send motbud" : {
-
     },
     "Send tilbakestillingslenke" : {
       "extractionState" : "manual",

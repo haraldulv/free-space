@@ -12,6 +12,10 @@ interface OfferMessageBubbleProps {
   isActive: boolean;
   /** Hvilken rolle den innloggede har i denne samtalen. Brukes for accept-label. */
   viewerRole?: "host" | "guest" | null;
+  /** True når booking har trigget PaymentIntent — skjuler accept/endre/avslå. */
+  awaitingPayment?: boolean;
+  /** True mens accept-API-kallet pågår — viser spinner i Godta-knappen. */
+  accepting?: boolean;
   onAccept?: () => void;
   onCounter?: () => void;
   onDecline?: () => void;
@@ -22,6 +26,8 @@ export default function OfferMessageBubble({
   isFromMe,
   isActive,
   viewerRole,
+  awaitingPayment = false,
+  accepting = false,
   onAccept,
   onCounter,
   onDecline,
@@ -76,24 +82,31 @@ export default function OfferMessageBubble({
         </span>
       ) : isFromMe ? (
         <p className="text-xs text-neutral-500">Venter på svar fra {opposingPartyLabel}</p>
-      ) : (
+      ) : awaitingPayment ? null : (
         <div className="flex flex-col gap-2">
           <button
             onClick={onAccept}
-            className="w-full rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 transition-colors"
+            disabled={accepting}
+            className="w-full rounded-lg bg-primary-600 px-3 py-2 text-sm font-semibold text-white hover:bg-primary-700 disabled:opacity-70 transition-colors flex items-center justify-center"
           >
-            {acceptLabel}
+            {accepting ? (
+              <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" />
+            ) : (
+              acceptLabel
+            )}
           </button>
           <div className="flex gap-2">
             <button
               onClick={onCounter}
-              className="flex-1 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-900 hover:bg-neutral-50 transition-colors"
+              disabled={accepting}
+              className="flex-1 rounded-lg border border-neutral-300 px-3 py-1.5 text-xs font-semibold text-neutral-900 hover:bg-neutral-50 disabled:opacity-50 transition-colors"
             >
               Endre pris
             </button>
             <button
               onClick={onDecline}
-              className="flex-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 transition-colors"
+              disabled={accepting}
+              className="flex-1 rounded-lg border border-red-200 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
             >
               Avslå
             </button>

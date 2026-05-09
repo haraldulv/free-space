@@ -23,6 +23,7 @@ struct ChatView: View {
     @State private var showPaymentSheet = false
     @State private var paymentClientSecret: String?
     @State private var paymentBookingId: String?
+    @State private var accepting = false
     @StateObject private var bookingService = BookingService()
     @FocusState private var isInputFocused: Bool
     @Environment(\.dismiss) private var dismiss
@@ -35,46 +36,59 @@ struct ChatView: View {
         let userId: String  // gjest
         let hostId: String?
         let totalPrice: Int
+        /// Settes når server har opprettet PaymentIntent. For atomic gjest-flow
+        /// betyr det at gjest har tappet accept (kanskje avbrutt påfølgende
+        /// payment-sheet); booking forblir awaiting_guest til payment-confirmed.
+        let paymentIntentId: String?
 
         var isNegotiating: Bool {
             ["awaiting_host", "awaiting_guest", "awaiting_payment", "requested"].contains(status)
         }
 
+        /// True når banneret skal vise "Fullfør betalingen". Dekker både
+        /// host-aksept-flyten (status = awaiting_payment) og atomic gjest-flow
+        /// hvor gjest har trigget PI men ikke betalt enda (awaiting_guest + PI).
+        var isAwaitingPayment: Bool {
+            if status == "awaiting_payment" { return true }
+            if status == "awaiting_guest" && paymentIntentId != nil { return true }
+            return false
+        }
+
         func isMyTurn(userId: String) -> Bool {
+            if isAwaitingPayment { return self.userId == userId }
             switch status {
             case "awaiting_host", "requested":
                 return hostId == userId
             case "awaiting_guest":
                 return self.userId == userId
-            case "awaiting_payment":
-                return self.userId == userId  // gjest skal betale
             default:
                 return false
             }
         }
 
         func bannerText(isMyTurn: Bool) -> String {
+            if isAwaitingPayment {
+                return isMyTurn ? "Fullfør betalingen" : "Venter på at gjest betaler"
+            }
             switch status {
             case "awaiting_host", "requested":
                 return isMyTurn ? "Din tur å svare på forespørselen" : "Venter på utleier"
             case "awaiting_guest":
-                return isMyTurn ? "Din tur å svare på motbudet" : "Venter på gjest"
-            case "awaiting_payment":
-                return isMyTurn ? "Fullfør betalingen" : "Venter på at gjest betaler"
+                return isMyTurn ? "Din tur å svare på prisforslaget" : "Venter på gjest"
             default:
                 return ""
             }
         }
 
         func bannerIcon(isMyTurn: Bool) -> String {
-            if status == "awaiting_payment" {
+            if isAwaitingPayment {
                 return isMyTurn ? "creditcard.fill" : "hourglass"
             }
             return isMyTurn ? "bell.fill" : "hourglass"
         }
 
         func bannerColor(isMyTurn: Bool) -> Color {
-            if status == "awaiting_payment" {
+            if isAwaitingPayment {
                 return Color(hex: "#f59e0b")  // oransje
             }
             return isMyTurn ? Color.primary600 : Color(hex: "#6b7280")
@@ -271,6 +285,9 @@ struct ChatView: View {
                 listingImage: listingImage,
                 listingTitle: listingTitle,
                 listingId: listingId,
+                partnerName: otherUserName,
+                partnerAvatar: conversationDetails?.otherAvatar,
+                partnerRoleLabel: viewerRole == "host" ? "Gjest" : "Vert",
                 onShowListing: {
                     showOpplysninger = false
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
@@ -403,28 +420,55 @@ struct ChatView: View {
     private var negotiationBanner: some View {
         if let state = bookingState, state.isNegotiating {
             let isMyTurn = state.isMyTurn(userId: currentUserId)
-            HStack(spacing: 10) {
+            // Banneret er tappable for gjest når status=awaiting_payment (eller
+            // atomisk awaiting_guest med PI). Tap åpner payment-sheet på nytt.
+            let canResumePayment = isMyTurn && state.isAwaitingPayment
+            if canResumePayment {
+                Button {
+                    Task { await resumePayment() }
+                } label: {
+                    bannerContent(state: state, isMyTurn: isMyTurn)
+                }
+                .buttonStyle(.plain)
+                .disabled(accepting)
+            } else {
+                bannerContent(state: state, isMyTurn: isMyTurn)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func bannerContent(state: BookingNegotiationState, isMyTurn: Bool) -> some View {
+        HStack(spacing: 10) {
+            if accepting && state.isAwaitingPayment && isMyTurn {
+                ProgressView()
+                    .controlSize(.small)
+                    .tint(state.bannerColor(isMyTurn: isMyTurn))
+                    .frame(width: 14, height: 14)
+            } else {
                 Image(systemName: state.bannerIcon(isMyTurn: isMyTurn))
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(state.bannerColor(isMyTurn: isMyTurn))
-                Text(state.bannerText(isMyTurn: isMyTurn))
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                Spacer()
-                Text("\(state.totalPrice.formatted(.number.locale(Locale(identifier: "nb_NO")))) kr")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.neutral900)
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(state.bannerColor(isMyTurn: isMyTurn).opacity(0.08))
-            .overlay(
-                Rectangle()
-                    .frame(height: 1)
-                    .foregroundStyle(state.bannerColor(isMyTurn: isMyTurn).opacity(0.2)),
-                alignment: .bottom
-            )
+            Text(accepting && state.isAwaitingPayment && isMyTurn
+                 ? "Forbereder betaling…"
+                 : state.bannerText(isMyTurn: isMyTurn))
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral900)
+            Spacer()
+            Text("\(state.totalPrice.formatted(.number.locale(Locale(identifier: "nb_NO")))) kr")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.neutral900)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(state.bannerColor(isMyTurn: isMyTurn).opacity(0.08))
+        .overlay(
+            Rectangle()
+                .frame(height: 1)
+                .foregroundStyle(state.bannerColor(isMyTurn: isMyTurn).opacity(0.2)),
+            alignment: .bottom
+        )
     }
 
     // MARK: - Offer + system message rows
@@ -447,6 +491,8 @@ struct ChatView: View {
                 isFromMe: isMe,
                 isActive: isActive,
                 viewerRole: viewerRole,
+                awaitingPayment: bookingState?.isAwaitingPayment ?? false,
+                accepting: accepting,
                 onAccept: isActive && !isMe ? { Task { await acceptOffer(metadata: metadata) } } : nil,
                 onCounter: isActive && !isMe ? { openCounterSheet(metadata: metadata) } : nil,
                 onDecline: isActive && !isMe ? { Task { await declineOffer() } } : nil
@@ -487,10 +533,11 @@ struct ChatView: View {
                 let status: String
                 let current_offer_id: String?
                 let total_price: Int
+                let payment_intent_id: String?
             }
             let rows: [BookingRow] = try await supabase
                 .from("bookings")
-                .select("id, user_id, host_id, status, current_offer_id, total_price")
+                .select("id, user_id, host_id, status, current_offer_id, total_price, payment_intent_id")
                 .eq("listing_id", value: listingId)
                 .or("user_id.eq.\(currentUserId),host_id.eq.\(currentUserId)")
                 .in("status", values: ["awaiting_host", "awaiting_guest", "awaiting_payment", "requested", "confirmed", "expired", "declined", "cancelled"])
@@ -505,7 +552,8 @@ struct ChatView: View {
                     currentOfferId: row.current_offer_id,
                     userId: row.user_id,
                     hostId: row.host_id,
-                    totalPrice: row.total_price
+                    totalPrice: row.total_price,
+                    paymentIntentId: row.payment_intent_id
                 )
             }
         } catch {
@@ -517,25 +565,54 @@ struct ChatView: View {
 
     private func acceptOffer(metadata: OfferMetadata) async {
         guard let bookingId = metadata.bookingId, let offerId = metadata.offerId else { return }
+        accepting = true
+        defer { accepting = false }
+
         let payload = BookingService.AcceptPayload(bookingId: bookingId, offerId: offerId)
         let response = await bookingService.acceptOffer(payload: payload)
 
-        guard response?.status == "awaiting_payment" else {
+        guard let resp = response else {
             flashToast(bookingService.error ?? "Kunne ikke godta tilbudet")
             return
         }
 
-        // Hvis det er gjest som godtok, åpne PaymentSheet umiddelbart.
-        // Host får retur-data med samme felter, men trigger ikke PaymentSheet selv.
-        if response?.acceptorRole == "guest", let secret = response?.clientSecret {
+        // Atomisk gjest-flyt eller idempotent retry: åpne payment-sheet
+        // med en gang vi har clientSecret (uavhengig av om status er
+        // awaiting_guest eller awaiting_payment).
+        if resp.acceptorRole == "guest", let secret = resp.clientSecret {
             paymentClientSecret = secret
             paymentBookingId = bookingId
             showPaymentSheet = true
-        } else {
+        } else if resp.acceptorRole == "host" {
             flashToast("Godtatt — venter på betaling")
         }
         await chatService.loadMessages(conversationId: conversationId)
         await loadBookingState()
+    }
+
+    /// Brukes når banneret "Fullfør betalingen" tappes — gjenbruker accept-API
+    /// idempotent for å hente eksisterende clientSecret og åpne payment-sheet.
+    private func resumePayment() async {
+        guard let state = bookingState,
+              let offerId = state.currentOfferId else {
+            flashToast("Ingen aktiv forhandling")
+            return
+        }
+        let metadata = OfferMetadata(
+            offerId: offerId,
+            bookingId: state.bookingId,
+            totalPrice: state.totalPrice,
+            checkIn: nil,
+            checkOut: nil,
+            proposedByRole: nil,
+            round: nil,
+            expiresAt: nil,
+            paymentDeadline: nil,
+            acceptorRole: nil,
+            declinedBy: nil,
+            reason: nil
+        )
+        await acceptOffer(metadata: metadata)
     }
 
     private func declineOffer() async {
@@ -921,6 +998,13 @@ struct OpplysningerSheet: View {
     let listingImage: String?
     let listingTitle: String
     let listingId: String?
+    /// Navn på den andre parten i samtalen (gjest hvis viewer er host, host hvis
+    /// viewer er gjest). Kalkulert i ChatView fra otherUserName-prop.
+    let partnerName: String
+    /// Den andre partens avatar.
+    let partnerAvatar: String?
+    /// Rolle-label for den andre parten ("Vert" eller "Gjest").
+    let partnerRoleLabel: String
     let onShowListing: () -> Void
     let onShowHostProfile: () -> Void
     let onMarkUnread: () -> Void
@@ -990,7 +1074,7 @@ struct OpplysningerSheet: View {
                             Button(action: onShowHostProfile) {
                                 HStack(spacing: 12) {
                                     Group {
-                                        if let url = URL(string: details.hostAvatar ?? "") {
+                                        if let url = URL(string: partnerAvatar ?? "") {
                                             CachedAsyncImage(url: url) { image in
                                                 image.resizable().aspectRatio(contentMode: .fill)
                                             } placeholder: {
@@ -1004,10 +1088,10 @@ struct OpplysningerSheet: View {
                                     .clipShape(Circle())
 
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(details.hostName ?? "Utleier")
+                                        Text(partnerName)
                                             .font(.system(size: 14, weight: .semibold))
                                             .foregroundStyle(.neutral900)
-                                        Text("Vert")
+                                        Text(partnerRoleLabel)
                                             .font(.system(size: 12))
                                             .foregroundStyle(.neutral500)
                                     }

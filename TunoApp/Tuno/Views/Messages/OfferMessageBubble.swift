@@ -13,6 +13,12 @@ struct OfferMessageBubble: View {
     /// Brukes til å rendre riktig accept-label — host godtar uten å betale,
     /// gjest betaler ved aksept.
     let viewerRole: String?
+    /// True når booking har trigget PaymentIntent (atomisk gjest-aksept eller
+    /// host-aksept fullført). Skjuler accept/endre/avslå-knappene fordi den
+    /// videre handlingen er å betale via banneret.
+    let awaitingPayment: Bool
+    /// True mens accept-API-kallet pågår — viser ProgressView i Godta-knappen.
+    let accepting: Bool
     /// Handlinger — bare relevant når tilbudet er aktivt og isFromMe == false.
     let onAccept: (() -> Void)?
     let onCounter: (() -> Void)?
@@ -60,6 +66,10 @@ struct OfferMessageBubble: View {
                 Text("Venter på svar fra \(opposingPartyLabel)")
                     .font(.system(size: 12))
                     .foregroundStyle(.neutral500)
+            } else if awaitingPayment {
+                // Booking har en aktiv PaymentIntent — accept-knapper skjules,
+                // banner over chat-listen er kanalen videre.
+                EmptyView()
             } else {
                 actionButtons
             }
@@ -79,15 +89,24 @@ struct OfferMessageBubble: View {
     @ViewBuilder
     private var actionButtons: some View {
         VStack(spacing: 8) {
-            Button(action: { onAccept?() }) {
-                Text(acceptLabel)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.primary600)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+            Button(action: { if !accepting { onAccept?() } }) {
+                Group {
+                    if accepting {
+                        ProgressView()
+                            .controlSize(.small)
+                            .tint(.white)
+                    } else {
+                        Text(acceptLabel)
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(Color.primary600)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
             }
+            .disabled(accepting)
 
             HStack(spacing: 8) {
                 Button(action: { onCounter?() }) {
@@ -101,6 +120,7 @@ struct OfferMessageBubble: View {
                                 .stroke(Color.neutral300, lineWidth: 1)
                         )
                 }
+                .disabled(accepting)
                 Button(action: { onDecline?() }) {
                     Text("Avslå")
                         .font(.system(size: 13, weight: .semibold))
@@ -112,6 +132,7 @@ struct OfferMessageBubble: View {
                                 .stroke(Color.red.opacity(0.3), lineWidth: 1)
                         )
                 }
+                .disabled(accepting)
             }
         }
     }
