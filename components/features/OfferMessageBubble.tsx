@@ -12,8 +12,8 @@ interface OfferMessageBubbleProps {
   isActive: boolean;
   /** Hvilken rolle den innloggede har i denne samtalen. Brukes for accept-label. */
   viewerRole?: "host" | "guest" | null;
-  /** True når booking har trigget PaymentIntent — skjuler accept/endre/avslå. */
-  awaitingPayment?: boolean;
+  /** True når Godta/Endre/Avslå skal skjules — både ved aktiv betaling og terminale statuser. */
+  hideActions?: boolean;
   /** True mens accept-API-kallet pågår — viser spinner i Godta-knappen. */
   accepting?: boolean;
   onAccept?: () => void;
@@ -26,7 +26,7 @@ export default function OfferMessageBubble({
   isFromMe,
   isActive,
   viewerRole,
-  awaitingPayment = false,
+  hideActions = false,
   accepting = false,
   onAccept,
   onCounter,
@@ -82,7 +82,7 @@ export default function OfferMessageBubble({
         </span>
       ) : isFromMe ? (
         <p className="text-xs text-neutral-500">Venter på svar fra {opposingPartyLabel}</p>
-      ) : awaitingPayment ? null : (
+      ) : hideActions ? null : (
         <div className="flex flex-col gap-2">
           <button
             onClick={onAccept}

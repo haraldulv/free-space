@@ -13,10 +13,10 @@ struct OfferMessageBubble: View {
     /// Brukes til å rendre riktig accept-label — host godtar uten å betale,
     /// gjest betaler ved aksept.
     let viewerRole: String?
-    /// True når booking har trigget PaymentIntent (atomisk gjest-aksept eller
-    /// host-aksept fullført). Skjuler accept/endre/avslå-knappene fordi den
-    /// videre handlingen er å betale via banneret.
-    let awaitingPayment: Bool
+    /// True når Godta/Endre/Avslå skal skjules. Brukes både for awaiting_payment
+    /// (banneret er kanalen videre) og for terminale booking-statuser
+    /// (confirmed/cancelled/declined) der videre handling ikke gir mening.
+    let hideActions: Bool
     /// True mens accept-API-kallet pågår — viser ProgressView i Godta-knappen.
     let accepting: Bool
     /// Handlinger — bare relevant når tilbudet er aktivt og isFromMe == false.
@@ -66,9 +66,10 @@ struct OfferMessageBubble: View {
                 Text("Venter på svar fra \(opposingPartyLabel)")
                     .font(.system(size: 12))
                     .foregroundStyle(.neutral500)
-            } else if awaitingPayment {
-                // Booking har en aktiv PaymentIntent — accept-knapper skjules,
-                // banner over chat-listen er kanalen videre.
+            } else if hideActions {
+                // Booking er enten i awaiting_payment (banner viser videre vei)
+                // eller i en terminal status (confirmed/cancelled/declined).
+                // Knappene gir ikke mening lenger.
                 EmptyView()
             } else {
                 actionButtons

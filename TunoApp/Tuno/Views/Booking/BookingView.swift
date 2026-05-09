@@ -648,20 +648,28 @@ struct BookingView: View {
             }
             // Pre-fyll datoer/tidspunkter fra kartsøket — brukeren slipper å
             // skrive samme info to ganger. Bare når lokal state er null.
+            // Datoer i fortiden ignoreres (search-state kan være flere dager
+            // gammel) — ellers ender brukeren med en ugyldig pre-valgt dato
+            // som kalenderen forhindrer å bruke.
             let ctx = SearchContextStore.shared
-            if checkIn == nil, let storedIn = ctx.checkIn { checkIn = storedIn }
-            if checkOut == nil, let storedOut = ctx.checkOut { checkOut = storedOut }
+            let today = Calendar.current.startOfDay(for: Date())
+            let validStoredIn: Date? = ctx.checkIn.flatMap { Calendar.current.startOfDay(for: $0) >= today ? $0 : nil }
+            let validStoredOut: Date? = ctx.checkOut.flatMap { Calendar.current.startOfDay(for: $0) >= today ? $0 : nil }
+            if checkIn == nil, let storedIn = validStoredIn { checkIn = storedIn }
+            if checkOut == nil, let storedOut = validStoredOut, let ci = checkIn, storedOut > ci {
+                checkOut = storedOut
+            }
             if isHourly {
                 // Pre-fyll fra context (kartsøk), eller default til i dag.
                 if hourlyDate == nil {
-                    if let storedIn = ctx.checkIn {
+                    if let storedIn = validStoredIn {
                         hourlyDate = Calendar.current.startOfDay(for: storedIn)
                     } else {
                         hourlyDate = Calendar.current.startOfDay(for: Date())
                     }
                 }
                 if hourlyEndDate == nil {
-                    if let storedOut = ctx.checkOut {
+                    if let storedOut = validStoredOut {
                         hourlyEndDate = Calendar.current.startOfDay(for: storedOut)
                     } else {
                         hourlyEndDate = hourlyDate

@@ -54,6 +54,14 @@ struct ChatView: View {
             return false
         }
 
+        /// True når offer-bobblen IKKE skal vise Godta/Endre/Avslå.
+        /// Dekker både aktiv betaling og terminale statuser (confirmed,
+        /// cancelled, declined, expired) der videre handling ikke gir mening.
+        var hideOfferActions: Bool {
+            if isAwaitingPayment { return true }
+            return ["confirmed", "cancelled", "declined", "expired", "completed"].contains(status)
+        }
+
         func isMyTurn(userId: String) -> Bool {
             if isAwaitingPayment { return self.userId == userId }
             switch status {
@@ -491,7 +499,7 @@ struct ChatView: View {
                 isFromMe: isMe,
                 isActive: isActive,
                 viewerRole: viewerRole,
-                awaitingPayment: bookingState?.isAwaitingPayment ?? false,
+                hideActions: bookingState?.hideOfferActions ?? false,
                 accepting: accepting,
                 onAccept: isActive && !isMe ? { Task { await acceptOffer(metadata: metadata) } } : nil,
                 onCounter: isActive && !isMe ? { openCounterSheet(metadata: metadata) } : nil,

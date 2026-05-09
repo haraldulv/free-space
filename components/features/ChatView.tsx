@@ -332,7 +332,7 @@ export default function ChatView({
                       ? bookingState.hostId === currentUserId ? "host" : "guest"
                       : null
                   }
-                  awaitingPayment={isAwaitingPayment(bookingState)}
+                  hideActions={shouldHideOfferActions(bookingState)}
                   accepting={accepting}
                   onAccept={isActive && !isOwn ? () => acceptOffer(msg.metadata!) : undefined}
                   onCounter={isActive && !isOwn ? () => openCounter(msg.metadata!) : undefined}
@@ -429,6 +429,15 @@ function isAwaitingPayment(state: NegotiationState | null): boolean {
   if (state.status === "awaiting_payment") return true;
   if (state.status === "awaiting_guest" && state.paymentIntentId) return true;
   return false;
+}
+
+/// True når offer-bobblen IKKE skal vise Godta/Endre/Avslå.
+/// Dekker både aktiv betaling og terminale statuser der knappene
+/// ikke gir mening.
+function shouldHideOfferActions(state: NegotiationState | null): boolean {
+  if (!state) return false;
+  if (isAwaitingPayment(state)) return true;
+  return ["confirmed", "cancelled", "declined", "expired", "completed"].includes(state.status);
 }
 
 function NegotiationBanner({
