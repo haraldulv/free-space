@@ -14,6 +14,8 @@ interface OfferMessageBubbleProps {
   viewerRole?: "host" | "guest" | null;
   /** True når Godta/Endre/Avslå skal skjules — både ved aktiv betaling og terminale statuser. */
   hideActions?: boolean;
+  /** True når dette er aktive tilbudet OG booking er confirmed — viser grønn Bekreftet-pille. */
+  isConfirmed?: boolean;
   /** True mens accept-API-kallet pågår — viser spinner i Godta-knappen. */
   accepting?: boolean;
   onAccept?: () => void;
@@ -27,6 +29,7 @@ export default function OfferMessageBubble({
   isActive,
   viewerRole,
   hideActions = false,
+  isConfirmed = false,
   accepting = false,
   onAccept,
   onCounter,
@@ -45,6 +48,7 @@ export default function OfferMessageBubble({
   const opposingPartyLabel = metadata.proposedByRole === "host" ? "gjest" : "utleier";
   // Host godtar uten å betale (gjest betaler etterpå); gjest betaler ved aksept.
   const acceptLabel = viewerRole === "host" ? "Godta forespørselen" : "Godta og betal";
+  const headerLabel = isConfirmed ? "Avtalt pris" : roleLabel;
 
   return (
     <div
@@ -55,11 +59,18 @@ export default function OfferMessageBubble({
       <div className="flex items-center justify-between gap-2 mb-3">
         <div className="flex items-center gap-1.5">
           <Tag className="h-3 w-3 text-primary-600" />
-          <span className="text-xs font-semibold text-neutral-700">{roleLabel}</span>
+          <span className="text-xs font-semibold text-neutral-700">{headerLabel}</span>
         </div>
-        {countdown && (
+        {isConfirmed ? (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-primary-600">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="h-3 w-3" aria-hidden="true">
+              <path fillRule="evenodd" d="M16.7 5.3a1 1 0 0 1 0 1.4l-7 7a1 1 0 0 1-1.4 0l-3-3a1 1 0 1 1 1.4-1.4L9 11.6l6.3-6.3a1 1 0 0 1 1.4 0Z" clipRule="evenodd" />
+            </svg>
+            Bekreftet
+          </span>
+        ) : countdown ? (
           <span className="text-[10px] text-neutral-500">{countdown}</span>
-        )}
+        ) : null}
       </div>
 
       <div className="flex items-baseline gap-1 mb-2">

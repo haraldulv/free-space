@@ -17,6 +17,10 @@ struct OfferMessageBubble: View {
     /// (banneret er kanalen videre) og for terminale booking-statuser
     /// (confirmed/cancelled/declined) der videre handling ikke gir mening.
     let hideActions: Bool
+    /// True når dette er det aktive tilbudet OG bookingen er bekreftet
+    /// (status=confirmed). Bytter ut countdown med en grønn "Bekreftet"-pille
+    /// og endrer rolle-label til "Avtalt pris".
+    let isConfirmed: Bool
     /// True mens accept-API-kallet pågår — viser ProgressView i Godta-knappen.
     let accepting: Bool
     /// Handlinger — bare relevant når tilbudet er aktivt og isFromMe == false.
@@ -34,7 +38,15 @@ struct OfferMessageBubble: View {
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(.neutral700)
                 Spacer()
-                if let countdownText {
+                if isConfirmed {
+                    HStack(spacing: 4) {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.system(size: 11))
+                        Text("Bekreftet")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .foregroundStyle(.primary600)
+                } else if let countdownText {
                     Text(countdownText)
                         .font(.system(size: 11))
                         .foregroundStyle(.neutral500)
@@ -157,6 +169,7 @@ struct OfferMessageBubble: View {
     // MARK: - Helpers
 
     private var roleLabel: String {
+        if isConfirmed { return "Avtalt pris" }
         switch metadata.proposedByRole {
         case "host": return isFromMe ? "Du foreslår" : "Utleier foreslår"
         case "guest": return isFromMe ? "Du foreslår" : "Gjest foreslår"

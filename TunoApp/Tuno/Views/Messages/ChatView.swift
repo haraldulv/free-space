@@ -399,6 +399,21 @@ struct ChatView: View {
                     listingTitle: listingTitle,
                     onSuccess: {
                         Task {
+                            // Optimistisk oppdatering: sett bookingState lokalt til
+                            // confirmed med en gang, så accept-knappene forsvinner
+                            // umiddelbart og confirmed-pillen vises uten flash mens
+                            // server-refresh er underveis.
+                            if let s = bookingState {
+                                bookingState = BookingNegotiationState(
+                                    bookingId: s.bookingId,
+                                    status: "confirmed",
+                                    currentOfferId: s.currentOfferId,
+                                    userId: s.userId,
+                                    hostId: s.hostId,
+                                    totalPrice: s.totalPrice,
+                                    paymentIntentId: s.paymentIntentId
+                                )
+                            }
                             await chatService.loadMessages(conversationId: conversationId)
                             await loadBookingState()
                             flashToast("Betaling fullført! Bestillingen er bekreftet.")
@@ -500,6 +515,7 @@ struct ChatView: View {
                 isActive: isActive,
                 viewerRole: viewerRole,
                 hideActions: bookingState?.hideOfferActions ?? false,
+                isConfirmed: isActive && bookingState?.status == "confirmed",
                 accepting: accepting,
                 onAccept: isActive && !isMe ? { Task { await acceptOffer(metadata: metadata) } } : nil,
                 onCounter: isActive && !isMe ? { openCounterSheet(metadata: metadata) } : nil,
