@@ -251,6 +251,129 @@ final class AuthManager: ObservableObject {
         }
     }
 
+    // MARK: - Vipps Sign In
+    //
+    // Vipps er ikke en innebygd Supabase-provider, så vi rir på vår egen
+    // web-route /api/auth/vipps/start med ?native=1. Den fullfører Vipps
+    // OIDC-flow server-side, oppretter/slår opp Supabase-bruker via
+    // service-role, og returnerer et engangs token_hash til appen via
+    // custom-scheme-redirect (no.tuno.app://vipps-return). Vi veksler det
+    // med supabase.auth.verifyOTP(.magiclink) for å få session.
+
+    func signInWithVipps(launchFlow: @escaping @Sendable (URL) async throws -> URL) async {
+        self.error = nil
+        guard let startURL = URL(string: "\(AppConfig.siteURL)/api/auth/vipps/start?native=1&return=/") else {
+            self.error = "Vipps-innlogging feilet"
+            return
+        }
+        do {
+            let callbackURL = try await launchFlow(startURL)
+            guard let comps = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false) else {
+                self.error = "Vipps-innlogging feilet"
+                return
+            }
+            let items = comps.queryItems ?? []
+            if let errParam = items.first(where: { $0.name == "error" })?.value {
+                self.error = "Vipps: \(errParam)"
+                return
+            }
+            guard let tokenHash = items.first(where: { $0.name == "token_hash" })?.value,
+                  !tokenHash.isEmpty else {
+                self.error = "Vipps-innlogging feilet"
+                return
+            }
+            _ = try await supabase.auth.verifyOTP(tokenHash: tokenHash, type: .magiclink)
+            await loadProfile()
+        } catch {
+            // ASWebAuthenticationSession kaster .canceledLogin når brukeren
+            // lukker sheet'et — ikke vis feilmelding for det.
+            let nsErr = error as NSError
+            if nsErr.domain == "com.apple.AuthenticationServices.WebAuthenticationSession",
+               nsErr.code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                return
+            }
+            self.error = "Vipps-innlogging feilet"
+        }
+    }
+
+    // MARK: - Vipps nin-flyt (Fase 3, Bli utleier)
+    //
+    // ASWebAuthenticationSession deler ikke session-cookies med native, så
+    // vi kan ikke lene oss på SSR-session-cookien i callback-ruten. I
+    // stedet:
+    //  1) Appen kaller POST /api/auth/vipps/native-intent med Bearer-token.
+    //     Serveren validerer sesjonen og lagrer (user_id, "nin") i
+    //     `vipps_native_intents`, returnerer engangs-uuid.
+    //  2) Appen åpner /api/auth/vipps/start?native=1&purpose=nin&intent=<uuid>
+    //     i ASWebAuthenticationSession. Vipps OIDC kjører.
+    //  3) Callback-ruten leser intent-cookien, slår opp user_id, sender data
+    //     direkte til Stripe Connect, og redirecter til
+    //     no.tuno.app://vipps-nin-return?status=ok|error=<reason>.
+    //
+    // Returnerer true hvis Stripe-oppdateringen lyktes.
+    @discardableResult
+    func fetchNinFromVipps(launchFlow: @escaping @Sendable (URL) async throws -> URL) async -> Bool {
+        self.error = nil
+        do {
+            let session = try await supabase.auth.session
+            let accessToken = session.accessToken
+
+            // 1) Opprett native-intent.
+            guard let intentURL = URL(string: "\(AppConfig.siteURL)/api/auth/vipps/native-intent") else {
+                self.error = "Vipps-flyten feilet"
+                return false
+            }
+            var req = URLRequest(url: intentURL)
+            req.httpMethod = "POST"
+            req.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+            req.httpBody = try JSONSerialization.data(withJSONObject: ["purpose": "nin"])
+
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            guard let http = resp as? HTTPURLResponse, http.statusCode == 200,
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let intent = json["intent"] as? String else {
+                self.error = "Vipps-flyten feilet"
+                return false
+            }
+
+            // 2) Start Vipps i web-auth-session.
+            var startComps = URLComponents(string: "\(AppConfig.siteURL)/api/auth/vipps/start")!
+            startComps.queryItems = [
+                URLQueryItem(name: "native", value: "1"),
+                URLQueryItem(name: "purpose", value: "nin"),
+                URLQueryItem(name: "intent", value: intent),
+                URLQueryItem(name: "return", value: "/"),
+            ]
+            guard let startURL = startComps.url else {
+                self.error = "Vipps-flyten feilet"
+                return false
+            }
+            let callbackURL = try await launchFlow(startURL)
+
+            // 3) Tolk callback.
+            let comps = URLComponents(url: callbackURL, resolvingAgainstBaseURL: false)
+            let items = comps?.queryItems ?? []
+            if let errParam = items.first(where: { $0.name == "error" })?.value {
+                self.error = "Vipps: \(errParam)"
+                return false
+            }
+            if items.first(where: { $0.name == "status" })?.value == "ok" {
+                return true
+            }
+            self.error = "Vipps-flyten feilet"
+            return false
+        } catch {
+            let nsErr = error as NSError
+            if nsErr.domain == "com.apple.AuthenticationServices.WebAuthenticationSession",
+               nsErr.code == ASWebAuthenticationSessionError.canceledLogin.rawValue {
+                return false
+            }
+            self.error = "Vipps-flyten feilet"
+            return false
+        }
+    }
+
     /// Henter eksisterende avatar_url for brukeren slik at OAuth-login ikke
     /// overskriver et brukervalgt bilde.
     private func currentAvatarUrl(userId: String) async -> String? {

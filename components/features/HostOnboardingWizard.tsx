@@ -39,6 +39,34 @@ export default function HostOnboardingWizard({ onComplete }: HostOnboardingWizar
   const [chargesEnabled, setChargesEnabled] = useState(false);
   const [payoutsEnabled, setPayoutsEnabled] = useState(false);
 
+  // nin-scope krever egen Vipps-godkjenning og er ikke launch-blokkerer.
+  // Eget flagg lar Login leve i prod mens nin sover til scopen er klar.
+  const vippsNinEnabled = process.env.NEXT_PUBLIC_VIPPS_NIN_ENABLED === "true";
+  const [vippsSuccess, setVippsSuccess] = useState(false);
+
+  // Når brukeren kommer tilbake fra Vipps nin-flow legger callback-routen
+  // ?vipps_nin=ok i URL-en. Vi hopper rett til adresse-step (Stripe har
+  // mottatt navn/dob/nin/telefon/email allerede) og rydder opp i URL-en.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const v = params.get("vipps_nin");
+    if (!v) return;
+    if (v === "ok") {
+      setVippsSuccess(true);
+      setStep("address");
+    } else {
+      setError(t("errorGeneric"));
+    }
+    params.delete("vipps_nin");
+    const newSearch = params.toString();
+    window.history.replaceState(
+      {},
+      "",
+      `${window.location.pathname}${newSearch ? `?${newSearch}` : ""}`
+    );
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-fyll by når host taster gyldig postnummer.
   useEffect(() => {
     if (!/^\d{4}$/.test(postalCode)) return;
@@ -262,6 +290,18 @@ export default function HostOnboardingWizard({ onComplete }: HostOnboardingWizar
             <UserCircle className="h-6 w-6 text-primary-600" />
             <h2 className="text-lg font-semibold text-neutral-900">{t("personalTitle")}</h2>
           </div>
+          {vippsNinEnabled && (
+            <button
+              type="button"
+              onClick={() => {
+                window.location.href =
+                  "/api/auth/vipps/start?purpose=nin&return=/bli-utleier";
+              }}
+              className="mb-4 flex w-full items-center justify-center gap-2 rounded-lg bg-[#FF5B24] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#E04E1E]"
+            >
+              Hent fra Vipps
+            </button>
+          )}
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <Input id="firstName" label={t("firstName")} value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t("firstNamePlaceholder")} />
@@ -291,6 +331,12 @@ export default function HostOnboardingWizard({ onComplete }: HostOnboardingWizar
       {/* Address */}
       {step === "address" && (
         <div>
+          {vippsSuccess && (
+            <div className="mb-4 flex items-center gap-2 rounded-lg bg-green-50 p-3 text-sm text-green-800">
+              <CheckCircle2 className="h-5 w-5" />
+              Personalia hentet fra Vipps
+            </div>
+          )}
           <div className="flex items-center gap-3 mb-6">
             <MapPin className="h-6 w-6 text-primary-600" />
             <h2 className="text-lg font-semibold text-neutral-900">{t("addressTitle")}</h2>

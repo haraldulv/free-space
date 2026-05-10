@@ -99,7 +99,32 @@ struct RegisterView: View {
     /// Sosiale knapper øverst — for de fleste er dette ett-tap registrering.
     /// 2-kolonne grid sparer vertikal plass.
     private var socialButtons: some View {
-        HStack(spacing: 10) {
+        VStack(spacing: 10) {
+            if AppConfig.vippsEnabled {
+                Button {
+                    Task {
+                        isLoading = true
+                        await authManager.signInWithVipps { url in
+                            try await self.webAuthenticationSession.authenticate(
+                                using: url,
+                                callbackURLScheme: "no.tuno.app"
+                            )
+                        }
+                        isLoading = false
+                    }
+                } label: {
+                    Text("Fortsett med Vipps")
+                        .font(.system(size: 15, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Color(red: 1.0, green: 0.357, blue: 0.141))
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .disabled(isLoading)
+            }
+
+            HStack(spacing: 10) {
             Button {
                 Task {
                     isLoading = true
@@ -150,6 +175,7 @@ struct RegisterView: View {
                 )
             }
             .disabled(isLoading)
+            }
         }
     }
 

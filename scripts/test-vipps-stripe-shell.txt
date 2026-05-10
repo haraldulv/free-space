@@ -1,0 +1,1 @@
+stripe checkout sessions create --stripe-version "2026-04-22.preview; vipps_preview=v1" -d "payment_method_types[0]=vipps" -d "mode=payment" -d "line_items[0][price_data][currency]=nok" -d "line_items[0][price_data][product_data][name]=Test" -d "line_items[0][price_data][unit_amount]=2000" -d "line_items[0][quantity]=1" -d "success_url=https://www.tuno.no"

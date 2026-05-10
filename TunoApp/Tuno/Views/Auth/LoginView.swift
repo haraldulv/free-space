@@ -51,6 +51,33 @@ struct LoginView: View {
 
                     // Social Sign In
                     VStack(spacing: 10) {
+                        // Vipps Sign In
+                        if AppConfig.vippsEnabled {
+                            Button {
+                                Task {
+                                    isLoading = true
+                                    await authManager.signInWithVipps { url in
+                                        try await self.webAuthenticationSession.authenticate(
+                                            using: url,
+                                            callbackURLScheme: "no.tuno.app"
+                                        )
+                                    }
+                                    isLoading = false
+                                }
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Text("Fortsett med Vipps")
+                                        .font(.system(size: 16, weight: .semibold))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color(red: 1.0, green: 0.357, blue: 0.141))
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            }
+                            .disabled(isLoading)
+                        }
+
                         // Apple Sign In
                         Button {
                             Task {

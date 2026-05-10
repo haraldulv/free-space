@@ -33,6 +33,14 @@ enum AppConfig {
         return false
         #endif
     }
+
+    /// Slå Vipps Login-knappen av/på. Settes til true når Kim har levert
+    /// Vipps-credentials og web-server har env-vars satt.
+    static let vippsEnabled = false
+    /// nin-scope krever egen Vipps-godkjenning og egen avtale. Eget flagg
+    /// lar Login leve i prod mens nin-knappen i Bli utleier sover til
+    /// scopen er klar. Skru på sammen med NEXT_PUBLIC_VIPPS_NIN_ENABLED.
+    static let vippsNinEnabled = false
 }
 
 let supabase = SupabaseClient(

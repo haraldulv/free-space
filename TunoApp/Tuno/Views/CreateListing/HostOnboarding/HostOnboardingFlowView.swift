@@ -369,6 +369,9 @@ private struct BulletCard: View {
 private struct PersonalStep: View {
     @ObservedObject var viewModel: HostOnboardingViewModel
     var focusedField: FocusState<OnboardingField?>.Binding
+    @EnvironmentObject var authManager: AuthManager
+    @Environment(\.webAuthenticationSession) private var webAuthenticationSession
+    @State private var vippsLoading = false
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -377,6 +380,10 @@ private struct PersonalStep: View {
                 subtitle: "Stripe trenger dette for identitetsverifisering. Fødselsdato utleder vi automatisk fra personnummeret."
             ) {
                 VStack(spacing: 16) {
+                    if AppConfig.vippsNinEnabled && !viewModel.vippsPrefilled {
+                        vippsButton
+                        orDivider
+                    }
                     OnboardingTextField(
                         label: "Fornavn",
                         placeholder: "Kari",
@@ -439,6 +446,59 @@ private struct PersonalStep: View {
                     proxy.scrollTo(new, anchor: .center)
                 }
             }
+        }
+    }
+
+    private var vippsButton: some View {
+        Button {
+            Task { await runVippsFlow() }
+        } label: {
+            HStack(spacing: 10) {
+                if vippsLoading {
+                    ProgressView()
+                        .progressViewStyle(.circular)
+                        .tint(.white)
+                } else {
+                    Image(systemName: "person.text.rectangle.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                Text(vippsLoading ? "Henter fra Vipps…" : "Hent fra Vipps")
+                    .font(.system(size: 16, weight: .semibold))
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .foregroundStyle(.white)
+            .background(Color(red: 1.0, green: 0.357, blue: 0.141))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .disabled(vippsLoading)
+    }
+
+    private var orDivider: some View {
+        HStack(spacing: 12) {
+            Rectangle().fill(Color.gray.opacity(0.25)).frame(height: 1)
+            Text("eller fyll inn manuelt")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.secondary)
+            Rectangle().fill(Color.gray.opacity(0.25)).frame(height: 1)
+        }
+        .padding(.vertical, 4)
+    }
+
+    @MainActor
+    private func runVippsFlow() async {
+        vippsLoading = true
+        defer { vippsLoading = false }
+        let ok = await authManager.fetchNinFromVipps { url in
+            try await webAuthenticationSession.authenticate(
+                using: url,
+                callbackURLScheme: "no.tuno.app"
+            )
+        }
+        if ok {
+            viewModel.vippsPrefilled = true
+            // Stripe har fått alt — hopp direkte til bank.
+            withAnimation { viewModel.step = .bank }
         }
     }
 
@@ -617,6 +677,19 @@ private struct BankStep: View {
                 subtitle: "Skriv det norske kontonummeret slik du ser det i nettbanken din. Vi konverterer det automatisk til IBAN-format."
             ) {
                 VStack(spacing: 16) {
+                    if viewModel.vippsPrefilled {
+                        HStack(spacing: 10) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color(red: 0.275, green: 0.757, blue: 0.522))
+                            Text("Personalia hentet fra Vipps")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(.primary)
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(Color(red: 0.275, green: 0.757, blue: 0.522).opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
                     OnboardingTextField(
                         label: "Kontonummer",
                         placeholder: "11 siffer",

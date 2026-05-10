@@ -8,6 +8,7 @@ import { loginSchema } from "@/lib/utils/validation";
 import AuthForm from "@/components/features/AuthForm";
 import GoogleSignInButton from "@/components/features/GoogleSignInButton";
 import AppleSignInButton from "@/components/features/AppleSignInButton";
+import VippsSignInButton from "@/components/features/VippsSignInButton";
 
 export default function LoginPage() {
   const t = useTranslations("auth");
@@ -39,6 +40,7 @@ export default function LoginPage() {
         <p className="mt-1 text-sm text-neutral-500">{t("loginSubtitle")}</p>
       </div>
 
+      <VippsSignInButton redirectTo={redirectTo} />
       <AppleSignInButton redirectTo={redirectTo} />
       <GoogleSignInButton redirectTo={redirectTo} />
 

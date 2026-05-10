@@ -16,6 +16,10 @@ final class HostOnboardingViewModel: ObservableObject {
     @Published var isSubmitting: Bool = false
     @Published var errorMessage: String?
     @Published var fieldErrors: [String: String] = [:]
+    /// Settes når Vipps-flyten i Personal-steget har sendt navn, fødsel,
+    /// personnummer, adresse og telefon DIREKTE til Stripe Connect. Brukes
+    /// til å vise grønn banner og hoppe forbi manuelle felter.
+    @Published var vippsPrefilled: Bool = false
 
     // Step 2 — Personal info
     // Fødselsdato spørres ikke lenger — vi utleder den fra personnummeret
