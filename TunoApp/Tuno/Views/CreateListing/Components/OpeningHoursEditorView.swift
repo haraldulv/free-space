@@ -151,8 +151,8 @@ struct OpeningHoursEditorView: View {
                 .buttonStyle(.plain)
             } else if !closed, isFullDay {
                 HStack(spacing: 6) {
-                    Image(systemName: "24.circle.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                    Image(systemName: "clock")
+                        .font(.system(size: 12, weight: .semibold))
                     Text("Døgnåpent")
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
@@ -169,19 +169,21 @@ struct OpeningHoursEditorView: View {
             }
 
             if !closed {
-                // 24-symbol-knapp: tap = sett døgnåpent. Tap igjen = tilbake til 09:00-17:00.
-                // Plasseres alltid lengst til høyre.
+                // "24t"-tekstpille: tap = sett døgnåpent. Tap igjen = tilbake til 09:00-17:00.
+                // Plasseres alltid lengst til høyre. Samme stil som Åpen/Stengt-pillene
+                // men kompakt og i nøytrale toner (ikke grønn).
                 Button {
                     setDayValue(day, range: isFullDay ? "09:00-17:00" : Self.fullDaySentinel)
                 } label: {
-                    Image(systemName: "24.circle.fill")
-                        .symbolRenderingMode(.palette)
-                        .foregroundStyle(
-                            isFullDay ? Color.white : Color.neutral600,
-                            isFullDay ? Color.neutral800 : Color.neutral100
-                        )
-                        .font(.system(size: 32, weight: .semibold))
-                        .frame(width: 32, height: 32)
+                    Text("24t")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(isFullDay ? Color.white : Color.neutral600)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(isFullDay ? Color.neutral800 : Color.neutral100)
+                        .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
             }
