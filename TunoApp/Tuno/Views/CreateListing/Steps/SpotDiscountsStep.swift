@@ -422,23 +422,25 @@ struct AddPackageContext: Identifiable {
 struct InlineRentalPeriodsView: View {
     @ObservedObject var form: ListingFormModel
     let spotIndex: Int
+    var scrollProxy: ScrollViewProxy? = nil
 
     var body: some View {
         VStack(spacing: 8) {
-            tierRow(label: "1 uke", periodType: .week)
-            tierRow(label: "1 måned", periodType: .month)
-            tierRow(label: "1 år", periodType: .year)
+            tierRow(label: "1 uke", periodType: .week, idSuffix: "week")
+            tierRow(label: "1 måned", periodType: .month, idSuffix: "month")
+            tierRow(label: "1 år", periodType: .year, idSuffix: "year")
         }
     }
 
     @ViewBuilder
-    private func tierRow(label: String, periodType: PricePackagePeriodType) -> some View {
+    private func tierRow(label: String, periodType: PricePackagePeriodType, idSuffix: String) -> some View {
         let binding = packageBinding(periodType: periodType, periodValue: 1)
         let isEnabled = (binding.wrappedValue ?? 0) > 0
         let basePrice = form.spotMarkers.indices.contains(spotIndex)
             ? (form.spotMarkers[spotIndex].price ?? 0) : 0
         let suggested = SpotDiscountsStep.suggestedPrice(forTier: periodType, periodValue: 1, dailyPrice: basePrice)
         let showSuggestion = !isEnabled && suggested > 0
+        let rowId = "tier_\(idSuffix)_\(spotIndex)"
 
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 12) {
@@ -462,9 +464,24 @@ struct InlineRentalPeriodsView: View {
                 }
                 .buttonStyle(.plain)
 
-                KrStepper(value: binding, step: 50, minValue: 0, maxValue: nil, unitLabel: "kr", placeholder: "0")
-                    .frame(width: 190)
-                    .opacity(isEnabled ? 1 : 0.6)
+                KrStepper(
+                    value: binding,
+                    step: 50,
+                    minValue: 0,
+                    maxValue: nil,
+                    unitLabel: "kr",
+                    placeholder: "0",
+                    onFocusChange: { focused in
+                        guard focused else { return }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                            withAnimation(.easeInOut(duration: 0.25)) {
+                                scrollProxy?.scrollTo(rowId, anchor: .center)
+                            }
+                        }
+                    }
+                )
+                .frame(width: 190)
+                .opacity(isEnabled ? 1 : 0.6)
             }
 
             if showSuggestion {
@@ -493,6 +510,7 @@ struct InlineRentalPeriodsView: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12)
             .stroke(isEnabled ? Color.primary600 : Color.neutral200, lineWidth: isEnabled ? 1.5 : 1))
+        .id(rowId)
     }
 
     private func packageBinding(periodType: PricePackagePeriodType, periodValue: Int) -> Binding<Int?> {

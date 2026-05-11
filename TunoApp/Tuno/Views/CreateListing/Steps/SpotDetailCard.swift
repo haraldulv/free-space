@@ -189,7 +189,7 @@ struct SpotPriceContent: View {
                 .buttonStyle(.plain)
 
                 if showLongerStay {
-                    InlineRentalPeriodsView(form: form, spotIndex: index)
+                    InlineRentalPeriodsView(form: form, spotIndex: index, scrollProxy: scrollProxy)
                         .id("longerStay\(index)")
                 }
             } else if let s = spot {

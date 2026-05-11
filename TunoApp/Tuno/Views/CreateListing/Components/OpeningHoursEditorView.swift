@@ -151,8 +151,8 @@ struct OpeningHoursEditorView: View {
                 .buttonStyle(.plain)
             } else if !closed, isFullDay {
                 HStack(spacing: 6) {
-                    Image(systemName: "infinity")
-                        .font(.system(size: 12, weight: .semibold))
+                    Image(systemName: "24.circle.fill")
+                        .font(.system(size: 14, weight: .semibold))
                     Text("Døgnåpent")
                         .font(.system(size: 12, weight: .semibold))
                         .lineLimit(1)
@@ -169,17 +169,19 @@ struct OpeningHoursEditorView: View {
             }
 
             if !closed {
-                // ∞-symbol-knapp: tap = sett døgnåpent. Tap igjen = tilbake til 09:00-17:00.
+                // 24-symbol-knapp: tap = sett døgnåpent. Tap igjen = tilbake til 09:00-17:00.
                 // Plasseres alltid lengst til høyre.
                 Button {
                     setDayValue(day, range: isFullDay ? "09:00-17:00" : Self.fullDaySentinel)
                 } label: {
-                    Image(systemName: "infinity")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(isFullDay ? Color.white : Color.neutral600)
+                    Image(systemName: "24.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(
+                            isFullDay ? Color.white : Color.neutral600,
+                            isFullDay ? Color.neutral800 : Color.neutral100
+                        )
+                        .font(.system(size: 32, weight: .semibold))
                         .frame(width: 32, height: 32)
-                        .background(isFullDay ? Color.neutral800 : Color.neutral100)
-                        .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
             }

@@ -16,6 +16,9 @@ struct KrStepper: View {
     var unitLabel: String = "kr"
     /// Hva som vises når value er nil eller 0 og feltet ikke har fokus.
     var placeholder: String = "0"
+    /// Kalles når TextField-fokus endres. Parent kan bruke dette til å trigge
+    /// scroll så feltet ikke gjemmes bak tastaturet.
+    var onFocusChange: ((Bool) -> Void)? = nil
 
     @State private var text: String = ""
     @FocusState private var isFocused: Bool
@@ -74,6 +77,7 @@ struct KrStepper: View {
                 } else {
                     text = displayText
                 }
+                onFocusChange?(focused)
             }
             .onAppear { text = displayText }
             .onChange(of: value) { _, _ in

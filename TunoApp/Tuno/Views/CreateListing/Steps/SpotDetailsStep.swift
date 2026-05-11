@@ -26,7 +26,7 @@ struct SpotDetailsStep: View {
                                         }
                                     }
                                 }
-                                ParkingDimensionsCard(form: form, index: index)
+                                ParkingDimensionsCard(form: form, index: index, scrollProxy: proxy)
                                     .id("parkingMal\(index)")
                             }
                         }
@@ -76,6 +76,7 @@ struct SpotDetailsStep: View {
 private struct ParkingDimensionsCard: View {
     @ObservedObject var form: ListingFormModel
     let index: Int
+    var scrollProxy: ScrollViewProxy? = nil
 
     @FocusState private var focusedField: String?
 
@@ -111,6 +112,7 @@ private struct ParkingDimensionsCard: View {
                 focusField: "length",
                 focused: $focusedField
             )
+            .id("dimLength\(index)")
 
             DimensionRow(
                 label: "Bredde",
@@ -122,6 +124,7 @@ private struct ParkingDimensionsCard: View {
                 focusField: "width",
                 focused: $focusedField
             )
+            .id("dimWidth\(index)")
 
             if showHeight {
                 DimensionRow(
@@ -134,6 +137,7 @@ private struct ParkingDimensionsCard: View {
                     focusField: "height",
                     focused: $focusedField
                 )
+                .id("dimHeight\(index)")
             }
         }
         .padding(16)
@@ -141,15 +145,20 @@ private struct ParkingDimensionsCard: View {
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 1))
-        .onChange(of: form.parkingType) { oldType, newType in
-            // Tap på Type plass-chip → auto-fokus Lengde etter scroll.
-            // Bare når brukeren går fra ingen valg til et valg (ikke ved
-            // bytte mellom typer, og ikke ved av-velging). Hopp også over
-            // hvis Lengde allerede er fylt ut.
-            guard oldType == nil, newType != nil else { return }
-            guard (spot?.vehicleMaxLength ?? 0) == 0 else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                focusedField = "length"
+        .onChange(of: focusedField) { _, newField in
+            // Når et felt får fokus, scroll det opp så tastaturet ikke dekker.
+            guard let field = newField else { return }
+            let targetId: String
+            switch field {
+            case "length": targetId = "dimLength\(index)"
+            case "width": targetId = "dimWidth\(index)"
+            case "height": targetId = "dimHeight\(index)"
+            default: return
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    scrollProxy?.scrollTo(targetId, anchor: .center)
+                }
             }
         }
     }
