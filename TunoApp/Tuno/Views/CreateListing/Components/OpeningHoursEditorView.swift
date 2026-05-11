@@ -110,6 +110,7 @@ struct OpeningHoursEditorView: View {
     @ViewBuilder
     private func weekdayRow(day: Weekday, raw: String?) -> some View {
         let closed = raw == nil
+        let isFullDay = Self.isFullDaySentinel(raw)
         HStack(spacing: 10) {
             Text(weekdayLabel(day))
                 .font(.system(size: 13, weight: .medium))
@@ -129,8 +130,25 @@ struct OpeningHoursEditorView: View {
             }
             .buttonStyle(.plain)
 
+            if !closed {
+                // 24/7-pill: tap = sett døgnåpent. Tap igjen (når aktiv) = tilbake til 09:00-17:00.
+                Button {
+                    setDayValue(day, range: isFullDay ? "09:00-17:00" : Self.fullDaySentinel)
+                } label: {
+                    Text("24/7")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(isFullDay ? Color.white : .primary700)
+                        .frame(width: 44)
+                        .padding(.vertical, 5)
+                        .background(isFullDay ? Color.primary600 : Color.primary50)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+
             // Time-display: tap åpner kombinert fra/til-sheet for hele dagen.
-            if !closed, let parsed = OpeningHoursService.parseRange(raw ?? "") {
+            // Skjules når 24/7 er aktiv, siden tidene da er fastsatt.
+            if !closed, !isFullDay, let parsed = OpeningHoursService.parseRange(raw ?? "") {
                 Button {
                     editingDay = day
                 } label: {
@@ -145,11 +163,24 @@ struct OpeningHoursEditorView: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+            } else if !closed, isFullDay {
+                Text("Døgnåpen")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.neutral500)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
             } else {
                 Spacer(minLength: 0)
             }
         }
         .frame(maxWidth: .infinity, minHeight: 32)
+    }
+
+    /// Sentinel for å markere én ukedag som døgnåpen i OpeningHours-modellen.
+    /// Lagres som tekst i samme felt som vanlig tidsintervall ("HH:MM-HH:MM").
+    private static let fullDaySentinel = "00:00-23:59"
+    private static func isFullDaySentinel(_ raw: String?) -> Bool {
+        guard let raw else { return false }
+        return raw == fullDaySentinel
     }
 
     private func timePill(text: String) -> some View {

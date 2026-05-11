@@ -12,22 +12,40 @@ struct SpotVehicleContent: View {
         form.spotMarkers.indices.contains(index) ? form.spotMarkers[index] : nil
     }
 
+    private var hasMultipleSpots: Bool { form.spots > 1 }
+    private var descriptionLabel: String {
+        hasMultipleSpots ? "Beskrivelse av denne plassen" : "Beskrivelse"
+    }
+    private var descriptionHelper: String? {
+        hasMultipleSpots
+            ? "Vises på plass-fanen. Annonsen har en egen overordnet beskrivelse."
+            : nil
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 22) {
             // Beskrivelse (frivillig)
-            field(label: "Beskrivelse", optional: true) {
-                TextEditor(text: Binding(
-                    get: { spot?.description ?? "" },
-                    set: { form.spotMarkers[index].description = $0.isEmpty ? nil : $0 }
-                ))
-                .frame(minHeight: 120)
-                .padding(8)
-                .background(Color.neutral50)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(Color.neutral200, lineWidth: 1)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+            field(label: descriptionLabel, optional: true) {
+                VStack(alignment: .leading, spacing: 6) {
+                    TextEditor(text: Binding(
+                        get: { spot?.description ?? "" },
+                        set: { form.spotMarkers[index].description = $0.isEmpty ? nil : $0 }
+                    ))
+                    .frame(minHeight: 120)
+                    .padding(8)
+                    .background(Color.neutral50)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.neutral200, lineWidth: 1)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    if let helper = descriptionHelper {
+                        Text(helper)
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral500)
+                    }
+                }
             }
 
             // Kjøretøytype (multi-select) — samme card-stil som ParkingType
@@ -78,8 +96,9 @@ struct SpotVehicleContent: View {
             }
 
             // Maks lengde — kun for plasser med store kjøretøy (bobil/campingbil)
+            // og kun for camping (parkering bruker dedikert dimensjoner-card).
             let needsLength = (spot?.effectiveVehicleTypes ?? []).contains(where: { !$0.isCompact })
-            if needsLength {
+            if needsLength && form.category != .parking {
                 BigLengthInput(
                     length: Binding(
                         get: { spot?.vehicleMaxLength ?? 0 },
@@ -116,6 +135,7 @@ struct SpotVehicleContent: View {
 struct SpotPriceContent: View {
     @ObservedObject var form: ListingFormModel
     let index: Int
+    @State private var showLongerStay: Bool = false
 
     private var spot: SpotMarker? {
         form.spotMarkers.indices.contains(index) ? form.spotMarkers[index] : nil
@@ -124,8 +144,8 @@ struct SpotPriceContent: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             if form.category == .parking, let s = spot {
-                // Parkering per døgn (24t). Lengre opphold-rabatter (uke/måned)
-                // kommer i et eget steg.
+                // Parkering per døgn (24t). Lengre opphold-rabatter ligger
+                // kollapset under prisen så samme side dekker hele pris-modellen.
                 BigPriceInput(
                     price: Binding(
                         get: { s.price ?? 0 },
@@ -139,6 +159,30 @@ struct SpotPriceContent: View {
                     unitLabel: "dag"
                 )
                 FeeBreakdownCard(subtotal: s.price ?? 0, unitLabel: "dag")
+
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) { showLongerStay.toggle() }
+                } label: {
+                    HStack {
+                        Text("Lengre opphold-rabatter")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.neutral900)
+                        Spacer()
+                        Image(systemName: showLongerStay ? "chevron.up" : "chevron.down")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.neutral500)
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+
+                if showLongerStay {
+                    InlineRentalPeriodsView(form: form, spotIndex: index)
+                }
             } else if let s = spot {
                 // Camping: kun per natt
                 BigPriceInput(

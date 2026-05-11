@@ -144,38 +144,62 @@ struct SpotDiscountsStep: View {
     ) -> some View {
         let binding = bindingFor(periodType: periodType, periodValue: periodValue, spotIndex: spotIndex, applyToAll: applyToAll)
         let isEnabled = (binding.wrappedValue ?? 0) > 0
+        let basePrice = form.spotMarkers.indices.contains(spotIndex)
+            ? (form.spotMarkers[spotIndex].price ?? 0)
+            : 0
+        let suggested = Self.suggestedPrice(forTier: periodType, periodValue: periodValue, dailyPrice: basePrice)
+        let showSuggestion = !isEnabled && suggested > 0 && !(periodType == .day && periodValue == 1)
 
-        HStack(spacing: 12) {
-            // Hele venstre-siden (sjekkboks + label) toggler raden.
-            Button {
-                if isEnabled {
-                    binding.wrappedValue = nil
-                } else {
-                    let basePrice = form.spotMarkers.indices.contains(spotIndex)
-                        ? (form.spotMarkers[spotIndex].price ?? 0)
-                        : 0
-                    binding.wrappedValue = basePrice > 0 ? basePrice : nil
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                // Hele venstre-siden (sjekkboks + label) toggler raden.
+                Button {
+                    if isEnabled {
+                        binding.wrappedValue = nil
+                    } else {
+                        binding.wrappedValue = suggested > 0 ? suggested : (basePrice > 0 ? basePrice : nil)
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 22))
+                            .foregroundStyle(isEnabled ? Color.primary600 : Color.neutral300)
+                        Text(label)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(isEnabled ? .neutral900 : .neutral500)
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
                 }
-            } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 22))
-                        .foregroundStyle(isEnabled ? Color.primary600 : Color.neutral300)
-                    Text(label)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(isEnabled ? .neutral900 : .neutral500)
-                    Spacer(minLength: 0)
-                }
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+
+                // KrStepper er alltid hit-testable. Bruker kan tappe pris-feltet
+                // direkte for å skrive et tall — pakken aktiveres automatisk når
+                // verdien blir > 0.
+                KrStepper(value: binding, step: 50, minValue: 0, maxValue: nil, unitLabel: "kr", placeholder: "0")
+                    .frame(width: 170)
+                    .opacity(isEnabled ? 1 : 0.6)
             }
-            .buttonStyle(.plain)
 
-            // KrStepper er alltid hit-testable. Bruker kan tappe pris-feltet
-            // direkte for å skrive et tall — pakken aktiveres automatisk når
-            // verdien blir > 0.
-            KrStepper(value: binding, step: 50, minValue: 0, maxValue: nil, unitLabel: "kr", placeholder: "0")
-                .frame(width: 170)
-                .opacity(isEnabled ? 1 : 0.6)
+            if showSuggestion {
+                Button {
+                    binding.wrappedValue = suggested
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Foreslått: \(Self.formatKr(suggested))")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(.primary700)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.primary50)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 34)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
@@ -185,6 +209,29 @@ struct SpotDiscountsStep: View {
             RoundedRectangle(cornerRadius: 12)
                 .stroke(isEnabled ? Color.primary600 : Color.neutral200, lineWidth: isEnabled ? 1.5 : 1)
         )
+    }
+
+    /// Standard rabattskala for lengre opphold. Brukes som auto-forslag i UI.
+    /// Uke = 10% rabatt, måned = 25%, år = 40%. Avrundes til nærmeste 50 kr.
+    static func suggestedPrice(forTier tier: PricePackagePeriodType, periodValue: Int, dailyPrice: Int) -> Int {
+        guard dailyPrice > 0 else { return 0 }
+        let raw: Double
+        switch tier {
+        case .day: raw = Double(dailyPrice * periodValue)
+        case .week: raw = Double(dailyPrice) * 7.0 * Double(periodValue) * 0.9
+        case .month: raw = Double(dailyPrice) * 30.0 * Double(periodValue) * 0.75
+        case .year: raw = Double(dailyPrice) * 365.0 * Double(periodValue) * 0.6
+        }
+        let rounded = Int((raw / 50.0).rounded()) * 50
+        return max(rounded, 50)
+    }
+
+    static func formatKr(_ value: Int) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.groupingSeparator = " "
+        f.maximumFractionDigits = 0
+        return "\(f.string(from: NSNumber(value: value)) ?? "\(value)") kr"
     }
 
     /// Felles binding-helper. For DAY-1: lagres på spot.price (som beholder
@@ -364,6 +411,117 @@ struct AddPackageContext: Identifiable {
     let id = UUID()
     let spotIndex: Int
     let applyToAll: Bool
+}
+
+// MARK: - InlineRentalPeriodsView
+//
+// Kompakt versjon av leieperioder-UI til bruk inline i SpotPriceStep.
+// Viser 4 standard-tiers (1 uke / 1 måned / 1 år), ekskluderer 1 dag som er
+// dagsprisen øverst på samme side. Custom-pakker og "felles for alle plasser"
+// holdes ute her — kun avansert i full EditListingView.
+struct InlineRentalPeriodsView: View {
+    @ObservedObject var form: ListingFormModel
+    let spotIndex: Int
+
+    var body: some View {
+        VStack(spacing: 8) {
+            tierRow(label: "1 uke", periodType: .week)
+            tierRow(label: "1 måned", periodType: .month)
+            tierRow(label: "1 år", periodType: .year)
+        }
+    }
+
+    @ViewBuilder
+    private func tierRow(label: String, periodType: PricePackagePeriodType) -> some View {
+        let binding = packageBinding(periodType: periodType, periodValue: 1)
+        let isEnabled = (binding.wrappedValue ?? 0) > 0
+        let basePrice = form.spotMarkers.indices.contains(spotIndex)
+            ? (form.spotMarkers[spotIndex].price ?? 0) : 0
+        let suggested = SpotDiscountsStep.suggestedPrice(forTier: periodType, periodValue: 1, dailyPrice: basePrice)
+        let showSuggestion = !isEnabled && suggested > 0
+
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                Button {
+                    if isEnabled {
+                        binding.wrappedValue = nil
+                    } else {
+                        binding.wrappedValue = suggested > 0 ? suggested : basePrice
+                    }
+                } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
+                            .font(.system(size: 22))
+                            .foregroundStyle(isEnabled ? Color.primary600 : Color.neutral300)
+                        Text(label)
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(isEnabled ? .neutral900 : .neutral500)
+                        Spacer(minLength: 0)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                KrStepper(value: binding, step: 50, minValue: 0, maxValue: nil, unitLabel: "kr", placeholder: "0")
+                    .frame(width: 150)
+                    .opacity(isEnabled ? 1 : 0.6)
+            }
+
+            if showSuggestion {
+                Button {
+                    binding.wrappedValue = suggested
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "wand.and.stars")
+                            .font(.system(size: 11, weight: .semibold))
+                        Text("Foreslått: \(SpotDiscountsStep.formatKr(suggested))")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(.primary700)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.primary50)
+                    .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 34)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(isEnabled ? Color.white : Color.neutral50)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12)
+            .stroke(isEnabled ? Color.primary600 : Color.neutral200, lineWidth: isEnabled ? 1.5 : 1))
+    }
+
+    private func packageBinding(periodType: PricePackagePeriodType, periodValue: Int) -> Binding<Int?> {
+        Binding(
+            get: {
+                guard form.spotMarkers.indices.contains(spotIndex) else { return nil }
+                return form.spotMarkers[spotIndex].pricePackages?.first {
+                    $0.periodType == periodType && $0.periodValue == periodValue
+                }?.priceNok
+            },
+            set: { newValue in
+                var packages = form.spotMarkers[spotIndex].pricePackages ?? []
+                packages.removeAll { $0.periodType == periodType && $0.periodValue == periodValue }
+                if let v = newValue, v > 0 {
+                    packages.append(PricePackage(periodType: periodType, periodValue: periodValue, priceNok: v))
+                }
+                form.spotMarkers[spotIndex].pricePackages = packages.isEmpty ? nil : packages.sortedForDisplay
+                mirrorLegacyPriceFields(spotIndex: spotIndex)
+            }
+        )
+    }
+
+    private func mirrorLegacyPriceFields(spotIndex i: Int) {
+        guard form.spotMarkers.indices.contains(i) else { return }
+        let pkgs = form.spotMarkers[i].pricePackages ?? []
+        form.spotMarkers[i].weeklyPrice = pkgs.first { $0.periodType == .week && $0.periodValue == 1 }?.priceNok
+        form.spotMarkers[i].monthlyPrice = pkgs.first { $0.periodType == .month && $0.periodValue == 1 }?.priceNok
+        form.spotMarkers[i].yearPrice = pkgs.first { $0.periodType == .year && $0.periodValue == 1 }?.priceNok
+    }
 }
 
 // MARK: - Add package sheet

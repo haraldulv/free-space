@@ -102,6 +102,15 @@ struct AddressStep: View {
                             }
                         }
                         Spacer()
+                        Button {
+                            clearAddress()
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(.neutral400)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Slett valgt adresse")
                     }
                     .padding(14)
                     .background(Color.primary50)
@@ -134,6 +143,17 @@ struct AddressStep: View {
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
             }
         }
+    }
+
+    private func clearAddress() {
+        form.address = ""
+        form.city = ""
+        form.region = ""
+        form.lat = 0
+        form.lng = 0
+        searchText = ""
+        placesService.clear()
+        isSearchFocused = true
     }
 
     private func selectPlace(_ prediction: PlacePrediction) {

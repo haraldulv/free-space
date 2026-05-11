@@ -299,50 +299,46 @@ private struct HostOnboardingWelcomeStep: View {
     var body: some View {
         WizardScreen(
             title: "Velkommen som utleier",
-            subtitle: "Vi trenger litt informasjon for å kunne betale ut leieinntektene dine. Alt skjer her i appen."
+            subtitle: "Vi trenger litt info for å kunne betale ut leieinntektene dine."
         ) {
-            VStack(spacing: 14) {
-                BulletCard(
+            VStack(spacing: 0) {
+                BulletRow(
                     iconName: "person.text.rectangle.fill",
                     title: "Personlig info",
-                    subtitle: "Navn, personnummer og telefon"
+                    subtitle: "Navn, fnr og telefon"
                 )
-                BulletCard(
+                BulletRow(
                     iconName: "house.fill",
                     title: "Adresse",
                     subtitle: "Hjemmeadressen din"
                 )
-                BulletCard(
+                BulletRow(
                     iconName: "creditcard.fill",
                     title: "Bankkonto",
-                    subtitle: "Norsk kontonummer for utbetalinger"
+                    subtitle: "Kontonummer for utbetalinger"
                 )
 
                 Text("Ved å fortsette godtar du [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer](https://tuno.no/retningslinjer). Tuno bruker Stripe som betalingsleverandør.")
                     .font(.system(size: 13))
                     .foregroundStyle(.neutral500)
                     .tint(.primary600)
-                    .padding(.top, 8)
+                    .padding(.top, 16)
             }
         }
     }
 }
 
-private struct BulletCard: View {
+private struct BulletRow: View {
     let iconName: String
     let title: String
     let subtitle: String
 
     var body: some View {
         HStack(spacing: 14) {
-            ZStack {
-                Circle()
-                    .fill(Color.primary50)
-                    .frame(width: 52, height: 52)
-                Image(systemName: iconName)
-                    .font(.system(size: 22, weight: .medium))
-                    .foregroundStyle(.primary700)
-            }
+            Image(systemName: iconName)
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.primary700)
+                .frame(width: 28, alignment: .center)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold))
@@ -353,14 +349,8 @@ private struct BulletCard: View {
             }
             Spacer()
         }
-        .padding(16)
+        .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.neutral200, lineWidth: 1)
-        )
     }
 }
 

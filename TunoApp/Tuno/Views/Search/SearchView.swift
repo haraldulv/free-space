@@ -268,6 +268,7 @@ struct SearchView: View {
             centerZoom: searchZoom,
             selectedListingId: selectedListingIndex.flatMap { filteredListings.indices.contains($0) ? filteredListings[$0].id : nil },
             visitedIds: visitedStore.ids,
+            searchNights: searchNightsCount,
             onSelect: { id in
                 hideKeyboard()
                 if let id, let idx = filteredListings.firstIndex(where: { $0.id == id }) {
@@ -388,6 +389,15 @@ struct SearchView: View {
 
     // MARK: - Computed
 
+    /// Antall døgn brukeren har søkt etter (utsjekk - innsjekk + 1). Nil hvis
+    /// ingen periode er valgt. Brukes til å vise totalpris i prisbobler.
+    private var searchNightsCount: Int? {
+        guard let inDate = checkIn, let outDate = checkOut else { return nil }
+        let cal = Calendar(identifier: .gregorian)
+        let span = (cal.dateComponents([.day], from: inDate, to: outDate).day ?? 0) + 1
+        return span > 1 ? span : nil
+    }
+
     /// Klient-side filtrering basert på SearchFilters. Server-search
     /// håndterer query+lat+lng+vehicle+amenities+instant; resterende
     /// filtre (pris, kategori, multi-vehicle, ekstra booking-options)
@@ -414,6 +424,25 @@ struct SearchView: View {
             if !filters.rentalPeriodTypes.isEmpty {
                 let derived = Set(listing.derivedPeriodTypes)
                 if filters.rentalPeriodTypes.isDisjoint(with: derived) { return false }
+            }
+            // Parkering Korttid/Langtid: hvis bruker har valgt en periode i
+            // WhereSheet (Korttid ≤ 7 dager, Langtid > 7 dager), så vil vi
+            // bare vise listings som matcher tilbudet:
+            //   Korttid → må ha dag-pris (.day i derivedPeriodTypes)
+            //   Langtid → må ha uke/måned/år-pris
+            if listing.category == .parking, let inDate = checkIn, let outDate = checkOut {
+                let cal = Calendar(identifier: .gregorian)
+                let spanDays = (cal.dateComponents([.day], from: inDate, to: outDate).day ?? 0) + 1
+                let isLongTerm = spanDays > 7
+                let derived = Set(listing.derivedPeriodTypes)
+                if isLongTerm {
+                    // Langtid: krev minst én tier >1 dag
+                    let longTermTiers: Set<PricePackagePeriodType> = [.week, .month, .year]
+                    if derived.isDisjoint(with: longTermTiers) { return false }
+                } else {
+                    // Korttid: krev dag-pris
+                    if !derived.contains(.day) && !derived.isEmpty { return false }
+                }
             }
             return true
         }

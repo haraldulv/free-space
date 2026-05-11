@@ -858,6 +858,17 @@ struct WizardPricingCalendarView: View {
         if case .bandEdit = mode { return }
         if case .bandCreate = mode { return }
 
+        // Direct toggle: hvis dagen er blokkert OG bruker ikke holder på med
+        // en range-selection, åpne dagen umiddelbart. Lettere oppdaget for
+        // brukere enn å selektere + bunnbar-knapp.
+        if rangeAnchor == nil, !selectedDates.contains(iso), let idx = spotIndex,
+           let blocked = form.spotMarkers[idx].blockedDates, blocked.contains(iso) {
+            var updated = Set(blocked)
+            updated.remove(iso)
+            form.spotMarkers[idx].blockedDates = updated.isEmpty ? nil : Array(updated).sorted()
+            return
+        }
+
         if let anchor = rangeAnchor {
             if anchor == iso {
                 selectedDates.remove(iso)
@@ -913,6 +924,15 @@ struct WizardPricingCalendarView: View {
             updated.formUnion(selectedDates)
         }
         form.spotMarkers[idx].blockedDates = updated.isEmpty ? nil : Array(updated).sorted()
+        clearSelectionState()
+    }
+
+    /// Felles helper for å rydde markering + anker + modus etter en utført
+    /// handling i kalenderen (blokker/åpne dager, bekreft pris-override osv).
+    private func clearSelectionState() {
+        selectedDates.removeAll()
+        rangeAnchor = nil
+        mode = .idle
     }
 
     private func syncPriceEditFromSelection() {
@@ -935,6 +955,7 @@ struct WizardPricingCalendarView: View {
 
     private func commitPriceEdit() {
         applyDateOverride(price: priceEditValue)
+        clearSelectionState()
     }
 
     private func applyDateOverride(price: Int) {

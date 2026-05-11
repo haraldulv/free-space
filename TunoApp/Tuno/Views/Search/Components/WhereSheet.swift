@@ -563,14 +563,19 @@ struct WhereSheet: View {
         }
     }
 
-    /// Periode-velger (1 dag / 1 uke / 1 måned / 1 år) — auto-strekker checkOut.
-    /// Default = 1 dag (i dag → i dag).
+    /// Periode-velger — auto-strekker checkOut.
+    /// Parkering: Korttid (1 dag) / Langtid (30 dager). Camping: 1 dag / 1 uke / 1 måned / 1 år.
     private var rentalPeriodToggle: some View {
         HStack(spacing: 8) {
-            periodChip(label: "1 dag", icon: "sun.max", days: 1)
-            periodChip(label: "1 uke", icon: "calendar.badge.clock", days: 7)
-            periodChip(label: "1 måned", icon: "calendar", days: 30)
-            periodChip(label: "1 år", icon: "infinity", days: 365)
+            if category == .parking {
+                periodChip(label: "Korttid", icon: "sun.max", days: 1)
+                periodChip(label: "Langtid", icon: "calendar", days: 30)
+            } else {
+                periodChip(label: "1 dag", icon: "sun.max", days: 1)
+                periodChip(label: "1 uke", icon: "calendar.badge.clock", days: 7)
+                periodChip(label: "1 måned", icon: "calendar", days: 30)
+                periodChip(label: "1 år", icon: "infinity", days: 365)
+            }
         }
     }
 

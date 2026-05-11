@@ -239,10 +239,11 @@ final class ListingFormModel: ObservableObject {
         category != .parking
     }
 
-    /// Rabatter-steget (12) gir kr-priser for uke/måned/3mnd/6mnd/år-bookinger.
-    /// Kun relevant for parkering — camping bruker en flat per-døgn-pris.
+    /// Rabatter-steget (12) er nå flettet inn under Pris-steget som en
+    /// collapsible seksjon, så denne hopper alltid. Beholdt som flagg slik at
+    /// existing step-routing-kode fortsetter å peke forbi step-en.
     var skipsRabatterStep: Bool {
-        category != .parking
+        true
     }
 
     // MARK: - Validation per step
@@ -517,6 +518,19 @@ final class ListingFormModel: ObservableObject {
         // Parkering = .time (kr/dag), camping = .natt. .hour er fjernet fra DB.
         let derivedPriceUnit: PriceUnit = category == .parking ? .time : .natt
 
+        // Når annonsen har kun én plass, speiles plassens beskrivelse opp til
+        // listing-nivå. Vert skriver beskrivelsen ett sted (på plassen) og det
+        // blir også annonse-beskrivelsen. Brukers eksplisitte annonse-beskrivelse
+        // vinner om begge finnes.
+        let resolvedDescription: String = {
+            let trimmed = description.trimmingCharacters(in: .whitespaces)
+            if !trimmed.isEmpty { return trimmed }
+            if spots == 1, let spotDesc = spotMarkers.first?.description?.trimmingCharacters(in: .whitespaces), !spotDesc.isEmpty {
+                return spotDesc
+            }
+            return trimmed
+        }()
+
         let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
         let resolvedTitle: String = {
             if !trimmedTitle.isEmpty { return trimmedTitle }
@@ -589,7 +603,7 @@ final class ListingFormModel: ObservableObject {
             hostId: hostId,
             title: resolvedTitle,
             internalName: internalName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : internalName.trimmingCharacters(in: .whitespaces),
-            description: description.trimmingCharacters(in: .whitespaces),
+            description: resolvedDescription,
             category: category?.rawValue ?? "camping",
             vehicleType: derivedVehicleType.rawValue,
             city: city,

@@ -24,6 +24,7 @@ struct ListingDetailView: View {
     @State private var spotFullscreenImages: [String]?
     @State private var spotFullscreenStartIndex: Int = 0
     @State private var bookingSpotId: String?
+    @State private var scrollOffsetY: CGFloat = 0
     @StateObject private var chatService = ChatService()
     @StateObject private var locationManager = LocationManager()
     @Environment(\.dismiss) private var dismiss
@@ -42,6 +43,27 @@ struct ListingDetailView: View {
             }
         }
         .toolbar(.hidden, for: .navigationBar)
+        .overlay(alignment: .topLeading) {
+            // Alltid-synlig tilbake-knapp: skjult når hero-back er synlig (scroll near top),
+            // fader inn når brukeren har scrollet past hero.
+            if scrollOffsetY < -heroHeight * 0.6 {
+                Button {
+                    dismiss()
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .frame(width: 36, height: 36)
+                        .background(.ultraThinMaterial, in: Circle())
+                        .overlay(Circle().stroke(Color.neutral200, lineWidth: 0.5))
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 16)
+                .padding(.top, 60)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: scrollOffsetY < -heroHeight * 0.6)
         .fullScreenCover(isPresented: $showLogin) {
             LoginView()
         }
@@ -83,6 +105,12 @@ struct ListingDetailView: View {
             ScrollView {
                 VStack(spacing: 0) {
                     heroGallery(images: images)
+                        .background(GeometryReader { geo in
+                            Color.clear.preference(
+                                key: ListingDetailScrollOffsetKey.self,
+                                value: geo.frame(in: .named("listingDetailScroll")).minY
+                            )
+                        })
 
                     VStack(alignment: .leading, spacing: 18) {
                         titleBlock(listing: listing)
@@ -141,6 +169,10 @@ struct ListingDetailView: View {
                     )
                     .offset(y: -20)
                 }
+            }
+            .coordinateSpace(name: "listingDetailScroll")
+            .onPreferenceChange(ListingDetailScrollOffsetKey.self) { value in
+                scrollOffsetY = value
             }
             .ignoresSafeArea(edges: .top)
             .scrollIndicators(.hidden)
@@ -1403,6 +1435,15 @@ private struct AllAmenitiesSheet: View {
                 }
             }
         }
+    }
+}
+
+// MARK: - Scroll offset tracking
+
+private struct ListingDetailScrollOffsetKey: PreferenceKey {
+    nonisolated(unsafe) static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 

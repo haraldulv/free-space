@@ -144,6 +144,9 @@ struct SearchMapView: UIViewRepresentable {
     var centerZoom: Float?
     var selectedListingId: String? = nil
     var visitedIds: Set<String> = []
+    /// Antall døgn bruker har søkt etter (utsjekk - innsjekk + 1, hvis begge satt).
+    /// Når > 1: prisbobler viser totalpris for oppholdet i stedet for per-døgn.
+    var searchNights: Int? = nil
     var onSelect: ((String?) -> Void)? = nil
     var onRegionChanged: ((_ lat: Double, _ lng: Double, _ radiusKm: Double) -> Void)? = nil
 
@@ -225,6 +228,7 @@ struct SearchMapView: UIViewRepresentable {
         context.coordinator.lastCenterZoom = centerZoom
         context.coordinator.lastSelectedListingId = selectedListingId
         context.coordinator.lastVisitedIds = visitedIds
+        context.coordinator.searchNights = searchNights
 
         addMarkers(to: mapView, coordinator: context.coordinator)
         return mapView
@@ -238,9 +242,11 @@ struct SearchMapView: UIViewRepresentable {
         let centerChanged = centerLat != context.coordinator.lastCenterLat
             || centerLng != context.coordinator.lastCenterLng
         let zoomChanged = centerZoom != context.coordinator.lastCenterZoom
+        let nightsChanged = searchNights != context.coordinator.searchNights
         context.coordinator.lastCenterLat = centerLat
         context.coordinator.lastCenterLng = centerLng
         context.coordinator.lastCenterZoom = centerZoom
+        context.coordinator.searchNights = searchNights
 
         let listingsKey = listings.compactMap { $0.lat != nil && $0.lng != nil ? $0.id : nil }.sorted().joined(separator: ",")
         if listingsKey != context.coordinator.lastListingIdsKey {
@@ -256,14 +262,24 @@ struct SearchMapView: UIViewRepresentable {
             context.coordinator.lastSelectedListingId = selectedListingId
             context.coordinator.lastVisitedIds = visitedIds
         } else {
-            // Kun selection eller visited har endret seg — oppdater pris-boble-bilder
+            // Kun selection / visited / nights har endret seg — oppdater pris-boble-bilder
             let visitedDiff = visitedIds.symmetricDifference(context.coordinator.lastVisitedIds)
             let selectionChanged = selectedListingId != context.coordinator.lastSelectedListingId
-            if !visitedDiff.isEmpty || selectionChanged {
+            if !visitedDiff.isEmpty || selectionChanged || nightsChanged {
                 var idsToUpdate: Set<String> = visitedDiff
                 if selectionChanged {
                     if let prev = context.coordinator.lastSelectedListingId { idsToUpdate.insert(prev) }
                     if let curr = selectedListingId { idsToUpdate.insert(curr) }
+                }
+                // Når søke-perioden endrer seg, må alle bobler tegnes på nytt
+                // siden totalprisen avhenger av antall døgn.
+                if nightsChanged {
+                    for annotation in context.coordinator.allAnnotations {
+                        let key = AnnotationKey(annotation)
+                        if let id = context.coordinator.markerToId[key] {
+                            idsToUpdate.insert(id)
+                        }
+                    }
                 }
                 for annotation in context.coordinator.allAnnotations {
                     let key = AnnotationKey(annotation)
@@ -273,7 +289,8 @@ struct SearchMapView: UIViewRepresentable {
                         annotationView.image = MapBubbleRenderer.priceBubble(
                             listing: listing,
                             isVisited: visitedIds.contains(id),
-                            isSelected: id == selectedListingId
+                            isSelected: id == selectedListingId,
+                            searchNights: searchNights
                         )
                     }
                 }
@@ -436,6 +453,7 @@ struct SearchMapView: UIViewRepresentable {
         var lastListingIdsKey: String = ""
         var lastSelectedListingId: String?
         var lastVisitedIds: Set<String> = []
+        var searchNights: Int? = nil
         var lastClusterZoom: Float = 0
         var allListingsForClustering: [Listing] = []
         var userMovedMap = false
@@ -465,7 +483,8 @@ struct SearchMapView: UIViewRepresentable {
                 view.image = MapBubbleRenderer.priceBubble(
                     listing: priceAnno.listing,
                     isVisited: priceAnno.isVisited,
-                    isSelected: priceAnno.isSelected
+                    isSelected: priceAnno.isSelected,
+                    searchNights: searchNights
                 )
                 view.canShowCallout = false
                 view.centerOffset = CGPoint(x: 0, y: 0)
@@ -638,12 +657,20 @@ enum MapBubbleRenderer {
 
     /// Pris-boble i Airbnb-stil med 3 tilstander: default/visited/selected.
     /// Returnerer UIImage som kan settes som annotation.image.
-    static func priceBubble(listing: Listing, isVisited: Bool, isSelected: Bool) -> UIImage {
+    /// Hvis `searchNights` > 1 og listing har dagspris (suffix=""), vises total
+    /// for hele oppholdet i stedet for fra-pris.
+    static func priceBubble(listing: Listing, isVisited: Bool, isSelected: Bool, searchNights: Int? = nil) -> UIImage {
         let h = listing.headlinePrice
-        let priceText = h.map { "\($0.price) kr" } ?? "—"
-        let suffix = h?.suffix ?? ""
+        let basePrice = h?.price ?? 0
+        let baseSuffix = h?.suffix ?? ""
+        // Totalpris kun når vi har gyldig daypris (tom suffix) og >=2 døgn.
+        let nights = searchNights ?? 0
+        let useTotal = nights >= 2 && baseSuffix.isEmpty && basePrice > 0
+        let total = useTotal ? basePrice * nights : basePrice
+        let priceText = total > 0 ? "\(total) kr" : (h.map { "\($0.price) kr" } ?? "—")
+        let suffix = useTotal ? "" : baseSuffix
         let spots = listing.spots ?? 1
-        let cacheKey = "\(priceText)|\(suffix)|\(spots)|\(isSelected)|\(isVisited)"
+        let cacheKey = "\(priceText)|\(suffix)|\(spots)|\(isSelected)|\(isVisited)|\(useTotal ? nights : 0)"
         if let cached = priceBubbleCache[cacheKey] { return cached }
 
         let textColor: UIColor = isSelected ? .white : TunoColors.textBlack

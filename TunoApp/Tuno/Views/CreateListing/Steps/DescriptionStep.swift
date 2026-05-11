@@ -5,6 +5,11 @@ struct DescriptionStep: View {
     @FocusState private var titleFocused: Bool
     @FocusState private var descriptionFocused: Bool
 
+    /// Hvis annonsen kun har én plass blir beskrivelsen lagt inn per plass i
+    /// neste steg, og speilet ned til annonse-beskrivelsen ved lagring. Da
+    /// skjuler vi annonse-beskrivelsen her for å unngå dobbeltarbeid.
+    private var showListingDescription: Bool { form.spots > 1 }
+
     var body: some View {
         WizardScreen(
             title: "Gi annonsen et navn",
@@ -12,7 +17,9 @@ struct DescriptionStep: View {
         ) {
             VStack(alignment: .leading, spacing: 24) {
                 titleField
-                descriptionField
+                if showListingDescription {
+                    descriptionField
+                }
             }
         }
     }
@@ -77,7 +84,7 @@ struct DescriptionStep: View {
     private var descriptionField: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
-                Text("Beskrivelse")
+                Text("Beskrivelse for hele annonsen")
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.neutral900)
                 Text("(valgfritt)")
@@ -85,6 +92,10 @@ struct DescriptionStep: View {
                     .foregroundStyle(.neutral400)
                 Spacer()
             }
+
+            Text("Dette vises øverst på annonsen. Hver plass kan ha sin egen beskrivelse i tillegg.")
+                .font(.system(size: 12))
+                .foregroundStyle(.neutral500)
 
             ZStack(alignment: .topLeading) {
                 TextEditor(text: $form.description)

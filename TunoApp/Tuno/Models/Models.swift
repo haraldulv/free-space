@@ -142,6 +142,11 @@ struct SpotMarker: Codable, Hashable {
     /// Per-natt-pris for camping (overstyrer listing-nivå). nil for parkering.
     var pricePerNight: Int?
     var vehicleMaxLength: Int?
+    /// Maks bredde (cm) for kjøretøy. Valgfritt, vises for alle parkeringskategorier.
+    var vehicleMaxWidth: Int?
+    /// Maks høyde (cm) for kjøretøy. Valgfritt, vises kun for garasje + p-hus
+    /// hvor takhøyde er en reell begrensning.
+    var vehicleMaxHeight: Int?
     /// Multi-select biltyper plassen passer for.
     var vehicleTypes: [VehicleType]?
     /// Eldre singel-felt — beholdes kun for backward-compat ved decode av seedede listings.
@@ -196,6 +201,8 @@ struct SpotMarker: Codable, Hashable {
         case pricePerHour = "pricePerHour"
         case pricePerNight = "pricePerNight"
         case vehicleMaxLength = "vehicleMaxLength"
+        case vehicleMaxWidth = "vehicleMaxWidth"
+        case vehicleMaxHeight = "vehicleMaxHeight"
         case vehicleType = "vehicleType"
         case vehicleTypes = "vehicleTypes"
         case priceUnit = "priceUnit"
