@@ -34,7 +34,13 @@ struct CreateListingView: View {
             .toolbar(.hidden, for: .tabBar)
             .toolbar(content: cancelToolbar)
             .toolbar(content: spotIndicatorToolbar)
-            .alert("Lukk wizarden?", isPresented: $showCancelAlert, actions: {
+            .alert("Lukk ny annonse?", isPresented: $showCancelAlert, actions: {
+                Button("Lukk og lagre") {
+                    if let userId = authManager.currentUser?.id.uuidString {
+                        form.saveDraft(userId: userId)
+                    }
+                    dismiss()
+                }
                 Button("Forkast utkast", role: .destructive) {
                     if let userId = authManager.currentUser?.id.uuidString {
                         if let snapshot = preExistingDraftSnapshot {
@@ -48,12 +54,7 @@ struct CreateListingView: View {
                     }
                     dismiss()
                 }
-                Button("Lukk og lagre", role: .cancel) {
-                    if let userId = authManager.currentUser?.id.uuidString {
-                        form.saveDraft(userId: userId)
-                    }
-                    dismiss()
-                }
+                Button("Avbryt", role: .cancel) { }
             }, message: {
                 Text("Vi lagrer fremdriften din som utkast så du kan fortsette senere fra Mine annonser.")
             })
@@ -106,37 +107,41 @@ struct CreateListingView: View {
         .onTapGesture {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
+        // navBar er sticky på bunnen kun når tastaturet IKKE er åpent.
+        // Done-knappen renderes som en gjennomsiktig overlay, ikke i
+        // safeAreaInset — så den ikke etterlater seg en hvit bar.
         .safeAreaInset(edge: .bottom) {
-            if keyboardVisible {
-                keyboardDoneBar.transition(.move(edge: .bottom).combined(with: .opacity))
-            } else {
+            if !keyboardVisible {
                 navBar.transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if keyboardVisible {
+                keyboardDoneButton
+                    .padding(.trailing, 16)
+                    .padding(.bottom, 8)
+                    .transition(.opacity)
             }
         }
     }
 
-    /// Vises i stedet for navBar når tastaturet er åpent. SwiftUI sin
-    /// `.toolbar(placement: .keyboard)` rendrer ikke pålitelig på numberPad,
-    /// så vi bygger vår egen "Ferdig"-knapp som ligger over tastaturet via
-    /// safeAreaInset. Floating sirkel uten bakgrunnsboks.
-    private var keyboardDoneBar: some View {
-        HStack {
-            Spacer()
-            Button {
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            } label: {
-                Image(systemName: "keyboard.chevron.compact.down")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(Color.primary600)
-                    .clipShape(Circle())
-                    .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
-            }
-            .accessibilityLabel("Skjul tastatur")
+    /// Floating "Ferdig"-knapp som vises over tastaturet. Ligger som overlay
+    /// (ikke safeAreaInset), så ingen full-bredde-bar bygges rundt den.
+    /// SwiftUI sin `.toolbar(placement: .keyboard)` rendrer ikke pålitelig
+    /// på numberPad, derfor egen knapp.
+    private var keyboardDoneButton: some View {
+        Button {
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        } label: {
+            Image(systemName: "keyboard.chevron.compact.down")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 44, height: 44)
+                .background(Color.primary600)
+                .clipShape(Circle())
+                .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
         }
-        .padding(.trailing, 16)
-        .padding(.bottom, 8)
+        .accessibilityLabel("Skjul tastatur")
     }
 
     @ViewBuilder
