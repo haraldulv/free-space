@@ -135,6 +135,7 @@ struct SpotVehicleContent: View {
 struct SpotPriceContent: View {
     @ObservedObject var form: ListingFormModel
     let index: Int
+    var scrollProxy: ScrollViewProxy? = nil
     @State private var showLongerStay: Bool = false
 
     private var spot: SpotMarker? {
@@ -162,6 +163,13 @@ struct SpotPriceContent: View {
 
                 Button {
                     withAnimation(.easeInOut(duration: 0.22)) { showLongerStay.toggle() }
+                    if showLongerStay {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                            withAnimation(.easeInOut(duration: 0.3)) {
+                                scrollProxy?.scrollTo("longerStay\(index)", anchor: .bottom)
+                            }
+                        }
+                    }
                 } label: {
                     HStack {
                         Text("Lengre opphold-rabatter")
@@ -182,6 +190,7 @@ struct SpotPriceContent: View {
 
                 if showLongerStay {
                     InlineRentalPeriodsView(form: form, spotIndex: index)
+                        .id("longerStay\(index)")
                 }
             } else if let s = spot {
                 // Camping: kun per natt

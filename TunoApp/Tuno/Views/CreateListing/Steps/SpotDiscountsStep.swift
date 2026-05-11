@@ -463,7 +463,7 @@ struct InlineRentalPeriodsView: View {
                 .buttonStyle(.plain)
 
                 KrStepper(value: binding, step: 50, minValue: 0, maxValue: nil, unitLabel: "kr", placeholder: "0")
-                    .frame(width: 150)
+                    .frame(width: 190)
                     .opacity(isEnabled ? 1 : 0.6)
             }
 

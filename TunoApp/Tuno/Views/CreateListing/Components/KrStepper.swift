@@ -32,35 +32,7 @@ struct KrStepper: View {
 
     private var valueField: some View {
         HStack(spacing: 4) {
-            TextField(placeholder, text: $text)
-                .focused($isFocused)
-                .keyboardType(.numberPad)
-                .multilineTextAlignment(.center)
-                .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(.neutral900)
-                .frame(minWidth: 50)
-                .onChange(of: text) { _, newValue in
-                    let digits = newValue.filter(\.isNumber)
-                    if digits.isEmpty {
-                        value = nil
-                        return
-                    }
-                    if let n = Int(digits) {
-                        value = clamp(n)
-                    }
-                }
-                .onChange(of: isFocused) { _, focused in
-                    if focused {
-                        // Tom-på-tap så bruker kan skrive nytt tall direkte.
-                        text = ""
-                    } else {
-                        text = displayText
-                    }
-                }
-                .onAppear { text = displayText }
-                .onChange(of: value) { _, newValue in
-                    if !isFocused { text = displayText }
-                }
+            textInput
             if !unitLabel.isEmpty {
                 Text(unitLabel)
                     .font(.system(size: 13))
@@ -73,6 +45,40 @@ struct KrStepper: View {
         .background(Color.neutral50)
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(isFocused ? Color.primary600 : Color.neutral200, lineWidth: isFocused ? 2 : 1))
+    }
+
+    private var textInput: some View {
+        let field = TextField(placeholder, text: $text)
+            .focused($isFocused)
+            .keyboardType(.numberPad)
+            .multilineTextAlignment(.center)
+            .font(.system(size: 18, weight: .bold))
+            .foregroundStyle(Color.neutral900)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .frame(minWidth: 50)
+        return field
+            .onChange(of: text) { _, newValue in
+                let digits = newValue.filter { $0.isNumber }
+                if digits.isEmpty {
+                    value = nil
+                    return
+                }
+                if let n = Int(digits) {
+                    value = clamp(n)
+                }
+            }
+            .onChange(of: isFocused) { _, focused in
+                if focused {
+                    text = ""
+                } else {
+                    text = displayText
+                }
+            }
+            .onAppear { text = displayText }
+            .onChange(of: value) { _, _ in
+                if !isFocused { text = displayText }
+            }
     }
 
     @ViewBuilder

@@ -555,6 +555,9 @@
     "24 timer før" : {
 
     },
+    "24/7" : {
+
+    },
     "30" : {
 
     },
@@ -1009,6 +1012,9 @@
     "Beskrivelse (valgfri)" : {
 
     },
+    "Beskrivelse for hele annonsen" : {
+
+    },
     "Bestill" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1455,6 +1461,9 @@
     "Dette tar vanligvis noen sekunder." : {
 
     },
+    "Dette vises øverst på annonsen. Hver plass kan ha sin egen beskrivelse i tillegg." : {
+
+    },
     "Dette vises til gjester som trykker på profilen din. Hold det kort og vennlig." : {
 
     },
@@ -1531,6 +1540,9 @@
           }
         }
       }
+    },
+    "Døgnåpen" : {
+
     },
     "Dra og slipp for å endre rekkefølge. Bildet lengst til venstre er forsidebildet." : {
 
@@ -1839,6 +1851,9 @@
           }
         }
       }
+    },
+    "eller fyll inn manuelt" : {
+
     },
     "eller med e-post" : {
 
@@ -2288,6 +2303,9 @@
         }
       }
     },
+    "Foreslått: %@" : {
+
+    },
     "Forespørsel" : {
       "localizations" : {
         "de" : {
@@ -2483,6 +2501,9 @@
           }
         }
       }
+    },
+    "Fortsett med Vipps" : {
+
     },
     "Fortsett redigering" : {
 
@@ -2861,6 +2882,9 @@
 
     },
     "Hjelp" : {
+
+    },
+    "Hjelper gjester å vite om kjøretøyet passer." : {
 
     },
     "Hjemmeadressen din. Brukes kun til identitetsverifisering." : {
@@ -4205,6 +4229,9 @@
     "Lengre opphold" : {
 
     },
+    "Lengre opphold-rabatter" : {
+
+    },
     "Les brukervilkår" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4422,6 +4449,9 @@
       }
     },
     "Maks lengde %@m" : {
+
+    },
+    "Mål" : {
 
     },
     "Månedlig inntekt" : {
@@ -5176,6 +5206,9 @@
       }
     },
     "Periode" : {
+
+    },
+    "Personalia hentet fra Vipps" : {
 
     },
     "Personbil" : {

@@ -8,17 +8,19 @@ struct SpotPriceStep: View {
     var body: some View {
         TabView(selection: $form.currentSpotIndex) {
             ForEach(Array(form.spotMarkers.indices), id: \.self) { index in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        spotHeader(index: index)
-                        if index > 0 {
-                            copyFromPreviousButton(currentIndex: index)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 18) {
+                            spotHeader(index: index)
+                            if index > 0 {
+                                copyFromPreviousButton(currentIndex: index)
+                            }
+                            SpotPriceContent(form: form, index: index, scrollProxy: proxy)
                         }
-                        SpotPriceContent(form: form, index: index)
+                        .padding(.horizontal, 24)
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 8)
-                    .padding(.bottom, 24)
                 }
                 .tag(index)
             }

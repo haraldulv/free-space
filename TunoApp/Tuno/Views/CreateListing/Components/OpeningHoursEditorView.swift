@@ -111,11 +111,11 @@ struct OpeningHoursEditorView: View {
     private func weekdayRow(day: Weekday, raw: String?) -> some View {
         let closed = raw == nil
         let isFullDay = Self.isFullDaySentinel(raw)
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Text(weekdayLabel(day))
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.neutral700)
-                .frame(width: 64, alignment: .leading)
+                .frame(width: 60, alignment: .leading)
 
             Button {
                 setDayValue(day, range: closed ? "09:00-17:00" : nil)
@@ -123,56 +123,68 @@ struct OpeningHoursEditorView: View {
                 Text(closed ? "Stengt" : "Åpen")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundStyle(closed ? .neutral500 : .primary700)
-                    .frame(width: 56)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 10)
                     .padding(.vertical, 5)
                     .background(closed ? Color.neutral100 : Color.primary50)
                     .clipShape(Capsule())
             }
             .buttonStyle(.plain)
 
-            if !closed {
-                // 24/7-pill: tap = sett døgnåpent. Tap igjen (når aktiv) = tilbake til 09:00-17:00.
-                Button {
-                    setDayValue(day, range: isFullDay ? "09:00-17:00" : Self.fullDaySentinel)
-                } label: {
-                    Text("24/7")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(isFullDay ? Color.white : .primary700)
-                        .frame(width: 44)
-                        .padding(.vertical, 5)
-                        .background(isFullDay ? Color.primary600 : Color.primary50)
-                        .clipShape(Capsule())
-                }
-                .buttonStyle(.plain)
-            }
-
             // Time-display: tap åpner kombinert fra/til-sheet for hele dagen.
-            // Skjules når 24/7 er aktiv, siden tidene da er fastsatt.
+            // Når 24/7 er aktiv viser vi en sentrert døgnåpent-pille i stedet.
             if !closed, !isFullDay, let parsed = OpeningHoursService.parseRange(raw ?? "") {
                 Button {
                     editingDay = day
                 } label: {
-                    HStack(spacing: 6) {
+                    HStack(spacing: 4) {
                         timePill(text: OpeningHoursService.formatTime(parsed.start))
                         Text("–")
                             .font(.system(size: 12))
                             .foregroundStyle(.neutral400)
                         timePill(text: OpeningHoursService.formatTime(parsed.end))
                     }
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .frame(maxWidth: .infinity, alignment: .center)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             } else if !closed, isFullDay {
-                Text("Døgnåpen")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.neutral500)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                HStack(spacing: 6) {
+                    Image(systemName: "infinity")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text("Døgnåpent")
+                        .font(.system(size: 12, weight: .semibold))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                .foregroundStyle(.neutral700)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(Color.neutral100)
+                .clipShape(Capsule())
+                .frame(maxWidth: .infinity, alignment: .center)
             } else {
                 Spacer(minLength: 0)
             }
+
+            if !closed {
+                // ∞-symbol-knapp: tap = sett døgnåpent. Tap igjen = tilbake til 09:00-17:00.
+                // Plasseres alltid lengst til høyre.
+                Button {
+                    setDayValue(day, range: isFullDay ? "09:00-17:00" : Self.fullDaySentinel)
+                } label: {
+                    Image(systemName: "infinity")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(isFullDay ? Color.white : Color.neutral600)
+                        .frame(width: 32, height: 32)
+                        .background(isFullDay ? Color.neutral800 : Color.neutral100)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+            }
         }
-        .frame(maxWidth: .infinity, minHeight: 32)
+        .frame(maxWidth: .infinity, minHeight: 36)
     }
 
     /// Sentinel for å markere én ukedag som døgnåpen i OpeningHours-modellen.
@@ -187,7 +199,9 @@ struct OpeningHoursEditorView: View {
         Text(text)
             .font(.system(size: 13, weight: .semibold, design: .monospaced))
             .foregroundStyle(.neutral900)
-            .padding(.horizontal, 10)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 8)
             .padding(.vertical, 6)
             .background(Color.neutral50)
             .clipShape(RoundedRectangle(cornerRadius: 8))

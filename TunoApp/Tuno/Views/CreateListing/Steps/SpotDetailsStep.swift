@@ -8,23 +8,32 @@ struct SpotDetailsStep: View {
     var body: some View {
         TabView(selection: $form.currentSpotIndex) {
             ForEach(Array(form.spotMarkers.indices), id: \.self) { index in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
-                        spotHeader(index: index)
-                        if index > 0 {
-                            CopyFromPreviousSpotButton(label: "Bruk samme detaljer som plass \(index)") {
-                                copyFromPrevious(currentIndex: index)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 18) {
+                            spotHeader(index: index)
+                            if index > 0 {
+                                CopyFromPreviousSpotButton(label: "Bruk samme detaljer som plass \(index)") {
+                                    copyFromPrevious(currentIndex: index)
+                                }
+                            }
+                            SpotVehicleContent(form: form, index: index)
+                            if form.category == .parking {
+                                ParkingTypeRow(selected: $form.parkingType) {
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                        withAnimation(.easeInOut(duration: 0.3)) {
+                                            proxy.scrollTo("parkingMal\(index)", anchor: .center)
+                                        }
+                                    }
+                                }
+                                ParkingDimensionsCard(form: form, index: index)
+                                    .id("parkingMal\(index)")
                             }
                         }
-                        SpotVehicleContent(form: form, index: index)
-                        if form.category == .parking {
-                            ParkingTypeRow(selected: $form.parkingType)
-                            ParkingDimensionsCard(form: form, index: index)
-                        }
+                        .padding(.horizontal, 24)
+                        .padding(.top, 8)
+                        .padding(.bottom, 24)
                     }
-                    .padding(.horizontal, 24)
-                    .padding(.top, 8)
-                    .padding(.bottom, 24)
                 }
                 .tag(index)
             }
@@ -68,6 +77,8 @@ private struct ParkingDimensionsCard: View {
     @ObservedObject var form: ListingFormModel
     let index: Int
 
+    @FocusState private var focusedField: String?
+
     private var spot: SpotMarker? {
         form.spotMarkers.indices.contains(index) ? form.spotMarkers[index] : nil
     }
@@ -96,7 +107,9 @@ private struct ParkingDimensionsCard: View {
                     get: { spot?.vehicleMaxLength ?? 0 },
                     set: { form.spotMarkers[index].vehicleMaxLength = $0 > 0 ? $0 : nil }
                 ),
-                maxValue: 30
+                maxValue: 30,
+                focusField: "length",
+                focused: $focusedField
             )
 
             DimensionRow(
@@ -105,7 +118,9 @@ private struct ParkingDimensionsCard: View {
                     get: { spot?.vehicleMaxWidth ?? 0 },
                     set: { form.spotMarkers[index].vehicleMaxWidth = $0 > 0 ? $0 : nil }
                 ),
-                maxValue: 10
+                maxValue: 10,
+                focusField: "width",
+                focused: $focusedField
             )
 
             if showHeight {
@@ -115,7 +130,9 @@ private struct ParkingDimensionsCard: View {
                         get: { spot?.vehicleMaxHeight ?? 0 },
                         set: { form.spotMarkers[index].vehicleMaxHeight = $0 > 0 ? $0 : nil }
                     ),
-                    maxValue: 10
+                    maxValue: 10,
+                    focusField: "height",
+                    focused: $focusedField
                 )
             }
         }
@@ -124,6 +141,17 @@ private struct ParkingDimensionsCard: View {
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 1))
+        .onChange(of: form.parkingType) { oldType, newType in
+            // Tap på Type plass-chip → auto-fokus Lengde etter scroll.
+            // Bare når brukeren går fra ingen valg til et valg (ikke ved
+            // bytte mellom typer, og ikke ved av-velging). Hopp også over
+            // hvis Lengde allerede er fylt ut.
+            guard oldType == nil, newType != nil else { return }
+            guard (spot?.vehicleMaxLength ?? 0) == 0 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                focusedField = "length"
+            }
+        }
     }
 }
 
@@ -132,7 +160,8 @@ private struct DimensionRow: View {
     let label: String
     @Binding var value: Int
     let maxValue: Int
-    @FocusState private var focused: Bool
+    let focusField: String
+    var focused: FocusState<String?>.Binding
     @State private var text: String = ""
 
     var body: some View {
@@ -145,7 +174,7 @@ private struct DimensionRow: View {
             HStack(spacing: 4) {
                 TextField("0", text: $text)
                     .keyboardType(.numberPad)
-                    .focused($focused)
+                    .focused(focused, equals: focusField)
                     .multilineTextAlignment(.trailing)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
                     .foregroundStyle(.primary700)
@@ -158,7 +187,7 @@ private struct DimensionRow: View {
             .padding(.vertical, 8)
             .background(Color.neutral50)
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused ? Color.primary600 : Color.neutral200, lineWidth: focused ? 1.5 : 1))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused.wrappedValue == focusField ? Color.primary600 : Color.neutral200, lineWidth: focused.wrappedValue == focusField ? 1.5 : 1))
         }
         .onAppear { text = value > 0 ? "\(value)" : "" }
         .onChange(of: text) { _, newValue in
@@ -168,15 +197,19 @@ private struct DimensionRow: View {
             if parsed != value { value = parsed }
         }
         .onChange(of: value) { _, newValue in
-            if !focused { text = newValue > 0 ? "\(newValue)" : "" }
+            if focused.wrappedValue != focusField { text = newValue > 0 ? "\(newValue)" : "" }
         }
     }
 }
 
 /// Horisontal rad med 3 ParkingType-ikoner. Valgfri (tap igjen avvelger).
-/// Vises kun for parkering-kategori.
+/// Vises kun for parkering-kategori. Garasje og P-hus side-ved-side
+/// fordi begge har takhøyde-begrensning.
 private struct ParkingTypeRow: View {
     @Binding var selected: ParkingType?
+    /// Kalt etter at et chip blir valgt (ikke ved av-velging). Parent bruker
+    /// dette til å trigge auto-scroll mot Mål-kortet.
+    var onSelect: () -> Void = {}
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -186,8 +219,8 @@ private struct ParkingTypeRow: View {
 
             HStack(spacing: 8) {
                 chip(.garage, icon: "house.fill", label: "Garasje")
-                chip(.outdoor, icon: "tree.fill", label: "Utendørs")
                 chip(.parkingHouse, icon: "building.2.fill", label: "P-hus")
+                chip(.outdoor, icon: "tree.fill", label: "Utendørs")
             }
         }
     }
@@ -197,7 +230,12 @@ private struct ParkingTypeRow: View {
         let isSelected = selected == type
         Button {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.78)) {
-                selected = isSelected ? nil : type
+                if isSelected {
+                    selected = nil
+                } else {
+                    selected = type
+                    onSelect()
+                }
             }
         } label: {
             VStack(spacing: 6) {
