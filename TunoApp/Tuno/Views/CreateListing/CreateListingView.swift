@@ -286,6 +286,9 @@ struct CreateListingView: View {
     }
 
     private var nextLabel: String {
+        if form.hasReachedSummary && form.currentStep < form.totalSteps - 1 {
+            return "Tilbake til oppsummering"
+        }
         switch form.currentStep {
         case 0: return "Kom i gang"
         case form.totalSteps - 1: return "Publiser annonse"

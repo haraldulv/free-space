@@ -14,6 +14,11 @@ final class ListingFormModel: ObservableObject {
     @Published var currentStep = 0
     @Published var isSubmitting = false
     @Published var error: String?
+    /// True når brukeren har nådd oppsummeringen (PublishStep, currentStep ==
+    /// totalSteps - 1) minst én gang i denne sesjonen. Brukes til å la
+    /// Neste-knappen hoppe rett tilbake til oppsummeringen i stedet for å
+    /// walke gjennom alle steg etter en liten edit.
+    @Published var hasReachedSummary: Bool = false
 
     /// 19-stegs fullscreen-flow (0 Velkomst → 18 Klar).
     /// Booking-modus (5) og Lengde på opphold (6) er på hver sin slide.
@@ -338,6 +343,16 @@ final class ListingFormModel: ObservableObject {
         }
         error = nil
 
+        // Hvis brukeren har vært på oppsummeringen før og er nå på et tidligere
+        // steg (etter å ha tappet en rad i oppsummeringen), short-circuit Neste
+        // direkte tilbake til oppsummeringen i stedet for å walke gjennom alt.
+        if hasReachedSummary && currentStep != totalSteps - 1 {
+            withAnimation(.easeInOut(duration: 0.32)) {
+                currentStep = totalSteps - 1
+            }
+            return
+        }
+
         // Mini-wizard 6-10: Kjøretøy → Tilgjengelighet → Pris → Tillegg → Kalender
         if currentStepHasMiniWizard {
             if currentStep < 10 {
@@ -372,6 +387,9 @@ final class ListingFormModel: ObservableObject {
                 if currentStep == 11 && skipsRabatterStep {
                     currentStep = 12
                 }
+            }
+            if currentStep == totalSteps - 1 {
+                hasReachedSummary = true
             }
         }
     }
@@ -425,6 +443,9 @@ final class ListingFormModel: ObservableObject {
                 currentSpotIndex = spotIndex
             }
             currentStep = step
+        }
+        if step == totalSteps - 1 {
+            hasReachedSummary = true
         }
     }
 
@@ -486,7 +507,10 @@ final class ListingFormModel: ObservableObject {
     var availableAmenities: [AmenityType] {
         switch category {
         case .parking:
-            return [.evCharging, .covered, .securityCamera, .gated, .lighting, .handicapAccessible]
+            // Elbil-lading og Under tak er overflødige: under tak er dekket
+            // av Type plass (Garasje/P-hus), elbil-lading hører hjemme som
+            // egen tjeneste senere.
+            return [.securityCamera, .gated, .lighting, .handicapAccessible]
         case .camping:
             return [.water, .wasteDisposal, .toilets, .showers, .wifi, .campfire, .lakeAccess, .mountainView, .petsAllowed, .handicapAccessible]
         case nil:
