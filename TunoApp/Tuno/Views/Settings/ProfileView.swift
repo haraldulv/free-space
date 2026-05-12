@@ -203,62 +203,45 @@ struct ProfileView: View {
     // MARK: - Sections
 
     private var hostSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 6) {
             sectionHeader("Vertskap")
-
-            VStack(spacing: 0) {
-                menuRow(
-                    icon: "tray.full.fill",
-                    label: "Forespørsler",
-                    badge: profileStats.pendingRequestCount > 0 ? "\(profileStats.pendingRequestCount)" : nil,
-                    destination: AnyView(HostRequestsView())
-                )
-                rowDivider()
-                menuRow(
-                    icon: "calendar",
-                    label: "Kalender",
-                    destination: AnyView(CalendarRootView())
-                )
-                rowDivider()
-                menuRow(
-                    icon: "house.fill",
-                    label: "Mine annonser",
-                    destination: AnyView(MyListingsView())
-                )
-                rowDivider()
-                menuRow(
-                    icon: "chart.line.uptrend.xyaxis",
-                    label: "Inntekter",
-                    destination: AnyView(EarningsView())
-                )
-            }
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+            menuRow(
+                icon: "tray.full.fill",
+                label: "Forespørsler",
+                badge: profileStats.pendingRequestCount > 0 ? "\(profileStats.pendingRequestCount)" : nil,
+                destination: AnyView(HostRequestsView())
+            )
+            menuRow(
+                icon: "calendar",
+                label: "Kalender",
+                destination: AnyView(CalendarRootView())
+            )
+            menuRow(
+                icon: "house.fill",
+                label: "Mine annonser",
+                destination: AnyView(MyListingsView())
+            )
+            menuRow(
+                icon: "chart.line.uptrend.xyaxis",
+                label: "Inntekter",
+                destination: AnyView(EarningsView())
+            )
         }
     }
 
     private var accountSection: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .leading, spacing: 6) {
             sectionHeader("Konto")
-            VStack(spacing: 0) {
-                menuRow(
-                    icon: "person.fill",
-                    label: "Rediger profil",
-                    destination: AnyView(EditProfileView())
-                )
-                rowDivider()
-                menuRow(
-                    icon: "gearshape.fill",
-                    label: "Innstillinger",
-                    destination: AnyView(SettingsView())
-                )
-            }
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+            menuRow(
+                icon: "person.fill",
+                label: "Rediger profil",
+                destination: AnyView(EditProfileView())
+            )
+            menuRow(
+                icon: "gearshape.fill",
+                label: "Innstillinger",
+                destination: AnyView(SettingsView())
+            )
         }
     }
 
@@ -361,17 +344,13 @@ struct ProfileView: View {
             .padding(.horizontal, 18)
             .padding(.vertical, 18)
             .frame(maxWidth: .infinity)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.05), radius: 6, y: 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableRowStyle())
-    }
-
-    @ViewBuilder
-    private func rowDivider() -> some View {
-        Rectangle()
-            .fill(Color.neutral200.opacity(0.7))
-            .frame(height: 0.5)
-            .padding(.leading, 62)
     }
 
     private var currentMonthName: String {

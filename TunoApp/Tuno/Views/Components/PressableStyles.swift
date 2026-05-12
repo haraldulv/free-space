@@ -6,28 +6,28 @@ import SwiftUI
 struct PressableCardStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.965 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
             .overlay(
                 Color.black
-                    .opacity(configuration.isPressed ? 0.04 : 0)
+                    .opacity(configuration.isPressed ? 0.06 : 0)
                     .allowsHitTesting(false)
             )
-            .animation(.spring(response: 0.3, dampingFraction: 0.65), value: configuration.isPressed)
+            .animation(.spring(response: 0.35, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
 
-/// For rader inni en gruppert container (menuRow). Kombinerer subtil scale
-/// + bg-tint overlay for "zwoop inn"-feedback. Overlay (ikke background)
-/// så tinten respekterer containerens clipShape og ikke lekker utenfor.
+/// For separate rad-cards (menuRow). Samme dramatiske "zwoop"-feel som
+/// topp-nivå-kortene — scale 0.94 + spring + bg-tint så det er tydelig
+/// at hver rad er et eget kort som krymper inn ved press.
 struct PressableRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.94 : 1.0)
             .overlay(
                 Color.neutral200
-                    .opacity(configuration.isPressed ? 0.45 : 0)
+                    .opacity(configuration.isPressed ? 0.6 : 0)
                     .allowsHitTesting(false)
             )
-            .animation(.spring(response: 0.28, dampingFraction: 0.62), value: configuration.isPressed)
+            .animation(.spring(response: 0.35, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }
