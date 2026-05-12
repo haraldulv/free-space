@@ -1,33 +1,33 @@
 import SwiftUI
 
 /// For topp-nivå kort som er individuelle objekter (ProfileSummaryCard,
-/// HostInntektCard, becomeHostCard, logoutRow). Krymper subtilt + tinter
-/// bg ved press — kombinert "lift away" + "darken" feedback.
+/// HostInntektCard, becomeHostCard, logoutRow). Krymper med en punchy
+/// spring + tinter bg ved press — "zwoop"-feel: flytende og levende.
 struct PressableCardStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed ? 0.975 : 1.0)
+            .scaleEffect(configuration.isPressed ? 0.965 : 1.0)
             .overlay(
                 Color.black
                     .opacity(configuration.isPressed ? 0.04 : 0)
                     .allowsHitTesting(false)
             )
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+            .animation(.spring(response: 0.3, dampingFraction: 0.65), value: configuration.isPressed)
     }
 }
 
-/// For rader inni en card-seksjon (menuRow). Skalerer IKKE — bare bg-tint
-/// — fordi stablede rader som krymper ser merkelig ut. Etterligner standard
-/// iOS Cell-pressed state. Bruker .overlay (ikke .background) så tinten
-/// respekterer cardets clipShape og ikke lekker utenfor rundede corners.
+/// For rader inni en gruppert container (menuRow). Kombinerer subtil scale
+/// + bg-tint overlay for "zwoop inn"-feedback. Overlay (ikke background)
+/// så tinten respekterer containerens clipShape og ikke lekker utenfor.
 struct PressableRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1.0)
             .overlay(
                 Color.neutral200
-                    .opacity(configuration.isPressed ? 0.5 : 0)
+                    .opacity(configuration.isPressed ? 0.45 : 0)
                     .allowsHitTesting(false)
             )
-            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .animation(.spring(response: 0.28, dampingFraction: 0.62), value: configuration.isPressed)
     }
 }

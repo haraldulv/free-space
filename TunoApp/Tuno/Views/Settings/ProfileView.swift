@@ -203,46 +203,62 @@ struct ProfileView: View {
     // MARK: - Sections
 
     private var hostSection: some View {
-        VStack(spacing: 2) {
+        VStack(alignment: .leading, spacing: 0) {
             sectionHeader("Vertskap")
 
-            menuRow(
-                icon: "tray.full.fill",
-                label: "Forespørsler",
-                badge: profileStats.pendingRequestCount > 0 ? "\(profileStats.pendingRequestCount)" : nil,
-                destination: AnyView(HostRequestsView())
-            )
-            menuRow(
-                icon: "calendar",
-                label: "Kalender",
-                destination: AnyView(CalendarRootView())
-            )
-            menuRow(
-                icon: "house.fill",
-                label: "Mine annonser",
-                destination: AnyView(MyListingsView())
-            )
-            menuRow(
-                icon: "chart.line.uptrend.xyaxis",
-                label: "Inntekter",
-                destination: AnyView(EarningsView())
-            )
+            VStack(spacing: 0) {
+                menuRow(
+                    icon: "tray.full.fill",
+                    label: "Forespørsler",
+                    badge: profileStats.pendingRequestCount > 0 ? "\(profileStats.pendingRequestCount)" : nil,
+                    destination: AnyView(HostRequestsView())
+                )
+                rowDivider()
+                menuRow(
+                    icon: "calendar",
+                    label: "Kalender",
+                    destination: AnyView(CalendarRootView())
+                )
+                rowDivider()
+                menuRow(
+                    icon: "house.fill",
+                    label: "Mine annonser",
+                    destination: AnyView(MyListingsView())
+                )
+                rowDivider()
+                menuRow(
+                    icon: "chart.line.uptrend.xyaxis",
+                    label: "Inntekter",
+                    destination: AnyView(EarningsView())
+                )
+            }
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
         }
     }
 
     private var accountSection: some View {
-        VStack(spacing: 2) {
+        VStack(alignment: .leading, spacing: 0) {
             sectionHeader("Konto")
-            menuRow(
-                icon: "person.fill",
-                label: "Rediger profil",
-                destination: AnyView(EditProfileView())
-            )
-            menuRow(
-                icon: "gearshape.fill",
-                label: "Innstillinger",
-                destination: AnyView(SettingsView())
-            )
+            VStack(spacing: 0) {
+                menuRow(
+                    icon: "person.fill",
+                    label: "Rediger profil",
+                    destination: AnyView(EditProfileView())
+                )
+                rowDivider()
+                menuRow(
+                    icon: "gearshape.fill",
+                    label: "Innstillinger",
+                    destination: AnyView(SettingsView())
+                )
+            }
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 14))
+            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
+            .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
         }
     }
 
@@ -306,14 +322,12 @@ struct ProfileView: View {
     private func sectionHeader(_ title: String) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.neutral500)
-                .textCase(.uppercase)
-                .tracking(0.5)
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(.neutral900)
             Spacer()
         }
         .padding(.horizontal, 4)
-        .padding(.top, 18)
+        .padding(.top, 24)
         .padding(.bottom, 10)
     }
 
@@ -324,11 +338,11 @@ struct ProfileView: View {
         } label: {
             HStack(spacing: 16) {
                 Image(systemName: icon)
-                    .font(.system(size: 17))
-                    .foregroundStyle(.neutral600)
+                    .font(.system(size: 19))
+                    .foregroundStyle(.neutral700)
                     .frame(width: 28)
                 Text(label)
-                    .font(.system(size: 17))
+                    .font(.system(size: 17, weight: .medium))
                     .foregroundStyle(.neutral900)
                 Spacer()
                 if let badge {
@@ -345,15 +359,19 @@ struct ProfileView: View {
                     .foregroundStyle(.neutral400)
             }
             .padding(.horizontal, 18)
-            .padding(.vertical, 16)
+            .padding(.vertical, 18)
             .frame(maxWidth: .infinity)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.04), radius: 6, y: 2)
             .contentShape(Rectangle())
         }
         .buttonStyle(PressableRowStyle())
+    }
+
+    @ViewBuilder
+    private func rowDivider() -> some View {
+        Rectangle()
+            .fill(Color.neutral200.opacity(0.7))
+            .frame(height: 0.5)
+            .padding(.leading, 62)
     }
 
     private var currentMonthName: String {
