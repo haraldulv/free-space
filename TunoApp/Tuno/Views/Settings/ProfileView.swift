@@ -1,6 +1,15 @@
 import SwiftUI
 import PhotosUI
 
+private enum ProfileRoute: Hashable {
+    case hostRequests
+    case calendar
+    case myListings
+    case earnings
+    case editProfile
+    case settings
+}
+
 struct ProfileView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var pushRouter: PushRouter
@@ -11,6 +20,7 @@ struct ProfileView: View {
     @State private var navigateToHostRequests = false
     @State private var navigateToNotifications = false
     @State private var showBecomeHost = false
+    @State private var presentedRoute: ProfileRoute?
 
     var body: some View {
         if !authManager.isAuthenticated {
@@ -131,7 +141,7 @@ struct ProfileView: View {
                 Spacer(minLength: 40)
             }
         }
-        .background(Color.neutral100)
+        .background(Color(.systemGroupedBackground))
         .navigationTitle("Profil")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -158,6 +168,16 @@ struct ProfileView: View {
         }
         .navigationDestination(isPresented: $navigateToNotifications) {
             NotificationsView()
+        }
+        .navigationDestination(item: $presentedRoute) { route in
+            switch route {
+            case .hostRequests: HostRequestsView()
+            case .calendar: CalendarRootView()
+            case .myListings: MyListingsView()
+            case .earnings: EarningsView()
+            case .editProfile: EditProfileView()
+            case .settings: SettingsView()
+            }
         }
         .alert("Logg ut", isPresented: $showLogoutConfirm) {
             Button("Logg ut", role: .destructive) {
@@ -202,46 +222,66 @@ struct ProfileView: View {
 
     // MARK: - Sections
 
-    private var hostSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            sectionHeader("Vertskap")
-            menuRow(
+    private struct MenuRowData {
+        let icon: String
+        let label: String
+        let badge: String?
+        let route: ProfileRoute
+    }
+
+    private var hostRows: [MenuRowData] {
+        [
+            MenuRowData(
                 icon: "tray.full.fill",
                 label: "Forespørsler",
                 badge: profileStats.pendingRequestCount > 0 ? "\(profileStats.pendingRequestCount)" : nil,
-                destination: AnyView(HostRequestsView())
-            )
-            menuRow(
-                icon: "calendar",
-                label: "Kalender",
-                destination: AnyView(CalendarRootView())
-            )
-            menuRow(
-                icon: "house.fill",
-                label: "Mine annonser",
-                destination: AnyView(MyListingsView())
-            )
-            menuRow(
-                icon: "chart.line.uptrend.xyaxis",
-                label: "Inntekter",
-                destination: AnyView(EarningsView())
-            )
+                route: .hostRequests
+            ),
+            MenuRowData(icon: "calendar", label: "Kalender", badge: nil, route: .calendar),
+            MenuRowData(icon: "house.fill", label: "Mine annonser", badge: nil, route: .myListings),
+            MenuRowData(icon: "chart.line.uptrend.xyaxis", label: "Inntekter", badge: nil, route: .earnings),
+        ]
+    }
+
+    private var accountRows: [MenuRowData] {
+        [
+            MenuRowData(icon: "person.fill", label: "Rediger profil", badge: nil, route: .editProfile),
+            MenuRowData(icon: "gearshape.fill", label: "Innstillinger", badge: nil, route: .settings),
+        ]
+    }
+
+    private var hostSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            sectionHeader("Vertskap")
+            groupedRows(hostRows)
         }
     }
 
     private var accountSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 0) {
             sectionHeader("Konto")
-            menuRow(
-                icon: "person.fill",
-                label: "Rediger profil",
-                destination: AnyView(EditProfileView())
-            )
-            menuRow(
-                icon: "gearshape.fill",
-                label: "Innstillinger",
-                destination: AnyView(SettingsView())
-            )
+            groupedRows(accountRows)
+        }
+    }
+
+    @ViewBuilder
+    private func groupedRows(_ rows: [MenuRowData]) -> some View {
+        VStack(spacing: 2) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { index, row in
+                let position = CardPosition.at(index: index, total: rows.count)
+                Button {
+                    // Delay navigasjon så ut-springen rekker å spille ut
+                    // før view-en pushes inn. Uten dette navigerer vi før
+                    // brukeren ser kortet sprette tilbake.
+                    Task { @MainActor in
+                        try? await Task.sleep(nanoseconds: 220_000_000)
+                        presentedRoute = row.route
+                    }
+                } label: {
+                    rowContent(row)
+                }
+                .buttonStyle(GroupedCardButtonStyle(position: position))
+            }
         }
     }
 
@@ -305,8 +345,8 @@ struct ProfileView: View {
     private func sectionHeader(_ title: String) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(.neutral900)
+                .font(.system(size: 20, weight: .semibold))
+                .foregroundStyle(.neutral800)
             Spacer()
         }
         .padding(.horizontal, 4)
@@ -314,43 +354,33 @@ struct ProfileView: View {
         .padding(.bottom, 10)
     }
 
+    /// Ren rad-content (HStack med icon/label/badge/chevron). Bg + shape settes
+    /// av GroupedCardButtonStyle, så denne funksjonen bryr seg KUN om innholdet.
     @ViewBuilder
-    private func menuRow(icon: String, label: String, badge: String? = nil, destination: AnyView) -> some View {
-        NavigationLink {
-            destination
-        } label: {
-            HStack(spacing: 16) {
-                Image(systemName: icon)
-                    .font(.system(size: 19))
-                    .foregroundStyle(.neutral700)
-                    .frame(width: 28)
-                Text(label)
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(.neutral900)
-                Spacer()
-                if let badge {
-                    Text(badge)
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 9)
-                        .padding(.vertical, 3)
-                        .background(Color.red)
-                        .clipShape(Capsule())
-                }
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.neutral400)
+    private func rowContent(_ row: MenuRowData) -> some View {
+        HStack(spacing: 16) {
+            Image(systemName: row.icon)
+                .font(.system(size: 18))
+                .foregroundStyle(.neutral600)
+                .frame(width: 28)
+            Text(row.label)
+                .font(.system(size: 16, weight: .regular))
+                .foregroundStyle(.neutral800)
+            Spacer()
+            if let badge = row.badge {
+                Text(badge)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 3)
+                    .background(Color.red)
+                    .clipShape(Capsule())
             }
-            .padding(.horizontal, 18)
-            .padding(.vertical, 18)
-            .frame(maxWidth: .infinity)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.05), radius: 6, y: 2)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(PressableRowStyle())
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .contentShape(Rectangle())
     }
 
     private var currentMonthName: String {
