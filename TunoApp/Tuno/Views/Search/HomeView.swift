@@ -234,8 +234,13 @@ struct HomeView: View {
                 pendingBookingPref = pref
             }
             let restoredVehicles = Set(ctx.vehicles.compactMap { VehicleType(rawValue: $0) })
-            if !restoredVehicles.isEmpty {
-                pendingVehicles = restoredVehicles
+            let categoryAvailable = Set(VehicleType.available(for: selectedCategory))
+            let intersected = restoredVehicles.intersection(categoryAvailable)
+            let isDefaultlyAll = intersected.count == categoryAvailable.count
+            if !intersected.isEmpty && !isDefaultlyAll {
+                pendingVehicles = intersected
+            } else {
+                pendingVehicles = (selectedCategory == .camping) ? [.motorhome] : [.car]
             }
             // Be om location-permission for "Nær deg"-seksjonen.
             locationManager.requestPermission()

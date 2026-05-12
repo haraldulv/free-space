@@ -425,25 +425,9 @@ struct SearchView: View {
                 let derived = Set(listing.derivedPeriodTypes)
                 if filters.rentalPeriodTypes.isDisjoint(with: derived) { return false }
             }
-            // Parkering Korttid/Langtid: hvis bruker har valgt en periode i
-            // WhereSheet (Korttid ≤ 7 dager, Langtid > 7 dager), så vil vi
-            // bare vise listings som matcher tilbudet:
-            //   Korttid → må ha dag-pris (.day i derivedPeriodTypes)
-            //   Langtid → må ha uke/måned/år-pris
-            if listing.category == .parking, let inDate = checkIn, let outDate = checkOut {
-                let cal = Calendar(identifier: .gregorian)
-                let spanDays = (cal.dateComponents([.day], from: inDate, to: outDate).day ?? 0) + 1
-                let isLongTerm = spanDays > 7
-                let derived = Set(listing.derivedPeriodTypes)
-                if isLongTerm {
-                    // Langtid: krev minst én tier >1 dag
-                    let longTermTiers: Set<PricePackagePeriodType> = [.week, .month, .year]
-                    if derived.isDisjoint(with: longTermTiers) { return false }
-                } else {
-                    // Korttid: krev dag-pris
-                    if !derived.contains(.day) && !derived.isEmpty { return false }
-                }
-            }
+            // Parkering: ikke filtrer på pris-pakke. Alt som har ledig
+            // kapasitet i intervallet skal vises uansett om utleier har
+            // dag-, uke-, måneds- eller årspris.
             return true
         }
     }

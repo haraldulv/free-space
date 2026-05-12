@@ -564,19 +564,61 @@ struct WhereSheet: View {
     }
 
     /// Periode-velger — auto-strekker checkOut.
-    /// Parkering: Korttid (1 dag) / Langtid (30 dager). Camping: 1 dag / 1 uke / 1 måned / 1 år.
+    /// Parkering: Korttid (1 dag) / Langtid (30 dager) + sub-rad med
+    /// måneds-presets når Langtid er aktiv. Camping: 1 dag / 1 uke /
+    /// 1 måned / 1 år.
     private var rentalPeriodToggle: some View {
-        HStack(spacing: 8) {
-            if category == .parking {
-                periodChip(label: "Korttid", icon: "sun.max", days: 1)
-                periodChip(label: "Langtid", icon: "calendar", days: 30)
-            } else {
-                periodChip(label: "1 dag", icon: "sun.max", days: 1)
-                periodChip(label: "1 uke", icon: "calendar.badge.clock", days: 7)
-                periodChip(label: "1 måned", icon: "calendar", days: 30)
-                periodChip(label: "1 år", icon: "infinity", days: 365)
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                if category == .parking {
+                    periodChip(label: "Korttid", icon: "clock", days: 1)
+                    periodChip(label: "Langtid", icon: "calendar.badge.clock", days: 30)
+                } else {
+                    periodChip(label: "1 dag", icon: "sun.max", days: 1)
+                    periodChip(label: "1 uke", icon: "calendar.badge.clock", days: 7)
+                    periodChip(label: "1 måned", icon: "calendar", days: 30)
+                    periodChip(label: "1 år", icon: "infinity", days: 365)
+                }
+            }
+            if category == .parking && isLongTermActive {
+                HStack(spacing: 8) {
+                    longTermChip(label: "1 mnd", days: 30)
+                    longTermChip(label: "3 mnd", days: 90)
+                    longTermChip(label: "6 mnd", days: 180)
+                    longTermChip(label: "1 år", days: 365)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
+        .animation(.spring(response: 0.32, dampingFraction: 0.82), value: isLongTermActive)
+    }
+
+    /// Sant når valgt dato-range strekker over minst 7 dager — da viser
+    /// vi sub-raden med måneds-presets under Langtid-chipen.
+    private var isLongTermActive: Bool {
+        guard let inDate = checkIn, let outDate = checkOut else { return false }
+        let span = Calendar(identifier: .gregorian)
+            .dateComponents([.day], from: inDate, to: outDate).day ?? 0
+        return span >= 7
+    }
+
+    @ViewBuilder
+    private func longTermChip(label: String, days: Int) -> some View {
+        let isActive = isPeriodActive(days: days)
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
+                applyPeriodPreset(days: days)
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(isActive ? Color.white : Color.neutral700)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(isActive ? Color.neutral800 : Color.neutral100)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     @ViewBuilder
