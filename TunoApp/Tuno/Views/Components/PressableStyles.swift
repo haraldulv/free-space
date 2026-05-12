@@ -18,12 +18,15 @@ struct PressableCardStyle: ButtonStyle {
 
 /// For rader inni en card-seksjon (menuRow). Skalerer IKKE — bare bg-tint
 /// — fordi stablede rader som krymper ser merkelig ut. Etterligner standard
-/// iOS Cell-pressed state.
+/// iOS Cell-pressed state. Bruker .overlay (ikke .background) så tinten
+/// respekterer cardets clipShape og ikke lekker utenfor rundede corners.
 struct PressableRowStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .background(
-                Color.neutral200.opacity(configuration.isPressed ? 0.5 : 0)
+            .overlay(
+                Color.neutral200
+                    .opacity(configuration.isPressed ? 0.5 : 0)
+                    .allowsHitTesting(false)
             )
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
