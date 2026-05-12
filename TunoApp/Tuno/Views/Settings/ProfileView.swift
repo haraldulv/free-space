@@ -92,7 +92,7 @@ struct ProfileView: View {
                         isVerified: authManager.isHost && (authManager.profile?.stripeOnboardingComplete ?? false)
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableCardStyle())
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
 
@@ -106,9 +106,9 @@ struct ProfileView: View {
                             bookingCount: profileStats.monthlyBookings,
                             recentMonths: profileStats.recentMonthsEarnings
                         )
-                        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+                        .shadow(color: .black.opacity(0.07), radius: 10, y: 3)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableCardStyle())
                     .padding(.horizontal, 16)
                 }
 
@@ -131,7 +131,7 @@ struct ProfileView: View {
                 Spacer(minLength: 40)
             }
         }
-        .background(Color.neutral50)
+        .background(Color.neutral100)
         .navigationTitle("Profil")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
@@ -212,16 +212,19 @@ struct ProfileView: View {
                 badge: profileStats.pendingRequestCount > 0 ? "\(profileStats.pendingRequestCount)" : nil,
                 destination: AnyView(HostRequestsView())
             )
+            rowDivider()
             menuRow(
                 icon: "calendar",
                 label: "Kalender",
                 destination: AnyView(CalendarRootView())
             )
+            rowDivider()
             menuRow(
                 icon: "house.fill",
                 label: "Mine annonser",
                 destination: AnyView(MyListingsView())
             )
+            rowDivider()
             menuRow(
                 icon: "chart.line.uptrend.xyaxis",
                 label: "Inntekter",
@@ -231,7 +234,7 @@ struct ProfileView: View {
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+        .shadow(color: .black.opacity(0.07), radius: 10, y: 3)
     }
 
     private var accountSection: some View {
@@ -242,6 +245,7 @@ struct ProfileView: View {
                 label: "Rediger profil",
                 destination: AnyView(EditProfileView())
             )
+            rowDivider()
             menuRow(
                 icon: "gearshape.fill",
                 label: "Innstillinger",
@@ -251,7 +255,7 @@ struct ProfileView: View {
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.5), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+        .shadow(color: .black.opacity(0.07), radius: 10, y: 3)
     }
 
     private var becomeHostCard: some View {
@@ -282,9 +286,9 @@ struct ProfileView: View {
             .padding(16)
             .background(Color.primary50)
             .clipShape(RoundedRectangle(cornerRadius: 16))
-            .shadow(color: .black.opacity(0.05), radius: 8, y: 2)
+            .shadow(color: .black.opacity(0.07), radius: 10, y: 3)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableCardStyle())
     }
 
     private var logoutRow: some View {
@@ -307,7 +311,7 @@ struct ProfileView: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableCardStyle())
     }
 
     @ViewBuilder
@@ -356,7 +360,15 @@ struct ProfileView: View {
             .padding(.vertical, 16)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableRowStyle())
+    }
+
+    @ViewBuilder
+    private func rowDivider() -> some View {
+        Rectangle()
+            .fill(Color.neutral200.opacity(0.6))
+            .frame(height: 0.5)
+            .padding(.leading, 62)
     }
 
     private var currentMonthName: String {

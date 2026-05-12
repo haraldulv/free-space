@@ -45,6 +45,7 @@
 		3F9B2D62042A08F8EAD36159 /* WizardNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF267768B92B52734B7568A /* WizardNavBar.swift */; };
 		400CCE6F1D6B0AF5A1699287 /* TunoCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308BCB9A59C6E33399015B98 /* TunoCalendar.swift */; };
 		402B7759282C565BD0F02A60 /* OpeningHoursService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A884CCDAD07F56994881803 /* OpeningHoursService.swift */; };
+		40C5CDAB5732E2305C7683B7 /* PressableStyles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 19AAAD22A9AEF5440B70DF82 /* PressableStyles.swift */; };
 		414ACCF50897E595892BBE9B /* CreateListingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A9A8155F44B5F1E01A1FE767 /* CreateListingView.swift */; };
 		4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */; };
 		427C0F0D1B37C5AF58AFAD58 /* OpeningHoursStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B6DFA8459E85A9536C1F27 /* OpeningHoursStep.swift */; };
@@ -161,6 +162,7 @@
 		1213A1E7AC0AB0C6683A1A43 /* SpotDetailCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotDetailCard.swift; sourceTree = "<group>"; };
 		1324AFD48A9779860210FE4B /* CalendarRootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CalendarRootView.swift; sourceTree = "<group>"; };
 		147F3163867D581B11ED7A6D /* success-confetti.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "success-confetti.json"; sourceTree = "<group>"; };
+		19AAAD22A9AEF5440B70DF82 /* PressableStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PressableStyles.swift; sourceTree = "<group>"; };
 		1A031A3724EC9DE0FAFF7A4A /* BookingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingView.swift; sourceTree = "<group>"; };
 		1C62328BAF7DE7328480EAF9 /* LottieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieView.swift; sourceTree = "<group>"; };
 		1EAC854F4475506A9E845BA2 /* BottomListDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomListDrawer.swift; sourceTree = "<group>"; };
@@ -554,6 +556,14 @@
 			path = CategoryIcons;
 			sourceTree = "<group>";
 		};
+		B7958A3DB28449509564D069 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				19AAAD22A9AEF5440B70DF82 /* PressableStyles.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		C093C2F60DEA1CADCE9ED881 /* Messages */ = {
 			isa = PBXGroup;
 			children = (
@@ -583,6 +593,7 @@
 				72853CC232D491F9F2AEC20B /* MainTabView.swift */,
 				5594C1BF423A5D70CCD1EED6 /* Auth */,
 				7B7FB350E9E3F645ECF7A2C5 /* Booking */,
+				B7958A3DB28449509564D069 /* Components */,
 				938771710FB90F4D2B0EE57A /* CreateListing */,
 				051BC7EBB039B5577258B96C /* Dashboard */,
 				6ACBF3D2252CA88F3CC2537D /* Listing */,
@@ -813,6 +824,7 @@
 				DF4CB397EEC21B6155822A74 /* PersonnummerHelper.swift in Sources */,
 				481B700D9FEB3AFB038F6A9E /* PhotosStep.swift in Sources */,
 				B61A0EA246DD9BEF82475048 /* PlacesService.swift in Sources */,
+				40C5CDAB5732E2305C7683B7 /* PressableStyles.swift in Sources */,
 				062B9E29C1596367A0EFED27 /* PriceHistogram.swift in Sources */,
 				53A0D526B1C2D389C36E2A64 /* PricingService.swift in Sources */,
 				99B9B0BC00ECC0126A3CF885 /* ProfileCalendarView.swift in Sources */,
