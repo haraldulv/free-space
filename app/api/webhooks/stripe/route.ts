@@ -6,7 +6,9 @@ import {
   sendBookingNotificationToHost,
   sendBookingRequestToHost,
   sendBookingRequestPendingToGuest,
+  sendPayoutFailedEmail,
 } from "@/lib/email";
+import { splitHostAndFee } from "@/lib/config";
 import { sendPushToUser } from "@/lib/push";
 
 // Use service role for webhook (no user auth context)
@@ -323,6 +325,118 @@ export async function POST(request: NextRequest) {
           payment_status: "failed",
         })
         .eq("id", bookingId);
+    }
+  }
+
+  // Stripe har forsøkt å overføre fra Tunos platform-konto til en hosts
+  // Connect-konto, men det feilet. Mappa booking-ID via metadata vi setter
+  // i `createTransfer`. Lagrer feilen så cron + admin har en spor.
+  if (event.type === "transfer.failed") {
+    const transfer = event.data.object;
+    const bookingId = transfer.metadata?.bookingId;
+    const reason = transfer.failure_message ?? "Stripe rapporterte transfer.failed uten årsak";
+
+    if (bookingId) {
+      await supabase
+        .from("bookings")
+        .update({
+          transfer_status: "failed",
+          transfer_error: reason.slice(0, 500),
+          transfer_failed_at: new Date().toISOString(),
+        })
+        .eq("id", bookingId);
+
+      const { data: booking } = await supabase
+        .from("bookings")
+        .select("host_id, total_price, listing_id")
+        .eq("id", bookingId)
+        .single();
+
+      if (booking?.host_id) {
+        const { hostShareNok } = splitHostAndFee(booking.total_price);
+        const { data: listing } = await supabase
+          .from("listings")
+          .select("title")
+          .eq("id", booking.listing_id)
+          .single();
+        const listingTitle = listing?.title || "en plass";
+
+        await supabase.from("notifications").insert({
+          user_id: booking.host_id,
+          type: "payout_failed",
+          title: "Utbetalingen feilet",
+          body: `Vi klarte ikke å sende ${hostShareNok} kr for ${listingTitle}.`,
+          metadata: { bookingId, reason: reason.slice(0, 200) },
+        });
+
+        await sendPushToUser(
+          booking.host_id,
+          "Utbetalingen feilet",
+          `Vi klarte ikke å sende ${hostShareNok} kr for ${listingTitle}.`,
+          { bookingId, type: "payout_failed" },
+        ).catch((err) => console.error("[Push] transfer.failed:", err));
+
+        const { data: hostAuth } = await supabase.auth.admin.getUserById(booking.host_id);
+        const { data: hostProfile } = await supabase
+          .from("profiles")
+          .select("full_name")
+          .eq("id", booking.host_id)
+          .single();
+        if (hostAuth.user?.email) {
+          await sendPayoutFailedEmail(hostAuth.user.email, {
+            hostName: hostProfile?.full_name || "Utleier",
+            amount: hostShareNok,
+            listingTitle,
+            reason: reason.slice(0, 200),
+          }).catch((err) => console.error("[Email] transfer.failed:", err));
+        }
+      }
+    }
+  }
+
+  // Stripe utbetaler fra Connect-kontoen til hostens bankkonto, og det
+  // feilet (vanligvis: bankkonto stenget, feil format, identity-krav).
+  // Vi vet ikke hvilken booking dette gjelder — varsler hosten generelt.
+  if (event.type === "payout.failed") {
+    const payout = event.data.object;
+    const connectAccountId = event.account; // Connect-event har account-felt
+    const reason = payout.failure_message ?? "Stripe rapporterte payout.failed";
+
+    if (connectAccountId) {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .eq("stripe_account_id", connectAccountId)
+        .maybeSingle();
+
+      if (profile?.id) {
+        const amountNok = Math.round((payout.amount ?? 0) / 100);
+
+        await supabase.from("notifications").insert({
+          user_id: profile.id,
+          type: "payout_failed",
+          title: "Stripe kunne ikke utbetale",
+          body: `${amountNok} kr ble ikke utbetalt: ${reason.slice(0, 120)}`,
+          metadata: { payoutId: payout.id, reason: reason.slice(0, 200) },
+        });
+
+        await sendPushToUser(
+          profile.id,
+          "Stripe kunne ikke utbetale",
+          `${amountNok} kr ble ikke utbetalt. Sjekk Stripe-onboardingen.`,
+          { type: "payout_failed", payoutId: payout.id },
+        ).catch((err) => console.error("[Push] payout.failed:", err));
+
+        const { data: hostAuth } = await supabase.auth.admin.getUserById(profile.id);
+        if (hostAuth.user?.email) {
+          await sendPayoutFailedEmail(hostAuth.user.email, {
+            hostName: profile.full_name || "Utleier",
+            amount: amountNok,
+            listingTitle: "din konto",
+            reason: reason.slice(0, 200),
+          }).catch((err) => console.error("[Email] payout.failed:", err));
+        }
+      }
     }
   }
 
