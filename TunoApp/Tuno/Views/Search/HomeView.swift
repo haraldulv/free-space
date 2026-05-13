@@ -245,6 +245,8 @@ struct HomeView: View {
             // Be om location-permission for "Nær deg"-seksjonen.
             locationManager.requestPermission()
             await listingService.fetchHomeListings(category: selectedCategory, userLat: locationManager.userLocation?.latitude, userLng: locationManager.userLocation?.longitude)
+            // Prefetch forsidebilder i bakgrunnen så Home ikke flickrer ved retur.
+            prefetchHomeImages()
         }
         .onReceive(locationManager.$userLocation) { newLoc in
             // Når brukerlokasjon kommer inn (etter permission-prompt eller GPS-fix),
@@ -256,8 +258,22 @@ struct HomeView: View {
                     userLat: newLoc?.latitude,
                     userLng: newLoc?.longitude
                 )
+                prefetchHomeImages()
             }
         }
+    }
+
+    /// Prefetch første bildet fra hver listing i alle home-seksjonene. URLCache
+    /// blir warm før cellene rendres → CachedAsyncImage treffer cache synkront
+    /// og kortene flickrer ikke lengre når man kommer tilbake til Home.
+    private func prefetchHomeImages() {
+        let listings = listingService.nearbyListings
+            + listingService.availableNowListings
+            + listingService.featuredListings
+            + listingService.popularListings
+            + listingService.availableTodayListings
+        let urls = listings.compactMap { $0.images.first.flatMap(URL.init(string:)) }
+        ImagePrefetcher.prefetch(urls: urls)
     }
 }
 

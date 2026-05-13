@@ -137,13 +137,17 @@ struct MessagesListView: View {
             guard let userId = authManager.currentUser?.id else { return }
             if chatService.conversations.isEmpty && !chatService.isLoading {
                 await chatService.loadConversations(userId: userId.uuidString)
+                prefetchConversationImages()
             }
         }
         .onAppear {
             // Hver gang meldinger-tab blir synlig, refresh listen så
             // nyopprettede samtaler (f.eks. forespørsel-flyt) dukker opp.
             guard let userId = authManager.currentUser?.id else { return }
-            Task { await chatService.loadConversations(userId: userId.uuidString) }
+            Task {
+                await chatService.loadConversations(userId: userId.uuidString)
+                prefetchConversationImages()
+            }
         }
         .onChange(of: pushRouter.pendingConversationId) { _, newId in
             // Når en ny samtale pushes onto path (etter forespørsel/push-deep-link),
@@ -328,6 +332,17 @@ struct MessagesListView: View {
             await chatService.loadConversations(userId: userId.uuidString.lowercased())
             pushRouter.pendingConversationId = id
         }
+    }
+
+    /// Prefetch listing- og avatar-bilder til URLCache før rad-cellene rendres,
+    /// så CachedAsyncImage treffer cache synkront og listen ikke flickrer.
+    private func prefetchConversationImages() {
+        var urls: [URL] = []
+        for conv in chatService.conversations {
+            if let s = conv.listingImage, let u = URL(string: s) { urls.append(u) }
+            if let s = conv.otherUserAvatar, let u = URL(string: s) { urls.append(u) }
+        }
+        ImagePrefetcher.prefetch(urls: urls)
     }
 }
 

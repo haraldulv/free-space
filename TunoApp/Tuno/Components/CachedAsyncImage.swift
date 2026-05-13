@@ -49,11 +49,16 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
     }
 
     private func load() async {
-        uiImage = nil
         failed = false
-        guard let url else { return }
+        guard let url else {
+            await MainActor.run { self.uiImage = nil }
+            return
+        }
 
-        // Sjekk cache først (treffer både minne + disk)
+        // Synkron cache-hit: bytt uiImage direkte uten å nullstille først.
+        // Tidligere satte vi uiImage = nil i starten — det fyrte placeholder ett
+        // frame før cache-treff og forårsaket synlig flicker når man kom tilbake
+        // til Home/Messages.
         let request = URLRequest(url: url)
         if let cached = URLCache.shared.cachedResponse(for: request),
            let image = UIImage(data: cached.data)
@@ -61,6 +66,9 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
             await MainActor.run { self.uiImage = image }
             return
         }
+
+        // Cache-miss: vis placeholder mens nettverkshenting kjører.
+        await MainActor.run { self.uiImage = nil }
 
         do {
             let (data, response) = try await URLSession.shared.data(for: request)
@@ -77,6 +85,30 @@ struct CachedAsyncImage<Content: View, Placeholder: View>: View {
             await MainActor.run { self.uiImage = image }
         } catch {
             await MainActor.run { self.failed = true }
+        }
+    }
+
+}
+
+/// Hjelpenamespace for prefetching av bilder inn i `URLCache.shared`. Kall fra
+/// `.task` på Home/Messages før kortene rendres så cellene treffer cache med
+/// en gang og ikke flickrer.
+enum ImagePrefetcher {
+    static func prefetch(urls: [URL]) {
+        for url in urls {
+            let request = URLRequest(url: url)
+            if URLCache.shared.cachedResponse(for: request) != nil { continue }
+            Task.detached(priority: .utility) {
+                do {
+                    let (data, response) = try await URLSession.shared.data(for: request)
+                    URLCache.shared.storeCachedResponse(
+                        CachedURLResponse(response: response, data: data),
+                        for: request,
+                    )
+                } catch {
+                    // Stille — neste visning vil prøve igjen via CachedAsyncImage.
+                }
+            }
         }
     }
 }
