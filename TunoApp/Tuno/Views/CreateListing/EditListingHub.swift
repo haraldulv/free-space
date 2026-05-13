@@ -179,14 +179,12 @@ struct EditListingHub: View {
     // MARK: - Section list
 
     /// Felles seksjoner som gjelder hele annonsen (ikke per plass).
+    /// Adressen er LÅST etter opprettelse — endring krever ny annonse.
+    /// Vises som read-only rad uten chevron, så brukeren ser hvilken
+    /// adresse annonsen ligger på, men ikke kan endre den.
     private var sectionList: some View {
         rowGroup {
-            row(
-                dest: .address,
-                icon: "mappin.and.ellipse",
-                title: "Adresse",
-                subtitle: form.address.isEmpty ? "Ikke satt" : form.address
-            )
+            readOnlyAddressRow
             divider
             row(
                 dest: .description,
@@ -354,6 +352,36 @@ struct EditListingHub: View {
 
     private var divider: some View {
         Divider().padding(.leading, 60).opacity(0.5)
+    }
+
+    /// Read-only adresse-rad. Adressen er kjernekoblet til kartet, spot-
+    /// markørene og eksisterende bookinger — endring krever ny annonse.
+    private var readOnlyAddressRow: some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.neutral100)
+                    .frame(width: 40, height: 40)
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.neutral500)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Adresse")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text(form.address.isEmpty ? "Ikke satt" : form.address)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral500)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Text("Låst")
+                .font(.system(size: 12, weight: .medium))
+                .foregroundStyle(.neutral500)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
     }
 
     private func row(dest: EditDestination, icon: String, title: String, subtitle: String) -> some View {
