@@ -408,11 +408,11 @@ struct SearchMapView: UIViewRepresentable {
     static func clusterListings(_ listings: [Listing], zoom: Float) -> [MarkerCluster] {
         guard !listings.isEmpty else { return [] }
         let pixelsPerDegree = (256.0 * pow(2.0, Double(zoom))) / 360.0
-        // 60px-grid gjør clusteringen aggressiv nok til at to listings innenfor
-        // en pris-bobbles bredde (~60-80px) alltid havner i samme bin — uten
-        // det havner naboer i hver sin celle og rendres som overlappende solo-
-        // pills som flickrer i z-rekkefølge under pan (TU-84).
-        let cellPixels = 60.0
+        // 40px-grid: nær original (35px) for å unngå over-clustering, men
+        // marginalt større for å redusere antall edge-cases der to listings
+        // havner i nabo-celler. Z-order-flicker håndteres separat via stabil
+        // zPriority i mapView(_:viewFor:) (TU-84).
+        let cellPixels = 40.0
         let cellSizeDeg = cellPixels / max(pixelsPerDegree, 0.000001)
 
         var bins: [String: [Listing]] = [:]
@@ -422,31 +422,6 @@ struct SearchMapView: UIViewRepresentable {
             let lngBin = Int(floor(lng / cellSizeDeg))
             let key = "\(latBin),\(lngBin)"
             bins[key, default: []].append(listing)
-        }
-
-        // Defensiv merge-nabo-singletons: selv med 60px-celler kan to listings
-        // ende opp på hver sin side av celle-grensen. Slå sammen nabo-bins som
-        // hver har akkurat 1 listing — disse ligger praktisk talt oppå hverandre
-        // på skjermen og må clusters for å unngå z-order-flicker.
-        let singletonKeys = bins.filter { $0.value.count == 1 }.map { $0.key }
-        for key in singletonKeys {
-            guard let listingsInBin = bins[key], listingsInBin.count == 1 else { continue }
-            let parts = key.split(separator: ",").compactMap { Int($0) }
-            guard parts.count == 2 else { continue }
-            let lb = parts[0]
-            let gb = parts[1]
-            var merged = false
-            for dLat in -1...1 where !merged {
-                for dLng in -1...1 where !merged {
-                    if dLat == 0 && dLng == 0 { continue }
-                    let nKey = "\(lb + dLat),\(gb + dLng)"
-                    if let neighbor = bins[nKey], neighbor.count == 1 {
-                        bins[key] = listingsInBin + neighbor
-                        bins.removeValue(forKey: nKey)
-                        merged = true
-                    }
-                }
-            }
         }
 
         return bins.map { (binKey, listingsInBin) in
@@ -529,6 +504,14 @@ struct SearchMapView: UIViewRepresentable {
                 )
                 view.canShowCallout = false
                 view.centerOffset = CGPoint(x: 0, y: 0)
+                // Deterministisk z-rekkefølge per listing.id. To overlappende
+                // solo-pills får alltid samme rendering-rekkefølge så MKMapView
+                // ikke kan re-evaluere z-ordering mellom dem under pan (TU-84
+                // flicker-årsak). Selected bobler hever til topp.
+                let baseRank = Float(abs(priceAnno.listing.id.hashValue) % 1000)
+                view.zPriority = MKAnnotationViewZPriority(
+                    rawValue: priceAnno.isSelected ? baseRank + 1000 : baseRank
+                )
                 return view
             }
 
