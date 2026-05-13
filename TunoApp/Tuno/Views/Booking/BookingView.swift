@@ -162,6 +162,38 @@ struct BookingView: View {
         }
     }
 
+    /// ISO-dato-strenger (yyyy-MM-dd) som er utilgjengelige for booking.
+    /// Union av host-blokkerte dager (listing + spot) og booking-opptatte
+    /// dager (per spot eller fullt-booket-on-listing).
+    private var availabilityBlockedDates: Set<String> {
+        var union: Set<String> = []
+        // 1. Host-blokkerte dager
+        if let dates = listing.blockedDates { union.formUnion(dates) }
+        for spot in selectedSpots {
+            if let dates = spot.blockedDates { union.formUnion(dates) }
+        }
+        // 2. Booking-opptatte dager fra bookings-tabellen
+        if let booked = bookedDates {
+            if !selectedSpots.isEmpty {
+                // Spesifikke spots valgt: dag opptatt hvis noen av dem er booket
+                for spot in selectedSpots {
+                    if let sid = spot.id, let dates = booked.perSpot[sid] {
+                        union.formUnion(dates)
+                    }
+                }
+            } else {
+                // Ingen spot valgt: dag opptatt hvis alle spots er booket
+                let totalSpots = (listing.spotMarkers ?? []).count
+                if totalSpots > 0 {
+                    for (date, count) in booked.perDateCount where count >= totalSpots {
+                        union.insert(date)
+                    }
+                }
+            }
+        }
+        return union
+    }
+
     private var nights: Int {
         // Antall dager i bookingen — INKLUDERER begge endepunkter (parkering teller dag, ikke natt).
         // 7. mai → 7. mai = 1 dag. 7. mai → 13. mai = 7 dager. 7. mai → 5. juni = 30 dager.
@@ -825,7 +857,8 @@ struct BookingView: View {
             // bruker tappe Innsjekk/Utsjekk-pillene → wheel-picker.
             SearchDateRangePicker(
                 checkIn: $checkIn,
-                checkOut: $checkOut
+                checkOut: $checkOut,
+                blockedDates: availabilityBlockedDates
             )
             .frame(height: 540)
             .scrollDisabled(true)

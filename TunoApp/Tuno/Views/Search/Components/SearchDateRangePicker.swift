@@ -8,10 +8,22 @@ import SwiftUI
 struct SearchDateRangePicker: View {
     @Binding var checkIn: Date?
     @Binding var checkOut: Date?
+    /// ISO-dato-strenger (yyyy-MM-dd) som er utilgjengelige — tegnes greyet ut
+    /// med X-overlay og er ikke tappbare. Brukes i BookingView for å vise
+    /// blokkerte/opptatte dager fra `listing.blockedDates`.
+    var blockedDates: Set<String> = []
 
     private let monthsAhead = 12
     private let cellHeight: CGFloat = 38
     private let cellSpacing: CGFloat = 3
+
+    private static let isoFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "Europe/Oslo")
+        return f
+    }()
 
     private static var osloCalendar: Calendar {
         var cal = Calendar(identifier: .iso8601)
@@ -119,6 +131,7 @@ struct SearchDateRangePicker: View {
         let startOfToday = cal.startOfDay(for: Date())
         let dayStart = cal.startOfDay(for: date)
         let isPast = dayStart < startOfToday
+        let isBlocked = blockedDates.contains(Self.isoFormatter.string(from: dayStart))
 
         let inRange = isInRange(date)
         let isStart = isSameDay(date, checkIn)
@@ -129,29 +142,31 @@ struct SearchDateRangePicker: View {
         } label: {
             ZStack {
                 // Range-fyll bak (til venstre/høyre for endepunkt-sirkel) — lett grønn
-                if inRange && !isStart && !isEnd {
+                if inRange && !isStart && !isEnd && !isBlocked {
                     Rectangle()
                         .fill(Color.primary50)
                 }
                 // Endepunkt-bakgrunn — Tuno-grønn sirkel
-                if isStart || isEnd {
+                if (isStart || isEnd) && !isBlocked {
                     Circle()
                         .fill(Color.primary600)
                         .padding(2)
                 }
                 Text("\(day)")
                     .font(.system(size: 14, weight: (isStart || isEnd) ? .bold : .medium))
-                    .foregroundStyle(textColor(isPast: isPast, isEndpoint: isStart || isEnd, inRange: inRange))
+                    .foregroundStyle(textColor(isPast: isPast, isBlocked: isBlocked, isEndpoint: isStart || isEnd, inRange: inRange))
+                    .strikethrough(isBlocked, color: Color.neutral400)
             }
             .frame(maxWidth: .infinity)
             .frame(height: cellHeight)
         }
         .buttonStyle(.plain)
-        .disabled(isPast)
+        .disabled(isPast || isBlocked)
     }
 
-    private func textColor(isPast: Bool, isEndpoint: Bool, inRange: Bool) -> Color {
+    private func textColor(isPast: Bool, isBlocked: Bool, isEndpoint: Bool, inRange: Bool) -> Color {
         if isPast { return Color.neutral300 }
+        if isBlocked { return Color.neutral400 }
         if isEndpoint { return .white }
         if inRange { return Color.primary700 }
         return Color.neutral900
@@ -175,6 +190,9 @@ struct SearchDateRangePicker: View {
     private func handleTap(_ date: Date) {
         let cal = Self.osloCalendar
         let tapped = cal.startOfDay(for: date)
+        // Sikkerhetsbelte — .disabled(isBlocked) i dayCell skal hindre tap,
+        // men eksterne kall (gesture-bridging osv.) kan likevel havne her.
+        if blockedDates.contains(Self.isoFormatter.string(from: tapped)) { return }
 
         if checkIn == nil {
             checkIn = tapped
