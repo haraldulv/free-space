@@ -40,6 +40,7 @@
 		336ED588D23B5F702C49257F /* ProfileStatsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F37F3CD542B4B76200AE7AE /* ProfileStatsStore.swift */; };
 		362A7E1F4D710DC24BE4A12C /* LottieView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C62328BAF7DE7328480EAF9 /* LottieView.swift */; };
 		367A9055909C4B33333782E3 /* LocationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5416B142A121192B7EDCA9A2 /* LocationManager.swift */; };
+		37A2317282EF5728BC73D64F /* ReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8B062DEA5D924A40BC340AB /* ReviewCard.swift */; };
 		3AB87FE9CF0DAE2029093E5C /* BandOverlap.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF1A051046E94B7F1B495563 /* BandOverlap.swift */; };
 		3F2C71CB33819E76B0A47700 /* MessagesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BB47DB7ED9FBB036BC353A /* MessagesListView.swift */; };
 		3F9B2D62042A08F8EAD36159 /* WizardNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF267768B92B52734B7568A /* WizardNavBar.swift */; };
@@ -63,6 +64,7 @@
 		5B59756933B0CFA0A84E11A3 /* RecentSearchesStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99D6E2878D5F6CA4C992D5FB /* RecentSearchesStore.swift */; };
 		5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */; };
 		5EDF76C6D90DDA30B6CE728E /* CounterOfferSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA16C264EC99BF4AD61C2FC /* CounterOfferSheet.swift */; };
+		5F9A2C2EC2495CE2792C781D /* ReviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BBAD271DE88C999089599E1 /* ReviewService.swift */; };
 		642AF85B63EEA4DB11DEA032 /* ListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6DFB7D23F06D079D826635 /* ListingDetailView.swift */; };
 		659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CE3CB213405AF521294421 /* TunoApp.swift */; };
 		666AD7D7FA51A19DC149E1EF /* progress-pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 9BCA07B748FCC5E1497CD115 /* progress-pin.json */; };
@@ -99,6 +101,7 @@
 		9AE9EF8B07B0FB00DF4149AF /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D0ADDAE2EA91F5F458E3E5A /* SupabaseService.swift */; };
 		9D96F4F3063C446B43FF6E99 /* complete-phone.png in Resources */ = {isa = PBXBuildFile; fileRef = C60A79D4D54F1069BB4CA915 /* complete-phone.png */; };
 		A8470E43E8EF688AF0A4112C /* welcome-tent.json in Resources */ = {isa = PBXBuildFile; fileRef = 0B723EAA2CB71B866808AE9D /* welcome-tent.json */; };
+		A9EC7CD44AC87BE9C3F4BCB2 /* HostReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB17BD79D8E54E68A77464A8 /* HostReviewView.swift */; };
 		AA7B4CA530ABE701BE17F593 /* CategoryStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BA98D1AD8A6E41FE60C2C91 /* CategoryStep.swift */; };
 		AA8A099FCB1C1DCDAFCCBA8E /* AuthPromptView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20BABEC0564518876FF3BB11 /* AuthPromptView.swift */; };
 		B2A276C68ACCEB05DBF4F7DB /* NotificationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FFBF70DF9565FD913EA5D09 /* NotificationsView.swift */; };
@@ -209,6 +212,7 @@
 		68CA391C41E2F738998E3725 /* NegotiationPaymentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NegotiationPaymentView.swift; sourceTree = "<group>"; };
 		69D03627A981C3C64EF47F06 /* PublicProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PublicProfileView.swift; sourceTree = "<group>"; };
 		6A884CCDAD07F56994881803 /* OpeningHoursService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningHoursService.swift; sourceTree = "<group>"; };
+		6BBAD271DE88C999089599E1 /* ReviewService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewService.swift; sourceTree = "<group>"; };
 		6BCD4377D9339A2359560A48 /* HostOnboardingFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostOnboardingFlowView.swift; sourceTree = "<group>"; };
 		6D08232C248CE64924B19723 /* DescriptionStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DescriptionStep.swift; sourceTree = "<group>"; };
 		6FFBF70DF9565FD913EA5D09 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
@@ -256,6 +260,7 @@
 		C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		C60A79D4D54F1069BB4CA915 /* complete-phone.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "complete-phone.png"; sourceTree = "<group>"; };
 		CB03B6FF2B6DA8FCAC15788C /* Globe.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Globe.json; sourceTree = "<group>"; };
+		CB17BD79D8E54E68A77464A8 /* HostReviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostReviewView.swift; sourceTree = "<group>"; };
 		CB8E7A5A570D7B4D68E6A9FB /* StayLengthStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StayLengthStep.swift; sourceTree = "<group>"; };
 		CE00FBD7C2654A066869B1E1 /* AmenitiesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmenitiesStep.swift; sourceTree = "<group>"; };
 		CE37F2B39F267A7C3F849A4C /* WizardTooltip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WizardTooltip.swift; sourceTree = "<group>"; };
@@ -289,6 +294,7 @@
 		F3BF694A798055824C4651A4 /* MessagesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesStep.swift; sourceTree = "<group>"; };
 		F65149FFDD665E73DD3401C9 /* ProfileSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSummaryCard.swift; sourceTree = "<group>"; };
 		F778AA24DE116E00B14AC035 /* Tuno-Staging.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Tuno-Staging.entitlements"; sourceTree = "<group>"; };
+		F8B062DEA5D924A40BC340AB /* ReviewCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReviewCard.swift; sourceTree = "<group>"; };
 		F92A4E3ED44C52BBEC76E34D /* SearchDateRangePicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchDateRangePicker.swift; sourceTree = "<group>"; };
 		F93078D73F31767D681DFC8B /* EditListingHub.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditListingHub.swift; sourceTree = "<group>"; };
 		F9A10E906BFD039DCF513926 /* TimePickerField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimePickerField.swift; sourceTree = "<group>"; };
@@ -332,6 +338,7 @@
 				728D58EED8EDC45FC329EE6F /* FavoritesView.swift */,
 				2B20C25D2CAFBCC5DB2693EF /* HostListingStatsView.swift */,
 				77A959B31DE4731320F9A990 /* HostRequestsView.swift */,
+				CB17BD79D8E54E68A77464A8 /* HostReviewView.swift */,
 				26E78282D80E5F27037C4EC4 /* HostSpotDetailView.swift */,
 				76509C97338D49F5D4C1B30B /* ProfileCalendarView.swift */,
 			);
@@ -356,6 +363,7 @@
 				56E3029710A8D3475494799E /* PricingService.swift */,
 				9F37F3CD542B4B76200AE7AE /* ProfileStatsStore.swift */,
 				FBE71C1EE64D63048F5BD2F5 /* PushNotificationManager.swift */,
+				6BBAD271DE88C999089599E1 /* ReviewService.swift */,
 				3D0ADDAE2EA91F5F458E3E5A /* SupabaseService.swift */,
 				308BCB9A59C6E33399015B98 /* TunoCalendar.swift */,
 			);
@@ -469,6 +477,7 @@
 				820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */,
 				F65149FFDD665E73DD3401C9 /* ProfileSummaryCard.swift */,
 				69D03627A981C3C64EF47F06 /* PublicProfileView.swift */,
+				F8B062DEA5D924A40BC340AB /* ReviewCard.swift */,
 				633F2046F5DC659D1D443A25 /* SpotBlockedDatesSection.swift */,
 				8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */,
 				F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */,
@@ -794,6 +803,7 @@
 				E280A497623DB50EB8DB28E0 /* HostOnboardingService.swift in Sources */,
 				F633782D650F9CAF614C16E2 /* HostOnboardingViewModel.swift in Sources */,
 				C20A38400F387BEF58A71667 /* HostRequestsView.swift in Sources */,
+				A9EC7CD44AC87BE9C3F4BCB2 /* HostReviewView.swift in Sources */,
 				96BC4BC4EB06699B3E5A5D69 /* HostSpotDetailView.swift in Sources */,
 				13B77DCEDB9056B38179BFAE /* IBANGenerator.swift in Sources */,
 				CA48E2836B846266237AD524 /* ImageCropPicker.swift in Sources */,
@@ -842,6 +852,8 @@
 				E73EE58A4F48616B26338D4E /* ReceiptBuilder.swift in Sources */,
 				5B59756933B0CFA0A84E11A3 /* RecentSearchesStore.swift in Sources */,
 				30DB0664F70CAF9A54C49E83 /* RegisterView.swift in Sources */,
+				37A2317282EF5728BC73D64F /* ReviewCard.swift in Sources */,
+				5F9A2C2EC2495CE2792C781D /* ReviewService.swift in Sources */,
 				96B48987F842D9D98F4FE0F7 /* SearchContextStore.swift in Sources */,
 				0DB672FC78BC310C5EDA3B89 /* SearchDateRangePicker.swift in Sources */,
 				CCC01BD7E34A8531A3C71E2A /* SearchHerePill.swift in Sources */,
@@ -914,7 +926,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1032,7 +1044,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1098,7 +1110,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1157,7 +1169,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 203;
+				CURRENT_PROJECT_VERSION = 204;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
