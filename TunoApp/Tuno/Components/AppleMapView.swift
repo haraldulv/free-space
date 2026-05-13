@@ -657,16 +657,25 @@ enum MapBubbleRenderer {
 
     /// Pris-boble i Airbnb-stil med 3 tilstander: default/visited/selected.
     /// Returnerer UIImage som kan settes som annotation.image.
-    /// Hvis `searchNights` > 1 og listing har dagspris (suffix=""), vises total
-    /// for hele oppholdet i stedet for fra-pris.
+    /// Hvis `searchNights` >= 2, vises totalpris for hele oppholdet i stedet
+    /// for fra-pris — uavhengig av om grunnprisen er per dag/uke/mnd/år. For
+    /// periode-priser ceiler vi til nærmeste periode (8 dager / "/uke" → 2 uker).
     static func priceBubble(listing: Listing, isVisited: Bool, isSelected: Bool, searchNights: Int? = nil) -> UIImage {
         let h = listing.headlinePrice
         let basePrice = h?.price ?? 0
         let baseSuffix = h?.suffix ?? ""
-        // Totalpris kun når vi har gyldig daypris (tom suffix) og >=2 døgn.
         let nights = searchNights ?? 0
-        let useTotal = nights >= 2 && baseSuffix.isEmpty && basePrice > 0
-        let total = useTotal ? basePrice * nights : basePrice
+        let useTotal = nights >= 2 && basePrice > 0
+        let multiplier: Int = {
+            switch baseSuffix {
+            case "":     return nights
+            case "/uke": return max(1, Int(ceil(Double(nights) / 7.0)))
+            case "/mnd": return max(1, Int(ceil(Double(nights) / 30.0)))
+            case "/år":  return max(1, Int(ceil(Double(nights) / 365.0)))
+            default:     return nights
+            }
+        }()
+        let total = useTotal ? basePrice * multiplier : basePrice
         let priceText = total > 0 ? "\(total) kr" : (h.map { "\($0.price) kr" } ?? "—")
         let suffix = useTotal ? "" : baseSuffix
         let spots = listing.spots ?? 1
