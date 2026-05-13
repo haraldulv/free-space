@@ -370,10 +370,6 @@ struct SearchMapView: UIViewRepresentable {
             coordinator.allAnnotations.removeAll { ($0 as AnyObject) === (anno as AnyObject) }
             toRemove.append(anno)
         }
-        if !toRemove.isEmpty {
-            mapView.removeAnnotations(toRemove)
-        }
-
         // 2. Legg til nye annotation-er. Eksisterende stable id-er hopper vi
         //    over — de er allerede på kartet med riktig posisjon.
         var toAdd: [MKAnnotation] = []
@@ -400,9 +396,19 @@ struct SearchMapView: UIViewRepresentable {
                 toAdd.append(annotation)
             }
         }
+
+        // Disable implicit CALayer-animasjoner under add/remove. Når en
+        // cluster sprekker og 5+ nye pris-bobler legges til samtidig får
+        // MapKit's default fade-in til å se ut som pris-flicker (TU-84 r3).
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        if !toRemove.isEmpty {
+            mapView.removeAnnotations(toRemove)
+        }
         if !toAdd.isEmpty {
             mapView.addAnnotations(toAdd)
         }
+        CATransaction.commit()
     }
 
     static func clusterListings(_ listings: [Listing], zoom: Float) -> [MarkerCluster] {
@@ -496,6 +502,10 @@ struct SearchMapView: UIViewRepresentable {
                 let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
                     ?? MKAnnotationView(annotation: priceAnno, reuseIdentifier: id)
                 view.annotation = priceAnno
+                // Nullstill alpha/transform så reuse-view ikke arver
+                // mid-animasjon-state fra forrige listing (TU-84 r3).
+                view.alpha = 1.0
+                view.transform = .identity
                 view.image = MapBubbleRenderer.priceBubble(
                     listing: priceAnno.listing,
                     isVisited: priceAnno.isVisited,
@@ -557,6 +567,18 @@ struct SearchMapView: UIViewRepresentable {
 
         func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
             // Ikke automatisk null ut — brukeren kan velge en annen
+        }
+
+        // MARK: Annotation add — disable default fade-in animasjoner
+
+        func mapView(_ mapView: MKMapView, didAdd views: [MKAnnotationView]) {
+            // MapKit setter en kort fade/scale-animasjon på nylig-lagte
+            // annotation-views. Når en cluster sprekker til N solo-pills,
+            // ser brukeren det som pris-flicker. Vi fjerner animasjonene
+            // umiddelbart så pris-boblene er rendret stabilt fra første frame.
+            for view in views {
+                view.layer.removeAllAnimations()
+            }
         }
 
         // MARK: Region tracking ("Søk i dette området")
