@@ -96,6 +96,10 @@ struct SearchView: View {
     @State private var searchLat: Double?
     @State private var searchLng: Double?
     @State private var searchZoom: Float?
+    /// Eksakt span (i grader) når et Google Places-treff har viewport-bounds.
+    /// Overrider zoom-heuristikken så f.eks. "Solli plass" zoomer til kvartal-
+    /// nivå mens "Oslo" viser hele byen (TU-83). Nil → bruk searchZoom som før.
+    @State private var searchSpan: Double?
     /// Brukerens valgte søkesenter — IKKE oppdatert ved kart-panning eller
     /// carousel-swipe. Brukes som referanse-koordinat for "X km fra deg"-
     /// avstand på listing-kort, så avstanden ikke endrer seg under brukeren.
@@ -180,7 +184,11 @@ struct SearchView: View {
             // Hvis brukeren valgte et sted i Hvor-modalen, gå dit først
             if let place = initialPlace {
                 if let detail = await placesService.getPlaceDetail(placeId: place.id) {
-                    setSearchCenter(lat: detail.lat, lng: detail.lng, zoom: 11)
+                    if let v = detail.viewport {
+                        setSearchRegion(lat: detail.lat, lng: detail.lng, viewport: v)
+                    } else {
+                        setSearchCenter(lat: detail.lat, lng: detail.lng, zoom: 11)
+                    }
                     hasInitialLocation = true
                     await searchAt(lat: detail.lat, lng: detail.lng)
                     return
@@ -266,6 +274,7 @@ struct SearchView: View {
             centerLat: searchLat,
             centerLng: searchLng,
             centerZoom: searchZoom,
+            centerSpan: searchSpan,
             selectedListingId: selectedListingIndex.flatMap { filteredListings.indices.contains($0) ? filteredListings[$0].id : nil },
             visitedIds: visitedStore.ids,
             searchNights: searchNightsCount,
@@ -511,6 +520,24 @@ struct SearchView: View {
         searchLat = lat
         searchLng = lng
         searchZoom = zoom
+        searchSpan = nil
+        originLat = lat
+        originLng = lng
+        lastSearchedCenter = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+        showSearchHere = false
+    }
+
+    /// Sentrér kartet på et Google Places-treff og bruk stedets viewport for
+    /// nøyaktig zoom-nivå. Span clampes til 0.01–0.5 grader (~1–55 km) så
+    /// veldig spesifikke adresser ikke pixel-zoomer (TU-83).
+    private func setSearchRegion(lat: Double, lng: Double, viewport: PlaceViewport) {
+        let latDelta = abs(viewport.neLat - viewport.swLat)
+        let lngDelta = abs(viewport.neLng - viewport.swLng)
+        let span = max(0.01, min(0.5, max(latDelta, lngDelta) * 1.2))
+        searchLat = lat
+        searchLng = lng
+        searchSpan = span
+        searchZoom = Float(log2(360.0 / max(span, 0.0001)))
         originLat = lat
         originLng = lng
         lastSearchedCenter = CLLocationCoordinate2D(latitude: lat, longitude: lng)
@@ -600,7 +627,11 @@ struct SearchView: View {
     private func handleSelectPlace(_ prediction: PlacePrediction) {
         Task {
             if let detail = await placesService.getPlaceDetail(placeId: prediction.id) {
-                setSearchCenter(lat: detail.lat, lng: detail.lng, zoom: 11)
+                if let v = detail.viewport {
+                    setSearchRegion(lat: detail.lat, lng: detail.lng, viewport: v)
+                } else {
+                    setSearchCenter(lat: detail.lat, lng: detail.lng, zoom: 11)
+                }
                 await searchAt(lat: detail.lat, lng: detail.lng)
             }
         }

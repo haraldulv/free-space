@@ -142,6 +142,10 @@ struct SearchMapView: UIViewRepresentable {
     /// Zoom uttrykkes som span-delta (mindre = nærmere). Konvertert fra Google's
     /// zoom-nivå via heuristikk i koordinatoren.
     var centerZoom: Float?
+    /// Eksakt span i grader. Overrider zoom-heuristikken når satt — brukes for
+    /// Google Places viewport-treff (PoI/region) så f.eks. "Solli plass" får
+    /// kvartal-zoom mens "Oslo" får by-zoom (TU-83).
+    var centerSpan: Double? = nil
     var selectedListingId: String? = nil
     var visitedIds: Set<String> = []
     /// Antall døgn bruker har søkt etter (utsjekk - innsjekk + 1, hvis begge satt).
@@ -213,7 +217,9 @@ struct SearchMapView: UIViewRepresentable {
 
         let lat = saved?.lat ?? centerLat ?? 64.5
         let lng = saved?.lng ?? centerLng ?? 14.0
-        let span = saved?.span ?? Self.spanForZoom(centerZoom ?? (centerLat != nil ? 11 : 4))
+        let span = saved?.span
+            ?? centerSpan
+            ?? Self.spanForZoom(centerZoom ?? (centerLat != nil ? 11 : 4))
         mapView.setRegion(
             MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
@@ -300,10 +306,16 @@ struct SearchMapView: UIViewRepresentable {
         }
 
         if centerChanged, let lat = centerLat, let lng = centerLng {
-            // Ved kun-pan: behold mapView's nåværende span. Ellers bruk centerZoom.
-            let span: Double = zoomChanged
-                ? Self.spanForZoom(centerZoom ?? 11)
-                : mapView.region.span.latitudeDelta
+            // Prioritet: eksplisitt centerSpan (fra viewport-treff) > zoom-
+            // heuristikk hvis zoom endret > behold gjeldende pan-span.
+            let span: Double
+            if let explicit = centerSpan {
+                span = explicit
+            } else if zoomChanged {
+                span = Self.spanForZoom(centerZoom ?? 11)
+            } else {
+                span = mapView.region.span.latitudeDelta
+            }
             let region = MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
                 span: MKCoordinateSpan(latitudeDelta: span, longitudeDelta: span)

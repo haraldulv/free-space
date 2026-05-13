@@ -159,6 +159,16 @@ struct AddressStep: View {
     private func selectPlace(_ prediction: PlacePrediction) {
         Task {
             if let detail = await placesService.getPlaceDetail(placeId: prediction.id) {
+                // I edit mode: tøm eksisterende plasser når koordinatene
+                // endrer seg, slik at MarkSpotsStep tvinger re-plassering
+                // på det nye kartet (TU-81).
+                if form.editingMode {
+                    let coordsChanged = abs(detail.lat - form.lat) > 1e-6
+                        || abs(detail.lng - form.lng) > 1e-6
+                    if coordsChanged {
+                        form.spotMarkers.removeAll()
+                    }
+                }
                 form.lat = detail.lat
                 form.lng = detail.lng
                 // Bruk parsed streetAddress hvis tilgjengelig (rute + nummer),

@@ -17,7 +17,6 @@ struct EditListingHub: View {
     @State private var isSaving = false
     @State private var saveError: String?
     @State private var showSavedToast = false
-    @State private var showDiscardConfirm = false
     @State private var showPreview = false
     /// Snapshot av adresse + lat/lng tatt rett etter loadFromListing.
     /// Hvis brukeren endrer adressen må alle plasser re-plasseres på
@@ -68,22 +67,6 @@ struct EditListingHub: View {
                 destinationView(for: dest)
             }
             .overlay(alignment: .bottom) { previewPill }
-            .confirmationDialog(
-                "Lagre endringer?",
-                isPresented: $showDiscardConfirm,
-                titleVisibility: .visible
-            ) {
-                Button("Lagre og lukk") {
-                    Task {
-                        await saveChanges()
-                        if saveError == nil { dismiss() }
-                    }
-                }
-                Button("Forkast", role: .destructive) { dismiss() }
-                Button("Fortsett å redigere", role: .cancel) { }
-            } message: {
-                Text("Du har endringer som ikke er lagret.")
-            }
             .alert("Kunne ikke lagre", isPresented: saveErrorBinding) {
                 Button("OK", role: .cancel) { saveError = nil }
             } message: {
@@ -120,30 +103,47 @@ struct EditListingHub: View {
 
     // MARK: - Toolbar
 
-    /// Toolbar for hub-rotnoden. Kun X-knapp — Lagre hører hjemme på
-    /// destination-stepene der faktiske endringer skjer.
-    ///
-    /// Vi bruker `Text/Image + .onTapGesture` istedenfor `Button` for å
-    /// unngå iOS 18 sin "Liquid Glass"-default-bg på toolbar-buttons (hvit
-    /// halo bak custom innhold). `.buttonStyle(.plain)` fjerner den ikke.
+    /// Toolbar for hub-rotnoden. X-knapp som dismisser direkte når ingen
+    /// endringer; ellers åpner en kompakt iOS-Menu med Lagre/Forkast
+    /// anchored rett under ikonet (TU-82). Bruker Image-label inni Menu
+    /// for å unngå iOS 18 sin "Liquid Glass"-halo bak custom innhold.
     @ToolbarContentBuilder
     private var rootToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            Image(systemName: "xmark")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.neutral700)
-                .frame(width: 32, height: 32)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    if form.isDirty {
-                        showDiscardConfirm = true
-                    } else {
-                        dismiss()
+            if form.isDirty {
+                Menu {
+                    Button {
+                        Task {
+                            await saveChanges()
+                            if saveError == nil { dismiss() }
+                        }
+                    } label: {
+                        Label("Lagre og lukk", systemImage: "checkmark.circle")
                     }
+                    Button(role: .destructive) {
+                        dismiss()
+                    } label: {
+                        Label("Forkast endringer", systemImage: "trash")
+                    }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral700)
+                        .frame(width: 32, height: 32)
+                        .contentShape(Rectangle())
                 }
-                .accessibilityElement()
                 .accessibilityLabel("Lukk")
-                .accessibilityAddTraits(.isButton)
+            } else {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.neutral700)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+                    .onTapGesture { dismiss() }
+                    .accessibilityElement()
+                    .accessibilityLabel("Lukk")
+                    .accessibilityAddTraits(.isButton)
+            }
         }
     }
 
@@ -162,6 +162,53 @@ struct EditListingHub: View {
                 .fontWeight(.semibold)
                 .tint(.primary600)
                 .disabled(!canSave)
+            }
+        }
+    }
+
+    /// Toolbar for `.address`-destinasjonen. Når adressen er endret må
+    /// vert pushe videre til `.markSpots` for re-plassering før lagring
+    /// er mulig (TU-81). Lagre vises kun når adressen er uendret.
+    @ToolbarContentBuilder
+    private var addressToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            if isSaving {
+                ProgressView().controlSize(.small)
+            } else if addressChanged {
+                Button("Neste") {
+                    path.append(.markSpots)
+                }
+                .fontWeight(.semibold)
+                .tint(.primary600)
+            } else {
+                Button("Lagre") {
+                    Task { await saveChanges() }
+                }
+                .fontWeight(.semibold)
+                .tint(.primary600)
+                .disabled(!canSave)
+            }
+        }
+    }
+
+    /// Toolbar for `.markSpots`-destinasjonen. Lagre disabled inntil alle
+    /// plasser er markert. Etter vellykket save popper vi helt tilbake
+    /// til hub-roten — mark-spots-stepet er gjort.
+    @ToolbarContentBuilder
+    private var markSpotsToolbar: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            if isSaving {
+                ProgressView().controlSize(.small)
+            } else {
+                Button("Lagre") {
+                    Task {
+                        await saveChanges()
+                        if saveError == nil { path.removeAll() }
+                    }
+                }
+                .fontWeight(.semibold)
+                .tint(.primary600)
+                .disabled(form.spotMarkers.count < form.spots)
             }
         }
     }
@@ -292,14 +339,15 @@ struct EditListingHub: View {
     private func destinationView(for dest: EditDestination) -> some View {
         switch dest {
         case .address:
-            EditAddressFlow(
-                form: form,
-                placesService: placesService,
-                addressChanged: addressChanged
-            )
+            AddressStep(form: form, placesService: placesService)
                 .navigationTitle("Adresse")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { stepToolbar }
+                .toolbar { addressToolbar }
+        case .markSpots:
+            markSpotsView
+                .navigationTitle(form.spots == 1 ? "Marker plassen" : "Marker plassene")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { markSpotsToolbar }
         case .description:
             DescriptionStep(form: form)
                 .navigationTitle("Tittel")
@@ -354,6 +402,34 @@ struct EditListingHub: View {
                 SpotDiscountsStep(form: form)
             }
         }
+    }
+
+    /// View for `.markSpots`-destinasjonen. Speiler wizardens MarkSpotsStep-
+    /// side: orange advarsel-banner øverst + fullskjerm-kart under (TU-81).
+    private var markSpotsView: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(form.spots == 1 ? "Plassen må re-plasseres" : "Plassene må re-plasseres")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text("Du har endret adresse. Marker \(form.spots == 1 ? "plassen" : "\(form.spots) plassene") på det nye kartet før du kan lagre.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral600)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.orange.opacity(0.12))
+
+            MarkSpotsStep(form: form)
+        }
+        .background(Color.neutral50)
     }
 
     /// Spot-spesifikke steg er TabView(selection: form.currentSpotIndex) over
@@ -550,6 +626,7 @@ struct EditListingHub: View {
 
 enum EditDestination: Hashable {
     case address
+    case markSpots
     case description
     case photos
     case amenities
@@ -562,89 +639,6 @@ enum EditDestination: Hashable {
     case spotExtras(Int)
     case spotCalendar(Int)
     case spotDiscounts(Int)
-}
-
-// MARK: - EditAddressFlow
-
-/// Adresse + plasser i én sammenhengende flyt — speiler wizardens
-/// AddressStep → MarkSpotsStep, men i ett scrollbart view siden brukeren
-/// allerede er inne i Rediger-hub. Når vert endrer adresse blir alle
-/// plassmarkører tømt automatisk og MarkSpotsStep dukker opp under
-/// adressefeltet. Lagre-knappen i toolbar styres av canSave på Hub-en.
-private struct EditAddressFlow: View {
-    @ObservedObject var form: ListingFormModel
-    @ObservedObject var placesService: PlacesService
-    let addressChanged: Bool
-
-    /// Husker forrige tilstand av addressChanged så vi bare tømmer pinner
-    /// EN GANG (når brukeren først endrer adressen). Ellers ville
-    /// re-plasseringer tømmes igjen så fort de skjer.
-    @State private var hasResetSpots = false
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                AddressStep(form: form, placesService: placesService)
-
-                if addressChanged {
-                    replacementSection
-                }
-            }
-            .padding(.bottom, 24)
-        }
-        .background(Color.neutral50)
-        .onChange(of: addressChanged) { _, changed in
-            if changed && !hasResetSpots {
-                // Første gang adressen endres: tøm pinnene og krev re-
-                // plassering. Brukeren ser advarsel + kart umiddelbart.
-                form.spotMarkers.removeAll()
-                hasResetSpots = true
-            }
-        }
-    }
-
-    private var replacementSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "exclamationmark.triangle.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(.orange)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Plassene må re-plasseres")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                    Text("Du har endret adresse. Marker \(form.spots) plass\(form.spots == 1 ? "" : "er") på det nye kartet før du kan lagre.")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral600)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.orange.opacity(0.12))
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .padding(.horizontal, 24)
-
-            MarkSpotsStep(form: form)
-                .frame(height: 420)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
-                .padding(.horizontal, 16)
-
-            statusRow
-                .padding(.horizontal, 24)
-        }
-    }
-
-    private var statusRow: some View {
-        HStack(spacing: 8) {
-            Image(systemName: form.spotMarkers.count >= form.spots ? "checkmark.circle.fill" : "circle")
-                .font(.system(size: 16))
-                .foregroundStyle(form.spotMarkers.count >= form.spots ? .primary600 : .neutral400)
-            Text("\(form.spotMarkers.count) av \(form.spots) plass\(form.spots == 1 ? "" : "er") markert")
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(.neutral700)
-        }
-    }
 }
 
 // MARK: - SpotMiniHub

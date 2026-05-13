@@ -153,6 +153,16 @@
         }
       }
     },
+    "%@ av %@ plass%@ markert" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ av %2$@ plass%3$@ markert"
+          }
+        }
+      }
+    },
     "%@ blokkert" : {
       "localizations" : {
         "de" : {
@@ -219,22 +229,22 @@
         }
       }
     },
-    "%@ kr × %@ %@ (%@)" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ kr × %2$@ %3$@ (%4$@)"
-          }
-        }
-      }
-    },
     "%@ kr × %@ døgn" : {
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ kr × %2$@ døgn"
+          }
+        }
+      }
+    },
+    "%@ kr × %@ døgn (%@)" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ kr × %2$@ døgn (%3$@)"
           }
         }
       }
@@ -513,6 +523,7 @@
       }
     },
     "+" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -532,27 +543,6 @@
 
     },
     "00" : {
-
-    },
-    "1 dag" : {
-
-    },
-    "1 time før" : {
-
-    },
-    "2 timer før" : {
-
-    },
-    "3 timer før" : {
-
-    },
-    "6 timer før" : {
-
-    },
-    "12 timer før" : {
-
-    },
-    "24 timer før" : {
 
     },
     "24t" : {
@@ -661,6 +651,12 @@
         }
       }
     },
+    "Anmeldelsen din hjelper andre verter med å vurdere gjester. Den blir synlig først når begge har sendt inn, eller etter 14 dager." : {
+
+    },
+    "Anmeldelser" : {
+
+    },
     "Annonse opprettet!" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -751,9 +747,6 @@
           }
         }
       }
-    },
-    "Åpne kalender" : {
-
     },
     "Åpningstid" : {
 
@@ -952,9 +945,6 @@
     "Bekreftet pris fra forhandlingen" : {
 
     },
-    "Belønn gjester som booker hele dagen, uken eller måneden. La feltene stå tomme for ingen rabatt." : {
-
-    },
     "Beløpet belastes gjesten og pengene reserveres til utbetaling etter oppholdet." : {
       "localizations" : {
         "de" : {
@@ -1011,9 +1001,6 @@
           }
         }
       }
-    },
-    "Beskrivelse (valgfri)" : {
-
     },
     "Beskrivelse for hele annonsen" : {
 
@@ -1153,6 +1140,9 @@
     "Blant topp 1 % av utleiestedene basert på vurderinger og anmeldelser." : {
 
     },
+    "Bli den første som anmelder denne plassen." : {
+
+    },
     "Bli utleier" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1169,9 +1159,6 @@
           }
         }
       }
-    },
-    "Blokker datoer, sett egen pris per dag og se bookinger per plass. Endringer lagres automatisk." : {
-
     },
     "Blokkerte datoer" : {
       "extractionState" : "manual",
@@ -1544,9 +1531,6 @@
     "Døgnåpent" : {
 
     },
-    "Dra og slipp for å endre rekkefølge. Bildet lengst til venstre er forsidebildet." : {
-
-    },
     "Dra og slipp for å endre rekkefølge. Første bilde er forsidebildet." : {
 
     },
@@ -1588,6 +1572,19 @@
       }
     },
     "Du har blanke ark (enn så lenge). Vi gir deg beskjed når det kommer oppdateringer." : {
+
+    },
+    "Du har endret adresse. Marker %@ plass%@ på det nye kartet før du kan lagre." : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Du har endret adresse. Marker %1$@ plass%2$@ på det nye kartet før du kan lagre."
+          }
+        }
+      }
+    },
+    "Du har endringer som ikke er lagret." : {
 
     },
     "Du har ingen annonser ennå" : {
@@ -1781,9 +1778,6 @@
     "Egendefinerte tillegg" : {
 
     },
-    "Egne pakker" : {
-
-    },
     "Eksakt adresse deles etter bekreftet booking." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1862,6 +1856,7 @@
 
     },
     "Endringene dine blir ikke lagret." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -1872,6 +1867,9 @@
       }
     },
     "Endringene i plasser-markeringene vil gå tapt." : {
+
+    },
+    "Endringer lagret" : {
 
     },
     "engangspris" : {
@@ -3155,6 +3153,9 @@
         }
       }
     },
+    "Ingen anmeldelser ennå" : {
+
+    },
     "Ingen annonser ennå" : {
 
     },
@@ -3285,9 +3286,6 @@
           }
         }
       }
-    },
-    "Ingen plass" : {
-
     },
     "Ingen plasser å vise" : {
       "extractionState" : "manual",
@@ -3440,9 +3438,6 @@
         }
       }
     },
-    "Internnavn" : {
-
-    },
     "Jeg er fleksibel" : {
 
     },
@@ -3526,9 +3521,6 @@
           }
         }
       }
-    },
-    "Kalender og priser" : {
-
     },
     "Kanseller bestilling" : {
       "extractionState" : "manual",
@@ -3836,9 +3828,6 @@
         }
       }
     },
-    "kr/%@" : {
-
-    },
     "kr/natt" : {
       "extractionState" : "stale",
       "localizations" : {
@@ -3851,9 +3840,6 @@
       }
     },
     "kr%@" : {
-
-    },
-    "Kun synlig for deg. Nyttig hvis du har flere annonser." : {
 
     },
     "Kundeservice" : {
@@ -4015,7 +4001,7 @@
         }
       }
     },
-    "La være tom hvis ingen grense." : {
+    "Lag din første annonse" : {
 
     },
     "Lagre" : {
@@ -4225,12 +4211,6 @@
           }
         }
       }
-    },
-    "Lengde på opphold" : {
-
-    },
-    "Lengre opphold" : {
-
     },
     "Lengre opphold-rabatter" : {
 
@@ -4665,9 +4645,6 @@
       }
     },
     "Møt verten" : {
-
-    },
-    "Multi-spot, prisregler, blokkering" : {
 
     },
     "Når ankommer du?" : {
@@ -5370,10 +5347,14 @@
         }
       }
     },
+    "Plassene må re-plasseres" : {
+
+    },
     "Plasser" : {
 
     },
     "Plasser (%@)" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -5693,6 +5674,9 @@
         }
       }
     },
+    "Publiser plassen din og begynn å tjene." : {
+
+    },
     "QR-koder" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5709,9 +5693,6 @@
           }
         }
       }
-    },
-    "Rabatten gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 dager. Resten betales etter standardpris." : {
-
     },
     "Rediger annonse" : {
       "extractionState" : "manual",
@@ -5935,6 +5916,9 @@
     "Samtalehandlinger" : {
 
     },
+    "Se alle %@ anmeldelser" : {
+
+    },
     "Se gjennom" : {
       "localizations" : {
         "de" : {
@@ -6056,13 +6040,8 @@
         }
       }
     },
-    "Sendes" : {
-
-    },
-    "Sendes automatisk før utsjekk som en vennlig påminnelse." : {
-
-    },
     "Sendes automatisk til gjesten ved innsjekk-tid på ankomstdagen." : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -6127,9 +6106,6 @@
 
     },
     "Sett en pris du synes er rettferdig. Du kan endre den senere." : {
-
-    },
-    "Sett når plassen er åpen for booking. Default er døgnåpent." : {
 
     },
     "Sett pris" : {
@@ -6233,6 +6209,9 @@
           }
         }
       }
+    },
+    "Sjekket ut %@" : {
+
     },
     "Sjø-/innsjøtilgang" : {
       "extractionState" : "manual",
@@ -6476,9 +6455,6 @@
         }
       }
     },
-    "Standard pris" : {
-
-    },
     "Standardpris per natt" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6613,10 +6589,10 @@
     "Tag bildene til riktig plass" : {
 
     },
-    "Tap for å plassere" : {
+    "Takk for anmeldelsen!" : {
 
     },
-    "Tap på kartet for å justere hovedposisjon. Bruk \"Marker plasser\" for å plassere individuelle plass-markører." : {
+    "Tap for å plassere" : {
 
     },
     "Telefonnummer" : {
@@ -7114,9 +7090,6 @@
         }
       }
     },
-    "Utsjekkmelding" : {
-
-    },
     "Utviklet i Norge" : {
 
     },
@@ -7447,6 +7420,9 @@
           }
         }
       }
+    },
+    "Vi viser den til gjesten når de selv har anmeldt deg, eller etter 14 dager." : {
+
     },
     "Vis" : {
 

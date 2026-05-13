@@ -280,7 +280,11 @@ final class ListingFormModel: ObservableObject {
         case 3:
             if spots < 1 { return "Du må ha minst én plass" }
         case 4:
-            if spotMarkers.count < spots { return "Marker alle \(spots) plassene på kartet" }
+            if spotMarkers.count < spots {
+                return spots == 1
+                    ? "Marker plassen på kartet"
+                    : "Marker alle \(spots) plassene på kartet"
+            }
         case 5:
             // Booking-modus (instant/request) — alltid gyldig
             return nil

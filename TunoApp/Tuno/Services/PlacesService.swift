@@ -21,6 +21,18 @@ struct PlaceDetail {
     let city: String?
     /// Region / fylke (administrative_area_level_1).
     let region: String?
+    /// Google's anbefalte visningsområde for stedet. PoIs som "Solli plass" har
+    /// kvartal-nivå viewport; byer/regioner har større. Brukes for å sette
+    /// nøyaktig zoom-nivå på kartet i stedet for fast zoom=11 (TU-83).
+    let viewport: PlaceViewport?
+}
+
+/// Geografisk bounding box (NE/SW-hjørner) fra Google Places.
+struct PlaceViewport {
+    let neLat: Double
+    let neLng: Double
+    let swLat: Double
+    let swLng: Double
 }
 
 @MainActor
@@ -81,7 +93,8 @@ final class PlacesService: ObservableObject {
         // .addressComponents gir oss tilgang til street_number, route, postal_code,
         // locality og administrative_area_level_1 — som vi trenger for å auto-
         // fylle postnummer + poststed i wizard og host-onboarding.
-        let fields: GMSPlaceField = [.coordinate, .name, .addressComponents]
+        // .viewport brukes til å zoome kartet til riktig nivå (TU-83).
+        let fields: GMSPlaceField = [.coordinate, .name, .addressComponents, .viewport]
 
         return await withCheckedContinuation { continuation in
             client.fetchPlace(
@@ -95,6 +108,15 @@ final class PlacesService: ObservableObject {
 
                 if let place {
                     let parsed = Self.parseAddressComponents(place.addressComponents ?? [])
+                    let viewport: PlaceViewport? = {
+                        guard let v = place.viewportInfo, v.isValid else { return nil }
+                        return PlaceViewport(
+                            neLat: v.northEast.latitude,
+                            neLng: v.northEast.longitude,
+                            swLat: v.southWest.latitude,
+                            swLng: v.southWest.longitude
+                        )
+                    }()
                     continuation.resume(returning: PlaceDetail(
                         lat: place.coordinate.latitude,
                         lng: place.coordinate.longitude,
@@ -102,7 +124,8 @@ final class PlacesService: ObservableObject {
                         streetAddress: parsed.streetAddress,
                         postalCode: parsed.postalCode,
                         city: parsed.city,
-                        region: parsed.region
+                        region: parsed.region,
+                        viewport: viewport
                     ))
                 } else {
                     if let error {

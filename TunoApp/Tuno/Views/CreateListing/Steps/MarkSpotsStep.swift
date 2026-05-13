@@ -13,7 +13,7 @@ struct MarkSpotsStep: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 4) {
-                Text("Marker plassene på kartet")
+                Text(form.spots == 1 ? "Marker plassen på kartet" : "Marker plassene på kartet")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(.neutral900)
             }
@@ -79,7 +79,7 @@ struct MarkSpotsStep: View {
         } else {
             instructionRow(
                 icon: "hand.point.up.left.fill",
-                title: "Alle plasser er markert",
+                title: form.spots == 1 ? "Plassen er markert" : "Alle plasser er markert",
                 subtitle: "Trykk og hold på en pin for å flytte den"
             )
         }
