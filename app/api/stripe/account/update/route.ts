@@ -146,8 +146,9 @@ export async function POST(request: NextRequest) {
       account = await stripe.accounts.update(accountId, updateParams);
     } catch (err) {
       if (err instanceof Stripe.errors.StripeInvalidRequestError) {
+        const mapped = mapStripeError(err);
         return NextResponse.json(
-          { error: err.message, field: err.param ?? null },
+          { error: mapped.message, field: mapped.field },
           { status: 400 },
         );
       }
@@ -171,4 +172,63 @@ export async function POST(request: NextRequest) {
       { status: 500 },
     );
   }
+}
+
+/**
+ * Oversetter Stripe-API-feil til norske meldinger med kontekst om
+ * staging-test-data der det er relevant. Når serveren kjører i Stripe
+ * test-mode (staging) godtas kun spesifikke "magic numbers" — det er
+ * vanlig at vanlige test-personnumre/IBAN-er avvises.
+ */
+function mapStripeError(err: Stripe.errors.StripeInvalidRequestError): {
+  message: string;
+  field: string | null;
+} {
+  const param = err.param ?? null;
+  const isTestMode = process.env.STRIPE_SECRET_KEY?.startsWith("sk_test_") ?? false;
+
+  // Normaliser param: Stripe rapporterer både "individual[id_number]" og
+  // "individual.id_number" avhengig av API-versjon. Trekk ut feltnavnet.
+  const normalizedField = param
+    ?.replace(/individual\[([^\]]+)\]/g, "individual.$1")
+    .replace(/external_account\[([^\]]+)\]/g, "external_account.$1") ?? null;
+
+  if (normalizedField?.endsWith("id_number")) {
+    return {
+      field: "id_number",
+      message: isTestMode
+        ? "Personnummeret godkjennes ikke i test-modus. Bruk Stripes test-pnr 30099999700 — det er pre-fylt i staging-builden."
+        : "Personnummeret er ikke gyldig. Sjekk at fødselsnummeret er korrekt.",
+    };
+  }
+  if (normalizedField?.endsWith("phone")) {
+    return {
+      field: "phone",
+      message: isTestMode
+        ? "Telefonnummeret godkjennes ikke i test-modus. Bruk +4799999999 — det er pre-fylt i staging-builden."
+        : "Telefonnummeret er ikke gyldig. Skriv inn et norsk mobilnummer (8 siffer).",
+    };
+  }
+  if (normalizedField?.includes("address")) {
+    return {
+      field: "address",
+      message: "Adressen er ikke gyldig. Sjekk at gateadresse, postnummer og poststed stemmer.",
+    };
+  }
+  if (normalizedField?.includes("dob")) {
+    return {
+      field: "dob",
+      message: "Fødselsdatoen er ikke gyldig. Sjekk at fødselsnummeret er korrekt.",
+    };
+  }
+  if (normalizedField?.endsWith("iban") || normalizedField?.includes("external_account")) {
+    return {
+      field: "bank_account",
+      message: isTestMode
+        ? "Bankkontoen godkjennes ikke i test-modus. Bruk Stripes test-IBAN — det er pre-fylt i staging-builden."
+        : "Kontonummeret er ikke gyldig. Sjekk at det er et norsk kontonummer på 11 siffer.",
+    };
+  }
+
+  return { message: err.message, field: normalizedField };
 }
