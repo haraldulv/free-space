@@ -407,7 +407,7 @@ struct BookingCard: View {
                     VStack(alignment: .leading, spacing: 3) {
                         ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
                             HStack {
-                                Text("\(g.price) kr × \(g.count) \(g.count == 1 ? "natt" : "netter") (\(bookingPriceSourceLabel(g.source)))")
+                                Text("\(g.price) kr × \(g.count) døgn (\(bookingPriceSourceLabel(g.source)))")
                                     .font(.system(size: 11))
                                     .foregroundStyle(.neutral500)
                                 Spacer()

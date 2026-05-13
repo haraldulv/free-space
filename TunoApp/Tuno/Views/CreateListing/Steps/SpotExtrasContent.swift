@@ -19,7 +19,7 @@ struct SpotExtrasContent: View {
         ExtraType.available(for: category, scope: .siteSpecific)
     }
     private var unitLabel: String {
-        guard let s = spot else { return "natt" }
+        guard let s = spot else { return "døgn" }
         return form.effectivePriceUnit(for: s).displayName
     }
 

@@ -814,7 +814,7 @@ struct EditListingView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(preset.name).font(.system(size: 13, weight: isSelected ? .medium : .regular))
                             .foregroundStyle(.neutral900)
-                        Text(preset.perNight ? "per natt" : "engangspris")
+                        Text(preset.perNight ? "per døgn" : "engangspris")
                             .font(.system(size: 10)).foregroundStyle(.neutral400)
                     }
                     Spacer()
@@ -852,7 +852,7 @@ struct EditListingView: View {
                         .textFieldStyle(.roundedBorder)
                         .keyboardType(.numberPad)
                         .frame(width: 80)
-                        Text(preset.perNight ? "kr/natt" : "kr").font(.system(size: 11)).foregroundStyle(.neutral400)
+                        Text(preset.perNight ? "kr/døgn" : "kr").font(.system(size: 11)).foregroundStyle(.neutral400)
                         Spacer()
                     }
                     TextField(
