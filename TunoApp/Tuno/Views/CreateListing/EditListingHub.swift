@@ -19,6 +19,29 @@ struct EditListingHub: View {
     @State private var showSavedToast = false
     @State private var showDiscardConfirm = false
     @State private var showPreview = false
+    /// Snapshot av adresse + lat/lng tatt rett etter loadFromListing.
+    /// Hvis brukeren endrer adressen må alle plasser re-plasseres på
+    /// det nye kartet før Lagre blir aktiv (samme regel som i wizarden).
+    @State private var initialLocationKey: String = ""
+
+    /// Sant hvis vert har endret adresse/koordinater siden hub åpnet.
+    private var addressChanged: Bool {
+        currentLocationKey() != initialLocationKey
+    }
+
+    /// Lagre kan trykkes når noe er endret, men hvis det er adressen,
+    /// må alle plasser være re-plassert på det nye kartet først.
+    private var canSave: Bool {
+        guard form.isDirty else { return false }
+        if addressChanged {
+            return form.spotMarkers.count >= form.spots
+        }
+        return true
+    }
+
+    private func currentLocationKey() -> String {
+        "\(form.address)|\(form.city)|\(form.lat)|\(form.lng)"
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -31,6 +54,7 @@ struct EditListingHub: View {
             form.editingMode = true
             form.existingListingId = listing.id
             form.loadFromListing(listing)
+            initialLocationKey = currentLocationKey()
         }
     }
 
@@ -137,7 +161,7 @@ struct EditListingHub: View {
                 }
                 .fontWeight(.semibold)
                 .tint(.primary600)
-                .disabled(!form.isDirty)
+                .disabled(!canSave)
             }
         }
     }
@@ -179,18 +203,22 @@ struct EditListingHub: View {
     // MARK: - Section list
 
     /// Felles seksjoner som gjelder hele annonsen (ikke per plass).
-    /// Adressen er LÅST etter opprettelse — endring krever ny annonse.
-    /// Vises som read-only rad uten chevron, så brukeren ser hvilken
-    /// adresse annonsen ligger på, men ikke kan endre den.
+    /// Adressen kan redigeres, men endring krever at vert re-plasserer
+    /// alle plassene på det nye kartet før Lagre blir aktiv.
     private var sectionList: some View {
         rowGroup {
-            readOnlyAddressRow
+            row(
+                dest: .address,
+                icon: "mappin.and.ellipse",
+                title: "Adresse",
+                subtitle: form.address.isEmpty ? "Ikke satt" : form.address
+            )
             divider
             row(
                 dest: .description,
                 icon: "text.alignleft",
-                title: "Beskrivelse",
-                subtitle: descriptionSummary
+                title: "Tittel",
+                subtitle: form.title.trimmingCharacters(in: .whitespaces).isEmpty ? "Ikke satt" : form.title
             )
             divider
             row(
@@ -264,13 +292,17 @@ struct EditListingHub: View {
     private func destinationView(for dest: EditDestination) -> some View {
         switch dest {
         case .address:
-            AddressStep(form: form, placesService: placesService)
+            EditAddressFlow(
+                form: form,
+                placesService: placesService,
+                addressChanged: addressChanged
+            )
                 .navigationTitle("Adresse")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { stepToolbar }
         case .description:
             DescriptionStep(form: form)
-                .navigationTitle("Beskrivelse")
+                .navigationTitle("Tittel")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { stepToolbar }
         case .photos:
@@ -352,36 +384,6 @@ struct EditListingHub: View {
 
     private var divider: some View {
         Divider().padding(.leading, 60).opacity(0.5)
-    }
-
-    /// Read-only adresse-rad. Adressen er kjernekoblet til kartet, spot-
-    /// markørene og eksisterende bookinger — endring krever ny annonse.
-    private var readOnlyAddressRow: some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.neutral100)
-                    .frame(width: 40, height: 40)
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.neutral500)
-            }
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Adresse")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                Text(form.address.isEmpty ? "Ikke satt" : form.address)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
-                    .lineLimit(1)
-            }
-            Spacer()
-            Text("Låst")
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.neutral500)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
     }
 
     private func row(dest: EditDestination, icon: String, title: String, subtitle: String) -> some View {
@@ -560,6 +562,89 @@ enum EditDestination: Hashable {
     case spotExtras(Int)
     case spotCalendar(Int)
     case spotDiscounts(Int)
+}
+
+// MARK: - EditAddressFlow
+
+/// Adresse + plasser i én sammenhengende flyt — speiler wizardens
+/// AddressStep → MarkSpotsStep, men i ett scrollbart view siden brukeren
+/// allerede er inne i Rediger-hub. Når vert endrer adresse blir alle
+/// plassmarkører tømt automatisk og MarkSpotsStep dukker opp under
+/// adressefeltet. Lagre-knappen i toolbar styres av canSave på Hub-en.
+private struct EditAddressFlow: View {
+    @ObservedObject var form: ListingFormModel
+    @ObservedObject var placesService: PlacesService
+    let addressChanged: Bool
+
+    /// Husker forrige tilstand av addressChanged så vi bare tømmer pinner
+    /// EN GANG (når brukeren først endrer adressen). Ellers ville
+    /// re-plasseringer tømmes igjen så fort de skjer.
+    @State private var hasResetSpots = false
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                AddressStep(form: form, placesService: placesService)
+
+                if addressChanged {
+                    replacementSection
+                }
+            }
+            .padding(.bottom, 24)
+        }
+        .background(Color.neutral50)
+        .onChange(of: addressChanged) { _, changed in
+            if changed && !hasResetSpots {
+                // Første gang adressen endres: tøm pinnene og krev re-
+                // plassering. Brukeren ser advarsel + kart umiddelbart.
+                form.spotMarkers.removeAll()
+                hasResetSpots = true
+            }
+        }
+    }
+
+    private var replacementSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(.orange)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Plassene må re-plasseres")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text("Du har endret adresse. Marker \(form.spots) plass\(form.spots == 1 ? "" : "er") på det nye kartet før du kan lagre.")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral600)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.orange.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .padding(.horizontal, 24)
+
+            MarkSpotsStep(form: form)
+                .frame(height: 420)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(.horizontal, 16)
+
+            statusRow
+                .padding(.horizontal, 24)
+        }
+    }
+
+    private var statusRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: form.spotMarkers.count >= form.spots ? "checkmark.circle.fill" : "circle")
+                .font(.system(size: 16))
+                .foregroundStyle(form.spotMarkers.count >= form.spots ? .primary600 : .neutral400)
+            Text("\(form.spotMarkers.count) av \(form.spots) plass\(form.spots == 1 ? "" : "er") markert")
+                .font(.system(size: 13, weight: .medium))
+                .foregroundStyle(.neutral700)
+        }
+    }
 }
 
 // MARK: - SpotMiniHub
