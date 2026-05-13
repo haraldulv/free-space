@@ -36,7 +36,7 @@ struct EditListingHub: View {
             .background(Color.neutral50)
             .navigationTitle("Rediger annonse")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { hubToolbar }
+            .toolbar { rootToolbar }
             .navigationDestination(for: EditDestination.self) { dest in
                 destinationView(for: dest)
             }
@@ -88,8 +88,10 @@ struct EditListingHub: View {
 
     // MARK: - Toolbar
 
+    /// Toolbar for hub-rotnoden. Kun X-knapp — Lagre hører hjemme på
+    /// destination-stepene der faktiske endringer skjer.
     @ToolbarContentBuilder
-    private var hubToolbar: some ToolbarContent {
+    private var rootToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
             Button {
                 if form.isDirty {
@@ -103,8 +105,15 @@ struct EditListingHub: View {
                     .foregroundStyle(.neutral700)
                     .frame(width: 32, height: 32)
             }
+            .buttonStyle(.plain)
             .accessibilityLabel("Lukk")
         }
+    }
+
+    /// Toolbar for destination-stegene. System-back-chevron tar venstre-
+    /// siden, vi tilbyr kun Lagre-pillen til høyre.
+    @ToolbarContentBuilder
+    private var stepToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 Task { await saveChanges() }
@@ -127,6 +136,7 @@ struct EditListingHub: View {
                         .clipShape(Capsule())
                 }
             }
+            .buttonStyle(.plain)
             .disabled(!form.isDirty || isSaving)
         }
     }
@@ -258,40 +268,40 @@ struct EditListingHub: View {
             AddressStep(form: form, placesService: placesService)
                 .navigationTitle("Adresse")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { hubToolbar }
+                .toolbar { stepToolbar }
         case .description:
             DescriptionStep(form: form)
                 .navigationTitle("Beskrivelse")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { hubToolbar }
+                .toolbar { stepToolbar }
         case .photos:
             PhotosStep(form: form)
                 .navigationTitle("Bilder")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { hubToolbar }
+                .toolbar { stepToolbar }
         case .amenities:
             AmenitiesStep(form: form)
                 .navigationTitle("Fasiliteter")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { hubToolbar }
+                .toolbar { stepToolbar }
         case .messages:
             MessagesStep(form: form)
                 .navigationTitle("Meldinger")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { hubToolbar }
+                .toolbar { stepToolbar }
         case .instantBooking:
             InstantBookingStep(form: form)
                 .navigationTitle("Booking")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { hubToolbar }
+                .toolbar { stepToolbar }
         case .openingHours:
             OpeningHoursStep(form: form)
                 .navigationTitle("Åpningstid")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar { hubToolbar }
+                .toolbar { stepToolbar }
         case .spotMiniHub(let idx):
             SpotMiniHub(form: form, spotIndex: idx)
-                .toolbar { hubToolbar }
+                .toolbar { stepToolbar }
         case .spotDetails(let idx):
             spotStepWrapper(idx: idx, title: "Detaljer") {
                 SpotDetailsStep(form: form)
@@ -323,7 +333,7 @@ struct EditListingHub: View {
         content()
             .navigationTitle("\(title) — plass \(idx + 1)")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { hubToolbar }
+            .toolbar { stepToolbar }
             .onAppear {
                 if form.spotMarkers.indices.contains(idx) {
                     form.currentSpotIndex = idx

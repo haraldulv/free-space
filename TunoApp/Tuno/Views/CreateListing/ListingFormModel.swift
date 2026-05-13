@@ -812,7 +812,11 @@ extension ListingFormModel {
         h.combine(imageURLs)
         h.combine(Array(blockedDates).sorted())
         // Kompleks-felter: hash via JSON for å unngå Hashable-conformance-krav.
+        // .sortedKeys er kritisk — SpotMarker har Dictionary-felter
+        // (datePriceOverrides, openingHoursOverrides, spots) som ellers
+        // ville fått tilfeldig key-rekkefølge per encoding-kall.
         let encoder = JSONEncoder()
+        encoder.outputFormatting = .sortedKeys
         if let data = try? encoder.encode(spotMarkers) { h.combine(data) }
         if let oh = openingHours, let data = try? encoder.encode(oh) {
             h.combine(data)
