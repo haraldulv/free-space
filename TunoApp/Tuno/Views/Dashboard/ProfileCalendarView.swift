@@ -63,6 +63,7 @@ struct ProfileCalendarView: View {
                             }
                         }
                     ),
+                    initialDates: [],
                     onClose: { showOpeningOverridesSheet = false }
                 )
                 .presentationDetents([.large])
@@ -312,8 +313,14 @@ struct ProfileCalendarView: View {
 /// Sheet for å sette per-dato overstyring av åpningstid på en parkering-plass.
 /// To valg per dato: helt stengt, eller annen tid (f.eks. 12:00-22:00).
 /// Eksisterende overstyringer listes nederst — kan slettes med søppel-ikon.
+///
+/// `initialDates` brukes når sheet'en åpnes fra kalenderens action-bar med en
+/// allerede-valgt range. Da skjules DatePicker og overstyringen påføres alle
+/// datoer i sett. Hvis `initialDates` er tom brukes single-dato-flyten med
+/// egen DatePicker (Profil-snarvei "legg til fra scratch").
 struct OpeningHoursOverridesSheet: View {
     @Binding var overrides: [String: DayOpeningOverride]
+    var initialDates: Set<String> = []
     let onClose: () -> Void
 
     @State private var selectedDate: Date = Date()
@@ -337,14 +344,34 @@ struct OpeningHoursOverridesSheet: View {
                         .foregroundStyle(Color.neutral600)
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("Dato")
+                        Text(initialDates.isEmpty ? "Dato" : "Valgte datoer")
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundStyle(Color.neutral500)
                             .textCase(.uppercase)
-                        DatePicker("", selection: $selectedDate, in: Date()..., displayedComponents: .date)
-                            .datePickerStyle(.compact)
-                            .labelsHidden()
-                            .environment(\.locale, Locale(identifier: "nb_NO"))
+                        if initialDates.isEmpty {
+                            DatePicker("", selection: $selectedDate, in: Date()..., displayedComponents: .date)
+                                .datePickerStyle(.compact)
+                                .labelsHidden()
+                                .environment(\.locale, Locale(identifier: "nb_NO"))
+                        } else {
+                            HStack(spacing: 8) {
+                                Image(systemName: "calendar")
+                                    .font(.system(size: 13, weight: .semibold))
+                                    .foregroundStyle(Color.neutral700)
+                                Text(initialRangeLabel)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color.neutral900)
+                                Spacer()
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 12)
+                            .background(Color.neutral50)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.neutral200, lineWidth: 1)
+                            )
+                        }
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -486,17 +513,36 @@ struct OpeningHoursOverridesSheet: View {
     private var sortedOverrideKeys: [String] { overrides.keys.sorted() }
 
     private func applyOverride() {
-        let iso = isoString(from: selectedDate)
+        let targets: [String] = initialDates.isEmpty
+            ? [isoString(from: selectedDate)]
+            : Array(initialDates)
+        let value: DayOpeningOverride
         switch mode {
         case .closed:
-            overrides[iso] = DayOpeningOverride(closed: true, open: nil)
+            value = DayOpeningOverride(closed: true, open: nil)
         case .allDay:
-            overrides[iso] = DayOpeningOverride(closed: false, open: "00:00-24:00")
+            value = DayOpeningOverride(closed: false, open: "00:00-24:00")
         case .otherTime:
             let s = formatHM(startTime)
             let e = formatHM(endTime)
-            overrides[iso] = DayOpeningOverride(closed: false, open: "\(s)-\(e)")
+            value = DayOpeningOverride(closed: false, open: "\(s)-\(e)")
         }
+        for iso in targets {
+            overrides[iso] = value
+        }
+        if !initialDates.isEmpty {
+            onClose()
+        }
+    }
+
+    /// Pene label for valgt range. "12. mai" eller "12. – 18. mai (7 datoer)".
+    private var initialRangeLabel: String {
+        let sorted = initialDates.sorted()
+        guard let first = sorted.first, let last = sorted.last else { return "" }
+        if first == last {
+            return formatDateLabel(iso: first)
+        }
+        return "\(formatDateLabel(iso: first)) – \(formatDateLabel(iso: last)) (\(initialDates.count) datoer)"
     }
 
     private func modeSubtitle(_ m: Mode) -> String {

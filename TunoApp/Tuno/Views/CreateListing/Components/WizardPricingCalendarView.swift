@@ -24,6 +24,19 @@ struct WizardPricingCalendarView: View {
     @State private var priceEditValue: Int = 0
     @FocusState private var priceEditFocused: Bool
 
+    /// Sub-modus for action-baren: vis tilgjengelighet+pris (default) eller
+    /// inline åpningstid-editor.
+    private enum ActionBarSubMode { case availability, openingHours }
+    @State private var actionBarSubMode: ActionBarSubMode = .availability
+
+    /// State for inline åpningstid-editor. Stenging skjer via
+    /// Tilgjengelig-toggle (blockedDates), IKKE via åpningstid — derfor kun
+    /// to valg: Døgnåpent eller Egne tider.
+    private enum OHEditorMode { case allDay, otherTime }
+    @State private var ohEditorMode: OHEditorMode = .otherTime
+    @State private var ohStartTime: Date = Self.defaultStartTime()
+    @State private var ohEndTime: Date = Self.defaultEndTime()
+
     // Band-editor draft state
     @State private var draft: WizardPricingBand? = nil
     @State private var draftPriceValue: Int = 0
@@ -111,26 +124,39 @@ struct WizardPricingCalendarView: View {
         spot?.openingHours ?? form.openingHours
     }
 
-    /// True hvis ukedagen for `date` er stengt etter åpningstid (verdien
-    /// er nil i OpeningHours for den ukedagen).
+    /// True hvis dagen er stengt etter åpningstid eller per-dato override.
+    /// Override har presedens over ukedags-default.
     private func closedByOpeningHours(_ date: Date) -> Bool {
-        guard let oh = effectiveOpeningHours else { return false }
-        return !OpeningHoursService.isOpen(oh, on: date)
+        let oh = effectiveOpeningHours
+        let overrides = spot?.openingHoursOverrides
+        // Hvis verken åpningstid eller overrides finnes → ingen begrensning
+        if oh == nil && (overrides?.isEmpty ?? true) { return false }
+        return !OpeningHoursService.isOpen(oh, on: date, overrides: overrides)
     }
 
-    /// Kompakt åpningstid-label for celle, f.eks. "9–17". nil hvis
-    /// døgnåpent eller hvis dagen er stengt.
-    private func openingHoursLabel(for date: Date) -> String? {
-        guard let oh = effectiveOpeningHours else { return nil }
-        let comp = Self.osloCalendar.component(.weekday, from: date)
-        let day = Weekday.from(weekdayComponent: comp)
-        guard let raw = oh.value(for: day),
-              let parsed = OpeningHoursService.parseRange(raw) else { return nil }
-        // 24/7 → ingen label (start 00:00, end 23:59 eller 24:00)
-        if parsed.start == 0 && parsed.end >= 23 * 60 + 59 { return nil }
+    /// Kompakt visning av åpningstid for celle. Returnerer enum slik at
+    /// callers kan skille mellom døgnåpent (egen "24t"-pille) og begrenset
+    /// tid ("9–17"-tekst). Override har presedens over ukedags-default.
+    enum CellOpeningDisplay: Equatable {
+        case none           // ingen begrensning satt på listing/spot
+        case alwaysOpen     // 24/7 — vises som "24t"-pille
+        case limited(String) // "9–17"
+    }
+
+    private func openingHoursDisplay(for date: Date) -> CellOpeningDisplay {
+        let oh = effectiveOpeningHours
+        let overrides = spot?.openingHoursOverrides
+        if oh == nil && (overrides?.isEmpty ?? true) { return .none }
+        guard let raw = OpeningHoursService.effectiveTime(oh, on: date, overrides: overrides) else {
+            return .none
+        }
+        // 24/7-sentineler — parseRange aksepterer ikke "24:00", så håndter eksplisitt.
+        if raw == "00:00-24:00" || raw == "00:00-23:59" { return .alwaysOpen }
+        guard let parsed = OpeningHoursService.parseRange(raw) else { return .none }
+        if parsed.start == 0 && parsed.end >= 23 * 60 + 59 { return .alwaysOpen }
         let startH = parsed.start / 60
         let endH = parsed.end / 60
-        return "\(startH)–\(endH)"
+        return .limited("\(startH)–\(endH)")
     }
 
     private var spot: SpotMarker? {
@@ -226,6 +252,7 @@ struct WizardPricingCalendarView: View {
                     }
                     .padding(.top, 8)
                 }
+                .background(Color(.systemGroupedBackground))
                 .onAppear {
                     guard !hasScrolledToCurrent else { return }
                     if let target = currentWeekRowId {
@@ -389,7 +416,11 @@ struct WizardPricingCalendarView: View {
         // stedet for X — så bruker skjønner at det ikke er en manuell blokk.
         let isClosedByHours = !isPast && !isBlocked && closedByOpeningHours(date)
         let dimAsBlocked = isBlocked || isClosedByHours
-        let hoursLabel = (!isPast && !dimAsBlocked) ? openingHoursLabel(for: date) : nil
+        let showPrice = !isPast && !dimAsBlocked && priceInfo != nil &&
+            !(dayCoveredByBand(date) && !hasOverride)
+        let ohDisplay: CellOpeningDisplay = (!isPast && !dimAsBlocked)
+            ? openingHoursDisplay(for: date)
+            : .none
 
         Button {
             handleDayTap(iso: iso, isPast: isPast)
@@ -400,12 +431,13 @@ struct WizardPricingCalendarView: View {
                         isPast: isPast,
                         isSelected: isSelected,
                         isAnchor: isAnchor,
-                        isBlocked: dimAsBlocked,
+                        isBlocked: isBlocked,
+                        isClosedByHours: isClosedByHours,
                         hasOverride: hasOverride
                     ))
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(
-                        cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast, isBlocked: dimAsBlocked),
+                        cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast, isBlocked: isBlocked, isClosedByHours: isClosedByHours),
                         lineWidth: isAnchor ? 2 : (isSelected || dimAsBlocked ? 1.5 : 1)
                     )
 
@@ -417,39 +449,24 @@ struct WizardPricingCalendarView: View {
 
                     Spacer(minLength: 0)
 
-                    if isBlocked {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.neutral500)
-                            .padding(.bottom, 10)
-                    } else if isClosedByHours {
-                        Text("Stengt")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.neutral500)
-                            .padding(.bottom, 10)
-                    } else if !isPast, let price = priceInfo, !(dayCoveredByBand(date) && !hasOverride) {
-                        // Hopp over bottom-pris hvis et bånd dekker dagen — prisen
-                        // står da på selve båndet. Date-overrides er fortsatt synlige
-                        // siden de vinner over bånd.
-                        VStack(spacing: 1) {
-                            Text("\(price.amount) kr")
-                                .font(.system(size: 11, weight: hasOverride || price.isOverride ? .bold : .medium))
-                                .foregroundStyle(priceTextColor(
-                                    isSelected: isSelected,
-                                    isAnchor: isAnchor,
-                                    isOverride: hasOverride || price.isOverride
-                                ))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                            if let lbl = hoursLabel {
-                                Text(lbl)
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(.neutral400)
-                                    .lineLimit(1)
-                            }
-                        }
-                        .padding(.bottom, 10)
+                    // Faste linjer: pris og status alltid på samme y-koordinat
+                    // — uavhengig av dag-state. Tomme rader er Color.clear med
+                    // samme høyde som teksten ville hatt.
+                    VStack(spacing: 5) {
+                        priceLine(
+                            priceInfo: priceInfo,
+                            show: showPrice,
+                            isSelected: isSelected,
+                            isAnchor: isAnchor,
+                            hasOverride: hasOverride
+                        )
+                        statusLine(
+                            isBlocked: isBlocked,
+                            isClosedByHours: isClosedByHours,
+                            ohDisplay: ohDisplay
+                        )
                     }
+                    .padding(.bottom, 10)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -459,28 +476,93 @@ struct WizardPricingCalendarView: View {
         .disabled(isPast)
     }
 
+    /// Pris-linje med fast høyde. Tom plassholder hvis pris ikke skal vises,
+    /// slik at status-linja under blir på samme y-koordinat for alle celler.
+    @ViewBuilder
+    private func priceLine(
+        priceInfo: ResolvedDayPrice?,
+        show: Bool,
+        isSelected: Bool,
+        isAnchor: Bool,
+        hasOverride: Bool
+    ) -> some View {
+        if show, let price = priceInfo {
+            Text("\(price.amount) kr")
+                .font(.system(size: 12, weight: hasOverride || price.isOverride ? .bold : .semibold))
+                .foregroundStyle(priceTextColor(
+                    isSelected: isSelected,
+                    isAnchor: isAnchor,
+                    isOverride: hasOverride || price.isOverride
+                ))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(height: 15)
+        } else {
+            Color.clear.frame(height: 15)
+        }
+    }
+
+    /// Status-linje: blokkert (X), stengt-av-åpningstid ("Stengt"),
+    /// døgnåpent ("24t" tekst), åpen med tider ("9–17"). Fast høyde for
+    /// konsistens på tvers av celler.
+    @ViewBuilder
+    private func statusLine(
+        isBlocked: Bool,
+        isClosedByHours: Bool,
+        ohDisplay: CellOpeningDisplay
+    ) -> some View {
+        if isBlocked || isClosedByHours {
+            Text("Stengt")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color(red: 185/255, green: 28/255, blue: 28/255))
+                .frame(height: 14)
+        } else {
+            switch ohDisplay {
+            case .none:
+                Color.clear.frame(height: 14)
+            case .alwaysOpen:
+                Text("24t")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                    .frame(height: 14)
+            case .limited(let label):
+                Text(label)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.neutral500)
+                    .lineLimit(1)
+                    .frame(height: 14)
+            }
+        }
+    }
+
     // MARK: - Cell styling
 
-    private func cellBackground(isPast: Bool, isSelected: Bool, isAnchor: Bool, isBlocked: Bool, hasOverride: Bool) -> Color {
+    private func cellBackground(isPast: Bool, isSelected: Bool, isAnchor: Bool, isBlocked: Bool, isClosedByHours: Bool, hasOverride: Bool) -> Color {
         if isAnchor { return Color.primary600.opacity(0.18) }
         if isSelected { return Color.primary600.opacity(0.10) }
-        if isBlocked { return Color.neutral100 }
-        // hasOverride har ikke egen bakgrunn lenger — den grønne pris-teksten
-        // alene markerer at en dato har en pris-overstyring.
+        // Stengt = stengt: både manuelt blokkert OG av åpningstid har samme
+        // visuelle stil — svak rødtone. Bruker skal ikke trenge å huske
+        // hvilken kilde stengningen kommer fra.
+        if isBlocked || isClosedByHours {
+            return Color(red: 254/255, green: 226/255, blue: 226/255)
+        }
         return Color.white
     }
 
-    private func cellBorder(isSelected: Bool, isAnchor: Bool, isPast: Bool, isBlocked: Bool) -> Color {
+    private func cellBorder(isSelected: Bool, isAnchor: Bool, isPast: Bool, isBlocked: Bool, isClosedByHours: Bool) -> Color {
         if isAnchor { return Color.primary600 }
         if isSelected { return Color.primary500 }
-        if isBlocked { return Color.neutral300 }
+        if isBlocked || isClosedByHours {
+            return Color(red: 252/255, green: 165/255, blue: 165/255)
+        }
         if isPast { return Color.neutral100 }
         return Color.neutral200
     }
 
     private func cellText(isPast: Bool, isBlocked: Bool) -> Color {
         if isPast { return Color.neutral300 }
-        if isBlocked { return Color.neutral400 }
+        // Stengt-tall: dempet rødtone for konsistens med "Stengt"-teksten
+        if isBlocked { return Color(red: 185/255, green: 28/255, blue: 28/255).opacity(0.55) }
         return Color.neutral900
     }
 
@@ -593,6 +675,19 @@ struct WizardPricingCalendarView: View {
             HStack(spacing: 10) {
                 dateRangePill
                 Spacer()
+                if !selectedDates.isEmpty {
+                    Button {
+                        closeActionBar()
+                    } label: {
+                        Image(systemName: "arrow.counterclockwise")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 38, height: 38)
+                            .background(glassCircleBackground)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Tøm valg")
+                }
                 Button {
                     closeActionBar()
                 } label: {
@@ -603,17 +698,266 @@ struct WizardPricingCalendarView: View {
                         .background(glassCircleBackground)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("Lukk")
             }
             .padding(.horizontal, 16)
 
-            HStack(alignment: .top, spacing: 10) {
-                availabilityCard
-                priceCard
+            // Innhold bytter basert på sub-modus.
+            Group {
+                switch actionBarSubMode {
+                case .availability:
+                    HStack(alignment: .top, spacing: 10) {
+                        availabilityCard
+                        priceCard
+                    }
+                case .openingHours:
+                    openingHoursInlineEditor
+                }
+            }
+            .padding(.horizontal, 12)
+
+            // Bunn-rad bytter også basert på modus.
+            Group {
+                switch actionBarSubMode {
+                case .availability:
+                    if effectiveOpeningHours != nil {
+                        openingHoursToggleButton
+                    }
+                case .openingHours:
+                    backToAvailabilityButton
+                }
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 12)
         }
         .padding(.top, 10)
+        .animation(.easeInOut(duration: 0.22), value: actionBarSubMode)
+    }
+
+    /// Bunn-rad i .availability-modus: bytter til åpningstid-editor.
+    private var openingHoursToggleButton: some View {
+        Button {
+            primeOHEditorFromSelection()
+            actionBarSubMode = .openingHours
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "clock")
+                    .font(.system(size: 14, weight: .semibold))
+                Text("Åpningstid for valgte datoer")
+                    .font(.system(size: 14, weight: .semibold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.6))
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .frame(height: 52)
+            .frame(maxWidth: .infinity)
+            .background(glassCardBackground)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Bunn-rad i .openingHours-modus: tilbake til tilgjengelighet/pris.
+    private var backToAvailabilityButton: some View {
+        Button {
+            actionBarSubMode = .availability
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 12, weight: .bold))
+                Text("Tilbake til tilgjengelighet")
+                    .font(.system(size: 14, weight: .semibold))
+                Spacer()
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 16)
+            .frame(height: 52)
+            .frame(maxWidth: .infinity)
+            .background(glassCardBackground)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Inline åpningstid-editor som erstatter availabilityCard+priceCard
+    /// når subMode == .openingHours. Tre valg + "Egne tider"-pickere +
+    /// Lagre/Fjern-knapper. Full bredde, glass-stil.
+    private var openingHoursInlineEditor: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Åpningstid for valgte datoer")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.white)
+
+            HStack(spacing: 8) {
+                ohModeChip(label: "Døgnåpent", value: .allDay)
+                ohModeChip(label: "Egne tider", value: .otherTime)
+            }
+
+            if ohEditorMode == .otherTime {
+                HStack(spacing: 12) {
+                    ohTimeColumn(title: "Fra", date: $ohStartTime)
+                    ohTimeColumn(title: "Til", date: $ohEndTime)
+                }
+            }
+
+            HStack(spacing: 8) {
+                if selectionHasExistingOpeningOverride {
+                    Button {
+                        removeOpeningHoursOverride()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "trash")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text("Fjern åpningstid")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 14)
+                        .frame(height: 38)
+                        .background(Capsule().fill(Color.white.opacity(0.14)))
+                        .overlay(Capsule().stroke(Color.white.opacity(0.22), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+                Button {
+                    applyOpeningHoursOverride()
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                        Text("Lagre")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundStyle(.neutral900)
+                    .padding(.horizontal, 14)
+                    .frame(height: 38)
+                    .frame(maxWidth: .infinity)
+                    .background(Capsule().fill(Color.white))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(glassCardBackground)
+    }
+
+    /// Chip-knapp i åpningstid-editoren. Valgt = hvit bg + svart tekst.
+    private func ohModeChip(label: String, value: OHEditorMode) -> some View {
+        let active = ohEditorMode == value
+        return Button {
+            ohEditorMode = value
+        } label: {
+            Text(label)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(active ? Color.neutral900 : .white)
+                .padding(.horizontal, 12)
+                .frame(height: 30)
+                .frame(maxWidth: .infinity)
+                .background(Capsule().fill(active ? Color.white : Color.white.opacity(0.12)))
+                .overlay(Capsule().stroke(Color.white.opacity(active ? 0.0 : 0.20), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Kompakt time-picker-kolonne for "Egne tider"-modus.
+    private func ohTimeColumn(title: String, date: Binding<Date>) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(.white.opacity(0.65))
+            DatePicker("", selection: date, displayedComponents: .hourAndMinute)
+                .datePickerStyle(.compact)
+                .labelsHidden()
+                .environment(\.colorScheme, .dark)
+                .environment(\.locale, Locale(identifier: "nb_NO"))
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    /// True hvis minst én av valgte datoer har en eksisterende åpningstid-override.
+    private var selectionHasExistingOpeningOverride: Bool {
+        guard let idx = spotIndex,
+              let dict = form.spotMarkers[idx].openingHoursOverrides else { return false }
+        return selectedDates.contains { dict[$0] != nil }
+    }
+
+    /// Pre-fyll editor-state basert på første valgte dato med eksisterende
+    /// override. Hvis ingen finnes, default til "Egne tider 09-17" så
+    /// brukeren har et tydelig utgangspunkt.
+    private func primeOHEditorFromSelection() {
+        guard let idx = spotIndex,
+              let dict = form.spotMarkers[idx].openingHoursOverrides else {
+            ohEditorMode = .otherTime
+            ohStartTime = Self.defaultStartTime()
+            ohEndTime = Self.defaultEndTime()
+            return
+        }
+        let firstWithOverride = selectedDates.sorted().first { dict[$0] != nil }
+        guard let iso = firstWithOverride, let ov = dict[iso] else {
+            ohEditorMode = .otherTime
+            ohStartTime = Self.defaultStartTime()
+            ohEndTime = Self.defaultEndTime()
+            return
+        }
+        if ov.open == "00:00-24:00" {
+            ohEditorMode = .allDay
+        } else if let s = ov.open, let dash = s.firstIndex(of: "-") {
+            ohEditorMode = .otherTime
+            let from = String(s[..<dash])
+            let to = String(s[s.index(after: dash)...])
+            ohStartTime = Self.parseHM(from) ?? Self.defaultStartTime()
+            ohEndTime = Self.parseHM(to) ?? Self.defaultEndTime()
+        } else {
+            // Eksisterende stengt-override (legacy) — vis som Egne tider
+            // default; bruker kan eksplisitt blokkere dagen via Tilgjengelig
+            ohEditorMode = .otherTime
+            ohStartTime = Self.defaultStartTime()
+            ohEndTime = Self.defaultEndTime()
+        }
+    }
+
+    private func applyOpeningHoursOverride() {
+        guard let idx = spotIndex else { return }
+        let value: DayOpeningOverride
+        switch ohEditorMode {
+        case .allDay:
+            value = .openTimes("00:00-24:00")
+        case .otherTime:
+            let s = Self.formatHM(ohStartTime)
+            let e = Self.formatHM(ohEndTime)
+            value = .openTimes("\(s)-\(e)")
+        }
+        var dict = form.spotMarkers[idx].openingHoursOverrides ?? [:]
+        for iso in selectedDates { dict[iso] = value }
+        form.spotMarkers[idx].openingHoursOverrides = dict.isEmpty ? nil : dict
+        actionBarSubMode = .availability
+        clearSelectionState()
+    }
+
+    private func removeOpeningHoursOverride() {
+        guard let idx = spotIndex else { return }
+        var dict = form.spotMarkers[idx].openingHoursOverrides ?? [:]
+        for iso in selectedDates { dict.removeValue(forKey: iso) }
+        form.spotMarkers[idx].openingHoursOverrides = dict.isEmpty ? nil : dict
+        actionBarSubMode = .availability
+        clearSelectionState()
+    }
+
+    private static func defaultStartTime() -> Date {
+        var c = DateComponents(); c.hour = 9; c.minute = 0
+        return Calendar.current.date(from: c) ?? Date()
+    }
+    private static func defaultEndTime() -> Date {
+        var c = DateComponents(); c.hour = 17; c.minute = 0
+        return Calendar.current.date(from: c) ?? Date()
+    }
+    private static func formatHM(_ d: Date) -> String {
+        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.string(from: d)
+    }
+    private static func parseHM(_ s: String) -> Date? {
+        let f = DateFormatter(); f.dateFormat = "HH:mm"; return f.date(from: s)
     }
 
     /// Lukker den aktive action-baren og rydder draft/selection.
@@ -630,6 +974,7 @@ struct WizardPricingCalendarView: View {
         rangeAnchor = nil
         draft = nil
         mode = .idle
+        actionBarSubMode = .availability
         priceEditFocused = false
         draftPriceFocused = false
     }
@@ -671,7 +1016,14 @@ struct WizardPricingCalendarView: View {
     }
 
     private var availabilityCard: some View {
-        let allBlocked = !selectedDates.isEmpty && selectedDates.allSatisfy { blockedDates.contains($0) }
+        // Ignorer stengt-av-åpningstid i toggle-state: den behandles
+        // separat via åpningstid-editor. Tilgjengelig-toggle gjelder kun
+        // dager som faktisk kan blokkeres/åpnes manuelt.
+        let togglable = selectedDates.filter { iso -> Bool in
+            guard let d = Self.isoFormatter.date(from: iso) else { return false }
+            return !closedByOpeningHours(d)
+        }
+        let allBlocked = !togglable.isEmpty && togglable.allSatisfy { blockedDates.contains($0) }
         let allOpen = !allBlocked
 
         return Button {
@@ -858,17 +1210,6 @@ struct WizardPricingCalendarView: View {
         if case .bandEdit = mode { return }
         if case .bandCreate = mode { return }
 
-        // Direct toggle: hvis dagen er blokkert OG bruker ikke holder på med
-        // en range-selection, åpne dagen umiddelbart. Lettere oppdaget for
-        // brukere enn å selektere + bunnbar-knapp.
-        if rangeAnchor == nil, !selectedDates.contains(iso), let idx = spotIndex,
-           let blocked = form.spotMarkers[idx].blockedDates, blocked.contains(iso) {
-            var updated = Set(blocked)
-            updated.remove(iso)
-            form.spotMarkers[idx].blockedDates = updated.isEmpty ? nil : Array(updated).sorted()
-            return
-        }
-
         if let anchor = rangeAnchor {
             if anchor == iso {
                 selectedDates.remove(iso)
@@ -916,12 +1257,23 @@ struct WizardPricingCalendarView: View {
     private func toggleBlockSelected() {
         guard let idx = spotIndex else { return }
         let existing = Set(form.spotMarkers[idx].blockedDates ?? [])
-        let allBlocked = selectedDates.allSatisfy { existing.contains($0) }
+        // Stengt-av-åpningstid trumfer manuell blokk — vi blokkerer/åpner kun
+        // dager som faktisk er booking-bare. Ellers blir det inkonsistent at
+        // bruker "blokkerer" en stengt søndag og taper den røde stengt-stil.
+        let togglable = selectedDates.filter { iso in
+            guard let date = Self.isoFormatter.date(from: iso) else { return false }
+            return !closedByOpeningHours(date)
+        }
+        guard !togglable.isEmpty else {
+            clearSelectionState()
+            return
+        }
+        let allBlocked = togglable.allSatisfy { existing.contains($0) }
         var updated = existing
         if allBlocked {
-            updated.subtract(selectedDates)
+            updated.subtract(togglable)
         } else {
-            updated.formUnion(selectedDates)
+            updated.formUnion(togglable)
         }
         form.spotMarkers[idx].blockedDates = updated.isEmpty ? nil : Array(updated).sorted()
         clearSelectionState()
@@ -933,6 +1285,7 @@ struct WizardPricingCalendarView: View {
         selectedDates.removeAll()
         rangeAnchor = nil
         mode = .idle
+        actionBarSubMode = .availability
     }
 
     private func syncPriceEditFromSelection() {

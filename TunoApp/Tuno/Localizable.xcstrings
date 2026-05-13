@@ -758,6 +758,9 @@
     "Åpningstid" : {
 
     },
+    "Åpningstid for valgte datoer" : {
+
+    },
     "Apple" : {
 
     },
@@ -1388,9 +1391,6 @@
           }
         }
       }
-    },
-    "Dato" : {
-
     },
     "Datoer" : {
       "extractionState" : "manual",
@@ -2268,6 +2268,9 @@
           }
         }
       }
+    },
+    "Fjern åpningstid" : {
+
     },
     "Flott" : {
       "extractionState" : "manual",
@@ -6661,6 +6664,9 @@
           }
         }
       }
+    },
+    "Tilbake til tilgjengelighet" : {
+
     },
     "Tilbys som %@" : {
 

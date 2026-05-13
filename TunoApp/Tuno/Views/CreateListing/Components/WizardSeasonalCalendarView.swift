@@ -134,6 +134,7 @@ struct WizardSeasonalCalendarView: View {
                     .padding(.top, 8)
                     .padding(.bottom, 220)  // plass for action-bar
                 }
+                .background(Color(.systemGroupedBackground))
                 .onAppear {
                     guard !hasScrolledToCurrent else { return }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -284,32 +285,41 @@ struct WizardSeasonalCalendarView: View {
 
                     Spacer(minLength: 0)
 
-                    if isBlocked {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(.neutral500)
-                            .padding(.bottom, 10)
-                    } else if !isPast, let override = dateOverridesMap[iso] {
-                        // Override vinner over bånd og base.
-                        Text("\(override) kr")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(Color.primary700)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .padding(.bottom, 10)
-                    } else if !isPast && !dayCovered, priceForDay > 0 {
-                        // Bånd dekker ikke dagen → vis base-pris.
-                        Text("\(priceForDay) kr")
-                            .font(.system(size: 11, weight: (isSelected || isAnchor) ? .semibold : .medium))
-                            .foregroundStyle(priceTextColor(
-                                isSelected: isSelected,
-                                isAnchor: isAnchor,
-                                isOverride: false
-                            ))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.7)
-                            .padding(.bottom, 10)
+                    // Faste linjer: pris og status alltid på samme y-koordinat.
+                    VStack(spacing: 5) {
+                        // Pris-linje med fast høyde
+                        if !isBlocked && !isPast, let override = dateOverridesMap[iso] {
+                            Text("\(override) kr")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(Color.primary700)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                                .frame(height: 15)
+                        } else if !isBlocked && !isPast && !dayCovered && priceForDay > 0 {
+                            Text("\(priceForDay) kr")
+                                .font(.system(size: 12, weight: (isSelected || isAnchor) ? .semibold : .semibold))
+                                .foregroundStyle(priceTextColor(
+                                    isSelected: isSelected,
+                                    isAnchor: isAnchor,
+                                    isOverride: false
+                                ))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                                .frame(height: 15)
+                        } else {
+                            Color.clear.frame(height: 15)
+                        }
+                        // Status-linje (camping: kun X for blokkert, ellers tom)
+                        if isBlocked {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.neutral500)
+                                .frame(height: 14)
+                        } else {
+                            Color.clear.frame(height: 14)
+                        }
                     }
+                    .padding(.bottom, 10)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
