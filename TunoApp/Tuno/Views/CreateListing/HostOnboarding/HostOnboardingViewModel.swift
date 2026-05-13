@@ -81,15 +81,34 @@ final class HostOnboardingViewModel: ObservableObject {
 
     // Prefill from the authenticated profile. Called once when the flow appears.
     func prefill(from profile: Profile?) {
-        guard let profile else { return }
-        if firstName.isEmpty, lastName.isEmpty,
-           let fullName = profile.fullName, !fullName.isEmpty {
-            let parts = fullName.trimmingCharacters(in: .whitespaces).split(separator: " ")
-            firstName = parts.first.map(String.init) ?? ""
-            if parts.count > 1 {
-                lastName = parts.dropFirst().joined(separator: " ")
+        if let profile {
+            if firstName.isEmpty, lastName.isEmpty,
+               let fullName = profile.fullName, !fullName.isEmpty {
+                let parts = fullName.trimmingCharacters(in: .whitespaces).split(separator: " ")
+                firstName = parts.first.map(String.init) ?? ""
+                if parts.count > 1 {
+                    lastName = parts.dropFirst().joined(separator: " ")
+                }
             }
         }
+
+        #if STAGING
+        // Staging-build kjører mot Stripe TEST mode som kun godtar spesifikke
+        // "magic numbers". Tester som taster ekte personnummer/telefon får
+        // 400 fra Stripe API og forstår ikke hvorfor. Pre-fyll alle Stripe-
+        // påkrevde felt med Stripes godkjente test-data, så tester kan
+        // klikke gjennom uten å måtte huske dem. Verdiene kan overstyres.
+        // Se docs/staging.md for fullstendig liste.
+        if firstName.isEmpty { firstName = "Test" }
+        if lastName.isEmpty { lastName = "Tester" }
+        if personnummer.isEmpty { personnummer = "30099999700" }
+        if phoneNumber.isEmpty { phoneNumber = "99999999" }
+        if addressLine1.isEmpty { addressLine1 = "Storgata 1" }
+        if postalCode.isEmpty { postalCode = "0150" }
+        if city.isEmpty { city = "Oslo" }
+        if bankAccount.isEmpty { bankAccount = "86011117947" }
+        #endif
+
         if accountHolderName.isEmpty {
             accountHolderName = [firstName, lastName]
                 .filter { !$0.isEmpty }
