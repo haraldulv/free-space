@@ -73,7 +73,7 @@ export async function GET(request: NextRequest) {
             booking.user_id,
             "Hvordan var oppholdet?",
             `Legg igjen en anmeldelse av ${listingTitle}.`,
-            { bookingId: booking.id, type: "review_reminder" },
+            { bookingId: booking.id, type: "review_reminder", reviewerRole: "guest" },
           ),
         );
       }
@@ -96,7 +96,7 @@ export async function GET(request: NextRequest) {
             booking.host_id,
             "Anmeld gjesten",
             `Hvordan var gjesten på ${listingTitle}?`,
-            { bookingId: booking.id, type: "review_reminder" },
+            { bookingId: booking.id, type: "review_reminder", reviewerRole: "host" },
           ),
         );
       }

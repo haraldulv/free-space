@@ -76,6 +76,7 @@ class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCen
         let type = userInfo["type"] as? String
         let bookingId = userInfo["bookingId"] as? String
         let conversationId = userInfo["conversationId"] as? String
+        let reviewerRole = userInfo["reviewerRole"] as? String
 
         DispatchQueue.main.async {
             NotificationCenter.default.post(name: .newPushNotification, object: nil)
@@ -91,6 +92,7 @@ class PushNotificationManager: NSObject, ObservableObject, UNUserNotificationCen
                     // Viktig: sett type FØR id så onChange-observere på id
                     // garantert ser riktig type når de leser routeren.
                     PushRouter.shared.pendingBookingType = type
+                    PushRouter.shared.pendingReviewerRole = reviewerRole
                     PushRouter.shared.pendingBookingId = id
                 }
             default:
@@ -110,10 +112,15 @@ final class PushRouter: ObservableObject {
     @Published var pendingBookingId: String?
     @Published var pendingBookingType: String?
     @Published var pendingConversationId: String?
+    /// Settes når en push av typen `review_reminder` mottas. "guest" → ruter
+    /// til BookingsView (gjest skal anmelde verten), "host" → åpner
+    /// `HostReviewView` som sheet. Default nil = legacy push uten felt.
+    @Published var pendingReviewerRole: String?
 
     func clearBooking() {
         pendingBookingId = nil
         pendingBookingType = nil
+        pendingReviewerRole = nil
     }
 
     func clearConversation() {
