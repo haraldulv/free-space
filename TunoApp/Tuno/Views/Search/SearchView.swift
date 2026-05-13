@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreLocation
+import MapKit
 
 extension View {
     func hideKeyboard() {
@@ -114,6 +115,10 @@ struct SearchView: View {
     @State private var lastSearchedRadius: Double = 30
     @State private var pendingPanCenter: (lat: Double, lng: Double, radius: Double)?
     @State private var showSearchHere = false
+    /// Faktisk synlig kart-region (oppdateres umiddelbart via SearchMapView's
+    /// onVisibleRegionChanged-callback). Brukes til å vise riktig antall
+    /// "X plasser" i bottom-drawer som reflekterer hva som er i viewporten.
+    @State private var mapVisibleRegion: MKCoordinateRegion?
 
     // Sheet-flagg
     @State private var showWhereSheet = false
@@ -293,7 +298,10 @@ struct SearchView: View {
                     }
                 }
             },
-            onRegionChanged: handleRegionChanged
+            onRegionChanged: handleRegionChanged,
+            onVisibleRegionChanged: { region in
+                mapVisibleRegion = region
+            }
         )
         .ignoresSafeArea()
     }
@@ -441,37 +449,38 @@ struct SearchView: View {
         }
     }
 
-    /// Listings begrenset til de som er i synlig kart-område. Brukes av
-    /// bottom-sheet-listen så telleren ("X annonser") og lista oppdateres
-    /// når brukeren zoomer/paner kartet — uten å trigge nytt server-søk.
-    /// Tom hvis ingen annonser er i synlig viewport (i motsetning til
-    /// carouselListings som faller tilbake til alle).
+    /// Listings begrenset til de som faktisk er i kartets synlige bounding
+    /// box. Brukes av bottom-drawer så "X plasser" reflekterer kartet, ikke
+    /// debouncet søk-radius.
     private var visibleListings: [Listing] {
-        guard let center = lastSearchedCenter else { return filteredListings }
-        let limitKm = max(lastSearchedRadius * 0.5, 1.5)
-        let nearby = filteredListings.compactMap { l -> (Listing, Double)? in
-            guard let lat = l.lat, let lng = l.lng else { return nil }
-            let d = haversineDistanceKm(lat1: center.latitude, lng1: center.longitude, lat2: lat, lng2: lng)
-            return d <= limitKm ? (l, d) : nil
+        guard let region = mapVisibleRegion else { return filteredListings }
+        let latMin = region.center.latitude - region.span.latitudeDelta / 2
+        let latMax = region.center.latitude + region.span.latitudeDelta / 2
+        let lngMin = region.center.longitude - region.span.longitudeDelta / 2
+        let lngMax = region.center.longitude + region.span.longitudeDelta / 2
+
+        let inRegion = filteredListings.compactMap { l -> (Listing, Double)? in
+            guard let lat = l.lat, let lng = l.lng,
+                  lat >= latMin, lat <= latMax,
+                  lng >= lngMin, lng <= lngMax else { return nil }
+            let d = haversineDistanceKm(
+                lat1: region.center.latitude,
+                lng1: region.center.longitude,
+                lat2: lat,
+                lng2: lng
+            )
+            return (l, d)
         }
-        return nearby.sorted { $0.1 < $1.1 }.map { $0.0 }
+        return inRegion.sorted { $0.1 < $1.1 }.map { $0.0 }
     }
 
-    /// Listings begrenset til de som er i (eller nær) synlig kart-område.
-    /// Brukes som carousel-data slik at sveip ikke hopper langt vekk.
-    /// Heuristikk: ~50% av lastSearchedRadius dekker typisk synlig zoom-område.
+    /// Listings i kartets synlige bounding box (samme som visibleListings)
+    /// men med fallback til alle filteredListings hvis ingen er i region
+    /// (f.eks. mid-pan før region-callback har firet). Brukes for carousel
+    /// så sveip ikke gir tomt resultat.
     private var carouselListings: [Listing] {
-        guard let center = lastSearchedCenter else { return filteredListings }
-        let limitKm = max(lastSearchedRadius * 0.5, 1.5)
-        let nearby = filteredListings.compactMap { l -> (Listing, Double)? in
-            guard let lat = l.lat, let lng = l.lng else { return nil }
-            let d = haversineDistanceKm(lat1: center.latitude, lng1: center.longitude, lat2: lat, lng2: lng)
-            return d <= limitKm ? (l, d) : nil
-        }
-        let sorted = nearby.sorted { $0.1 < $1.1 }.map { $0.0 }
-        // Hvis 0 listings i visible zone (f.eks. ny pan før search), fall
-        // tilbake på alle filteredListings så carousel ikke blir tom
-        return sorted.isEmpty ? filteredListings : sorted
+        let visible = visibleListings
+        return visible.isEmpty ? filteredListings : visible
     }
 
     private var priceArray: [Int] {

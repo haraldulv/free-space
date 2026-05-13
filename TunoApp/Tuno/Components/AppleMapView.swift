@@ -153,6 +153,10 @@ struct SearchMapView: UIViewRepresentable {
     var searchNights: Int? = nil
     var onSelect: ((String?) -> Void)? = nil
     var onRegionChanged: ((_ lat: Double, _ lng: Double, _ radiusKm: Double) -> Void)? = nil
+    /// Kalles ~100ms etter at kart-region har endret seg. Brukes til å
+    /// oppdatere bottom-drawer-telleren synkront med pan/zoom — ikke med
+    /// 0.8s server-søk-debounce.
+    var onVisibleRegionChanged: ((MKCoordinateRegion) -> Void)? = nil
 
     private static let stateKey = "tuno.searchMap.state"
     private static let stateTTL: TimeInterval = 30 * 60 // 30 min
@@ -197,7 +201,12 @@ struct SearchMapView: UIViewRepresentable {
         let saver: (Double, Double, Double) -> Void = { lat, lng, span in
             Self.saveCamera(searchKey: key, lat: lat, lng: lng, span: span)
         }
-        return Coordinator(onSelect: onSelect, onRegionChanged: onRegionChanged, onCameraIdle: saver)
+        return Coordinator(
+            onSelect: onSelect,
+            onRegionChanged: onRegionChanged,
+            onCameraIdle: saver,
+            onVisibleRegionChanged: onVisibleRegionChanged
+        )
     }
 
     func makeUIView(context: Context) -> MKMapView {
@@ -457,6 +466,7 @@ struct SearchMapView: UIViewRepresentable {
         let onSelect: ((String?) -> Void)?
         nonisolated(unsafe) let onRegionChanged: ((_ lat: Double, _ lng: Double, _ radiusKm: Double) -> Void)?
         nonisolated(unsafe) let onCameraIdle: ((_ lat: Double, _ lng: Double, _ span: Double) -> Void)?
+        nonisolated(unsafe) let onVisibleRegionChanged: ((MKCoordinateRegion) -> Void)?
         // MKAnnotation er ikke Hashable, men ObjectIdentifier på Coordinator-eide
         // class-instanser (ListingPriceAnnotation/ClusterAnnotation) er det.
         // Vi holder også en sterk referanse via map-key-arrayet under for å
@@ -481,15 +491,18 @@ struct SearchMapView: UIViewRepresentable {
         var userMovedMap = false
         var debounceWorkItem: DispatchWorkItem?
         var clusterDebounceWorkItem: DispatchWorkItem?
+        var visibleRegionDebounce: DispatchWorkItem?
 
         init(
             onSelect: ((String?) -> Void)?,
             onRegionChanged: ((_ lat: Double, _ lng: Double, _ radiusKm: Double) -> Void)?,
-            onCameraIdle: ((_ lat: Double, _ lng: Double, _ span: Double) -> Void)? = nil
+            onCameraIdle: ((_ lat: Double, _ lng: Double, _ span: Double) -> Void)? = nil,
+            onVisibleRegionChanged: ((MKCoordinateRegion) -> Void)? = nil
         ) {
             self.onSelect = onSelect
             self.onRegionChanged = onRegionChanged
             self.onCameraIdle = onCameraIdle
+            self.onVisibleRegionChanged = onVisibleRegionChanged
         }
 
         // MARK: Annotation views
@@ -594,6 +607,9 @@ struct SearchMapView: UIViewRepresentable {
             // Cluster-rebuild settes alltid på pause mens region endrer seg.
             // Den siste regionDidChange (etter pinch settler) re-armerer den.
             clusterDebounceWorkItem?.cancel()
+            // Bottom-drawer-teller-debouncen kanselleres også — den re-armeres
+            // i regionDidChangeAnimated.
+            visibleRegionDebounce?.cancel()
         }
 
         func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
@@ -601,6 +617,19 @@ struct SearchMapView: UIViewRepresentable {
             let center = mapView.region.center
             let span = mapView.region.span.latitudeDelta
             onCameraIdle?(center.latitude, center.longitude, span)
+
+            // Rask viewport-callback for bottom-drawer-telleren. ~100ms
+            // debounce slik at telleren responderer umiddelbart på zoom/pan,
+            // men ikke fyrer på hver pixel-frame under pinch.
+            if let onVisibleRegionChanged {
+                let region = mapView.region
+                visibleRegionDebounce?.cancel()
+                let visibleWork = DispatchWorkItem {
+                    onVisibleRegionChanged(region)
+                }
+                visibleRegionDebounce = visibleWork
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1, execute: visibleWork)
+            }
 
             // Re-cluster når zoom har endret seg vesentlig OG region har stabilisert
             // seg. Debouncen unngår at bobler reformer mens fingeren fortsatt er
