@@ -14,6 +14,7 @@ final class ProfileStatsStore: ObservableObject {
     @Published var monthlyNet: Int = 0
     @Published var monthlyBookings: Int = 0
     @Published var recentMonthsEarnings: [HostInntektCard.MonthlyEarning] = []
+    @Published var listingCount: Int = 0
 
     /// Sant første gang lastingen er ferdig — brukes for å vise ProgressView bare
     /// helt første gang. Påfølgende refresh skjer i bakgrunnen uten å nullstille.
@@ -35,6 +36,7 @@ final class ProfileStatsStore: ObservableObject {
             monthlyNet = 0
             monthlyBookings = 0
             recentMonthsEarnings = []
+            listingCount = 0
             hasLoaded = false
         }
         loadedForUserId = userId
@@ -50,6 +52,7 @@ final class ProfileStatsStore: ObservableObject {
             group.addTask { await self.loadReviewCount(userId: userId) }
             if isHost {
                 group.addTask { await self.loadMonthlyRevenue(userId: userId) }
+                group.addTask { await self.loadListingCount(userId: userId) }
             }
         }
 
@@ -65,6 +68,7 @@ final class ProfileStatsStore: ObservableObject {
         monthlyNet = 0
         monthlyBookings = 0
         recentMonthsEarnings = []
+        listingCount = 0
         hasLoaded = false
         loadedForUserId = nil
     }
@@ -102,6 +106,20 @@ final class ProfileStatsStore: ObservableObject {
             unreadNotifications = count
         } catch {
             print("ProfileStats loadUnreadCount error: \(error)")
+        }
+    }
+
+    private func loadListingCount(userId: String) async {
+        do {
+            let count = try await supabase
+                .from("listings")
+                .select("id", head: true, count: .exact)
+                .eq("host_id", value: userId)
+                .execute()
+                .count ?? 0
+            listingCount = count
+        } catch {
+            print("ProfileStats loadListingCount error: \(error)")
         }
     }
 

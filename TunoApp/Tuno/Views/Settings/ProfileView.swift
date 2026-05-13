@@ -107,19 +107,24 @@ struct ProfileView: View {
                 .padding(.top, 8)
 
                 if authManager.isHost {
-                    NavigationLink {
-                        EarningsView()
-                    } label: {
-                        HostInntektCard(
-                            monthName: currentMonthName,
-                            netIncome: profileStats.monthlyNet,
-                            bookingCount: profileStats.monthlyBookings,
-                            recentMonths: profileStats.recentMonthsEarnings
-                        )
-                        .shadow(color: .black.opacity(0.07), radius: 10, y: 3)
+                    if profileStats.hasLoaded && profileStats.listingCount == 0 {
+                        newListingCard
+                            .padding(.horizontal, 16)
+                    } else {
+                        NavigationLink {
+                            EarningsView()
+                        } label: {
+                            HostInntektCard(
+                                monthName: currentMonthName,
+                                netIncome: profileStats.monthlyNet,
+                                bookingCount: profileStats.monthlyBookings,
+                                recentMonths: profileStats.recentMonthsEarnings
+                            )
+                            .shadow(color: .black.opacity(0.07), radius: 10, y: 3)
+                        }
+                        .buttonStyle(PressableCardStyle())
+                        .padding(.horizontal, 16)
                     }
-                    .buttonStyle(PressableCardStyle())
-                    .padding(.horizontal, 16)
                 }
 
                 if authManager.isHost {
@@ -301,6 +306,39 @@ struct ProfileView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.neutral900)
                     Text("Det er lett å komme i gang og tjene ekstra penger.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                        .lineLimit(2)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.neutral400)
+            }
+            .padding(16)
+            .background(Color.primary50)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .shadow(color: .black.opacity(0.07), radius: 10, y: 3)
+        }
+        .buttonStyle(PressableCardStyle())
+    }
+
+    private var newListingCard: some View {
+        Button {
+            showBecomeHost = true
+        } label: {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(Color.primary100).frame(width: 44, height: 44)
+                    Image(systemName: "plus")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Color.primary600)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Lag din første annonse")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text("Publiser plassen din og begynn å tjene.")
                         .font(.system(size: 12))
                         .foregroundStyle(.neutral500)
                         .lineLimit(2)
