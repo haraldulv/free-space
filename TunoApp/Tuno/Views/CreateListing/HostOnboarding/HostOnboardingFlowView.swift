@@ -24,8 +24,6 @@ struct HostOnboardingFlowView: View {
                 .padding(.top, 8)
                 .padding(.bottom, 12)
 
-            stagingTestModeBanner
-
             errorBanner
 
             stepContent
@@ -111,42 +109,6 @@ struct HostOnboardingFlowView: View {
             .background(Color.red)
             .transition(.move(edge: .top).combined(with: .opacity))
         }
-    }
-
-    /// Staging-build kjører mot Stripe TEST mode som ikke aksepterer
-    /// ekte personnumre. Vi pre-fyller alle Stripe-felt med Stripes
-    /// godkjente test-data slik at tester slipper å huske dem.
-    @ViewBuilder
-    private var stagingTestModeBanner: some View {
-        #if STAGING
-        if viewModel.step != .status {
-            HStack(alignment: .top, spacing: 10) {
-                Text("🧪")
-                    .font(.system(size: 16))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Test-modus")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                    Text("Feltene er pre-fylt med Stripes godkjente test-verdier. Du kan endre dem hvis du vil.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral700)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(Color.yellow.opacity(0.18))
-            .overlay(
-                Rectangle()
-                    .frame(width: 3)
-                    .foregroundStyle(.yellow),
-                alignment: .leading
-            )
-            .padding(.horizontal, 16)
-            .padding(.bottom, 8)
-        }
-        #endif
     }
 
     private var navBar: some View {

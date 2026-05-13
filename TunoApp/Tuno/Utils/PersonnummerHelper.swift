@@ -20,6 +20,16 @@ enum PersonnummerHelper {
     static func dateOfBirth(from pnr: String) -> DateOfBirth? {
         let digits = pnr.filter(\.isNumber)
         guard digits.count == 11 else { return nil }
+
+        #if STAGING
+        // Stripe TEST mode godtar "30099999700" som magic id_number selv om
+        // det ikke består norsk MOD-11. Utled hardkodet DOB (30.09.1999) så
+        // staging-flyt kan gjennomføres uten å huske et ekte personnummer.
+        if digits == "30099999700" {
+            return DateOfBirth(day: 30, month: 9, year: 1999)
+        }
+        #endif
+
         let chars = Array(digits)
 
         let dd = Int(String(chars[0...1])) ?? -1
