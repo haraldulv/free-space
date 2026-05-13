@@ -45,14 +45,20 @@ struct EditListingHub: View {
             }
             .overlay(alignment: .bottom) { previewPill }
             .confirmationDialog(
-                "Forkast endringer?",
+                "Lagre endringer?",
                 isPresented: $showDiscardConfirm,
                 titleVisibility: .visible
             ) {
+                Button("Lagre og lukk") {
+                    Task {
+                        await saveChanges()
+                        if saveError == nil { dismiss() }
+                    }
+                }
                 Button("Forkast", role: .destructive) { dismiss() }
                 Button("Fortsett å redigere", role: .cancel) { }
             } message: {
-                Text("Endringene du har gjort er ikke lagret.")
+                Text("Du har endringer som ikke er lagret.")
             }
             .alert("Kunne ikke lagre", isPresented: saveErrorBinding) {
                 Button("OK", role: .cancel) { saveError = nil }
@@ -118,37 +124,20 @@ struct EditListingHub: View {
     }
 
     /// Toolbar for destination-stegene. System-back-chevron tar venstre-
-    /// siden, vi tilbyr kun Lagre-pillen til høyre.
+    /// siden, vi tilbyr kun en standard Lagre-knapp til høyre — uten
+    /// custom Capsule-bg så iOS 18 ikke legger Liquid Glass-halo bak.
     @ToolbarContentBuilder
     private var stepToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
-            Group {
-                if isSaving {
-                    ProgressView()
-                        .controlSize(.small)
-                        .tint(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(Color.primary600.opacity(0.6))
-                        .clipShape(Capsule())
-                } else {
-                    Text("Lagre")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(form.isDirty ? .white : Color.neutral500)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
-                        .background(form.isDirty ? Color.primary600 : Color.neutral200)
-                        .clipShape(Capsule())
-                        .contentShape(Capsule())
-                        .onTapGesture {
-                            guard form.isDirty, !isSaving else { return }
-                            Task { await saveChanges() }
-                        }
-                        .accessibilityElement()
-                        .accessibilityLabel("Lagre")
-                        .accessibilityAddTraits(.isButton)
-                        .accessibilityHint(form.isDirty ? "" : "Ingen endringer å lagre")
+            if isSaving {
+                ProgressView().controlSize(.small)
+            } else {
+                Button("Lagre") {
+                    Task { await saveChanges() }
                 }
+                .fontWeight(.semibold)
+                .tint(.primary600)
+                .disabled(!form.isDirty)
             }
         }
     }
