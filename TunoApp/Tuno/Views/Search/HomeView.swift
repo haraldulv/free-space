@@ -272,7 +272,7 @@ struct HomeView: View {
             + listingService.featuredListings
             + listingService.popularListings
             + listingService.availableTodayListings
-        let urls = listings.compactMap { $0.images.first.flatMap(URL.init(string:)) }
+        let urls = listings.compactMap { $0.images?.first.flatMap(URL.init(string:)) }
         ImagePrefetcher.prefetch(urls: urls)
     }
 }
