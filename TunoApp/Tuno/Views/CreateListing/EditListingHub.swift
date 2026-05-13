@@ -36,7 +36,6 @@ struct EditListingHub: View {
             .background(Color.neutral50)
             .navigationTitle("Rediger annonse")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar(.hidden, for: .tabBar)
             .toolbar { hubToolbar }
             .navigationDestination(for: EditDestination.self) { dest in
                 destinationView(for: dest)

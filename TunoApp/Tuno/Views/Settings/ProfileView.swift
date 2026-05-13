@@ -764,6 +764,10 @@ struct MyListingsView: View {
     @State private var showDiscardDraftAlert = false
     /// Driver fullScreenCover'en — én state for både ny annonse og fortsett-utkast.
     @State private var wizardSheet: WizardIntent?
+    /// Annonse som redigeres. Driver egen fullScreenCover for å isolere
+    /// EditListingHub sin NavigationStack fra Profil-tab sin parent-stack
+    /// (TU-78 — uten dette popper iOS 18 hele Hub-en ved spot-push).
+    @State private var editingListing: Listing?
     /// True når bruker tappet "+" mens et utkast var aktivt — vis dialog
     /// som tvinger valg mellom Fortsett, Forkast eller Avbryt.
     @State private var showDraftConflictAlert = false
@@ -793,6 +797,16 @@ struct MyListingsView: View {
                     Image(systemName: "plus")
                 }
             }
+        }
+        .fullScreenCover(item: $editingListing) { listing in
+            // Isolert NavigationStack — EditListingHub har sin egen som
+            // root inne i sheet-en, så spot-push virker uforstyrret av
+            // parent Profil-stacken.
+            EditListingRootView(listing: listing, onSaved: { updated in
+                if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
+                    listings[idx] = updated
+                }
+            })
         }
         .fullScreenCover(item: $wizardSheet, onDismiss: {
             // Re-load utkast når wizarden lukkes så banneret oppdateres
@@ -937,12 +951,8 @@ struct MyListingsView: View {
             ScrollView {
                 LazyVStack(spacing: 24) {
                     ForEach(Array(listings.enumerated()), id: \.element.id) { idx, listing in
-                        NavigationLink {
-                            EditListingRootView(listing: listing, onSaved: { updated in
-                                if let idx = listings.firstIndex(where: { $0.id == updated.id }) {
-                                    listings[idx] = updated
-                                }
-                            })
+                        Button {
+                            editingListing = listing
                         } label: {
                             HostListingCard(
                                 listing: listing,
