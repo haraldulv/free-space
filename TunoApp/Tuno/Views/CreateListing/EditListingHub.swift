@@ -24,6 +24,9 @@ struct EditListingHub: View {
         NavigationStack(path: $path) {
             rootScreen
         }
+        // Toast på NavigationStack-roten så den vises uansett om brukeren
+        // er på hub-rot eller pushet inn på en destination.
+        .overlay(alignment: .top) { savedToast }
         .onAppear {
             form.editingMode = true
             form.existingListingId = listing.id
@@ -41,7 +44,6 @@ struct EditListingHub: View {
                 destinationView(for: dest)
             }
             .overlay(alignment: .bottom) { previewPill }
-            .overlay(alignment: .top) { savedToast }
             .confirmationDialog(
                 "Forkast endringer?",
                 isPresented: $showDiscardConfirm,
@@ -90,23 +92,28 @@ struct EditListingHub: View {
 
     /// Toolbar for hub-rotnoden. Kun X-knapp — Lagre hører hjemme på
     /// destination-stepene der faktiske endringer skjer.
+    ///
+    /// Vi bruker `Text/Image + .onTapGesture` istedenfor `Button` for å
+    /// unngå iOS 18 sin "Liquid Glass"-default-bg på toolbar-buttons (hvit
+    /// halo bak custom innhold). `.buttonStyle(.plain)` fjerner den ikke.
     @ToolbarContentBuilder
     private var rootToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            Button {
-                if form.isDirty {
-                    showDiscardConfirm = true
-                } else {
-                    dismiss()
+            Image(systemName: "xmark")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(.neutral700)
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    if form.isDirty {
+                        showDiscardConfirm = true
+                    } else {
+                        dismiss()
+                    }
                 }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.neutral700)
-                    .frame(width: 32, height: 32)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Lukk")
+                .accessibilityElement()
+                .accessibilityLabel("Lukk")
+                .accessibilityAddTraits(.isButton)
         }
     }
 
@@ -115,9 +122,7 @@ struct EditListingHub: View {
     @ToolbarContentBuilder
     private var stepToolbar: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                Task { await saveChanges() }
-            } label: {
+            Group {
                 if isSaving {
                     ProgressView()
                         .controlSize(.small)
@@ -134,10 +139,17 @@ struct EditListingHub: View {
                         .padding(.vertical, 6)
                         .background(form.isDirty ? Color.primary600 : Color.neutral200)
                         .clipShape(Capsule())
+                        .contentShape(Capsule())
+                        .onTapGesture {
+                            guard form.isDirty, !isSaving else { return }
+                            Task { await saveChanges() }
+                        }
+                        .accessibilityElement()
+                        .accessibilityLabel("Lagre")
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityHint(form.isDirty ? "" : "Ingen endringer å lagre")
                 }
             }
-            .buttonStyle(.plain)
-            .disabled(!form.isDirty || isSaving)
         }
     }
 
