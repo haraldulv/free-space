@@ -10,6 +10,11 @@ struct ProfileSummaryCard: View {
     let reviews: Int
     let rating: Double?
     let isVerified: Bool
+    /// Valgfri callback for tap på "Anmeldelser"-stat-raden. Når satt,
+    /// overlayes en gjennomsiktig knapp som tar over tap-arealet for den
+    /// raden — resten av kortet beholder sin opprinnelige tap-bobling
+    /// (typisk en NavigationLink til EditProfileView i parent).
+    var onReviewsTap: (() -> Void)? = nil
 
     private var firstName: String {
         name.split(separator: " ").first.map(String.init) ?? name
@@ -77,6 +82,7 @@ struct ProfileSummaryCard: View {
                 statRow(value: "\(trips)", label: trips == 1 ? "Booking" : "Bookinger")
                 Divider().padding(.vertical, 2)
                 statRow(value: "\(reviews)", label: reviews == 1 ? "Anmeldelse" : "Anmeldelser")
+                    .overlay(reviewsTapOverlay)
                 Divider().padding(.vertical, 2)
                 statRow(
                     value: ratingDisplay,
@@ -109,6 +115,16 @@ struct ProfileSummaryCard: View {
             Image(systemName: "checkmark")
                 .font(.system(size: 12, weight: .heavy))
                 .foregroundStyle(.white)
+        }
+    }
+
+    @ViewBuilder
+    private var reviewsTapOverlay: some View {
+        if let onReviewsTap {
+            Button(action: onReviewsTap) {
+                Color.clear.contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
         }
     }
 

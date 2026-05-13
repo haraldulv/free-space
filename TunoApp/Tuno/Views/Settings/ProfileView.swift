@@ -8,6 +8,7 @@ private enum ProfileRoute: Hashable {
     case earnings
     case editProfile
     case settings
+    case reviews
 }
 
 struct ProfileView: View {
@@ -23,7 +24,6 @@ struct ProfileView: View {
     @State private var presentedRoute: ProfileRoute?
     @StateObject private var reviewService = ReviewService()
     @State private var receivedReviews: [ProfileReviewItem] = []
-    @State private var showAllReceivedReviews = false
     @State private var pendingHostReviewBookingId: String?
 
     var body: some View {
@@ -103,7 +103,10 @@ struct ProfileView: View {
                         trips: profileStats.tripCount,
                         reviews: profileStats.reviewCount,
                         rating: profileStats.rating,
-                        isVerified: authManager.isHost && (authManager.profile?.stripeOnboardingComplete ?? false)
+                        isVerified: authManager.isHost && (authManager.profile?.stripeOnboardingComplete ?? false),
+                        onReviewsTap: profileStats.reviewCount > 0
+                            ? { presentedRoute = .reviews }
+                            : nil
                     )
                 }
                 .buttonStyle(PressableCardStyle())
@@ -140,9 +143,6 @@ struct ProfileView: View {
                     becomeHostCard
                         .padding(.horizontal, 16)
                 }
-
-                receivedReviewsSection
-                    .padding(.horizontal, 16)
 
                 accountSection
                     .padding(.horizontal, 16)
@@ -189,6 +189,7 @@ struct ProfileView: View {
             case .earnings: EarningsView()
             case .editProfile: EditProfileView()
             case .settings: SettingsView()
+            case .reviews: ProfileReviewsView(reviews: receivedReviews)
             }
         }
         .alert("Logg ut", isPresented: $showLogoutConfirm) {
@@ -209,9 +210,6 @@ struct ProfileView: View {
             await authManager.loadProfile()
             // Hent mottatte anmeldelser parallelt — vises i egen seksjon under.
             receivedReviews = await reviewService.fetchReviewsForUser(userId)
-        }
-        .sheet(isPresented: $showAllReceivedReviews) {
-            AllReceivedReviewsSheet(reviews: receivedReviews)
         }
         .onAppear {
             if pushRouter.pendingBookingType == "booking_request" {
@@ -246,6 +244,17 @@ struct ProfileView: View {
             // dekke tab-baren, ikke pushes inn i nav-stacken.
             NavigationStack {
                 BecomeHostView()
+            }
+        }
+        .onChange(of: showBecomeHost) { _, isShown in
+            // SwiftUI kaller ikke alltid .onAppear etter fullScreenCover-dismiss
+            // på iOS 18 — vi tvinger en reload her så isHost og listingCount
+            // speiler post-onboarding-state med en gang sheetet lukkes.
+            guard !isShown else { return }
+            Task {
+                await authManager.loadProfile()
+                guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
+                await profileStats.refresh(userId: userId, isHost: authManager.isHost)
             }
         }
     }
@@ -291,51 +300,6 @@ struct ProfileView: View {
         VStack(alignment: .leading, spacing: 0) {
             sectionHeader("Konto")
             groupedRows(accountRows)
-        }
-    }
-
-    // MARK: - Reviews
-
-    @ViewBuilder
-    private var receivedReviewsSection: some View {
-        if receivedReviews.isEmpty {
-            EmptyView()
-        } else {
-            VStack(alignment: .leading, spacing: 12) {
-                sectionHeader("Anmeldelser om deg")
-                let preview = Array(receivedReviews.prefix(3))
-                VStack(spacing: 12) {
-                    ForEach(preview) { item in
-                        ReviewCard(
-                            rating: item.rating,
-                            comment: item.comment,
-                            createdAt: item.createdAt,
-                            reviewerName: item.profile?.fullName,
-                            reviewerAvatarUrl: item.profile?.avatarUrl,
-                            contextLine: item.listing?.title.map { "For \($0)" }
-                        )
-                    }
-                }
-                if receivedReviews.count > 3 {
-                    Button {
-                        showAllReceivedReviews = true
-                    } label: {
-                        HStack(spacing: 6) {
-                            Text("Se alle \(receivedReviews.count) anmeldelser")
-                                .font(.system(size: 15, weight: .semibold))
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 13, weight: .semibold))
-                        }
-                        .foregroundStyle(.neutral900)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(Color.white)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral300, lineWidth: 1))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
         }
     }
 
@@ -1159,37 +1123,3 @@ struct MyListingsView: View {
     }
 }
 
-// MARK: - Mottatte anmeldelser sheet
-
-private struct AllReceivedReviewsSheet: View {
-    let reviews: [ProfileReviewItem]
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 12) {
-                    ForEach(reviews) { item in
-                        ReviewCard(
-                            rating: item.rating,
-                            comment: item.comment,
-                            createdAt: item.createdAt,
-                            reviewerName: item.profile?.fullName,
-                            reviewerAvatarUrl: item.profile?.avatarUrl,
-                            contextLine: item.listing?.title.map { "For \($0)" }
-                        )
-                    }
-                }
-                .padding(20)
-            }
-            .background(Color.neutral50)
-            .navigationTitle("\(reviews.count) anmeldelser")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Lukk") { dismiss() }
-                }
-            }
-        }
-    }
-}

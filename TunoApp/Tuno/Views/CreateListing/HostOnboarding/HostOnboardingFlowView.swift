@@ -137,7 +137,12 @@ struct HostOnboardingFlowView: View {
 
     private var handleSkip: (() -> Void)? {
         if case .approved = viewModel.pollingState, viewModel.step == .status {
-            return { dismiss() }
+            return {
+                Task {
+                    await authManager.loadProfile()
+                    dismiss()
+                }
+            }
         }
         return nil
     }

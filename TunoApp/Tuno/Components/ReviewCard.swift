@@ -13,6 +13,9 @@ struct ReviewCard: View {
     /// Vises kun på ProfileView hvor brukeren ser sine mottatte reviews
     /// på tvers av flere annonser.
     var contextLine: String? = nil
+    /// Valgfri mini-thumb av annonsen reviewet handler om. Vises til høyre
+    /// i headeren, så brukeren raskt ser hvilken plass det refereres til.
+    var listingImageUrl: String? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -55,6 +58,24 @@ struct ReviewCard: View {
                 }
             }
             Spacer()
+            listingThumb
+        }
+    }
+
+    @ViewBuilder
+    private var listingThumb: some View {
+        if let urlString = listingImageUrl, !urlString.isEmpty, let url = URL(string: urlString) {
+            CachedAsyncImage(url: url) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Rectangle().fill(Color.neutral100)
+            }
+            .frame(width: 48, height: 48)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(Color.neutral200.opacity(0.6), lineWidth: 0.5)
+            )
         }
     }
 

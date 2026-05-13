@@ -39,7 +39,7 @@ final class ReviewService: ObservableObject {
         do {
             let rows: [ProfileReviewItem] = try await supabase
                 .from("reviews")
-                .select("*, profile:user_id(full_name, avatar_url), listing:listing_id(title)")
+                .select("*, profile:user_id(full_name, avatar_url), listing:listing_id(title, images)")
                 .eq("reviewee_id", value: userId)
                 .order("created_at", ascending: false)
                 .limit(limit)
@@ -108,4 +108,5 @@ struct ProfileReviewItem: Codable, Identifiable {
 
 struct ReviewListing: Codable {
     let title: String?
+    let images: [String]?
 }
