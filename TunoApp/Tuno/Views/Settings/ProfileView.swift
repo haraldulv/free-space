@@ -21,6 +21,10 @@ struct ProfileView: View {
     @State private var navigateToNotifications = false
     @State private var showBecomeHost = false
     @State private var presentedRoute: ProfileRoute?
+    @StateObject private var reviewService = ReviewService()
+    @State private var receivedReviews: [ProfileReviewItem] = []
+    @State private var showAllReceivedReviews = false
+    @State private var pendingHostReviewBookingId: String?
 
     var body: some View {
         if !authManager.isAuthenticated {
@@ -137,6 +141,9 @@ struct ProfileView: View {
                         .padding(.horizontal, 16)
                 }
 
+                receivedReviewsSection
+                    .padding(.horizontal, 16)
+
                 accountSection
                     .padding(.horizontal, 16)
 
@@ -200,10 +207,20 @@ struct ProfileView: View {
             // Re-load profile fra DB i tilfelle in-memory state er utdatert
             // (f.eks. etter logg-ut/inn med ulik konto, eller stale avatar).
             await authManager.loadProfile()
+            // Hent mottatte anmeldelser parallelt — vises i egen seksjon under.
+            receivedReviews = await reviewService.fetchReviewsForUser(userId)
+        }
+        .sheet(isPresented: $showAllReceivedReviews) {
+            AllReceivedReviewsSheet(reviews: receivedReviews)
         }
         .onAppear {
             if pushRouter.pendingBookingType == "booking_request" {
                 navigateToHostRequests = true
+                pushRouter.clearBooking()
+            } else if pushRouter.pendingBookingType == "review_reminder",
+                      pushRouter.pendingReviewerRole == "host",
+                      let id = pushRouter.pendingBookingId {
+                pendingHostReviewBookingId = id
                 pushRouter.clearBooking()
             }
             // Trigger profile-reload når Profil-tab kommer til syne, slik at
@@ -214,7 +231,15 @@ struct ProfileView: View {
             if newType == "booking_request" {
                 navigateToHostRequests = true
                 pushRouter.clearBooking()
+            } else if newType == "review_reminder",
+                      pushRouter.pendingReviewerRole == "host",
+                      let id = pushRouter.pendingBookingId {
+                pendingHostReviewBookingId = id
+                pushRouter.clearBooking()
             }
+        }
+        .sheet(item: $pendingHostReviewBookingId) { id in
+            HostReviewView(bookingId: id)
         }
         .fullScreenCover(isPresented: $showBecomeHost) {
             // Bli utleier-flowen (Stripe-onboarding eller direkte til wizarden) skal også
@@ -266,6 +291,51 @@ struct ProfileView: View {
         VStack(alignment: .leading, spacing: 0) {
             sectionHeader("Konto")
             groupedRows(accountRows)
+        }
+    }
+
+    // MARK: - Reviews
+
+    @ViewBuilder
+    private var receivedReviewsSection: some View {
+        if receivedReviews.isEmpty {
+            EmptyView()
+        } else {
+            VStack(alignment: .leading, spacing: 12) {
+                sectionHeader("Anmeldelser om deg")
+                let preview = Array(receivedReviews.prefix(3))
+                VStack(spacing: 12) {
+                    ForEach(preview) { item in
+                        ReviewCard(
+                            rating: item.rating,
+                            comment: item.comment,
+                            createdAt: item.createdAt,
+                            reviewerName: item.profile?.fullName,
+                            reviewerAvatarUrl: item.profile?.avatarUrl,
+                            contextLine: item.listing?.title.map { "For \($0)" }
+                        )
+                    }
+                }
+                if receivedReviews.count > 3 {
+                    Button {
+                        showAllReceivedReviews = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("Se alle \(receivedReviews.count) anmeldelser")
+                                .font(.system(size: 15, weight: .semibold))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(.neutral900)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral300, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 
@@ -1085,6 +1155,41 @@ struct MyListingsView: View {
                 .execute()
             deleteTarget = nil
             await loadListings()
+        }
+    }
+}
+
+// MARK: - Mottatte anmeldelser sheet
+
+private struct AllReceivedReviewsSheet: View {
+    let reviews: [ProfileReviewItem]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 12) {
+                    ForEach(reviews) { item in
+                        ReviewCard(
+                            rating: item.rating,
+                            comment: item.comment,
+                            createdAt: item.createdAt,
+                            reviewerName: item.profile?.fullName,
+                            reviewerAvatarUrl: item.profile?.avatarUrl,
+                            contextLine: item.listing?.title.map { "For \($0)" }
+                        )
+                    }
+                }
+                .padding(20)
+            }
+            .background(Color.neutral50)
+            .navigationTitle("\(reviews.count) anmeldelser")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Lukk") { dismiss() }
+                }
+            }
         }
     }
 }

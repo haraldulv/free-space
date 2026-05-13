@@ -27,6 +27,9 @@ struct ListingDetailView: View {
     @State private var scrollOffsetY: CGFloat = 0
     @StateObject private var chatService = ChatService()
     @StateObject private var locationManager = LocationManager()
+    @StateObject private var reviewService = ReviewService()
+    @State private var reviews: [Review] = []
+    @State private var showAllReviews = false
     @Environment(\.dismiss) private var dismiss
 
     private let heroHeight: CGFloat = 360
@@ -155,6 +158,8 @@ struct ListingDetailView: View {
 
                         locationCard(listing: listing, hideExact: hideExact)
 
+                        reviewsSection(listing: listing)
+
                         meetHostCard(listing: listing)
 
                         thingsToKnowCard(listing: listing)
@@ -223,6 +228,100 @@ struct ListingDetailView: View {
             ShareSheet(items: [text, url])
                 .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showAllReviews) {
+            AllReviewsSheet(listing: listing, reviews: reviews)
+        }
+        .task(id: listing.id) {
+            reviews = await reviewService.fetchListingReviews(listingId: listing.id)
+        }
+    }
+
+    // MARK: - Reviews
+
+    @ViewBuilder
+    private func reviewsSection(listing: Listing) -> some View {
+        let rating = listing.rating ?? 0
+        let count = listing.reviewCount ?? reviews.count
+        let preview = Array(reviews.prefix(3))
+
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("Anmeldelser")
+                    .font(.system(size: 18, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                if count > 0 {
+                    Text("(\(count))")
+                        .font(.system(size: 18, weight: .regular))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                if rating > 0 {
+                    HStack(spacing: 4) {
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.yellow)
+                        Text(String(format: "%.1f", rating).replacingOccurrences(of: ".", with: ","))
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.neutral900)
+                    }
+                }
+            }
+
+            if reviews.isEmpty {
+                emptyReviewsCard
+            } else {
+                VStack(spacing: 12) {
+                    ForEach(preview) { review in
+                        ReviewCard(
+                            rating: review.rating,
+                            comment: review.comment,
+                            createdAt: review.createdAt,
+                            reviewerName: review.profile?.fullName,
+                            reviewerAvatarUrl: review.profile?.avatarUrl
+                        )
+                    }
+                }
+                if reviews.count > 3 {
+                    Button {
+                        showAllReviews = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text("Se alle \(reviews.count) anmeldelser")
+                                .font(.system(size: 15, weight: .semibold))
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 13, weight: .semibold))
+                        }
+                        .foregroundStyle(.neutral900)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral300, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var emptyReviewsCard: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "star.bubble")
+                .font(.system(size: 28))
+                .foregroundStyle(.neutral400)
+            Text("Ingen anmeldelser ennå")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.neutral700)
+            Text("Bli den første som anmelder denne plassen.")
+                .font(.system(size: 13))
+                .foregroundStyle(.neutral500)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(24)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.6), lineWidth: 1))
     }
 
     // MARK: - Hero gallery
@@ -1428,6 +1527,41 @@ private struct AllAmenitiesSheet: View {
                 .padding(20)
             }
             .navigationTitle("Det dette stedet byr på")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Lukk") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - All reviews sheet
+
+private struct AllReviewsSheet: View {
+    let listing: Listing
+    let reviews: [Review]
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(spacing: 12) {
+                    ForEach(reviews) { review in
+                        ReviewCard(
+                            rating: review.rating,
+                            comment: review.comment,
+                            createdAt: review.createdAt,
+                            reviewerName: review.profile?.fullName,
+                            reviewerAvatarUrl: review.profile?.avatarUrl
+                        )
+                    }
+                }
+                .padding(20)
+            }
+            .background(Color.neutral50)
+            .navigationTitle("\(reviews.count) anmeldelser")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
