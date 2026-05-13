@@ -328,71 +328,12 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Stripe har forsøkt å overføre fra Tunos platform-konto til en hosts
-  // Connect-konto, men det feilet. Mappa booking-ID via metadata vi setter
-  // i `createTransfer`. Lagrer feilen så cron + admin har en spor.
-  if (event.type === "transfer.failed") {
-    const transfer = event.data.object;
-    const bookingId = transfer.metadata?.bookingId;
-    const reason = transfer.failure_message ?? "Stripe rapporterte transfer.failed uten årsak";
-
-    if (bookingId) {
-      await supabase
-        .from("bookings")
-        .update({
-          transfer_status: "failed",
-          transfer_error: reason.slice(0, 500),
-          transfer_failed_at: new Date().toISOString(),
-        })
-        .eq("id", bookingId);
-
-      const { data: booking } = await supabase
-        .from("bookings")
-        .select("host_id, total_price, listing_id")
-        .eq("id", bookingId)
-        .single();
-
-      if (booking?.host_id) {
-        const { hostShareNok } = splitHostAndFee(booking.total_price);
-        const { data: listing } = await supabase
-          .from("listings")
-          .select("title")
-          .eq("id", booking.listing_id)
-          .single();
-        const listingTitle = listing?.title || "en plass";
-
-        await supabase.from("notifications").insert({
-          user_id: booking.host_id,
-          type: "payout_failed",
-          title: "Utbetalingen feilet",
-          body: `Vi klarte ikke å sende ${hostShareNok} kr for ${listingTitle}.`,
-          metadata: { bookingId, reason: reason.slice(0, 200) },
-        });
-
-        await sendPushToUser(
-          booking.host_id,
-          "Utbetalingen feilet",
-          `Vi klarte ikke å sende ${hostShareNok} kr for ${listingTitle}.`,
-          { bookingId, type: "payout_failed" },
-        ).catch((err) => console.error("[Push] transfer.failed:", err));
-
-        const { data: hostAuth } = await supabase.auth.admin.getUserById(booking.host_id);
-        const { data: hostProfile } = await supabase
-          .from("profiles")
-          .select("full_name")
-          .eq("id", booking.host_id)
-          .single();
-        if (hostAuth.user?.email) {
-          await sendPayoutFailedEmail(hostAuth.user.email, {
-            hostName: hostProfile?.full_name || "Utleier",
-            amount: hostShareNok,
-            listingTitle,
-            reason: reason.slice(0, 200),
-          }).catch((err) => console.error("[Email] transfer.failed:", err));
-        }
-      }
-    }
-  }
+  // Stripe transfers er synkrone — hvis de feiler, kaster API-kallet en
+  // exception (fanges i process-payouts-cron's catch-blokk). Det finnes
+  // INGEN `transfer.failed`-webhook-event. Hvis Stripe reverser en transfer
+  // i ettertid (Connect-konto stengt, manuell intervensjon), kommer det
+  // som `transfer.reversed` — ikke implementert her ennå siden det er en
+  // svært sjelden case og krever manuell oppfølging uansett.
 
   // Stripe utbetaler fra Connect-kontoen til hostens bankkonto, og det
   // feilet (vanligvis: bankkonto stenget, feil format, identity-krav).
