@@ -1210,6 +1210,7 @@ struct WizardPricingCalendarView: View {
         if case .bandEdit = mode { return }
         if case .bandCreate = mode { return }
 
+        // 1. Aktiv anker (single-date valgt nettopp) → fullfør range
         if let anchor = rangeAnchor {
             if anchor == iso {
                 selectedDates.remove(iso)
@@ -1217,12 +1218,38 @@ struct WizardPricingCalendarView: View {
                 if selectedDates.isEmpty { mode = .idle }
                 return
             }
-            let range = isoRange(from: anchor, to: iso)
-            for d in range { selectedDates.insert(d) }
+            selectedDates = Set(isoRange(from: anchor, to: iso))
             rangeAnchor = nil
             mode = .dateOverride
             return
         }
+
+        // 2. Eksisterende range (≥ 2 dager, ingen anker) → "drag" sluttdatoen.
+        //    Tap utenfor range utvider den nærmeste enden; tap innenfor range
+        //    krymper den nærmeste enden. Lar brukeren justere seleksjonen uten
+        //    å starte på nytt — "Tøm valg" i action-baren brukes for å nullstille.
+        if selectedDates.count >= 2 {
+            let sorted = selectedDates.sorted()
+            let lo = sorted.first!
+            let hi = sorted.last!
+            if iso < lo {
+                selectedDates = Set(isoRange(from: iso, to: hi))
+            } else if iso > hi {
+                selectedDates = Set(isoRange(from: lo, to: iso))
+            } else {
+                // Innenfor range — krymp nærmeste ende (lexicographisk midt-deling).
+                let mid = sorted[sorted.count / 2]
+                if iso <= mid {
+                    selectedDates = Set(isoRange(from: iso, to: hi))
+                } else {
+                    selectedDates = Set(isoRange(from: lo, to: iso))
+                }
+            }
+            mode = .dateOverride
+            return
+        }
+
+        // 3. Single-date valgt → toggle
         if selectedDates.contains(iso) {
             selectedDates.remove(iso)
             if selectedDates.isEmpty {
