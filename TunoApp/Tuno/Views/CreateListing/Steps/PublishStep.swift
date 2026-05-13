@@ -111,11 +111,15 @@ struct PublishStep: View {
 
     private var summaryGrid: some View {
         VStack(spacing: 0) {
-            summaryRow(icon: "tent.fill", label: "Type", value: form.category?.displayName ?? "—") {
+            summaryRow(icon: typeIcon, label: "Type", value: form.category?.displayName ?? "—") {
                 form.goTo(step: 1)
             }
             Divider().padding(.leading, 56)
-            summaryRow(icon: "mappin.and.ellipse", label: "Plasser",
+            summaryRow(icon: "mappin.and.ellipse", label: "Adresse", value: addressSummary) {
+                form.goTo(step: 2)
+            }
+            Divider().padding(.leading, 56)
+            summaryRow(icon: "square.grid.2x2.fill", label: "Plasser",
                        value: form.spotMarkers.count == 1 ? "1 plass" : "\(form.spotMarkers.count) plasser") {
                 form.goTo(step: 3)
             }
@@ -131,6 +135,13 @@ struct PublishStep: View {
             ) {
                 form.goTo(step: 5)
             }
+            if form.category == .parking {
+                Divider().padding(.leading, 56)
+                summaryRow(icon: "clock.fill", label: "Åpningstid",
+                           value: OpeningHoursService.compactLabel(form.openingHours) ?? "Hele dagen") {
+                    form.goTo(step: 7)
+                }
+            }
             Divider().padding(.leading, 56)
             summaryRow(icon: "photo.stack", label: "Bilder",
                        value: form.imageURLs.isEmpty ? "Ingen" : "\(form.imageURLs.count)") {
@@ -141,10 +152,56 @@ struct PublishStep: View {
                        value: calendarSummary) {
                 form.goTo(step: 10, spotIndex: 0)
             }
+            Divider().padding(.leading, 56)
+            summaryRow(icon: "text.alignleft", label: "Beskrivelse",
+                       value: descriptionSummary) {
+                form.goTo(step: 12)
+            }
+            Divider().padding(.leading, 56)
+            summaryRow(icon: "checklist", label: "Fasiliteter",
+                       value: form.selectedAmenities.isEmpty ? "Ingen" : "\(form.selectedAmenities.count) valgt") {
+                form.goTo(step: 14)
+            }
+            Divider().padding(.leading, 56)
+            summaryRow(icon: "bubble.left.fill", label: "Meldinger",
+                       value: messagesSummary) {
+                form.goTo(step: 15)
+            }
         }
         .background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.neutral200, lineWidth: 1))
+    }
+
+    /// SF Symbol for Type-rad — speiler kategori (parkering=bil, camping=telt)
+    /// slik at oppsummeringen ikke viser camping-symbol for en parkering-annonse.
+    private var typeIcon: String {
+        switch form.category {
+        case .parking: return "car.fill"
+        case .camping: return "tent.fill"
+        case .none: return "questionmark.circle"
+        }
+    }
+
+    private var addressSummary: String {
+        let addr = form.address.trimmingCharacters(in: .whitespaces)
+        if addr.isEmpty { return "—" }
+        return addr
+    }
+
+    private var descriptionSummary: String {
+        let trimmed = form.description.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { return "Ingen" }
+        return trimmed.count > 28 ? String(trimmed.prefix(28)) + "…" : trimmed
+    }
+
+    private var messagesSummary: String {
+        let hasCheckin = !form.checkinMessage.trimmingCharacters(in: .whitespaces).isEmpty
+        let hasCheckout = !form.checkoutMessage.trimmingCharacters(in: .whitespaces).isEmpty
+        if hasCheckin && hasCheckout { return "Innsjekk + utsjekk" }
+        if hasCheckin { return "Innsjekk" }
+        if hasCheckout { return "Utsjekk" }
+        return form.skippedMessages ? "Hoppet over" : "Ingen"
     }
 
     /// Tekst som oppsummerer kalender-tilstanden på tvers av plasser:
