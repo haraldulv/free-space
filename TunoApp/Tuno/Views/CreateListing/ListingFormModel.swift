@@ -108,6 +108,16 @@ final class ListingFormModel: ObservableObject {
     /// Type parkering. nil = ikke oppgitt. Kun relevant for parkering-kategori.
     @Published var parkingType: ParkingType? = nil
 
+    // MARK: - Edit mode (TU-61)
+    /// True når formen brukes til å redigere en eksisterende annonse.
+    /// EditListingHub setter denne ved opprettelse, så CategoryStep skjules.
+    @Published var editingMode: Bool = false
+    /// listing.id når editingMode = true. Brukes som målsetting for UPDATE-query.
+    @Published var existingListingId: String? = nil
+    /// Snapshot-hash tatt etter loadFromListing(). Brukes av computed `isDirty`
+    /// for å sjekke om brukeren har gjort endringer siden load.
+    @Published var initialEditHash: Int = 0
+
     /// Settes når kategori velges — bytter også defaultPriceUnit og defaultVehicleTypes.
     func setCategory(_ newCategory: ListingCategory) {
         category = newCategory
@@ -702,6 +712,290 @@ enum ImageCompression {
             }
         }
         return resized.jpegData(compressionQuality: 0.3)
+    }
+}
+
+// MARK: - Edit mode helpers (TU-61)
+
+extension ListingFormModel {
+    /// Mapper en eksisterende Listing tilbake til form-state. Speiler den
+    /// gamle `EditListingView.populateFields()` slik at edit-flyten kan dele
+    /// nøyaktig samme step-views som wizard-flyten.
+    func loadFromListing(_ listing: Listing) {
+        category = listing.category ?? .camping
+        title = listing.title
+        internalName = listing.internalName ?? ""
+        description = listing.description ?? ""
+        address = listing.address ?? ""
+        city = listing.city ?? ""
+        region = listing.region ?? ""
+        lat = listing.lat ?? 0
+        lng = listing.lng ?? 0
+        hideExactLocation = listing.hideExactLocation ?? false
+        spots = listing.spots ?? 1
+        spotMarkers = listing.spotMarkers ?? []
+        imageURLs = listing.images ?? []
+        selectedAmenities = Set(listing.amenities ?? [])
+        checkInTime = listing.checkInTime ?? "15:00"
+        checkOutTime = listing.checkOutTime ?? "11:00"
+        checkinMessage = listing.checkinMessage ?? ""
+        checkoutMessage = listing.checkoutMessage ?? ""
+        checkoutMessageSendHoursBefore = listing.checkoutMessageSendHoursBefore ?? 2
+        skippedMessages = false
+        blockedDates = Set(listing.blockedDates ?? [])
+        instantBooking = listing.instantBooking ?? false
+        priceUnit = listing.priceUnit ?? PriceUnit.defaultUnit(for: listing.category ?? .camping)
+        openingHours = listing.openingHours
+        minStayDays = listing.minStayDays
+        maxStayDays = listing.maxStayDays
+        parkingType = listing.parkingType
+        defaultVehicleTypes = listing.spotMarkers?.first?.effectiveVehicleTypes ?? [listing.category == .parking ? .car : .motorhome]
+
+        // Backfill legacy pris-felt til pricePackages slik at rabatter-UI
+        // viser tidligere innstillinger. Speiler logikken i den gamle
+        // populateFields().
+        for i in spotMarkers.indices {
+            var pkgs = spotMarkers[i].pricePackages ?? []
+            func upsert(_ pt: PricePackagePeriodType, _ pv: Int, _ price: Int?) {
+                guard let p = price, p > 0 else { return }
+                if pkgs.contains(where: { $0.periodType == pt && $0.periodValue == pv }) { return }
+                pkgs.append(PricePackage(periodType: pt, periodValue: pv, priceNok: p))
+            }
+            upsert(.week, 1, spotMarkers[i].weeklyPrice)
+            upsert(.month, 1, spotMarkers[i].monthlyPrice)
+            upsert(.month, 3, spotMarkers[i].threeMonthPrice)
+            upsert(.month, 6, spotMarkers[i].sixMonthPrice)
+            upsert(.year, 1, spotMarkers[i].yearPrice)
+            spotMarkers[i].pricePackages = pkgs.isEmpty ? nil : pkgs.sortedForDisplay
+        }
+
+        currentStep = 0
+        currentSpotIndex = 0
+        error = nil
+        initialEditHash = currentEditHash()
+    }
+
+    /// Sjekker om brukeren har endret noe siden `loadFromListing(_:)`.
+    /// Computed slik at SwiftUI re-evaluerer automatisk når @Published-felter
+    /// publiserer endringer.
+    var isDirty: Bool {
+        guard editingMode else { return false }
+        return currentEditHash() != initialEditHash
+    }
+
+    /// Hash av alle bruker-redigerbare felt. Brukes for å sammenligne med
+    /// `initialEditHash` for å vite om "Lagre"-knappen skal være aktiv.
+    func currentEditHash() -> Int {
+        var h = Hasher()
+        h.combine(title)
+        h.combine(internalName)
+        h.combine(description)
+        h.combine(address)
+        h.combine(city)
+        h.combine(region)
+        h.combine(lat)
+        h.combine(lng)
+        h.combine(hideExactLocation)
+        h.combine(spots)
+        h.combine(checkInTime)
+        h.combine(checkOutTime)
+        h.combine(checkinMessage)
+        h.combine(checkoutMessage)
+        h.combine(checkoutMessageSendHoursBefore)
+        h.combine(skippedMessages)
+        h.combine(instantBooking)
+        h.combine(priceUnit.rawValue)
+        h.combine(minStayDays ?? -1)
+        h.combine(maxStayDays ?? -1)
+        h.combine(parkingType?.rawValue ?? "")
+        h.combine(Array(selectedAmenities).sorted())
+        h.combine(imageURLs)
+        h.combine(Array(blockedDates).sorted())
+        // Kompleks-felter: hash via JSON for å unngå Hashable-conformance-krav.
+        let encoder = JSONEncoder()
+        if let data = try? encoder.encode(spotMarkers) { h.combine(data) }
+        if let oh = openingHours, let data = try? encoder.encode(oh) {
+            h.combine(data)
+        } else {
+            h.combine(0) // nil-sentinel
+        }
+        return h.finalize()
+    }
+
+    /// Bygger UPDATE-payload for å oppdatere en eksisterende listing.
+    /// Speiler `saveChanges()` fra den gamle EditListingView.
+    func buildUpdateInput() -> UpdateListingInput {
+        let isParking = category == .parking
+        // Avled cached-felter på listing-nivå fra spotMarkers — samme logikk
+        // som CreateListingView's `buildInput`. Søk og kart-bobler leser disse,
+        // så de må holdes konsistent med spot-data.
+        let derivedListingPrice = spotMarkers.compactMap { spot -> Int? in
+            if let n = spot.pricePerNight, n > 0 { return n }
+            return spot.price
+        }.filter { $0 > 0 }.min() ?? 0
+
+        let derivedMaxLength = spotMarkers.compactMap { $0.vehicleMaxLength }.filter { $0 > 0 }.max()
+
+        var seenPeriods: Set<PricePackagePeriodType> = []
+        var minDay: Int?
+        var minWeek: Int?
+        var minMonth: Int?
+        var minYear: Int?
+        for s in spotMarkers {
+            for p in s.pricePackages ?? [] {
+                seenPeriods.insert(p.periodType)
+                switch p.periodType {
+                case .day: minDay = min(minDay ?? Int.max, p.priceNok)
+                case .week: minWeek = min(minWeek ?? Int.max, p.priceNok)
+                case .month: minMonth = min(minMonth ?? Int.max, p.priceNok)
+                case .year: minYear = min(minYear ?? Int.max, p.priceNok)
+                }
+            }
+            if let p = s.weeklyPrice, p > 0 { seenPeriods.insert(.week); minWeek = min(minWeek ?? Int.max, p) }
+            if let p = s.monthlyPrice, p > 0 { seenPeriods.insert(.month); minMonth = min(minMonth ?? Int.max, p) }
+            if let p = s.yearPrice, p > 0 { seenPeriods.insert(.year); minYear = min(minYear ?? Int.max, p) }
+            let basePrice = isParking ? (s.price ?? 0) : (s.pricePerNight ?? s.price ?? 0)
+            if basePrice > 0 { seenPeriods.insert(.day); minDay = min(minDay ?? Int.max, basePrice) }
+        }
+        let (displayPrice, displaySuffix): (Int?, String) = {
+            if let d = minDay { return (d, "") }
+            if let w = minWeek { return (w, "/uke") }
+            if let m = minMonth { return (m, "/mnd") }
+            if let y = minYear { return (y, "/år") }
+            return (derivedListingPrice > 0 ? derivedListingPrice : nil, "")
+        }()
+        let derivedPeriodTypes = seenPeriods.map { $0.rawValue }.sorted()
+        let derivedMinStay: Int? = {
+            if let m = minStayDays { return m }
+            if seenPeriods.contains(.day) { return 1 }
+            if seenPeriods.contains(.week) { return 7 }
+            if seenPeriods.contains(.month) { return 30 }
+            if seenPeriods.contains(.year) { return 365 }
+            return nil
+        }()
+
+        // Listing-nivå pris bør falle tilbake til displayPrice for filtre som
+        // leser kun `price`-kolonnen.
+        let resolvedPrice = derivedListingPrice > 0 ? derivedListingPrice : (displayPrice ?? 0)
+
+        // priceUnit i DB: parkering = .time (kr/dag), camping = .natt. Hour er fjernet.
+        let resolvedPriceUnit: PriceUnit = isParking ? .time : .natt
+
+        // Tittel og beskrivelse — speiler `buildInput`-fallback-logikken.
+        let resolvedTitle: String = {
+            let t = title.trimmingCharacters(in: .whitespaces)
+            if !t.isEmpty { return t }
+            let cat = category?.displayName ?? "Plass"
+            let loc = !address.isEmpty ? address
+                : !city.isEmpty ? city
+                : !region.isEmpty ? region
+                : "Norge"
+            return "\(cat) i \(loc)"
+        }()
+        let resolvedDescription: String = {
+            let d = description.trimmingCharacters(in: .whitespaces)
+            if !d.isEmpty { return d }
+            if spots == 1, let sd = spotMarkers.first?.description?.trimmingCharacters(in: .whitespaces), !sd.isEmpty {
+                return sd
+            }
+            return d
+        }()
+
+        return UpdateListingInput(
+            title: resolvedTitle,
+            internalName: internalName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : internalName.trimmingCharacters(in: .whitespaces),
+            description: resolvedDescription,
+            checkoutMessage: skippedMessages || checkoutMessage.trimmingCharacters(in: .whitespaces).isEmpty ? nil : checkoutMessage,
+            checkoutMessageSendHoursBefore: checkoutMessageSendHoursBefore,
+            spots: spots,
+            checkInTime: checkInTime,
+            checkOutTime: checkOutTime,
+            checkinMessage: skippedMessages || checkinMessage.trimmingCharacters(in: .whitespaces).isEmpty ? nil : checkinMessage,
+            address: address,
+            city: city,
+            region: region,
+            lat: lat,
+            lng: lng,
+            price: resolvedPrice,
+            priceUnit: resolvedPriceUnit.rawValue,
+            instantBooking: instantBooking,
+            amenities: Array(selectedAmenities),
+            images: imageURLs,
+            blockedDates: Array(blockedDates).sorted(),
+            hideExactLocation: hideExactLocation,
+            spotMarkers: spotMarkers,
+            extras: [],
+            maxVehicleLength: derivedMaxLength,
+            isActive: true,
+            openingHours: isParking ? openingHours : nil,
+            minStayDays: derivedMinStay,
+            maxStayDays: maxStayDays,
+            parkingType: isParking ? parkingType?.rawValue : nil,
+            rentalPeriodTypes: derivedPeriodTypes,
+            displayPrice: displayPrice,
+            displayPriceSuffix: displaySuffix
+        )
+    }
+}
+
+// MARK: - UPDATE payload (delt mellom EditListingHub og legacy edit-flyt)
+
+struct UpdateListingInput: Encodable {
+    let title: String
+    let internalName: String?
+    let description: String
+    let checkoutMessage: String?
+    let checkoutMessageSendHoursBefore: Int
+    let spots: Int
+    let checkInTime: String
+    let checkOutTime: String
+    let checkinMessage: String?
+    let address: String
+    let city: String
+    let region: String
+    let lat: Double
+    let lng: Double
+    let price: Int
+    let priceUnit: String
+    let instantBooking: Bool
+    let amenities: [String]
+    let images: [String]
+    let blockedDates: [String]
+    let hideExactLocation: Bool
+    let spotMarkers: [SpotMarker]
+    let extras: [ListingExtra]
+    let maxVehicleLength: Int?
+    let isActive: Bool
+    let openingHours: OpeningHours?
+    let minStayDays: Int?
+    let maxStayDays: Int?
+    let parkingType: String?
+    let rentalPeriodTypes: [String]
+    let displayPrice: Int?
+    let displayPriceSuffix: String
+
+    enum CodingKeys: String, CodingKey {
+        case title, description, spots, address, city, region, lat, lng, price, amenities, images, extras
+        case internalName = "internal_name"
+        case checkoutMessage = "checkout_message"
+        case checkoutMessageSendHoursBefore = "checkout_message_send_hours_before"
+        case checkInTime = "check_in_time"
+        case checkOutTime = "check_out_time"
+        case checkinMessage = "checkin_message"
+        case priceUnit = "price_unit"
+        case instantBooking = "instant_booking"
+        case blockedDates = "blocked_dates"
+        case hideExactLocation = "hide_exact_location"
+        case spotMarkers = "spot_markers"
+        case maxVehicleLength = "max_vehicle_length"
+        case isActive = "is_active"
+        case openingHours = "opening_hours"
+        case minStayDays = "min_stay_days"
+        case maxStayDays = "max_stay_days"
+        case parkingType = "parking_type"
+        case rentalPeriodTypes = "rental_period_types"
+        case displayPrice = "display_price"
+        case displayPriceSuffix = "display_price_suffix"
     }
 }
 
