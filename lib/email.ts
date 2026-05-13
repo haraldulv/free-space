@@ -209,6 +209,34 @@ export async function sendPayoutEmail(to: string, data: {
   });
 }
 
+export async function sendPayoutFailedEmail(to: string, data: {
+  hostName: string;
+  amount: number;
+  listingTitle: string;
+  reason?: string;
+}) {
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: `Utbetaling feilet: ${data.amount} kr`,
+    html: wrap("Utbetalingen feilet", `
+      <p style="color:#525252;font-size:14px;line-height:1.6;">
+        Hei ${data.hostName}, vi klarte ikke å sende utbetalingen for ${data.listingTitle}.
+      </p>
+      <div style="background:#fef3c7;border-left:4px solid #f59e0b;border-radius:8px;padding:16px;margin:16px 0;">
+        <p style="margin:0;font-size:14px;color:#525252;"><strong>${data.listingTitle}</strong></p>
+        <p style="margin:8px 0;font-size:20px;font-weight:700;color:#92400e;">${data.amount} kr</p>
+        ${data.reason ? `<p style="margin:8px 0 0;font-size:13px;color:#92400e;">${data.reason}</p>` : ""}
+      </div>
+      <p style="color:#525252;font-size:14px;line-height:1.6;">
+        Vanligste årsaker: bankkonto mangler eller har feil format, identifikasjon må verifiseres,
+        eller Stripe-onboardingen er ikke fullført. Gå inn på Mine inntekter for å sjekke statusen din.
+      </p>
+      ${btn("Sjekk utbetalingsstatus", `https://tuno.no/dashboard?tab=earnings`)}
+    `),
+  });
+}
+
 export async function sendBookingRequestToHost(to: string, data: {
   hostName: string;
   guestName: string;
