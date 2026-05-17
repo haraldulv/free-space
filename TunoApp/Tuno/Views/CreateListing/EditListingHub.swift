@@ -288,6 +288,13 @@ struct EditListingHub: View {
                 title: "Meldinger",
                 subtitle: messagesSummary
             )
+            divider
+            row(
+                dest: .stayLength,
+                icon: "calendar.day.timeline.left",
+                title: "Lengde på opphold",
+                subtitle: stayLengthSummary
+            )
         }
     }
 
@@ -371,6 +378,11 @@ struct EditListingHub: View {
         case .instantBooking:
             InstantBookingStep(form: form)
                 .navigationTitle("Booking")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { stepToolbar }
+        case .stayLength:
+            StayLengthStep(form: form)
+                .navigationTitle("Lengde på opphold")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { stepToolbar }
         case .openingHours:
@@ -546,6 +558,21 @@ struct EditListingHub: View {
         return "Ingen"
     }
 
+    private var stayLengthSummary: String {
+        let unit = form.category == .parking ? "dag" : "døgn"
+        let unitPlural = form.category == .parking ? "dager" : "døgn"
+        let minPart: String = {
+            if let m = form.minStayDays, m > 0 {
+                return "Min \(m) \(m == 1 ? unit : unitPlural)"
+            }
+            return "Min ikke satt"
+        }()
+        if let mx = form.maxStayDays, mx > 0 {
+            return "\(minPart), maks \(mx) \(mx == 1 ? unit : unitPlural)"
+        }
+        return minPart
+    }
+
     // MARK: - Save
 
     private func saveChanges() async {
@@ -632,6 +659,7 @@ enum EditDestination: Hashable {
     case amenities
     case messages
     case instantBooking
+    case stayLength
     case openingHours
     case spotMiniHub(Int)
     case spotDetails(Int)
