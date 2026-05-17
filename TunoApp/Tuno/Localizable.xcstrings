@@ -546,7 +546,20 @@
 
     },
     "24t" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "24h"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "24h"
+          }
+        }
+      }
     },
     "30" : {
 
@@ -749,10 +762,36 @@
       }
     },
     "Åpningstid" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnungszeiten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opening hours"
+          }
+        }
+      }
     },
     "Åpningstid for valgte datoer" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnungszeiten für ausgewählte Daten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Opening hours for selected dates"
+          }
+        }
+      }
     },
     "Apple" : {
 
@@ -1529,7 +1568,20 @@
       }
     },
     "Døgnåpent" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "24/7 geöffnet"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open 24/7"
+          }
+        }
+      }
     },
     "Dra og slipp for å endre rekkefølge. Første bilde er forsidebildet." : {
 
@@ -2268,7 +2320,20 @@
       }
     },
     "Fjern åpningstid" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Öffnungszeiten entfernen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Remove opening hours"
+          }
+        }
+      }
     },
     "Flott" : {
       "extractionState" : "manual",
@@ -2718,7 +2783,20 @@
       }
     },
     "Gjester ser åpningstidene på annonsen og blir varslet før booking. Du kan endre dette senere." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Gäste sehen die Öffnungszeiten in der Anzeige und werden vor der Buchung benachrichtigt. Du kannst dies später ändern."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guests see the opening hours on the listing and are notified before booking. You can change this later."
+          }
+        }
+      }
     },
     "Gjester ser et omtrentlig område. Eksakt adresse deles etter booking." : {
 
@@ -3342,7 +3420,20 @@
       }
     },
     "Ingen utbetalinger ennå. Når en gjest har vært innom plassen din i 24 timer, sender vi pengene til Stripe — og Stripe utbetaler videre til banken din." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Noch keine Auszahlungen. Sobald ein Gast 24 Stunden bei deinem Platz war, senden wir das Geld an Stripe — und Stripe zahlt es an dein Bankkonto aus."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No payouts yet. Once a guest has spent 24 hours at your spot, we send the money to Stripe — and Stripe pays out to your bank account."
+          }
+        }
+      }
     },
     "Ingen varslinger ennå" : {
 
@@ -6103,7 +6194,20 @@
       }
     },
     "Sett åpningstid for spesifikke datoer som overstyrer din vanlige uke-plan." : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Lege Öffnungszeiten für bestimmte Daten fest, die deinen üblichen Wochenplan überschreiben."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Set opening hours for specific dates that override your usual weekly schedule."
+          }
+        }
+      }
     },
     "Sett en pris du synes er rettferdig. Du kan endre den senere." : {
 
@@ -6476,7 +6580,20 @@
 
     },
     "Stengt" : {
-
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Geschlossen"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closed"
+          }
+        }
+      }
     },
     "Største kjøretøy som passer på plassen, i meter. Påkrevd for bobil og campingbil." : {
 
