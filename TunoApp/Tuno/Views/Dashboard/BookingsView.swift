@@ -762,17 +762,21 @@ struct StatusBadge: View {
     private var label: String {
         switch status {
         case .pending: return String(localized: "booking.statusPending", defaultValue: "Venter")
-        case .requested: return String(localized: "booking.statusRequested", defaultValue: "Forespørsel sendt")
+        case .requested, .awaiting_host: return String(localized: "booking.statusRequested", defaultValue: "Forespørsel sendt")
+        case .awaiting_guest, .awaiting_payment: return String(localized: "booking.statusAwaitingPayment", defaultValue: "Venter på betaling")
         case .confirmed: return String(localized: "booking.statusConfirmed", defaultValue: "Bekreftet")
+        case .declined: return String(localized: "booking.statusDeclined", defaultValue: "Avslått")
+        case .expired: return String(localized: "booking.statusExpired", defaultValue: "Utløpt")
         case .cancelled: return String(localized: "booking.statusCancelled", defaultValue: "Kansellert")
         }
     }
 
     private var bgColor: Color {
         switch status {
-        case .pending, .requested: return .orange
+        case .pending, .requested, .awaiting_host: return .orange
+        case .awaiting_guest, .awaiting_payment: return .orange
         case .confirmed: return .primary600
-        case .cancelled: return .neutral500
+        case .declined, .expired, .cancelled: return .neutral500
         }
     }
 
