@@ -39,6 +39,18 @@ struct BookingCalendarView: UIViewRepresentable {
         uiView.reloadDecorations(forDateComponents: context.coordinator.decorableComponents(), animated: false)
     }
 
+    /// Tving SwiftUI til å respektere container-høyden i stedet for UICalendarView
+    /// sin intrinsic content size (som dekker alle måneder fra minDate til
+    /// today+2år stablet vertikalt). Uten dette ekspanderer kalenderen forbi
+    /// skjermen og intern UIScrollView aktiveres ikke, så brukeren får ikke
+    /// scrollet fram til måneden de trenger.
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UICalendarView, context: Context) -> CGSize? {
+        CGSize(
+            width: proposal.width ?? UIView.layoutFittingExpandedSize.width,
+            height: proposal.height ?? 480
+        )
+    }
+
     // MARK: - Coordinator
 
     final class Coordinator: NSObject, UICalendarViewDelegate, UICalendarSelectionSingleDateDelegate {

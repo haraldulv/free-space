@@ -344,6 +344,14 @@ class ChatService: ObservableObject {
     // MARK: - Mark as read
 
     func markAsRead(conversationId: String, userId: String) async {
+        // Optimistisk: oppdater lokalt state FØR await, så tab-badge og
+        // ulest-prikker krymper umiddelbart når brukeren går inn i chatten.
+        // Uten dette ser brukeren 200-500ms av "gammelt" tall mens supabase
+        // RTT pågår, som oppleves som en buggy badge.
+        if let idx = conversations.firstIndex(where: { $0.id == conversationId }) {
+            conversations[idx] = conversations[idx].with(unreadCount: 0)
+            unreadCount = conversations.reduce(0) { $1.isArchived ? $0 : $0 + $1.unreadCount }
+        }
         do {
             try await supabase
                 .from("messages")
@@ -352,16 +360,9 @@ class ChatService: ObservableObject {
                 .eq("read", value: false)
                 .neq("sender_id", value: userId)
                 .execute()
-
-            // Speil endringen i lokalt state slik at badge på Meldinger-tab og
-            // ulest-prikker oppdateres umiddelbart, uten å vente på neste
-            // loadConversations-call.
-            if let idx = conversations.firstIndex(where: { $0.id == conversationId }) {
-                conversations[idx] = conversations[idx].with(unreadCount: 0)
-                unreadCount = conversations.reduce(0) { $1.isArchived ? $0 : $0 + $1.unreadCount }
-            }
         } catch {
             print("Failed to mark as read: \(error)")
+            // La optimistic state stå — neste loadConversations korrigerer.
         }
     }
 

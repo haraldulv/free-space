@@ -27,6 +27,9 @@ struct ChatView: View {
     @StateObject private var bookingService = BookingService()
     @FocusState private var isInputFocused: Bool
     @Environment(\.dismiss) private var dismiss
+    /// True når brukeren har scrollet >300pt opp fra bunnen. Trigger "scroll til
+    /// bunnen"-flyteknapp.
+    @State private var showScrollToBottom = false
 
     /// Snapshot av booking + current_offer for å drive offer-bobler og topp-banneret.
     struct BookingNegotiationState {
@@ -200,6 +203,19 @@ struct ChatView: View {
                     .padding(.horizontal, 12)
                     .padding(.vertical, 12)
                 }
+                .onScrollGeometryChange(for: Bool.self) { geometry in
+                    // True når bunnen av innholdet er >300pt nedenfor synlig
+                    // viewport — altså brukeren har scrollet et godt stykke
+                    // opp i historikken.
+                    let distanceFromBottom = geometry.contentSize.height
+                        - geometry.contentOffset.y
+                        - geometry.containerSize.height
+                    return distanceFromBottom > 300
+                } action: { _, isFar in
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        showScrollToBottom = isFar
+                    }
+                }
                 .onChange(of: chatService.messages.count) {
                     if let last = chatService.messages.last {
                         withAnimation(.easeOut(duration: 0.2)) {
@@ -210,6 +226,29 @@ struct ChatView: View {
                 .onAppear {
                     if let last = chatService.messages.last {
                         proxy.scrollTo(last.id, anchor: .bottom)
+                    }
+                }
+                .overlay(alignment: .bottomTrailing) {
+                    if showScrollToBottom {
+                        Button {
+                            if let last = chatService.messages.last {
+                                withAnimation(.easeOut(duration: 0.25)) {
+                                    proxy.scrollTo(last.id, anchor: .bottom)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "chevron.down")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(Color.primary600)
+                                .frame(width: 44, height: 44)
+                                .background(Color.white)
+                                .clipShape(Circle())
+                                .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+                                .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 2)
+                        }
+                        .padding(.trailing, 14)
+                        .padding(.bottom, 14)
+                        .transition(.opacity.combined(with: .scale(scale: 0.85)))
                     }
                 }
             }

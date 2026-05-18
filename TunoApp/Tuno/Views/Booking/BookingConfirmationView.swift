@@ -53,6 +53,7 @@ struct BookingConfirmationView: View {
                     .font(.system(size: 15))
                     .foregroundStyle(.neutral500)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             VStack(spacing: 16) {

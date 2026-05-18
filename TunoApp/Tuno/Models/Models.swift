@@ -1108,7 +1108,12 @@ struct BookingListing: Codable {
 enum BookingStatus: String, Codable {
     case pending
     case requested
+    case awaiting_host
+    case awaiting_guest
+    case awaiting_payment
     case confirmed
+    case declined
+    case expired
     case cancelled
 }
 
