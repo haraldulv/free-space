@@ -142,6 +142,8 @@ struct BookingView: View {
     @State private var isApplePayLoading = false
     @State private var requestSending = false
     @State private var requestError: String?
+    @State private var showRequestSent = false
+    @State private var requestConversationId: String?
     @State private var selectedSpotIds: Set<String> = []
     @State private var listingExtrasQty: [String: Int] = [:]
     @State private var spotExtrasQty: [String: [String: Int]] = [:]
@@ -655,6 +657,15 @@ struct BookingView: View {
                 checkIn: checkIn ?? Date(),
                 checkOut: checkOut ?? Date(),
                 total: total
+            )
+        }
+        .navigationDestination(isPresented: $showRequestSent) {
+            BookingConfirmationView(
+                listing: listing,
+                checkIn: checkIn ?? Date(),
+                checkOut: checkOut ?? Date(),
+                total: total,
+                mode: .requested(conversationId: requestConversationId)
             )
         }
         .sheet(isPresented: $showCalendar) {
@@ -1665,18 +1676,14 @@ struct BookingView: View {
         let response = await bookingService.requestBooking(payload: payload)
         requestSending = false
 
-        if let bookingId = response?.bookingId, let conversationId = response?.conversationId {
-            // Refresh chatService FØR vi navigerer, så ChatView finner samtalen i
-            // listen og kan vise riktig header (otherUserName, listingTitle, avatar).
-            // Uten dette ble headeren stående tom (en grønn placeholder-prikk).
+        if let _ = response?.bookingId {
+            // Forhåndslast samtalen så chat-headeren har data hvis brukeren
+            // trykker "Se i meldinger" på bekreftelsesskjermen.
             if let userId = authManager.currentUser?.id {
                 await chatService.loadConversations(userId: userId.uuidString.lowercased())
             }
-            PushRouter.shared.pendingConversationId = conversationId
-            _ = bookingId
-            // Lukk BookingView så man kommer tilbake til detaljsiden, så åpnes
-            // chat-tabben automatisk via PushRouter.
-            dismiss()
+            requestConversationId = response?.conversationId
+            showRequestSent = true
         } else {
             requestError = bookingService.error ?? "Kunne ikke sende forespørsel"
         }

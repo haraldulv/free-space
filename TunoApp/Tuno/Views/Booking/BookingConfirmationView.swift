@@ -1,10 +1,16 @@
 import SwiftUI
 
+enum BookingConfirmationMode {
+    case confirmed
+    case requested(conversationId: String?)
+}
+
 struct BookingConfirmationView: View {
     let listing: Listing
     let checkIn: Date
     let checkOut: Date
     let total: Int
+    var mode: BookingConfirmationMode = .confirmed
     @Environment(\.dismiss) var dismiss
 
     private var nights: Int {
@@ -40,12 +46,13 @@ struct BookingConfirmationView: View {
             }
 
             VStack(spacing: 8) {
-                Text("Bestilling bekreftet!")
+                Text(titleText)
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(.neutral900)
-                Text("Du vil motta en bekreftelse snart.")
+                Text(subtitleText)
                     .font(.system(size: 15))
                     .foregroundStyle(.neutral500)
+                    .multilineTextAlignment(.center)
             }
 
             VStack(spacing: 16) {
@@ -84,7 +91,7 @@ struct BookingConfirmationView: View {
                 Divider()
 
                 HStack {
-                    Text("Totalt betalt")
+                    Text(totalLabel)
                         .font(.system(size: 15, weight: .bold))
                     Spacer()
                     Text("\(total) kr")
@@ -102,9 +109,9 @@ struct BookingConfirmationView: View {
             Spacer()
 
             Button {
-                NotificationCenter.default.post(name: .switchToBookingsTab, object: nil)
+                handleCTA()
             } label: {
-                Text("Se mine bestillinger")
+                Text(ctaText)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -117,6 +124,45 @@ struct BookingConfirmationView: View {
         .padding(24)
         .background(.white)
         .navigationBarBackButtonHidden(true)
+    }
+
+    private var titleText: String {
+        switch mode {
+        case .confirmed: return "Bestilling bekreftet!"
+        case .requested: return "Forespørsel sendt!"
+        }
+    }
+
+    private var subtitleText: String {
+        switch mode {
+        case .confirmed: return "Du vil motta en bekreftelse snart."
+        case .requested: return "Utleier får 24 timer på å svare. Du blir varslet når det skjer."
+        }
+    }
+
+    private var totalLabel: String {
+        switch mode {
+        case .confirmed: return "Totalt betalt"
+        case .requested: return "Foreslått pris"
+        }
+    }
+
+    private var ctaText: String {
+        switch mode {
+        case .confirmed: return "Se mine bestillinger"
+        case .requested: return "Se i meldinger"
+        }
+    }
+
+    private func handleCTA() {
+        switch mode {
+        case .confirmed:
+            NotificationCenter.default.post(name: .switchToBookingsTab, object: nil)
+        case .requested(let conversationId):
+            if let id = conversationId {
+                PushRouter.shared.pendingConversationId = id
+            }
+        }
     }
 
     private func detailRow(label: String, value: String) -> some View {

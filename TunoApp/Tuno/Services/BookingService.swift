@@ -224,6 +224,14 @@ final class BookingService: ObservableObject {
                 print("❌ \(path) returned \(http.statusCode): \(String(data: data, encoding: .utf8) ?? "")")
                 return nil
             }
+            // Server kan returnere 200 med { error: "..." } for noen business-feil.
+            // Plukk opp meldingen så UI-en viser serverens norske tekst i stedet
+            // for en generisk fallback.
+            if let parsed = try? JSONDecoder().decode(BookingErrorBody.self, from: data), let msg = parsed.error, !msg.isEmpty {
+                self.error = msg
+                print("⚠️ \(path) returned 200 with error: \(msg)")
+                return nil
+            }
             return try JSONDecoder().decode(Response.self, from: data)
         } catch {
             print("❌ postJSON \(path) error: \(error)")

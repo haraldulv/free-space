@@ -119,7 +119,7 @@ export async function POST(request: NextRequest) {
     }, 0);
     const available = listing.spots - bookedCount;
     if (available <= 0) {
-      return NextResponse.json({ error: "Ingen ledige plasser for valgte datoer" });
+      return NextResponse.json({ error: "Ingen ledige plasser for valgte datoer" }, { status: 409 });
     }
 
     if (selectedSpotIds && selectedSpotIds.length > 0) {
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       }
       const conflict = selectedSpotIds.find((id) => alreadyBooked.has(id));
       if (conflict) {
-        return NextResponse.json({ error: "En eller flere av de valgte plassene er allerede booket. Velg andre plasser." });
+        return NextResponse.json({ error: "En eller flere av de valgte plassene er allerede booket. Velg andre plasser." }, { status: 409 });
       }
     }
 
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!hostProfile?.stripe_account_id || !hostProfile?.stripe_onboarding_complete) {
-      return NextResponse.json({ error: "Utleier har ikke satt opp utbetalinger ennå. Prøv igjen senere." });
+      return NextResponse.json({ error: "Utleier har ikke satt opp utbetalinger ennå. Prøv igjen senere." }, { status: 400 });
     }
 
     // Opprett booking-rad uten Stripe.

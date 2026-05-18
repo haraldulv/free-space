@@ -153,16 +153,6 @@
         }
       }
     },
-    "%@ av %@ plass%@ markert" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ av %2$@ plass%3$@ markert"
-          }
-        }
-      }
-    },
     "%@ blokkert" : {
       "localizations" : {
         "de" : {
@@ -1626,17 +1616,7 @@
     "Du har blanke ark (enn så lenge). Vi gir deg beskjed når det kommer oppdateringer." : {
 
     },
-    "Du har endret adresse. Marker %@ plass%@ på det nye kartet før du kan lagre." : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Du har endret adresse. Marker %1$@ plass%2$@ på det nye kartet før du kan lagre."
-          }
-        }
-      }
-    },
-    "Du har endringer som ikke er lagret." : {
+    "Du har endret adresse. Marker %@ på det nye kartet før du kan lagre." : {
 
     },
     "Du har ingen annonser ennå" : {
@@ -4579,9 +4559,6 @@
         }
       }
     },
-    "Marker plassene på kartet" : {
-
-    },
     "Marker plasser" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -5437,9 +5414,6 @@
           }
         }
       }
-    },
-    "Plassene må re-plasseres" : {
-
     },
     "Plasser" : {
 
