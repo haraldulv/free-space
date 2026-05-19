@@ -47,6 +47,9 @@ struct WizardPricingCalendarView: View {
     /// Cell-frame lookup i navngitt coordinate space "calendarGrid".
     /// Aggregert via PreferenceKey fra hver dayCell.
     @State private var cellFrames: [String: CGRect] = [:]
+    /// Pre-warmed haptic for hver tap/drag-celle. Selection-typen er Apple
+    /// sin standard for picker-aktige valg — mer subtilt enn impact.
+    private let selectionHaptic = UISelectionFeedbackGenerator()
 
     // MARK: - Panel-minimer state
     /// True når bunn-panelet er kollapset til kun pille + reset + maks-knapp.
@@ -1315,6 +1318,8 @@ struct WizardPricingCalendarView: View {
         } else {
             selectedDates.insert(iso)
         }
+        selectionHaptic.selectionChanged()
+        selectionHaptic.prepare()
         mode = selectedDates.isEmpty ? .idle : .dateOverride
         if selectedDates.isEmpty {
             panelMinimized = false  // reset minimer-tilstand når seleksjonen tømmes
@@ -1348,6 +1353,10 @@ struct WizardPricingCalendarView: View {
         } else {
             selectedDates.insert(iso)
         }
+        // Tick-feel per ny celle finger drar over (cellAt-filteret hindrer
+        // dobbel-trigger for samme dato i samme drag-sesjon).
+        selectionHaptic.selectionChanged()
+        selectionHaptic.prepare()
     }
 
     private func commitDrag() {
