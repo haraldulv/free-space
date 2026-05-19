@@ -29,6 +29,10 @@ struct EditListingHub: View {
     /// alle kollapset. Bare ett kan være åpent om gangen, så åpning av et
     /// nytt kort lukker det forrige.
     @State private var expandedField: String?
+    /// Segmentkontroll "Annonse / Plasser" (TU-99 redux build 232).
+    /// Speiler Airbnbs "Your space / Arrival guide"-pille men gir naturlig
+    /// split for Tuno: listing-felter vs spot-cards.
+    @State private var selectedTab: HubTab = .annonse
     /// Snapshot av adresse + lat/lng tatt rett etter loadFromListing.
     /// Hvis brukeren endrer adressen må alle plasser re-plasseres på
     /// det nye kartet før Lagre blir aktiv (samme regel som i wizarden).
@@ -102,15 +106,24 @@ struct EditListingHub: View {
     }
 
     private var scrollBody: some View {
+        // TU-99 redux (build 232): Airbnb-stil "Listing editor"-layout.
+        // Segmentkontroll "Annonse / Plasser" øverst (etter tannhjul-toolbar),
+        // photosStackCard som første kort i "Annonse"-fanen, valueCards uten
+        // ikoner under. Hero-kortet er fjernet — bildene ligger nå i sitt
+        // eget kort med "spilkort"-preview (stacked thumbnails).
         ScrollView {
-            VStack(spacing: 16) {
-                heroCard
-                sectionList
-                if listing.category == .parking {
-                    listingLevelSection
+            VStack(spacing: 12) {
+                tabSegmentControl
+                if selectedTab == .annonse {
+                    photosStackCard
+                    sectionList
+                    if listing.category == .parking {
+                        listingLevelSection
+                    }
+                } else {
+                    spotsSection
                 }
-                spotsSection
-                Spacer().frame(height: 60)
+                Spacer().frame(height: 80)
             }
             .padding(16)
         }
@@ -261,38 +274,194 @@ struct EditListingHub: View {
         }
     }
 
-    // MARK: - Hero
+    // MARK: - Segmentkontroll (TU-99 redux build 232)
 
-    private var heroCard: some View {
-        ZStack(alignment: .bottomLeading) {
-            CachedAsyncImage(url: URL(string: form.imageURLs.first ?? "")) { image in
-                image.resizable().aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Rectangle().fill(Color.neutral100)
-            }
-            .frame(height: 180)
-            .frame(maxWidth: .infinity)
-            .clipped()
-
-            LinearGradient(
-                colors: [Color.black.opacity(0), Color.black.opacity(0.55)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .frame(height: 180)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(form.title.isEmpty ? "Uten tittel" : form.title)
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .lineLimit(2)
-                Text(form.city)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.white.opacity(0.85))
-            }
-            .padding(16)
+    /// Capsule-pill segmentkontroll over feltene. To valg: "Annonse" =
+    /// listing-felter (Adresse, Tittel, Bilder, Fasiliteter, etc.) og
+    /// "Plasser" = spot-cards. Speiler Airbnbs "Your space / Arrival guide".
+    private var tabSegmentControl: some View {
+        HStack(spacing: 0) {
+            tabSegmentButton(label: "Annonse", tab: .annonse)
+            tabSegmentButton(label: "Plasser", tab: .plasser)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .padding(4)
+        .background(Color.neutral100)
+        .clipShape(Capsule())
+        .padding(.horizontal, 40)
+        .padding(.top, 4)
+        .padding(.bottom, 8)
+    }
+
+    private func tabSegmentButton(label: String, tab: HubTab) -> some View {
+        let isSelected = selectedTab == tab
+        return Button {
+            withAnimation(.easeInOut(duration: 0.18)) {
+                selectedTab = tab
+            }
+        } label: {
+            Text(label)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(isSelected ? .neutral900 : .neutral500)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 9)
+                .background(
+                    Group {
+                        if isSelected {
+                            Capsule()
+                                .fill(Color.white)
+                                .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
+                        }
+                    }
+                )
+        }
+        .buttonStyle(.plain)
+    }
+
+    // MARK: - Bilder-kort (TU-99 redux build 232)
+
+    /// Første kort i "Annonse"-fanen. Tittel "Bilder" + verdi "N bilder"
+    /// over en "spilkort"-stack-preview av de 3 første bildene (ZStack med
+    /// offset + rotation). Tap → ekspanderer inline med horisontal carousel.
+    private var photosStackCard: some View {
+        let isExpanded = expandedField == "photos"
+        let imageCount = form.imageURLs.count
+        let valueText = imageCount == 0
+            ? "Ingen bilder"
+            : "\(imageCount) bilde\(imageCount == 1 ? "" : "r")"
+        return valueCardChrome(isExpanded: isExpanded) {
+            VStack(spacing: 0) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        expandedField = isExpanded ? nil : "photos"
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 14) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Bilder")
+                                .font(.system(size: 16))
+                                .foregroundStyle(.neutral500)
+                            Text(valueText)
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(.neutral900)
+                        }
+                        photosStackPreview
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                if isExpanded {
+                    VStack(spacing: 14) {
+                        inlinePhotosEditor
+                        expandedFooter
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 18)
+                    .transition(.opacity)
+                }
+            }
+        }
+    }
+
+    /// "Spilkort"-stack: ZStack med 3 thumbnail-bilder, hver med litt
+    /// offset + rotation så de ser ut som et fan av kort. Tap åpner det
+    /// store inline-carouselen.
+    @ViewBuilder
+    private var photosStackPreview: some View {
+        if form.imageURLs.isEmpty {
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.neutral100)
+                .frame(height: 180)
+                .overlay(
+                    VStack(spacing: 6) {
+                        Image(systemName: "photo.on.rectangle.angled")
+                            .font(.system(size: 28))
+                            .foregroundStyle(.neutral400)
+                        Text("Trykk for å legge til")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.neutral500)
+                    }
+                )
+        } else {
+            let visible = Array(form.imageURLs.prefix(3).enumerated())
+            ZStack {
+                ForEach(visible.reversed(), id: \.offset) { idx, urlString in
+                    CachedAsyncImage(url: URL(string: urlString)) { image in
+                        image.resizable().aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle().fill(Color.neutral100)
+                    }
+                    .frame(height: 180)
+                    .frame(maxWidth: .infinity)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.white, lineWidth: 3)
+                    )
+                    .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
+                    .scaleEffect(1 - CGFloat(idx) * 0.04)
+                    .offset(y: CGFloat(idx) * 8)
+                    .zIndex(Double(3 - idx))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .frame(height: 200)
+        }
+    }
+
+    /// Horisontal scroll med alle bildene + "Legg til"-knapp på slutten.
+    /// Reorder pusher til PhotosStep — for kompleks for inline.
+    private var inlinePhotosEditor: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 10) {
+                    ForEach(Array(form.imageURLs.enumerated()), id: \.offset) { idx, urlString in
+                        ZStack(alignment: .topTrailing) {
+                            CachedAsyncImage(url: URL(string: urlString)) { image in
+                                image.resizable().aspectRatio(contentMode: .fill)
+                            } placeholder: {
+                                Rectangle().fill(Color.neutral100)
+                            }
+                            .frame(width: 120, height: 120)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+
+                            Button {
+                                form.imageURLs.remove(at: idx)
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .font(.system(size: 22))
+                                    .foregroundStyle(.white, .black.opacity(0.55))
+                                    .padding(6)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    NavigationLink(value: EditDestination.photos) {
+                        VStack(spacing: 6) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(.primary600)
+                            Text("Endre")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.primary600)
+                        }
+                        .frame(width: 120, height: 120)
+                        .background(Color.primary50)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                                .foregroundColor(.primary300)
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     // MARK: - Section list (TU-99: Airbnb-stil valueCards)
@@ -304,33 +473,25 @@ struct EditListingHub: View {
     private var sectionList: some View {
         VStack(spacing: 12) {
             valueCard(
-                icon: "mappin.and.ellipse",
                 title: "Adresse",
                 value: form.address.isEmpty ? "Ikke satt" : form.address,
                 dest: .address
             )
             expandableValueCard(
-                icon: "text.alignleft",
                 title: "Tittel",
                 value: form.title.trimmingCharacters(in: .whitespaces).isEmpty ? "Ikke satt" : form.title,
                 fieldKey: "title"
             ) {
                 inlineTitleEditor
             }
-            valueCard(
-                icon: "photo.on.rectangle.angled",
-                title: "Bilder",
-                value: form.imageURLs.isEmpty ? "Ingen bilder" : "\(form.imageURLs.count) bilde\(form.imageURLs.count == 1 ? "" : "r")",
-                dest: .photos
-            )
-            valueCard(
-                icon: "wand.and.stars",
+            expandableValueCard(
                 title: "Fasiliteter",
                 value: form.selectedAmenities.isEmpty ? "Ingen valgt" : "\(form.selectedAmenities.count) valgt",
-                dest: .amenities
-            )
+                fieldKey: "amenities"
+            ) {
+                inlineAmenitiesEditor
+            }
             expandableValueCard(
-                icon: "bubble.left.fill",
                 title: "Meldinger",
                 value: messagesSummary,
                 fieldKey: "messages"
@@ -338,7 +499,6 @@ struct EditListingHub: View {
                 inlineMessagesEditor
             }
             expandableValueCard(
-                icon: "calendar.day.timeline.left",
                 title: "Lengde på opphold",
                 value: stayLengthSummary,
                 fieldKey: "stay"
@@ -352,7 +512,6 @@ struct EditListingHub: View {
     private var listingLevelSection: some View {
         VStack(spacing: 12) {
             expandableValueCard(
-                icon: form.instantBooking ? "bolt.fill" : "hand.raised.fill",
                 title: "Booking",
                 value: form.instantBooking ? "Direktebooking" : "Godkjenn først",
                 fieldKey: "booking"
@@ -529,47 +688,38 @@ struct EditListingHub: View {
             )
     }
 
-    private func valueCardHeader(icon: String, title: String, value: String, isExpanded: Bool) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.primary50)
-                    .frame(width: 40, height: 40)
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.primary600)
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.neutral500)
-                Text(value)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.neutral400)
-                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+    /// Airbnb-stil kort-header: feltnavn (regular, grå) over verdi (semibold,
+    /// stor, neutral900). Ingen ikon-prefiks, ingen chevron — affordance er
+    /// at hele kortet er klikkbart. Identisk Airbnbs Listing editor (TU-99
+    /// redux i build 232 etter Harald-feedback på build 231).
+    private func valueCardHeader(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 16))
+                .foregroundStyle(.neutral500)
+            Text(value)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(.neutral900)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
         .contentShape(Rectangle())
     }
 
-    private func valueCard(icon: String, title: String, value: String, dest: EditDestination) -> some View {
+    private func valueCard(title: String, value: String, dest: EditDestination) -> some View {
         NavigationLink(value: dest) {
             valueCardChrome(isExpanded: false) {
-                valueCardHeader(icon: icon, title: title, value: value, isExpanded: false)
+                valueCardHeader(title: title, value: value)
             }
         }
         .buttonStyle(.plain)
     }
 
     private func expandableValueCard<Content: View>(
-        icon: String,
         title: String,
         value: String,
         fieldKey: String,
@@ -583,7 +733,7 @@ struct EditListingHub: View {
                         expandedField = isExpanded ? nil : fieldKey
                     }
                 } label: {
-                    valueCardHeader(icon: icon, title: title, value: value, isExpanded: isExpanded)
+                    valueCardHeader(title: title, value: value)
                 }
                 .buttonStyle(.plain)
 
@@ -592,8 +742,8 @@ struct EditListingHub: View {
                         content()
                         expandedFooter
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 18)
                     .transition(.opacity)
                 }
             }
@@ -662,29 +812,20 @@ struct EditListingHub: View {
         if blockedCount > 0 { bits.append("\(blockedCount) blokkert") }
         let summary = bits.joined(separator: " · ")
         return valueCardChrome(isExpanded: false) {
-            HStack(spacing: 14) {
-                ZStack {
-                    Circle().fill(Color.primary50).frame(width: 40, height: 40)
-                    Text("\(index + 1)")
-                        .font(.system(size: 15, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary700)
-                }
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(label)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral500)
-                    Text(summary)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
-                Spacer(minLength: 8)
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.neutral400)
+            VStack(alignment: .leading, spacing: 6) {
+                Text(label)
+                    .font(.system(size: 16))
+                    .foregroundStyle(.neutral500)
+                Text(summary)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 20)
+            .padding(.vertical, 18)
             .contentShape(Rectangle())
         }
     }
@@ -783,6 +924,57 @@ struct EditListingHub: View {
                         RoundedRectangle(cornerRadius: 10)
                             .stroke(Color.neutral200, lineWidth: 1)
                     )
+            }
+        }
+    }
+
+    /// Chip-grid med alle fasiliteter. Toggle på tap. 3-kolonner for å
+    /// matche AmenitiesStep-stilen, men kompakt nok for inline-kort.
+    private var inlineAmenitiesEditor: some View {
+        let columns = [
+            GridItem(.flexible(), spacing: 8),
+            GridItem(.flexible(), spacing: 8),
+            GridItem(.flexible(), spacing: 8)
+        ]
+        return LazyVGrid(columns: columns, spacing: 8) {
+            ForEach(form.availableAmenities, id: \.rawValue) { amenity in
+                let selected = form.selectedAmenities.contains(amenity.rawValue)
+                Button {
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.78)) {
+                        if selected {
+                            form.selectedAmenities.remove(amenity.rawValue)
+                        } else {
+                            form.selectedAmenities.insert(amenity.rawValue)
+                        }
+                    }
+                } label: {
+                    VStack(spacing: 6) {
+                        Image(systemName: amenity.icon)
+                            .font(.system(size: 18, weight: .light))
+                            .foregroundStyle(selected ? .white : .primary700)
+                            .frame(width: 32, height: 32)
+                            .background(selected ? Color.primary600 : Color.primary50)
+                            .clipShape(RoundedRectangle(cornerRadius: 9))
+
+                        Text(amenity.label)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.neutral900)
+                            .multilineTextAlignment(.center)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.8)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 6)
+                    .frame(maxWidth: .infinity, minHeight: 80)
+                    .background(selected ? Color.primary50 : Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(selected ? Color.primary600 : Color.neutral200, lineWidth: selected ? 1.5 : 1)
+                    )
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -993,6 +1185,13 @@ enum EditDestination: Hashable {
     case spotDiscounts(Int)
 }
 
+/// Segmentkontroll-tabs i EditListingHub (TU-99 redux build 232).
+/// Speiler Airbnbs "Your space / Arrival guide"-segmenter.
+enum HubTab: Hashable {
+    case annonse   // Listing-felter (Adresse, Tittel, Bilder, Fasiliteter, etc.)
+    case plasser   // Spot-kort (Plass 1, Plass 2, ...)
+}
+
 // MARK: - SpotMiniHub
 
 /// Sub-hub for én plass. Hver felt rendres som sitt eget valueCard
@@ -1018,12 +1217,10 @@ struct SpotMiniHub: View {
                 headerCard
                 valueCard(
                     dest: .spotDetails(spotIndex),
-                    icon: "doc.text",
                     title: "Detaljer",
                     value: detailsSummary
                 )
                 expandableValueCard(
-                    icon: "tag.fill",
                     title: "Pris",
                     value: priceSummary,
                     fieldKey: "price"
@@ -1032,20 +1229,17 @@ struct SpotMiniHub: View {
                 }
                 valueCard(
                     dest: .spotExtras(spotIndex),
-                    icon: "sparkles",
                     title: "Tillegg",
                     value: extrasSummary
                 )
                 valueCard(
                     dest: .spotCalendar(spotIndex),
-                    icon: "calendar",
                     title: "Kalender",
                     value: calendarSummary
                 )
                 if form.category == .parking {
                     valueCard(
                         dest: .spotDiscounts(spotIndex),
-                        icon: "calendar.badge.clock",
                         title: "Lengre opphold",
                         value: discountsSummary
                     )
@@ -1098,47 +1292,36 @@ struct SpotMiniHub: View {
             )
     }
 
-    private func valueCardHeader(icon: String, title: String, value: String, isExpanded: Bool) -> some View {
-        HStack(spacing: 14) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color.primary50)
-                    .frame(width: 40, height: 40)
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(.primary600)
-            }
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(.system(size: 13))
-                    .foregroundStyle(.neutral500)
-                Text(value)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-            Spacer(minLength: 8)
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.neutral400)
-                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+    /// Airbnb-stil kort-header (TU-99 redux build 232). Ingen ikoner, ingen
+    /// chevron, stor verdi over liten feltnavn-subtittel.
+    private func valueCardHeader(title: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 16))
+                .foregroundStyle(.neutral500)
+            Text(value)
+                .font(.system(size: 22, weight: .semibold))
+                .foregroundStyle(.neutral900)
+                .lineLimit(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 20)
+        .padding(.vertical, 18)
         .contentShape(Rectangle())
     }
 
-    private func valueCard(dest: EditDestination, icon: String, title: String, value: String) -> some View {
+    private func valueCard(dest: EditDestination, title: String, value: String) -> some View {
         NavigationLink(value: dest) {
             valueCardChrome(isExpanded: false) {
-                valueCardHeader(icon: icon, title: title, value: value, isExpanded: false)
+                valueCardHeader(title: title, value: value)
             }
         }
         .buttonStyle(.plain)
     }
 
     private func expandableValueCard<Content: View>(
-        icon: String,
         title: String,
         value: String,
         fieldKey: String,
@@ -1152,7 +1335,7 @@ struct SpotMiniHub: View {
                         expandedField = isExpanded ? nil : fieldKey
                     }
                 } label: {
-                    valueCardHeader(icon: icon, title: title, value: value, isExpanded: isExpanded)
+                    valueCardHeader(title: title, value: value)
                 }
                 .buttonStyle(.plain)
 
@@ -1161,8 +1344,8 @@ struct SpotMiniHub: View {
                         content()
                         expandedFooter
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 16)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 18)
                     .transition(.opacity)
                 }
             }

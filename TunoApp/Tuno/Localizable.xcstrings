@@ -153,6 +153,9 @@
         }
       }
     },
+    "%@ av 60 tegn" : {
+
+    },
     "%@ blokkert" : {
       "localizations" : {
         "de" : {
@@ -1810,6 +1813,9 @@
     "Egendefinerte tillegg" : {
 
     },
+    "Eget tillegg" : {
+
+    },
     "Eksakt adresse deles etter bekreftet booking." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3438,6 +3444,9 @@
         }
       }
     },
+    "Innsjekk-melding" : {
+
+    },
     "Innstillinger" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -3898,6 +3907,9 @@
           }
         }
       }
+    },
+    "kr/%@" : {
+
     },
     "kr/natt" : {
       "extractionState" : "stale",
@@ -4482,6 +4494,9 @@
         }
       }
     },
+    "Maks antall %@" : {
+
+    },
     "Maks kjøretøy-lengde" : {
 
     },
@@ -4660,6 +4675,9 @@
           }
         }
       }
+    },
+    "Min antall %@" : {
+
     },
     "Min posisjon" : {
       "extractionState" : "manual",
@@ -7177,6 +7195,9 @@
           }
         }
       }
+    },
+    "Utsjekk-melding" : {
+
     },
     "Utviklet i Norge" : {
 

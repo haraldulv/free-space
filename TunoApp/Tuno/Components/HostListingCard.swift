@@ -12,10 +12,12 @@ struct HostListingCard: View {
     /// Inntekt host har tjent på denne annonsen sist måned. Skjuler banneren
     /// når nil eller 0.
     let monthlyEarnings: Int?
-    /// Tap på status-pillen (Listet/Pauset) — parent åpner confirmation
-    /// dialog og toggler `is_active`. QR-koder og slett-annonse ligger nå
-    /// inne i Rediger annonse-skjermen under tannhjul-menyen (TU-100).
-    var onTogglePauseRequested: (() -> Void)? = nil
+    /// Tap på status-pillen åpner en kompakt SwiftUI Menu rett ved pillen
+    /// med ett valg — "Pause annonse" eller "Aktiver annonse". Tap menyvalg
+    /// trigger denne callbacken som toggler `is_active`. QR-koder og slett-
+    /// annonse ligger inne i Rediger annonse-skjermen under tannhjul-
+    /// menyen (TU-100).
+    var onPauseToggle: (() -> Void)? = nil
 
     private var isActive: Bool { listing.isActive == true }
 
@@ -73,13 +75,28 @@ struct HostListingCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .opacity(isActive ? 1 : 0.55)
             .overlay(alignment: .topLeading) {
-                statusPill.padding(12)
+                statusPillMenu.padding(12)
             }
     }
 
-    /// Tap-bar status-pille. Tap = parent åpner confirmation for å toggle
-    /// pause/aktiver. Tre-prikker-menyen ble fjernet i TU-100; slett og
-    /// QR-koder ligger nå i Rediger annonse-skjermen.
+    /// Status-pille wrappet i SwiftUI `Menu` så tap åpner et lokalt
+    /// popover-menyvalg rett ved pillen (ikke en sentrert dialog). Harald
+    /// rejected `.confirmationDialog` i build 231 fordi den la seg midt på
+    /// skjerm med pil-anchor. `Menu` ankerer direkte til labelen.
+    private var statusPillMenu: some View {
+        Menu {
+            Button(
+                isActive ? "Pause annonse" : "Aktiver annonse",
+                role: isActive ? .destructive : nil
+            ) {
+                onPauseToggle?()
+            }
+        } label: {
+            statusPill
+        }
+        .buttonStyle(.plain)
+    }
+
     private var statusPill: some View {
         HStack(spacing: 6) {
             Circle()
@@ -94,7 +111,6 @@ struct HostListingCard: View {
         .background(.ultraThinMaterial)
         .clipShape(Capsule())
         .contentShape(Capsule())
-        .onTapGesture { onTogglePauseRequested?() }
     }
 
     // MARK: - Metadata under bildet

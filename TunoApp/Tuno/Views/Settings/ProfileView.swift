@@ -752,9 +752,6 @@ struct MyListingsView: View {
     /// etter listings, så kortene viser inntekt-banner når data er klart.
     @State private var monthlyEarnings: [String: Int] = [:]
     @State private var isLoading = true
-    /// Annonse som er valgt for pause/aktivering — driver confirmationDialog (TU-100).
-    /// QR-koder og slett-annonse er flyttet inn til Rediger annonse-skjermen.
-    @State private var pauseTarget: Listing?
     /// Pagineringstilstand for "Mine annonser". Vi laster i batches av 20.
     @State private var hasMoreListings: Bool = true
     @State private var isLoadingMoreListings: Bool = false
@@ -867,27 +864,6 @@ struct MyListingsView: View {
         }, message: {
             Text("Du må fortsette eller forkaste det aktive utkastet før du kan starte en ny annonse.")
         })
-        .confirmationDialog(
-            pauseDialogTitle,
-            isPresented: .init(
-                get: { pauseTarget != nil },
-                set: { if !$0 { pauseTarget = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            if let target = pauseTarget {
-                let isCurrentlyActive = target.isActive ?? true
-                Button(
-                    isCurrentlyActive ? "Pause" : "Aktiver",
-                    role: isCurrentlyActive ? .destructive : nil
-                ) {
-                    Task { await toggleListingActive(target) }
-                }
-            }
-            Button("Avbryt", role: .cancel) { pauseTarget = nil }
-        } message: {
-            Text(pauseDialogMessage)
-        }
         .task {
             loadDraft()
             await loadListings()
@@ -946,7 +922,7 @@ struct MyListingsView: View {
                             HostListingCard(
                                 listing: listing,
                                 monthlyEarnings: monthlyEarnings[listing.id],
-                                onTogglePauseRequested: { pauseTarget = listing }
+                                onPauseToggle: { Task { await toggleListingActive(listing) } }
                             )
                         }
                         .buttonStyle(.plain)
@@ -1108,12 +1084,12 @@ struct MyListingsView: View {
         }
     }
 
-    /// Pause/aktiver-toggle for annonsen. Slett-annonse er flyttet til
-    /// EditListingHub-tannhjul (TU-100). Listing er immutable struct, så
-    /// vi re-loader fra DB etter server-respons.
+    /// Pause/aktiver-toggle for annonsen. Kalles direkte fra HostListingCard
+    /// sin Menu — ingen confirmation dialog mellomliggende (TU-100 redux i
+    /// build 232). Listing er immutable struct, så vi re-loader fra DB
+    /// etter server-respons.
     private func toggleListingActive(_ listing: Listing) async {
         let newValue = !(listing.isActive ?? true)
-        pauseTarget = nil
         do {
             try await supabase
                 .from("listings")
@@ -1124,18 +1100,6 @@ struct MyListingsView: View {
             print("Failed to toggle listing active: \(error)")
         }
         await loadListings()
-    }
-
-    private var pauseDialogTitle: String {
-        guard let target = pauseTarget else { return "" }
-        return (target.isActive ?? true) ? "Pause annonse?" : "Aktivere annonse?"
-    }
-
-    private var pauseDialogMessage: String {
-        guard let target = pauseTarget else { return "" }
-        return (target.isActive ?? true)
-            ? "Pausede annonser vises ikke i søk. Du kan aktivere igjen når som helst."
-            : "Annonsen blir synlig i søk igjen."
     }
 }
 
