@@ -520,12 +520,11 @@ struct WhereSheet: View {
     // MARK: - When (camping)
 
     /// Inline date picker — embedded direkte i whenCard (ingen separat sheet).
-    /// Periode-toggle (Dag/Uke/Måned/År) på toppen som auto-velger range i kalenderen,
-    /// så Innsjekk/Utsjekk-tabs og graphical kalender-grid under for fin-justering.
+    /// Innsjekk/Utsjekk-tabs og graphical kalender-grid for fin-justering.
+    /// Korttid/Langtid + camping-presets (1 dag/uke/mnd/år) fjernet pre-launch
+    /// per Kim-test-økt — brukere velger datoer manuelt.
     private var inlineDatePicker: some View {
         VStack(spacing: 12) {
-            rentalPeriodToggle
-
             HStack(spacing: 8) {
                 dateTab(label: "Innsjekk", date: checkIn, isActive: editingCheckIn) {
                     editingCheckIn = true
@@ -561,123 +560,6 @@ struct WhereSheet: View {
                 .foregroundStyle(.neutral600)
             }
         }
-    }
-
-    /// Periode-velger — auto-strekker checkOut.
-    /// Parkering: Korttid (1 dag) / Langtid (30 dager) + sub-rad med
-    /// måneds-presets når Langtid er aktiv. Camping: 1 dag / 1 uke /
-    /// 1 måned / 1 år.
-    private var rentalPeriodToggle: some View {
-        VStack(spacing: 8) {
-            HStack(spacing: 8) {
-                if category == .parking {
-                    periodChip(label: "Korttid", icon: "clock", days: 1)
-                    periodChip(label: "Langtid", icon: "calendar.badge.clock", days: 30)
-                } else {
-                    periodChip(label: "1 dag", icon: "sun.max", days: 1)
-                    periodChip(label: "1 uke", icon: "calendar.badge.clock", days: 7)
-                    periodChip(label: "1 måned", icon: "calendar", days: 30)
-                    periodChip(label: "1 år", icon: "infinity", days: 365)
-                }
-            }
-            if category == .parking && isLongTermActive {
-                HStack(spacing: 8) {
-                    longTermChip(label: "1 mnd", days: 30)
-                    longTermChip(label: "3 mnd", days: 90)
-                    longTermChip(label: "6 mnd", days: 180)
-                    longTermChip(label: "1 år", days: 365)
-                }
-                .transition(.opacity.combined(with: .move(edge: .top)))
-            }
-        }
-        .animation(.spring(response: 0.32, dampingFraction: 0.82), value: isLongTermActive)
-    }
-
-    /// Sant når valgt dato-range strekker over minst 7 dager — da viser
-    /// vi sub-raden med måneds-presets under Langtid-chipen.
-    private var isLongTermActive: Bool {
-        guard let inDate = checkIn, let outDate = checkOut else { return false }
-        let span = Calendar(identifier: .gregorian)
-            .dateComponents([.day], from: inDate, to: outDate).day ?? 0
-        return span >= 7
-    }
-
-    @ViewBuilder
-    private func longTermChip(label: String, days: Int) -> some View {
-        let isActive = isPeriodActive(days: days)
-        Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
-                applyPeriodPreset(days: days)
-            }
-        } label: {
-            Text(label)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isActive ? Color.white : Color.neutral700)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
-                .background(isActive ? Color.neutral800 : Color.neutral100)
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func periodChip(label: String, icon: String, days: Int) -> some View {
-        let isActive = isPeriodActive(days: days)
-        Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.78)) {
-                applyPeriodPreset(days: days)
-            }
-        } label: {
-            VStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: 16, weight: .medium))
-                    .frame(width: 24, height: 24)
-                    .foregroundStyle(isActive ? Color.primary700 : Color.neutral600)
-                Text(label)
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(isActive ? Color.primary700 : Color.neutral700)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
-            .background(isActive ? Color.primary50 : Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isActive ? Color.primary600 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func isPeriodActive(days: Int) -> Bool {
-        guard let inDate = checkIn, let outDate = checkOut else {
-            // "1 dag" er aktiv hvis ingen datoer er satt (default-tilstand).
-            return days == 1 && checkIn == nil && checkOut == nil
-        }
-        let cal = Calendar(identifier: .gregorian)
-        let span = cal.dateComponents([.day], from: inDate, to: outDate).day ?? 0
-        // Vi teller antall dager inklusivt begge endepunkter: 7-7 = 1 dag,
-        // 7-13 = 7 dager (1 uke), 7-8 = 2 dager. Så span+1 = total dager.
-        return span == days - 1
-    }
-
-    private func applyPeriodPreset(days: Int) {
-        let cal = Calendar(identifier: .gregorian)
-        let today = cal.startOfDay(for: Date())
-        // Anchor = eksisterende checkIn, men aldri i fortiden — klampes til
-        // today så preset-knappene aldri stretcher en stale dato.
-        let storedAnchor = checkIn.map(cal.startOfDay(for:))
-        let anchor = (storedAnchor.map { max($0, today) }) ?? today
-        checkIn = anchor
-        // 1 dag = samme dag (7. mai → 7. mai). 1 uke = X → X+6 (begge dager teller, totalt 7).
-        // 1 måned = X → X+29 (30 dager). 1 år = X → X+364 (365 dager).
-        if days == 1 {
-            checkOut = anchor
-        } else {
-            checkOut = cal.date(byAdding: .day, value: days - 1, to: anchor) ?? anchor
-        }
-        editingCheckIn = false
     }
 
     /// "Jeg er fleksibel"-chips. Lar brukeren utvide søket med ±N dager
@@ -749,7 +631,8 @@ struct WhereSheet: View {
     }
 
     // MARK: - Opening hours (parkering only)
-
+    // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+    /*
     private var openingHoursSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("Tilgjengelighet")
@@ -789,6 +672,7 @@ struct WhereSheet: View {
         }
         .buttonStyle(.plain)
     }
+    */
 
     // MARK: - Booking preference
 
