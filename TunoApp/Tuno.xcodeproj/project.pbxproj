@@ -10,7 +10,6 @@
 		03A5A87D02A32009386B95E8 /* FiltersSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30327AE07ADF79432C8F3B35 /* FiltersSheet.swift */; };
 		062B9E29C1596367A0EFED27 /* PriceHistogram.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA06602EF8129BE55A4E5CEC /* PriceHistogram.swift */; };
 		0A8748402C49449A4F0B8CE4 /* ListingFormModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EB67EEF4A6A12892A1B1697E /* ListingFormModel.swift */; };
-		0B19852C5D3D617305E11C4A /* WizardSeasonalCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AE101C0F1F72214EE38A5DE /* WizardSeasonalCalendarView.swift */; };
 		0B771074E8ABC573EB77837C /* StripeApplePay in Frameworks */ = {isa = PBXBuildFile; productRef = EFD6004772316F38FF89D02C /* StripeApplePay */; };
 		0DB672FC78BC310C5EDA3B89 /* SearchDateRangePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F92A4E3ED44C52BBEC76E34D /* SearchDateRangePicker.swift */; };
 		0FD3445EB4FD7DC8AE465DC3 /* SpotBlockedDatesSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 633F2046F5DC659D1D443A25 /* SpotBlockedDatesSection.swift */; };
@@ -239,7 +238,6 @@
 		91BD5B56FDD4700D7C849E70 /* WizardScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WizardScreen.swift; sourceTree = "<group>"; };
 		92E48039F546D58654A8CF5E /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabBar.swift; sourceTree = "<group>"; };
 		99D6E2878D5F6CA4C992D5FB /* RecentSearchesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentSearchesStore.swift; sourceTree = "<group>"; };
-		9AE101C0F1F72214EE38A5DE /* WizardSeasonalCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WizardSeasonalCalendarView.swift; sourceTree = "<group>"; };
 		9BCA07B748FCC5E1497CD115 /* progress-pin.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "progress-pin.json"; sourceTree = "<group>"; };
 		9DE80E0F57ED28043A953489 /* WhereSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhereSheet.swift; sourceTree = "<group>"; };
 		9F37F3CD542B4B76200AE7AE /* ProfileStatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStatsStore.swift; sourceTree = "<group>"; };
@@ -439,7 +437,6 @@
 				411181AFF3AC2C69BF0D3CB4 /* WizardPricingCalendarView.swift */,
 				5467FA534273021B9B949773 /* WizardProgressBar.swift */,
 				91BD5B56FDD4700D7C849E70 /* WizardScreen.swift */,
-				9AE101C0F1F72214EE38A5DE /* WizardSeasonalCalendarView.swift */,
 				CE37F2B39F267A7C3F849A4C /* WizardTooltip.swift */,
 			);
 			path = Components;
@@ -888,7 +885,6 @@
 				FFC836D6FEC0D9E8B9346EA5 /* WizardPricingCalendarView.swift in Sources */,
 				E3BDAE469F940943E2DB8E2E /* WizardProgressBar.swift in Sources */,
 				66712985E67581E25E1DBAAF /* WizardScreen.swift in Sources */,
-				0B19852C5D3D617305E11C4A /* WizardSeasonalCalendarView.swift in Sources */,
 				77CC3D34760D44AE1F1F1CB5 /* WizardTooltip.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -930,7 +926,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 224;
+				CURRENT_PROJECT_VERSION = 225;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1048,7 +1044,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 224;
+				CURRENT_PROJECT_VERSION = 225;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1114,7 +1110,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 224;
+				CURRENT_PROJECT_VERSION = 225;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1173,7 +1169,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 224;
+				CURRENT_PROJECT_VERSION = 225;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;

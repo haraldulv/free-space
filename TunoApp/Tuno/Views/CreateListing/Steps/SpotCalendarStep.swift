@@ -7,7 +7,7 @@ import SwiftUI
 ///   - "Sett opp kalender" → går til `.editing`.
 ///
 /// **`.editing`** — fullskjerm (form.fullscreenStep = true). Bruker den
-/// eksisterende `WizardPricingCalendarView` / `WizardSeasonalCalendarView`.
+/// eksisterende `WizardPricingCalendarView` (felles for parkering + camping).
 /// Egen top-bar med X (= tilbake til ask) og Ferdig (= form.goNext()).
 struct SpotCalendarStep: View {
     @ObservedObject var form: ListingFormModel
@@ -142,11 +142,10 @@ struct SpotCalendarStep: View {
     @ViewBuilder
     private var calendarBody: some View {
         if let id = currentSpotId {
-            if form.category == .camping {
-                WizardSeasonalCalendarView(form: form, spotId: id)
-            } else {
-                WizardPricingCalendarView(form: form, spotId: id)
-            }
+            // Samme kalender for parkering og camping per Harald 2026-05-19.
+            // Forskjellene mellom kategoriene (innsjekk/utsjekk-tid, extras)
+            // håndteres utenfor kalenderen.
+            WizardPricingCalendarView(form: form, spotId: id)
         } else {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

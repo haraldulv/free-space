@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// Post-publisering kalender (Profil → Kalender). Bruker den samme
-/// `WizardPricingCalendarView` / `WizardSeasonalCalendarView` som wizarden,
+/// `WizardPricingCalendarView` som wizarden,
 /// hooked til den nye datamodellen (per-plass blockedDates +
 /// datePriceOverrides — ingen bånd).
 ///
@@ -96,11 +96,8 @@ struct ProfileCalendarView: View {
     @ViewBuilder
     private var calendarBody: some View {
         if let id = canonicalSpotId {
-            if listing.category == .camping {
-                WizardSeasonalCalendarView(form: form, spotId: id)
-            } else {
-                WizardPricingCalendarView(form: form, spotId: id)
-            }
+            // Samme kalender for parkering og camping per Harald 2026-05-19.
+            WizardPricingCalendarView(form: form, spotId: id)
         } else {
             emptyState
         }

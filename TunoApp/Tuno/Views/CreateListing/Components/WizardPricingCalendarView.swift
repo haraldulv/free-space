@@ -1163,7 +1163,7 @@ struct WizardPricingCalendarView: View {
 
     private var priceCard: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text("Pris per time")
+            Text("Pris per døgn")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white)
 
