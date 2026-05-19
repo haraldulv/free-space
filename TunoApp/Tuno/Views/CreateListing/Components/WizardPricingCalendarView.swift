@@ -13,14 +13,47 @@ enum CalendarMode: Equatable {
     case bandCreate
 }
 
+/// Aggregerer cell-frames fra alle dayCells slik at DragGesture kan slå opp
+/// hvilken dato finger-koordinatet treffer i `named("calendarGrid")`-rommet.
+/// Merge bevarer nyeste verdi pr iso-key (under-scrolling kan re-rapportere).
+struct CellFramesPreference: PreferenceKey {
+    // Swift 6 strict-concurrency: PreferenceKey-protokollen krever `var` på
+    // defaultValue, men kompilatoren tolker det som global mutable state.
+    // nonisolated(unsafe) er standardpatternet for å si "vi vet hva vi gjør".
+    nonisolated(unsafe) static var defaultValue: [String: CGRect] = [:]
+    static func reduce(value: inout [String: CGRect], nextValue: () -> [String: CGRect]) {
+        value.merge(nextValue()) { $1 }
+    }
+}
+
 struct WizardPricingCalendarView: View {
     @ObservedObject var form: ListingFormModel
     let spotId: String
 
     @State private var mode: CalendarMode = .idle
     @State private var selectedDates: Set<String> = []
-    @State private var rangeAnchor: String?
     @State private var hasScrolledToCurrent = false
+
+    // MARK: - Drag-select state (iOS 18)
+    /// True mens fingeren er nede og DragGesture er aktiv. Brukes til å låse
+    /// ScrollView så drag-bevegelse ikke trigger scroll.
+    @State private var isDragging: Bool = false
+    /// Bestemmer toggle-retning: hvis drag startet på en valgt celle, fjerner
+    /// vi datoer; ellers legger vi til. Mimicker Apple sin Reminders-app.
+    @State private var dragStartedOnSelected: Bool = false
+    /// Datoer drag-en har besøkt i denne gestus-sesjonen — brukes for å
+    /// unngå dobbel-toggling samme celle.
+    @State private var dragVisited: Set<String> = []
+    /// Cell-frame lookup i navngitt coordinate space "calendarGrid".
+    /// Aggregert via PreferenceKey fra hver dayCell.
+    @State private var cellFrames: [String: CGRect] = [:]
+
+    // MARK: - Panel-minimer state
+    /// True når bunn-panelet er kollapset til kun pille + reset + maks-knapp.
+    /// Auto-trigges på scroll ned, manuelt toggles via X / chevron.up.
+    @State private var panelMinimized: Bool = false
+    /// Seneste scroll-offset for delta-beregning i onScrollGeometryChange.
+    @State private var lastScrollY: CGFloat = 0
     @State private var priceEditValue: Int = 0
     @FocusState private var priceEditFocused: Bool
 
@@ -256,6 +289,38 @@ struct WizardPricingCalendarView: View {
                     .padding(.top, 8)
                 }
                 .background(Color(.systemGroupedBackground))
+                .coordinateSpace(name: "calendarGrid")
+                // Aggregere cell-frames fra alle dayCells i drag-mappingen.
+                .onPreferenceChange(CellFramesPreference.self) { frames in
+                    cellFrames = frames
+                }
+                // Drag-select: hold + slide trigger range-mark. simultaneousGesture
+                // lar ScrollView fortsatt scrolle vertikalt når brukeren ikke
+                // beveger fingeren fort nok til å trigge dragen. Når dragen
+                // begynner låser vi scroll via `.scrollDisabled(isDragging)`.
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 12, coordinateSpace: .named("calendarGrid"))
+                        .onChanged { value in
+                            handleDragChanged(at: value.location, startLocation: value.startLocation)
+                        }
+                        .onEnded { _ in
+                            commitDrag()
+                        }
+                )
+                .scrollDisabled(isDragging)
+                // Auto-minimer panel ved scroll ned. Sjekker delta >30pt slik
+                // at små bevegelser (overscroll-bounce) ikke trigger.
+                .onScrollGeometryChange(for: CGFloat.self) { geo in
+                    geo.contentOffset.y
+                } action: { _, newY in
+                    let delta = newY - lastScrollY
+                    lastScrollY = newY
+                    if delta > 30, !panelMinimized, !selectedDates.isEmpty {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                            panelMinimized = true
+                        }
+                    }
+                }
                 .onAppear {
                     guard !hasScrolledToCurrent else { return }
                     if let target = currentWeekRowId {
@@ -407,7 +472,9 @@ struct WizardPricingCalendarView: View {
         let startOfToday = Self.osloCalendar.startOfDay(for: Date())
         let isPast = Self.osloCalendar.startOfDay(for: date) < startOfToday
         let isSelected = selectedDates.contains(iso)
-        let isAnchor = rangeAnchor == iso
+        // isAnchor fjernet — single-tap = toggle, ingen anker-konsept lenger.
+        // Behold lokalvariabelen som `false` for å minimere downstream-endringer.
+        let isAnchor = false
         let isBlocked = blockedDates.contains(iso)
         // hasOverride er kun true når overstyringen FAKTISK avviker fra
         // base — defensiv mot stale data der dict'en kan ha verdier lik base.
@@ -477,6 +544,17 @@ struct WizardPricingCalendarView: View {
         }
         .buttonStyle(.plain)
         .disabled(isPast)
+        .background(
+            // Rapporter cellens frame i navngitt coordinate space slik at
+            // DragGesture kan mappe finger-koordinat → dato. PreferenceKey
+            // aggregeres i ScrollView'en (onPreferenceChange).
+            GeometryReader { geo in
+                Color.clear.preference(
+                    key: CellFramesPreference.self,
+                    value: [iso: geo.frame(in: .named("calendarGrid"))]
+                )
+            }
+        )
     }
 
     /// Pris-linje med fast høyde. Tom plassholder hvis pris ikke skal vises,
@@ -678,6 +756,8 @@ struct WizardPricingCalendarView: View {
             HStack(spacing: 10) {
                 dateRangePill
                 Spacer()
+                // Pil = nullstill seleksjon (close action bar helt).
+                // Vises bare når noe er valgt.
                 if !selectedDates.isEmpty {
                     Button {
                         closeActionBar()
@@ -691,52 +771,62 @@ struct WizardPricingCalendarView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Tøm valg")
                 }
+                // X = minimer panel (skjul kortene, behold pill + pil).
+                // Når minimert: ikonet byttes til chevron.up = maksimer-knapp.
                 Button {
-                    closeActionBar()
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
+                        panelMinimized.toggle()
+                    }
                 } label: {
-                    Image(systemName: "xmark")
+                    Image(systemName: panelMinimized ? "chevron.up" : "xmark")
                         .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.white)
                         .frame(width: 38, height: 38)
                         .background(glassCircleBackground)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("Lukk")
+                .accessibilityLabel(panelMinimized ? "Maksimer panel" : "Minimer panel")
             }
             .padding(.horizontal, 16)
 
-            // Innhold bytter basert på sub-modus.
-            Group {
-                switch actionBarSubMode {
-                case .availability:
-                    HStack(alignment: .top, spacing: 10) {
-                        availabilityCard
-                        priceCard
+            // Innhold bytter basert på sub-modus. Skjul ved minimer.
+            if !panelMinimized {
+                Group {
+                    switch actionBarSubMode {
+                    case .availability:
+                        HStack(alignment: .top, spacing: 10) {
+                            availabilityCard
+                            priceCard
+                        }
+                    case .openingHours:
+                        openingHoursInlineEditor
                     }
-                case .openingHours:
-                    openingHoursInlineEditor
                 }
-            }
-            .padding(.horizontal, 12)
+                .padding(.horizontal, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
 
-            // Bunn-rad bytter også basert på modus.
-            // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver toggle-knappen post-launch
-            Group {
-                switch actionBarSubMode {
-                case .availability:
-                    EmptyView()
-                    // if effectiveOpeningHours != nil {
-                    //     openingHoursToggleButton
-                    // }
-                case .openingHours:
-                    backToAvailabilityButton
+                // Bunn-rad bytter også basert på modus.
+                // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver toggle-knappen post-launch
+                Group {
+                    switch actionBarSubMode {
+                    case .availability:
+                        EmptyView()
+                        // if effectiveOpeningHours != nil {
+                        //     openingHoursToggleButton
+                        // }
+                    case .openingHours:
+                        backToAvailabilityButton
+                    }
                 }
+                .padding(.horizontal, 12)
+                .padding(.bottom, 12)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .padding(.horizontal, 12)
-            .padding(.bottom, 12)
         }
         .padding(.top, 10)
+        .padding(.bottom, panelMinimized ? 12 : 0)
         .animation(.easeInOut(duration: 0.22), value: actionBarSubMode)
+        .animation(.spring(response: 0.32, dampingFraction: 0.85), value: panelMinimized)
     }
 
     /// Bunn-rad i .availability-modus: bytter til åpningstid-editor.
@@ -980,7 +1070,6 @@ struct WizardPricingCalendarView: View {
             commitPriceEdit()
         }
         selectedDates.removeAll()
-        rangeAnchor = nil
         draft = nil
         mode = .idle
         actionBarSubMode = .availability
@@ -1211,65 +1300,77 @@ struct WizardPricingCalendarView: View {
         return ResolvedPrice(price: bandPrice, scope: nil)
     }
 
-    // MARK: - Tap-handling (multi-select tap-anker)
+    // MARK: - Tap-handling (single-tap toggle)
+    //
+    // Ny modell per Kim/Harald-feedback: tap legger til ELLER fjerner en
+    // dato — aldri range-fyll. Range gjøres via DragGesture (under).
 
     private func handleDayTap(iso: String, isPast: Bool) {
         guard !isPast else { return }
-        // Når i band-editor-modus: ignorer dag-tap (cellen er bakteppe).
         if case .bandEdit = mode { return }
         if case .bandCreate = mode { return }
 
-        // 1. Aktiv anker (single-date valgt nettopp) → fullfør range
-        if let anchor = rangeAnchor {
-            if anchor == iso {
-                selectedDates.remove(iso)
-                rangeAnchor = nil
-                if selectedDates.isEmpty { mode = .idle }
-                return
-            }
-            selectedDates = Set(isoRange(from: anchor, to: iso))
-            rangeAnchor = nil
-            mode = .dateOverride
-            return
-        }
-
-        // 2. Eksisterende range (≥ 2 dager, ingen anker) → "drag" sluttdatoen.
-        //    Tap utenfor range utvider den nærmeste enden; tap innenfor range
-        //    krymper den nærmeste enden. Lar brukeren justere seleksjonen uten
-        //    å starte på nytt — "Tøm valg" i action-baren brukes for å nullstille.
-        if selectedDates.count >= 2 {
-            let sorted = selectedDates.sorted()
-            let lo = sorted.first!
-            let hi = sorted.last!
-            if iso < lo {
-                selectedDates = Set(isoRange(from: iso, to: hi))
-            } else if iso > hi {
-                selectedDates = Set(isoRange(from: lo, to: iso))
-            } else {
-                // Innenfor range — krymp nærmeste ende (lexicographisk midt-deling).
-                let mid = sorted[sorted.count / 2]
-                if iso <= mid {
-                    selectedDates = Set(isoRange(from: iso, to: hi))
-                } else {
-                    selectedDates = Set(isoRange(from: lo, to: iso))
-                }
-            }
-            mode = .dateOverride
-            return
-        }
-
-        // 3. Single-date valgt → toggle
         if selectedDates.contains(iso) {
             selectedDates.remove(iso)
-            if selectedDates.isEmpty {
-                rangeAnchor = nil
-                mode = .idle
-            }
         } else {
             selectedDates.insert(iso)
-            rangeAnchor = iso
-            mode = .dateOverride
         }
+        mode = selectedDates.isEmpty ? .idle : .dateOverride
+        if selectedDates.isEmpty {
+            panelMinimized = false  // reset minimer-tilstand når seleksjonen tømmes
+        }
+    }
+
+    // MARK: - Drag-select (iOS 18 simultaneousGesture)
+
+    /// Kalles fra `.simultaneousGesture(DragGesture...)` på ScrollView.
+    /// Mapper finger-koordinat til celle via `cellFrames` og legger til/fjerner
+    /// datoen i seleksjonen avhengig av drag-start-cellens initial-tilstand.
+    private func handleDragChanged(at location: CGPoint, startLocation: CGPoint) {
+        if !isDragging {
+            // Drag-en starter nå. Bestem toggle-retning ut fra første celle.
+            guard let startIso = cellAt(point: startLocation) else { return }
+            isDragging = true
+            dragStartedOnSelected = selectedDates.contains(startIso)
+            dragVisited = [startIso]
+            applyDragVisit(startIso)
+            return
+        }
+        if let iso = cellAt(point: location), !dragVisited.contains(iso) {
+            dragVisited.insert(iso)
+            applyDragVisit(iso)
+        }
+    }
+
+    private func applyDragVisit(_ iso: String) {
+        if dragStartedOnSelected {
+            selectedDates.remove(iso)
+        } else {
+            selectedDates.insert(iso)
+        }
+    }
+
+    private func commitDrag() {
+        isDragging = false
+        dragVisited.removeAll()
+        mode = selectedDates.isEmpty ? .idle : .dateOverride
+        if selectedDates.isEmpty {
+            panelMinimized = false
+        }
+    }
+
+    /// Slå opp hvilken dag-celle som inneholder gitt punkt i "calendarGrid"-
+    /// coordinate space. Filtrerer bort past-celler så drag hopper over fortiden.
+    private func cellAt(point: CGPoint) -> String? {
+        for (iso, frame) in cellFrames where frame.contains(point) {
+            if let date = Self.isoFormatter.date(from: iso),
+               !Calendar.current.isDate(date, inSameDayAs: Date()),
+               date < Calendar.current.startOfDay(for: Date()) {
+                return nil
+            }
+            return iso
+        }
+        return nil
     }
 
     private func isoRange(from start: String, to end: String) -> [String] {
@@ -1319,7 +1420,6 @@ struct WizardPricingCalendarView: View {
     /// handling i kalenderen (blokker/åpne dager, bekreft pris-override osv).
     private func clearSelectionState() {
         selectedDates.removeAll()
-        rangeAnchor = nil
         mode = .idle
         actionBarSubMode = .availability
     }
@@ -1371,7 +1471,6 @@ struct WizardPricingCalendarView: View {
         draftPriceText = "\(draftPriceValue)"
         // Rydd date-override-state for å unngå at den vises bak editoren.
         selectedDates.removeAll()
-        rangeAnchor = nil
         mode = .bandEdit(band.id)
     }
 
@@ -1390,7 +1489,6 @@ struct WizardPricingCalendarView: View {
         draftPriceValue = basePerHour
         draftPriceText = "\(draftPriceValue)"
         selectedDates.removeAll()
-        rangeAnchor = nil
         mode = .bandCreate
     }
 
