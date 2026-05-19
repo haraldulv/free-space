@@ -12,10 +12,10 @@ struct HostListingCard: View {
     /// Inntekt host har tjent på denne annonsen sist måned. Skjuler banneren
     /// når nil eller 0.
     let monthlyEarnings: Int?
-    /// Vis QR-kode for denne annonsen.
-    var onShowQR: (() -> Void)? = nil
-    /// Slett denne annonsen.
-    var onDelete: (() -> Void)? = nil
+    /// Tap på status-pillen (Listet/Pauset) — parent åpner confirmation
+    /// dialog og toggler `is_active`. QR-koder og slett-annonse ligger nå
+    /// inne i Rediger annonse-skjermen under tannhjul-menyen (TU-100).
+    var onTogglePauseRequested: (() -> Void)? = nil
 
     private var isActive: Bool { listing.isActive == true }
 
@@ -75,46 +75,17 @@ struct HostListingCard: View {
             .overlay(alignment: .topLeading) {
                 statusPill.padding(12)
             }
-            .overlay(alignment: .topTrailing) {
-                if onShowQR != nil || onDelete != nil {
-                    actionsMenu.padding(12)
-                }
-            }
     }
 
-    /// SwiftUI Menu — pop-up'er ved selve ...-knappen, ikke som stor sentrert dialog.
-    private var actionsMenu: some View {
-        Menu {
-            if let onShowQR {
-                Button {
-                    onShowQR()
-                } label: {
-                    Label("Vis QR-kode", systemImage: "qrcode")
-                }
-            }
-            if let onDelete {
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Label("Slett annonse", systemImage: "trash")
-                }
-            }
-        } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.neutral900)
-                .frame(width: 34, height: 34)
-                .background(.ultraThinMaterial)
-                .clipShape(Circle())
-        }
-    }
-
+    /// Tap-bar status-pille. Tap = parent åpner confirmation for å toggle
+    /// pause/aktiver. Tre-prikker-menyen ble fjernet i TU-100; slett og
+    /// QR-koder ligger nå i Rediger annonse-skjermen.
     private var statusPill: some View {
         HStack(spacing: 6) {
             Circle()
                 .fill(isActive ? Color.green : Color.neutral500)
                 .frame(width: 7, height: 7)
-            Text(isActive ? "Listet" : "Inaktiv")
+            Text(isActive ? "Listet" : "Pauset")
                 .font(.system(size: 12, weight: .semibold))
                 .foregroundStyle(.neutral900)
         }
@@ -122,6 +93,8 @@ struct HostListingCard: View {
         .padding(.vertical, 6)
         .background(.ultraThinMaterial)
         .clipShape(Capsule())
+        .contentShape(Capsule())
+        .onTapGesture { onTogglePauseRequested?() }
     }
 
     // MARK: - Metadata under bildet

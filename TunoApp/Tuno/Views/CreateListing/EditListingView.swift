@@ -7,8 +7,9 @@ import SwiftUI
 struct EditListingRootView: View {
     let listing: Listing
     var onSaved: ((Listing) -> Void)? = nil
+    var onDeleted: (() -> Void)? = nil
 
     var body: some View {
-        EditListingHub(listing: listing, onSaved: onSaved)
+        EditListingHub(listing: listing, onSaved: onSaved, onDeleted: onDeleted)
     }
 }

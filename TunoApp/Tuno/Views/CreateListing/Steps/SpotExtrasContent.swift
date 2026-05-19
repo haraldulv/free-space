@@ -52,35 +52,39 @@ struct SpotExtrasContent: View {
                 }
             }
 
-            // Legg til egendefinert
-            Button {
-                customName = ""
-                customPrice = ""
-                customPerNight = false
-                showAddCustom = true
-            } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 17))
-                    Text("Legg til eget tillegg")
-                        .font(.system(size: 15, weight: .semibold))
+            // Legg til egendefinert — inline form i stedet for sheet (TU-93).
+            // Speiler preset-rad-mønsteret: tap åpner formen inline rett
+            // under "+"-knappen, ingen modal/menu-diving.
+            if showAddCustom {
+                inlineAddCustomForm
+                    .transition(.opacity.combined(with: .move(edge: .top)))
+            } else {
+                Button {
+                    customName = ""
+                    customPrice = ""
+                    customPerNight = false
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showAddCustom = true
+                    }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 17))
+                        Text("Legg til eget tillegg")
+                            .font(.system(size: 15, weight: .semibold))
+                    }
+                    .foregroundStyle(.primary700)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Color.primary50)
+                    .clipShape(Capsule())
+                    .overlay(
+                        Capsule().strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                            .foregroundColor(.primary300)
+                    )
                 }
-                .foregroundStyle(.primary700)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(Color.primary50)
-                .clipShape(Capsule())
-                .overlay(
-                    Capsule().strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                        .foregroundColor(.primary300)
-                )
+                .padding(.top, 4)
             }
-            .padding(.top, 4)
-        }
-        .sheet(isPresented: $showAddCustom) {
-            customExtraSheet
-                .presentationDetents([.medium])
-                .presentationDragIndicator(.visible)
         }
     }
 
@@ -182,95 +186,131 @@ struct SpotExtrasContent: View {
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
     }
 
-    // MARK: - Custom add sheet
+    // MARK: - Inline add-custom-form (TU-93)
+    //
+    // Tidligere ble denne formen vist i en sheet (presentationDetents .medium).
+    // Harald + Kim ønsket mindre "menu-diving" — formen ekspanderer nå inline
+    // rett under "+ Legg til eget tillegg"-knappen, med samme felter og samme
+    // submit-logikk. Avbryt/Legg til ligger i en footer på selve kortet.
 
-    private var customExtraSheet: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
-                    // Navn
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Navn på tillegget")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.neutral900)
-                        TextField("F.eks. Strøm 16A", text: $customName)
-                            .textInputAutocapitalization(.sentences)
-                            .submitLabel(.done)
-                            .padding(14)
-                            .background(Color.neutral50)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.neutral200, lineWidth: 1)
-                            )
-                    }
+    private var canAddCustomExtra: Bool {
+        !customName.trimmingCharacters(in: .whitespaces).isEmpty
+        && (Int(customPrice) ?? 0) >= 1
+    }
 
-                    // Pris
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Pris")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.neutral900)
-                        HStack(spacing: 8) {
-                            TextField("F.eks. 50", text: $customPrice)
-                                .keyboardType(.numberPad)
-                                .padding(14)
-                                .background(Color.neutral50)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.neutral200, lineWidth: 1)
-                                )
-                            Text("kr")
-                                .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.neutral500)
-                        }
-                    }
+    @ViewBuilder
+    private var inlineAddCustomForm: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            // Header med tittel
+            Text("Eget tillegg")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.neutral900)
 
-                    // Beregning — segmented picker (matcher Pris-modell)
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Beregning")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.neutral900)
-                        HStack(spacing: 0) {
-                            extraModeSegment(
-                                label: "Engangspris",
-                                sublabel: "Betales én gang",
-                                isSelected: !customPerNight
-                            ) {
-                                customPerNight = false
-                            }
-                            extraModeSegment(
-                                label: "Per \(unitLabel)",
-                                sublabel: "× antall \(unitLabel)er",
-                                isSelected: customPerNight
-                            ) {
-                                customPerNight = true
-                            }
-                        }
-                        .background(Color.neutral100)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
-                }
-                .padding(20)
+            // Navn
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Navn på tillegget")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                TextField("F.eks. Strøm 16A", text: $customName)
+                    .textInputAutocapitalization(.sentences)
+                    .submitLabel(.done)
+                    .padding(14)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.neutral200, lineWidth: 1)
+                    )
             }
-            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
-            .navigationTitle("Eget tillegg")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Avbryt") { showAddCustom = false }
+
+            // Pris
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Pris")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                HStack(spacing: 8) {
+                    TextField("F.eks. 50", text: $customPrice)
+                        .keyboardType(.numberPad)
+                        .padding(14)
+                        .background(Color.neutral50)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 12)
+                                .stroke(Color.neutral200, lineWidth: 1)
+                        )
+                    Text("kr")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral500)
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Legg til") {
-                        addCustomExtra()
+            }
+
+            // Beregning
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Beregning")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                HStack(spacing: 0) {
+                    extraModeSegment(
+                        label: "Engangspris",
+                        sublabel: "Betales én gang",
+                        isSelected: !customPerNight
+                    ) {
+                        customPerNight = false
+                    }
+                    extraModeSegment(
+                        label: "Per \(unitLabel)",
+                        sublabel: "× antall \(unitLabel)er",
+                        isSelected: customPerNight
+                    ) {
+                        customPerNight = true
+                    }
+                }
+                .background(Color.neutral100)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+
+            // Footer-knapper
+            HStack(spacing: 10) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
                         showAddCustom = false
                     }
-                    .fontWeight(.semibold)
-                    .disabled(customName.trimmingCharacters(in: .whitespaces).isEmpty
-                              || (Int(customPrice) ?? 0) < 1)
+                } label: {
+                    Text("Avbryt")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral700)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.neutral100)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
+                .buttonStyle(.plain)
+
+                Button {
+                    addCustomExtra()
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        showAddCustom = false
+                    }
+                } label: {
+                    Text("Legg til")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(canAddCustomExtra ? Color.primary600 : Color.neutral300)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+                .disabled(!canAddCustomExtra)
             }
         }
+        .padding(16)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Color.primary300, lineWidth: 1)
+        )
     }
 
     @ViewBuilder

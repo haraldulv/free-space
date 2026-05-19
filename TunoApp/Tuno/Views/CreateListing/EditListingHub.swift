@@ -8,6 +8,7 @@ import SwiftUI
 struct EditListingHub: View {
     let listing: Listing
     var onSaved: ((Listing) -> Void)? = nil
+    var onDeleted: (() -> Void)? = nil
 
     @StateObject private var form = ListingFormModel()
     @StateObject private var placesService = PlacesService()
@@ -18,6 +19,16 @@ struct EditListingHub: View {
     @State private var saveError: String?
     @State private var showSavedToast = false
     @State private var showPreview = false
+    /// QR-koder og slett-annonse er flyttet fra "Mine annonser"-kortet til
+    /// EditListingHub-toolbaren (TU-100). Tannhjul-menyen øverst-høyre lar
+    /// vert vise QR-koder eller slette annonsen herfra.
+    @State private var qrTarget: Listing?
+    @State private var showDeleteAlert = false
+    @State private var isDeleting = false
+    /// Hvilket value-card som er ekspandert inline (TU-99 Fase B). nil =
+    /// alle kollapset. Bare ett kan være åpent om gangen, så åpning av et
+    /// nytt kort lukker det forrige.
+    @State private var expandedField: String?
     /// Snapshot av adresse + lat/lng tatt rett etter loadFromListing.
     /// Hvis brukeren endrer adressen må alle plasser re-plasseres på
     /// det nye kartet før Lagre blir aktiv (samme regel som i wizarden).
@@ -76,6 +87,17 @@ struct EditListingHub: View {
                 NavigationStack {
                     ListingDetailView(listingId: listing.id)
                 }
+            }
+            .sheet(item: $qrTarget) { listing in
+                QRCodeModal(listing: listing)
+            }
+            .alert("Slett annonse?", isPresented: $showDeleteAlert) {
+                Button("Slett", role: .destructive) {
+                    Task { await deleteListing() }
+                }
+                Button("Avbryt", role: .cancel) {}
+            } message: {
+                Text("Denne handlingen kan ikke angres.")
             }
     }
 
@@ -144,6 +166,32 @@ struct EditListingHub: View {
                     .accessibilityLabel("Lukk")
                     .accessibilityAddTraits(.isButton)
             }
+        }
+        // Tannhjul-menyen i toolbar-trailing rommer handlinger som ikke
+        // hører hjemme i en redigerings-flow per se: QR-koder og slett-
+        // annonse. Flyttet hit i TU-100 fra "Mine annonser"-kortets tre-
+        // prikker-meny. Image + onTapGesture (i stedet for Menu(label:))
+        // for å unngå iOS 18 toolbar-button-halo (feedback_ios18_toolbar_button_halo).
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    qrTarget = listing
+                } label: {
+                    Label("Vis QR-kode", systemImage: "qrcode")
+                }
+                Button(role: .destructive) {
+                    showDeleteAlert = true
+                } label: {
+                    Label("Slett annonse", systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.neutral700)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Innstillinger")
         }
     }
 
@@ -247,95 +295,91 @@ struct EditListingHub: View {
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    // MARK: - Section list
+    // MARK: - Section list (TU-99: Airbnb-stil valueCards)
+    //
+    // Hvert felt vises som sitt eget kort med felt-navn (subtittel) + nåværende
+    // verdi (stor tekst). Tap åpner enten en fullskjerm-editor (push) eller
+    // ekspanderer kortet inline (Fase B — Tittel, Lengde, Booking, Meldinger).
 
-    /// Felles seksjoner som gjelder hele annonsen (ikke per plass).
-    /// Adressen kan redigeres, men endring krever at vert re-plasserer
-    /// alle plassene på det nye kartet før Lagre blir aktiv.
     private var sectionList: some View {
-        rowGroup {
-            row(
-                dest: .address,
+        VStack(spacing: 12) {
+            valueCard(
                 icon: "mappin.and.ellipse",
                 title: "Adresse",
-                subtitle: form.address.isEmpty ? "Ikke satt" : form.address
+                value: form.address.isEmpty ? "Ikke satt" : form.address,
+                dest: .address
             )
-            divider
-            row(
-                dest: .description,
+            expandableValueCard(
                 icon: "text.alignleft",
                 title: "Tittel",
-                subtitle: form.title.trimmingCharacters(in: .whitespaces).isEmpty ? "Ikke satt" : form.title
-            )
-            divider
-            row(
-                dest: .photos,
+                value: form.title.trimmingCharacters(in: .whitespaces).isEmpty ? "Ikke satt" : form.title,
+                fieldKey: "title"
+            ) {
+                inlineTitleEditor
+            }
+            valueCard(
                 icon: "photo.on.rectangle.angled",
                 title: "Bilder",
-                subtitle: form.imageURLs.isEmpty ? "Ingen bilder" : "\(form.imageURLs.count) bilde\(form.imageURLs.count == 1 ? "" : "r")"
+                value: form.imageURLs.isEmpty ? "Ingen bilder" : "\(form.imageURLs.count) bilde\(form.imageURLs.count == 1 ? "" : "r")",
+                dest: .photos
             )
-            divider
-            row(
-                dest: .amenities,
+            valueCard(
                 icon: "wand.and.stars",
                 title: "Fasiliteter",
-                subtitle: form.selectedAmenities.isEmpty ? "Ingen valgt" : "\(form.selectedAmenities.count) valgt"
+                value: form.selectedAmenities.isEmpty ? "Ingen valgt" : "\(form.selectedAmenities.count) valgt",
+                dest: .amenities
             )
-            divider
-            row(
-                dest: .messages,
+            expandableValueCard(
                 icon: "bubble.left.fill",
                 title: "Meldinger",
-                subtitle: messagesSummary
-            )
-            divider
-            row(
-                dest: .stayLength,
+                value: messagesSummary,
+                fieldKey: "messages"
+            ) {
+                inlineMessagesEditor
+            }
+            expandableValueCard(
                 icon: "calendar.day.timeline.left",
                 title: "Lengde på opphold",
-                subtitle: stayLengthSummary
-            )
+                value: stayLengthSummary,
+                fieldKey: "stay"
+            ) {
+                inlineStayLengthEditor
+            }
         }
     }
 
-    /// Listing-nivå innstillinger som kun gjelder parkering (åpningstid).
+    /// Listing-nivå innstillinger som kun gjelder parkering.
     private var listingLevelSection: some View {
-        rowGroup {
-            row(
-                dest: .instantBooking,
+        VStack(spacing: 12) {
+            expandableValueCard(
                 icon: form.instantBooking ? "bolt.fill" : "hand.raised.fill",
                 title: "Booking",
-                subtitle: form.instantBooking ? "Direktebooking" : "Godkjenn først"
-            )
+                value: form.instantBooking ? "Direktebooking" : "Godkjenn først",
+                fieldKey: "booking"
+            ) {
+                inlineBookingEditor
+            }
             // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
-            // divider
-            // row(
-            //     dest: .openingHours,
-            //     icon: "clock.fill",
-            //     title: "Åpningstid",
-            //     subtitle: OpeningHoursService.compactLabel(form.openingHours) ?? "Hele dagen"
-            // )
         }
     }
 
-    /// Plass-rader. Én rad per plass — hver åpner SpotMiniHub for den plassen.
+    /// Plass-kort. Én valueCard per plass — hver åpner SpotMiniHub for plassen.
+    /// Spots er for komplekse til inline-expand (har 5 felter selv), så de
+    /// pushes til SpotMiniHub som har sin egen valueCard-stack.
     private var spotsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 12) {
             Text("Plasser")
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.neutral500)
                 .textCase(.uppercase)
                 .padding(.leading, 4)
 
-            rowGroup {
+            VStack(spacing: 12) {
                 ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { idx, spot in
                     NavigationLink(value: EditDestination.spotMiniHub(idx)) {
-                        spotRow(index: idx, spot: spot)
+                        spotCard(index: idx, spot: spot)
                     }
                     .buttonStyle(.plain)
-                    if idx < form.spotMarkers.count - 1 {
-                        Divider().padding(.leading, 60).opacity(0.5)
-                    }
                 }
             }
         }
@@ -392,7 +436,7 @@ struct EditListingHub: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { stepToolbar }
         case .spotMiniHub(let idx):
-            SpotMiniHub(form: form, spotIndex: idx)
+            SpotMiniHub(form: form, spotIndex: idx, onSave: { await saveChanges() })
                 .toolbar { stepToolbar }
         case .spotDetails(let idx):
             spotStepWrapper(idx: idx, title: "Detaljer") {
@@ -461,53 +505,147 @@ struct EditListingHub: View {
             }
     }
 
-    // MARK: - Row helpers
+    // MARK: - ValueCard helpers (TU-99 Airbnb-stil)
+    //
+    // Hvert kort står som sin egen RoundedRectangle med stroke. Titt + verdi
+    // stables vertikalt: feltnavnet 13pt grå (subtittel), verdien 16pt
+    // semibold (hovedtekst). Ikon ligger til venstre, chevron til høyre.
+    //
+    // `valueCard` = trykk pusher til fullskjerm-editor.
+    // `expandableValueCard` = trykk åpner inline-edit i samme kort + viser
+    // Lagre/Avbryt. Kun ett kort kan være ekspandert om gangen (driver via
+    // `expandedField`-state på hub).
 
-    @ViewBuilder
-    private func rowGroup<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(spacing: 0) { content() }
+    private func valueCardChrome<Content: View>(
+        isExpanded: Bool,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.6), lineWidth: 1))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isExpanded ? Color.primary300 : Color.neutral200.opacity(0.7), lineWidth: 1)
+            )
     }
 
-    private var divider: some View {
-        Divider().padding(.leading, 60).opacity(0.5)
-    }
-
-    private func row(dest: EditDestination, icon: String, title: String, subtitle: String) -> some View {
-        NavigationLink(value: dest) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.primary50)
-                        .frame(width: 40, height: 40)
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.primary600)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.neutral400)
+    private func valueCardHeader(icon: String, title: String, value: String, isExpanded: Bool) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.primary50)
+                    .frame(width: 40, height: 40)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.primary600)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .contentShape(Rectangle())
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
+                Text(value)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral400)
+                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+        }
+        .padding(16)
+        .contentShape(Rectangle())
+    }
+
+    private func valueCard(icon: String, title: String, value: String, dest: EditDestination) -> some View {
+        NavigationLink(value: dest) {
+            valueCardChrome(isExpanded: false) {
+                valueCardHeader(icon: icon, title: title, value: value, isExpanded: false)
+            }
         }
         .buttonStyle(.plain)
     }
 
-    private func spotRow(index: Int, spot: SpotMarker) -> some View {
+    private func expandableValueCard<Content: View>(
+        icon: String,
+        title: String,
+        value: String,
+        fieldKey: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        let isExpanded = expandedField == fieldKey
+        return valueCardChrome(isExpanded: isExpanded) {
+            VStack(spacing: 0) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        expandedField = isExpanded ? nil : fieldKey
+                    }
+                } label: {
+                    valueCardHeader(icon: icon, title: title, value: value, isExpanded: isExpanded)
+                }
+                .buttonStyle(.plain)
+
+                if isExpanded {
+                    VStack(spacing: 14) {
+                        content()
+                        expandedFooter
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+                    .transition(.opacity)
+                }
+            }
+        }
+    }
+
+    /// Footer i ekspandert kort. Avbryt = kollapse uten side-effekter
+    /// (form.X-endringer blir i in-memory state og kan reverseres ved
+    /// "Forkast endringer" i toolbar-X-menyen). Lagre = persistér via
+    /// saveChanges() med en gang så det føles direkte.
+    private var expandedFooter: some View {
+        HStack(spacing: 10) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.22)) {
+                    expandedField = nil
+                }
+            } label: {
+                Text("Avbryt")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.neutral700)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.neutral100)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Task {
+                    await saveChanges()
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        expandedField = nil
+                    }
+                }
+            } label: {
+                Text("Lagre")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(canSave ? Color.primary600 : Color.neutral300)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .disabled(!canSave)
+        }
+    }
+
+    /// Spot-kort for hub-roten. Pushes til SpotMiniHub for å redigere
+    /// detaljer/pris/tillegg/kalender/rabatter. Verdien viser sammendraget
+    /// (pris + N tillegg + N blokkerte dater).
+    private func spotCard(index: Int, spot: SpotMarker) -> some View {
         let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
             ? spot.label!
             : "Plass \(index + 1)"
@@ -517,29 +655,194 @@ struct EditListingHub: View {
             if let p = spot.pricePerNight, p > 0 { return "\(p) kr/\(unit)" }
             return "Pris mangler"
         }()
-        return HStack(spacing: 14) {
-            ZStack {
-                Circle().fill(Color.primary50).frame(width: 40, height: 40)
-                Text("\(index + 1)")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary700)
+        let extrasCount = spot.extras?.count ?? 0
+        let blockedCount = spot.blockedDates?.count ?? 0
+        var bits: [String] = [priceText]
+        if extrasCount > 0 { bits.append("\(extrasCount) tillegg") }
+        if blockedCount > 0 { bits.append("\(blockedCount) blokkert") }
+        let summary = bits.joined(separator: " · ")
+        return valueCardChrome(isExpanded: false) {
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle().fill(Color.primary50).frame(width: 40, height: 40)
+                    Text("\(index + 1)")
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary700)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(label)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral500)
+                    Text(summary)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                }
+                Spacer(minLength: 8)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral400)
             }
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                Text(priceText)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
-            }
-            Spacer()
-            Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
+            .padding(16)
+            .contentShape(Rectangle())
+        }
+    }
+
+    // MARK: - Inline editors (Fase B)
+
+    private var inlineTitleEditor: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            TextField("F.eks. Privat parkering i sentrum", text: $form.title)
+                .textInputAutocapitalization(.sentences)
+                .padding(14)
+                .background(Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.neutral200, lineWidth: 1)
+                )
+            Text("\(form.title.count) av 60 tegn")
+                .font(.system(size: 12))
                 .foregroundStyle(.neutral400)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .contentShape(Rectangle())
+    }
+
+    private var inlineMessagesEditor: some View {
+        VStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Innsjekk-melding")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                TextField("Sendes ved bekreftet booking", text: $form.checkinMessage, axis: .vertical)
+                    .lineLimit(2...5)
+                    .padding(14)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.neutral200, lineWidth: 1)
+                    )
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                Text("Utsjekk-melding")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+                TextField("Sendes før utsjekk", text: $form.checkoutMessage, axis: .vertical)
+                    .lineLimit(2...5)
+                    .padding(14)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color.neutral200, lineWidth: 1)
+                    )
+            }
+        }
+    }
+
+    private var inlineStayLengthEditor: some View {
+        let unitWord = form.category == .parking ? "dager" : "døgn"
+        return VStack(spacing: 12) {
+            HStack {
+                Text("Min antall \(unitWord)")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral600)
+                Spacer()
+                TextField("Ingen", value: Binding(
+                    get: { form.minStayDays ?? 0 },
+                    set: { form.minStayDays = $0 > 0 ? $0 : nil }
+                ), format: .number)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 80)
+                    .padding(10)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.neutral200, lineWidth: 1)
+                    )
+            }
+            HStack {
+                Text("Maks antall \(unitWord)")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral600)
+                Spacer()
+                TextField("Ingen", value: Binding(
+                    get: { form.maxStayDays ?? 0 },
+                    set: { form.maxStayDays = $0 > 0 ? $0 : nil }
+                ), format: .number)
+                    .keyboardType(.numberPad)
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 80)
+                    .padding(10)
+                    .background(Color.neutral50)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.neutral200, lineWidth: 1)
+                    )
+            }
+        }
+    }
+
+    private var inlineBookingEditor: some View {
+        VStack(spacing: 10) {
+            bookingOption(
+                isSelected: form.instantBooking,
+                icon: "bolt.fill",
+                title: "Direktebooking",
+                subtitle: "Gjester kan booke uten godkjenning"
+            ) {
+                form.instantBooking = true
+            }
+            bookingOption(
+                isSelected: !form.instantBooking,
+                icon: "hand.raised.fill",
+                title: "Godkjenn først",
+                subtitle: "Du må godkjenne hver booking"
+            ) {
+                form.instantBooking = false
+            }
+        }
+    }
+
+    private func bookingOption(
+        isSelected: Bool,
+        icon: String,
+        title: String,
+        subtitle: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.system(size: 18))
+                    .foregroundStyle(isSelected ? .primary700 : .neutral500)
+                    .frame(width: 28)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Text(subtitle)
+                        .font(.system(size: 12))
+                        .foregroundStyle(.neutral500)
+                }
+                Spacer()
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 22))
+                    .foregroundStyle(isSelected ? .primary600 : .neutral300)
+            }
+            .padding(12)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(isSelected ? Color.primary300 : Color.neutral200, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Computed strings
@@ -602,6 +905,26 @@ struct EditListingHub: View {
             withAnimation { showSavedToast = false }
         } catch {
             saveError = "Kunne ikke lagre: \(error.localizedDescription)"
+        }
+    }
+
+    /// Sletter annonsen og dismisser hub'en. Parent gjør egen re-load via
+    /// `onDeleted`-callback (typisk MyListingsView som re-laster listings).
+    /// Flyttet hit i TU-100 fra ProfileView.
+    private func deleteListing() async {
+        guard !isDeleting else { return }
+        isDeleting = true
+        defer { isDeleting = false }
+        do {
+            try await supabase
+                .from("listings")
+                .delete()
+                .eq("id", value: listing.id)
+                .execute()
+            onDeleted?()
+            dismiss()
+        } catch {
+            saveError = "Kunne ikke slette: \(error.localizedDescription)"
         }
     }
 
@@ -672,11 +995,18 @@ enum EditDestination: Hashable {
 
 // MARK: - SpotMiniHub
 
-/// Sub-hub for én plass. Renderer rader for spot-spesifikke steg.
-/// Pushes resolves i hub-en's NavigationStack via `.navigationDestination`.
+/// Sub-hub for én plass. Hver felt rendres som sitt eget valueCard
+/// (TU-99 Airbnb-stil). Pris-kortet ekspanderer inline; resten pusher til
+/// fullskjerm-editor i hub'ens NavigationStack.
 struct SpotMiniHub: View {
     @ObservedObject var form: ListingFormModel
     let spotIndex: Int
+    /// Kalles fra inline-expand "Lagre" — persisterer til Supabase via
+    /// EditListingHub's saveChanges. Closure passes som async fra parent.
+    var onSave: (() async -> Void)? = nil
+
+    /// Inline-expand state. Bare ett kort åpent om gangen.
+    @State private var expandedField: String?
 
     private var spot: SpotMarker? {
         form.spotMarkers.indices.contains(spotIndex) ? form.spotMarkers[spotIndex] : nil
@@ -684,45 +1014,41 @@ struct SpotMiniHub: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 16) {
+            VStack(spacing: 12) {
                 headerCard
-                rowGroup {
-                    row(
-                        dest: .spotDetails(spotIndex),
-                        icon: "doc.text",
-                        title: "Detaljer",
-                        subtitle: detailsSummary
+                valueCard(
+                    dest: .spotDetails(spotIndex),
+                    icon: "doc.text",
+                    title: "Detaljer",
+                    value: detailsSummary
+                )
+                expandableValueCard(
+                    icon: "tag.fill",
+                    title: "Pris",
+                    value: priceSummary,
+                    fieldKey: "price"
+                ) {
+                    inlinePriceEditor
+                }
+                valueCard(
+                    dest: .spotExtras(spotIndex),
+                    icon: "sparkles",
+                    title: "Tillegg",
+                    value: extrasSummary
+                )
+                valueCard(
+                    dest: .spotCalendar(spotIndex),
+                    icon: "calendar",
+                    title: "Kalender",
+                    value: calendarSummary
+                )
+                if form.category == .parking {
+                    valueCard(
+                        dest: .spotDiscounts(spotIndex),
+                        icon: "calendar.badge.clock",
+                        title: "Lengre opphold",
+                        value: discountsSummary
                     )
-                    divider
-                    row(
-                        dest: .spotPrice(spotIndex),
-                        icon: "tag.fill",
-                        title: "Pris",
-                        subtitle: priceSummary
-                    )
-                    divider
-                    row(
-                        dest: .spotExtras(spotIndex),
-                        icon: "sparkles",
-                        title: "Tillegg",
-                        subtitle: extrasSummary
-                    )
-                    divider
-                    row(
-                        dest: .spotCalendar(spotIndex),
-                        icon: "calendar",
-                        title: "Kalender",
-                        subtitle: calendarSummary
-                    )
-                    if form.category == .parking {
-                        divider
-                        row(
-                            dest: .spotDiscounts(spotIndex),
-                            icon: "calendar.badge.clock",
-                            title: "Lengre opphold",
-                            subtitle: discountsSummary
-                        )
-                    }
                 }
                 Spacer().frame(height: 24)
             }
@@ -757,50 +1083,157 @@ struct SpotMiniHub: View {
         }
     }
 
-    // MARK: - Row helpers (duplisert fra EditListingHub for å unngå internal-API)
+    // MARK: - ValueCard helpers (duplisert fra EditListingHub)
 
-    @ViewBuilder
-    private func rowGroup<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(spacing: 0) { content() }
+    private func valueCardChrome<Content: View>(
+        isExpanded: Bool,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.6), lineWidth: 1))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .stroke(isExpanded ? Color.primary300 : Color.neutral200.opacity(0.7), lineWidth: 1)
+            )
     }
 
-    private var divider: some View {
-        Divider().padding(.leading, 60).opacity(0.5)
-    }
-
-    private func row(dest: EditDestination, icon: String, title: String, subtitle: String) -> some View {
-        NavigationLink(value: dest) {
-            HStack(spacing: 14) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.primary50)
-                        .frame(width: 40, height: 40)
-                    Image(systemName: icon)
-                        .font(.system(size: 16, weight: .medium))
-                        .foregroundStyle(.primary600)
-                }
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                    Text(subtitle)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.neutral500)
-                        .lineLimit(1)
-                }
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.neutral400)
+    private func valueCardHeader(icon: String, title: String, value: String, isExpanded: Bool) -> some View {
+        HStack(spacing: 14) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color.primary50)
+                    .frame(width: 40, height: 40)
+                Image(systemName: icon)
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.primary600)
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .contentShape(Rectangle())
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
+                Text(value)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+            }
+            Spacer(minLength: 8)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral400)
+                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+        }
+        .padding(16)
+        .contentShape(Rectangle())
+    }
+
+    private func valueCard(dest: EditDestination, icon: String, title: String, value: String) -> some View {
+        NavigationLink(value: dest) {
+            valueCardChrome(isExpanded: false) {
+                valueCardHeader(icon: icon, title: title, value: value, isExpanded: false)
+            }
         }
         .buttonStyle(.plain)
+    }
+
+    private func expandableValueCard<Content: View>(
+        icon: String,
+        title: String,
+        value: String,
+        fieldKey: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        let isExpanded = expandedField == fieldKey
+        return valueCardChrome(isExpanded: isExpanded) {
+            VStack(spacing: 0) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        expandedField = isExpanded ? nil : fieldKey
+                    }
+                } label: {
+                    valueCardHeader(icon: icon, title: title, value: value, isExpanded: isExpanded)
+                }
+                .buttonStyle(.plain)
+
+                if isExpanded {
+                    VStack(spacing: 14) {
+                        content()
+                        expandedFooter
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 16)
+                    .transition(.opacity)
+                }
+            }
+        }
+    }
+
+    private var expandedFooter: some View {
+        HStack(spacing: 10) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.22)) {
+                    expandedField = nil
+                }
+            } label: {
+                Text("Avbryt")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.neutral700)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.neutral100)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+
+            Button {
+                Task {
+                    await onSave?()
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        expandedField = nil
+                    }
+                }
+            } label: {
+                Text("Lagre")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(Color.primary600)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    // MARK: - Inline editors (Pris)
+
+    private var inlinePriceEditor: some View {
+        guard form.spotMarkers.indices.contains(spotIndex) else {
+            return AnyView(EmptyView())
+        }
+        let unit = form.effectivePriceUnit(for: form.spotMarkers[spotIndex]).displayName
+        return AnyView(
+            HStack(spacing: 8) {
+                TextField("0", value: Binding(
+                    get: { form.spotMarkers[spotIndex].price ?? 0 },
+                    set: { form.spotMarkers[spotIndex].price = max(0, $0) }
+                ), format: .number)
+                .keyboardType(.numberPad)
+                .multilineTextAlignment(.trailing)
+                .padding(14)
+                .background(Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.neutral200, lineWidth: 1)
+                )
+
+                Text("kr/\(unit)")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.neutral500)
+            }
+        )
     }
 
     // MARK: - Summaries
