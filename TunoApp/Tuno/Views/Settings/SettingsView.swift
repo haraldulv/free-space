@@ -185,16 +185,32 @@ struct SettingsView: View {
     }
 
     private func deleteAccount() async {
-        guard let userId = authManager.currentUser?.id else { return }
+        guard authManager.currentUser != nil else { return }
         deletingAccount = true
         defer { deletingAccount = false }
         do {
-            try await supabase
-                .from("profiles")
-                .delete()
-                .eq("id", value: userId.uuidString.lowercased())
-                .execute()
-            await authManager.signOut()
+            let accessToken = try await supabase.auth.session.accessToken
+            guard let url = URL(string: "\(AppConfig.siteURL)/api/user/delete") else {
+                deleteError = "Ugyldig URL"
+                return
+            }
+            var request = URLRequest(url: url)
+            request.httpMethod = "POST"
+            request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+
+            let (data, response) = try await URLSession.shared.data(for: request)
+            let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+            if status == 200 {
+                await authManager.signOut()
+                return
+            }
+            if let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+               let serverError = json["error"] as? String {
+                deleteError = serverError
+            } else {
+                deleteError = "Kunne ikke slette konto (HTTP \(status))"
+            }
         } catch {
             deleteError = error.localizedDescription
         }
