@@ -664,14 +664,21 @@ struct WizardPricingCalendarView: View {
                 )
 
             VStack(spacing: 0) {
-                Text("\(day)")
-                    .font(.system(size: 16, weight: (isSelected || isAnchor || isToday) ? .bold : .semibold))
-                    .foregroundStyle(
-                        isToday && !dimAsBlocked
-                            ? Color.primary600
-                            : cellText(isPast: isPast, isBlocked: dimAsBlocked)
-                    )
-                    .padding(.top, 8)
+                ZStack {
+                    if isToday && !dimAsBlocked {
+                        Circle()
+                            .fill(Color.neutral900)
+                            .frame(width: 24, height: 24)
+                    }
+                    Text("\(day)")
+                        .font(.system(size: 16, weight: (isSelected || isAnchor || isToday) ? .bold : .semibold))
+                        .foregroundStyle(
+                            isToday && !dimAsBlocked
+                                ? Color.white
+                                : cellText(isPast: isPast, isBlocked: dimAsBlocked)
+                        )
+                }
+                .padding(.top, 8)
 
                 Spacer(minLength: 0)
 
