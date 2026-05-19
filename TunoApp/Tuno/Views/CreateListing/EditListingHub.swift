@@ -33,6 +33,10 @@ struct EditListingHub: View {
     /// Speiler Airbnbs "Your space / Arrival guide"-pille men gir naturlig
     /// split for Tuno: listing-felter vs spot-cards.
     @State private var selectedTab: HubTab = .annonse
+    /// "Folded fan"-bildene starter samlet og spring-er ut til target-state
+    /// når hub-en vises (build 233 etter Harald-feedback om "stack-animasjon").
+    /// Triggrer i onAppear i `photosStackCard`.
+    @State private var photosSpread: Bool = false
     /// Snapshot av adresse + lat/lng tatt rett etter loadFromListing.
     /// Hvis brukeren endrer adressen må alle plasser re-plasseres på
     /// det nye kartet før Lagre blir aktiv (samme regel som i wizarden).
@@ -111,21 +115,36 @@ struct EditListingHub: View {
         // photosStackCard som første kort i "Annonse"-fanen, valueCards uten
         // ikoner under. Hero-kortet er fjernet — bildene ligger nå i sitt
         // eget kort med "spilkort"-preview (stacked thumbnails).
-        ScrollView {
-            VStack(spacing: 12) {
-                tabSegmentControl
-                if selectedTab == .annonse {
-                    photosStackCard
-                    sectionList
-                    if listing.category == .parking {
-                        listingLevelSection
+        //
+        // Build 233: ScrollViewReader-wrap + scrollTo expandedField for å
+        // sikre at ekspandert inline-editor blir synlig over tastaturet.
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(spacing: 12) {
+                    tabSegmentControl
+                    if selectedTab == .annonse {
+                        photosStackCard
+                        sectionList
+                        if listing.category == .parking {
+                            listingLevelSection
+                        }
+                    } else {
+                        spotsSection
                     }
-                } else {
-                    spotsSection
+                    Spacer().frame(height: 80)
                 }
-                Spacer().frame(height: 80)
+                .padding(16)
             }
-            .padding(16)
+            .onChange(of: expandedField) { _, newField in
+                guard let key = newField else { return }
+                // Litt delay så keyboard-avoidance settler først, ellers
+                // scroller vi før layouten har stabilisert seg.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo(key, anchor: .top)
+                    }
+                }
+            }
         }
     }
 
@@ -351,7 +370,7 @@ struct EditListingHub: View {
                     .padding(.vertical, 18)
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableCardStyle())
 
                 if isExpanded {
                     VStack(spacing: 14) {
@@ -364,17 +383,35 @@ struct EditListingHub: View {
                 }
             }
         }
+        // Stack-animasjon (build 233): bildene starter samlet og fjærer ut
+        // til "fan"-state etter en kort delay så det matcher det visuelle
+        // tempoet av modal-presentationen. Resettes ved onDisappear så den
+        // spilles igjen neste gang hub-en åpnes.
+        .onAppear {
+            photosSpread = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+                withAnimation(.spring(response: 0.6, dampingFraction: 0.72)) {
+                    photosSpread = true
+                }
+            }
+        }
+        .onDisappear { photosSpread = false }
+        .id("photos")
     }
 
-    /// "Spilkort"-stack: ZStack med 3 thumbnail-bilder, hver med litt
-    /// offset + rotation så de ser ut som et fan av kort. Tap åpner det
-    /// store inline-carouselen.
+    /// "Folded fan"-stack à la Airbnb sin Listing editor (Image #22).
+    /// Tre kvadratiske bilder peeker ut fra forsiden — to bakerste roteres
+    /// litt og forskyves til høyre så vi får et "stack of cards"-feel.
+    /// Tap åpner det store inline-carouselen.
+    ///
+    /// `photosSpread` styrer onAppear-spreaden: bildene starter samlet på
+    /// (0,0) med scale 1 og fjærer ut til sine target-tilstander (Fase 4).
     @ViewBuilder
     private var photosStackPreview: some View {
         if form.imageURLs.isEmpty {
             RoundedRectangle(cornerRadius: 14)
                 .fill(Color.neutral100)
-                .frame(height: 180)
+                .frame(height: 220)
                 .overlay(
                     VStack(spacing: 6) {
                         Image(systemName: "photo.on.rectangle.angled")
@@ -394,21 +431,24 @@ struct EditListingHub: View {
                     } placeholder: {
                         Rectangle().fill(Color.neutral100)
                     }
-                    .frame(height: 180)
-                    .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                    .frame(width: 220, height: 220)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 14)
+                        RoundedRectangle(cornerRadius: 16)
                             .stroke(Color.white, lineWidth: 3)
                     )
-                    .shadow(color: .black.opacity(0.12), radius: 8, y: 4)
-                    .scaleEffect(1 - CGFloat(idx) * 0.04)
-                    .offset(y: CGFloat(idx) * 8)
+                    .shadow(color: .black.opacity(0.14), radius: 10, y: 4)
+                    .scaleEffect(photosSpread ? (1 - CGFloat(idx) * 0.05) : 1.0)
+                    .offset(
+                        x: photosSpread ? CGFloat(idx) * 22 : 0,
+                        y: photosSpread ? CGFloat(idx) * 4 : 0
+                    )
+                    .rotationEffect(.degrees(photosSpread ? Double(idx) * 4 : 0))
                     .zIndex(Double(3 - idx))
                 }
             }
             .frame(maxWidth: .infinity)
-            .frame(height: 200)
+            .frame(height: 240)
         }
     }
 
@@ -472,11 +512,6 @@ struct EditListingHub: View {
 
     private var sectionList: some View {
         VStack(spacing: 12) {
-            valueCard(
-                title: "Adresse",
-                value: form.address.isEmpty ? "Ikke satt" : form.address,
-                dest: .address
-            )
             expandableValueCard(
                 title: "Tittel",
                 value: form.title.trimmingCharacters(in: .whitespaces).isEmpty ? "Ikke satt" : form.title,
@@ -484,20 +519,13 @@ struct EditListingHub: View {
             ) {
                 inlineTitleEditor
             }
-            expandableValueCard(
-                title: "Fasiliteter",
-                value: form.selectedAmenities.isEmpty ? "Ingen valgt" : "\(form.selectedAmenities.count) valgt",
-                fieldKey: "amenities"
-            ) {
-                inlineAmenitiesEditor
-            }
-            expandableValueCard(
-                title: "Meldinger",
-                value: messagesSummary,
-                fieldKey: "messages"
-            ) {
-                inlineMessagesEditor
-            }
+            valueCard(
+                title: "Adresse",
+                value: form.address.isEmpty ? "Ikke satt" : form.address,
+                dest: .address
+            )
+            amenitiesValueCard
+            messagesValueCard
             expandableValueCard(
                 title: "Lengde på opphold",
                 value: stayLengthSummary,
@@ -511,15 +539,149 @@ struct EditListingHub: View {
     /// Listing-nivå innstillinger som kun gjelder parkering.
     private var listingLevelSection: some View {
         VStack(spacing: 12) {
-            expandableValueCard(
-                title: "Booking",
-                value: form.instantBooking ? "Direktebooking" : "Godkjenn først",
-                fieldKey: "booking"
-            ) {
-                inlineBookingEditor
-            }
+            bookingValueCard
             // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
         }
+    }
+
+    // MARK: - Rikere closed-state-kort (build 233)
+    //
+    // Harald-feedback på build 232: "vi vil ha flere ting synlig". Disse
+    // helperne speiler `expandableValueCard` men erstatter den enkle
+    // strengverdien med visuelt rikere innhold — ikon-rad for Fasiliteter,
+    // tekstpreview for Meldinger, ikon foran for Booking.
+
+    /// Fasiliteter-kort med horisontal mini-rad av valgte amenity-ikoner.
+    /// Maks 6 ikoner + "+N" pille hvis flere. Tom-state: "Ingen valgt".
+    private var amenitiesValueCard: some View {
+        let isExpanded = expandedField == "amenities"
+        return valueCardChrome(isExpanded: isExpanded) {
+            VStack(spacing: 0) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        expandedField = isExpanded ? nil : "amenities"
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Fasiliteter")
+                            .font(.system(size: 16))
+                            .foregroundStyle(.neutral500)
+                        if form.selectedAmenities.isEmpty {
+                            Text("Ingen valgt")
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(.neutral900)
+                        } else {
+                            selectedAmenitiesRow
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableCardStyle())
+
+                if isExpanded {
+                    VStack(spacing: 14) {
+                        inlineAmenitiesEditor
+                        expandedFooter
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 18)
+                    .transition(.opacity)
+                }
+            }
+        }
+        .id("amenities")
+    }
+
+    /// Horisontal rad av valgte amenity-ikoner. Filterer
+    /// `form.availableAmenities` på `form.selectedAmenities` så vi får
+    /// AmenityType-objekter med `.icon` og bevarer category-rekkefølgen.
+    @ViewBuilder
+    private var selectedAmenitiesRow: some View {
+        let selected = form.availableAmenities.filter { form.selectedAmenities.contains($0.rawValue) }
+        let maxIcons = 6
+        HStack(spacing: 8) {
+            ForEach(selected.prefix(maxIcons), id: \.rawValue) { amenity in
+                Image(systemName: amenity.icon)
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.primary700)
+                    .frame(width: 30, height: 30)
+                    .background(Color.primary50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            if selected.count > maxIcons {
+                Text("+\(selected.count - maxIcons)")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.primary700)
+                    .padding(.horizontal, 10)
+                    .frame(height: 30)
+                    .background(Color.primary50)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            Spacer(minLength: 0)
+        }
+    }
+
+    /// Meldinger-kort med tittel "Melding ved innsjekk & utsjekk" og selve
+    /// tekst-previewen som verdi (lineLimit(2) i valueCardHeader).
+    private var messagesValueCard: some View {
+        expandableValueCard(
+            title: "Melding ved innsjekk & utsjekk",
+            value: messagesSummary,
+            fieldKey: "messages"
+        ) {
+            inlineMessagesEditor
+        }
+    }
+
+    /// Booking-kort med ikon foran verdien. `bolt.fill` for Direktebooking,
+    /// `hand.raised.fill` for Godkjenn først.
+    private var bookingValueCard: some View {
+        let isExpanded = expandedField == "booking"
+        let isInstant = form.instantBooking
+        let icon = isInstant ? "bolt.fill" : "hand.raised.fill"
+        let valueText = isInstant ? "Direktebooking" : "Godkjenn først"
+        return valueCardChrome(isExpanded: isExpanded) {
+            VStack(spacing: 0) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.22)) {
+                        expandedField = isExpanded ? nil : "booking"
+                    }
+                } label: {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Booking")
+                            .font(.system(size: 16))
+                            .foregroundStyle(.neutral500)
+                        HStack(spacing: 10) {
+                            Image(systemName: icon)
+                                .font(.system(size: 18, weight: .semibold))
+                                .foregroundStyle(.primary600)
+                            Text(valueText)
+                                .font(.system(size: 22, weight: .semibold))
+                                .foregroundStyle(.neutral900)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 18)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(PressableCardStyle())
+
+                if isExpanded {
+                    VStack(spacing: 14) {
+                        inlineBookingEditor
+                        expandedFooter
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 18)
+                    .transition(.opacity)
+                }
+            }
+        }
+        .id("booking")
     }
 
     /// Plass-kort. Én valueCard per plass — hver åpner SpotMiniHub for plassen.
@@ -538,7 +700,7 @@ struct EditListingHub: View {
                     NavigationLink(value: EditDestination.spotMiniHub(idx)) {
                         spotCard(index: idx, spot: spot)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressableCardStyle())
                 }
             }
         }
@@ -716,7 +878,7 @@ struct EditListingHub: View {
                 valueCardHeader(title: title, value: value)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressableCardStyle())
     }
 
     private func expandableValueCard<Content: View>(
@@ -726,6 +888,8 @@ struct EditListingHub: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         let isExpanded = expandedField == fieldKey
+        // .id(fieldKey) lar ScrollViewReader (i scrollBody) finne kortet
+        // og scrolle det over tastaturet når feltet ekspanderes.
         return valueCardChrome(isExpanded: isExpanded) {
             VStack(spacing: 0) {
                 Button {
@@ -735,7 +899,7 @@ struct EditListingHub: View {
                 } label: {
                     valueCardHeader(title: title, value: value)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableCardStyle())
 
                 if isExpanded {
                     VStack(spacing: 14) {
@@ -748,6 +912,7 @@ struct EditListingHub: View {
                 }
             }
         }
+        .id(fieldKey)
     }
 
     /// Footer i ekspandert kort. Avbryt = kollapse uten side-effekter
@@ -979,16 +1144,10 @@ struct EditListingHub: View {
         }
     }
 
+    /// Build 233: Godkjenn først ØVERST (Harald-feedback), begge bokser
+    /// får samme minHeight i `bookingOption` for like store proporsjoner.
     private var inlineBookingEditor: some View {
         VStack(spacing: 10) {
-            bookingOption(
-                isSelected: form.instantBooking,
-                icon: "bolt.fill",
-                title: "Direktebooking",
-                subtitle: "Gjester kan booke uten godkjenning"
-            ) {
-                form.instantBooking = true
-            }
             bookingOption(
                 isSelected: !form.instantBooking,
                 icon: "hand.raised.fill",
@@ -996,6 +1155,14 @@ struct EditListingHub: View {
                 subtitle: "Du må godkjenne hver booking"
             ) {
                 form.instantBooking = false
+            }
+            bookingOption(
+                isSelected: form.instantBooking,
+                icon: "bolt.fill",
+                title: "Direktebooking",
+                subtitle: "Gjester kan booke uten godkjenning"
+            ) {
+                form.instantBooking = true
             }
         }
     }
@@ -1020,6 +1187,7 @@ struct EditListingHub: View {
                     Text(subtitle)
                         .font(.system(size: 12))
                         .foregroundStyle(.neutral500)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
@@ -1027,6 +1195,7 @@ struct EditListingHub: View {
                     .foregroundStyle(isSelected ? .primary600 : .neutral300)
             }
             .padding(12)
+            .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
             .background(Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
@@ -1045,13 +1214,16 @@ struct EditListingHub: View {
         return d.count > 40 ? String(d.prefix(40)) + "…" : d
     }
 
+    /// Tekstpreview til closed-state Meldinger-kortet (build 233).
+    /// Returnerer den faktiske innsjekks-meldingen hvis satt, ellers
+    /// utsjekksmeldingen, ellers "Ikke satt". `valueCardHeader` har allerede
+    /// lineLimit(2) så lang tekst trunceres pent.
     private var messagesSummary: String {
-        let hasIn = !form.checkinMessage.trimmingCharacters(in: .whitespaces).isEmpty
-        let hasOut = !form.checkoutMessage.trimmingCharacters(in: .whitespaces).isEmpty
-        if hasIn && hasOut { return "Innsjekk + utsjekk" }
-        if hasIn { return "Innsjekk" }
-        if hasOut { return "Utsjekk" }
-        return "Ingen"
+        let inMsg = form.checkinMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        let outMsg = form.checkoutMessage.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !inMsg.isEmpty { return inMsg }
+        if !outMsg.isEmpty { return outMsg }
+        return "Ikke satt"
     }
 
     private var stayLengthSummary: String {
@@ -1337,7 +1509,7 @@ struct SpotMiniHub: View {
                 } label: {
                     valueCardHeader(title: title, value: value)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressableCardStyle())
 
                 if isExpanded {
                     VStack(spacing: 14) {

@@ -1169,6 +1169,9 @@
         }
       }
     },
+    "Bilder" : {
+
+    },
     "Blant topp 1 % av utleiestedene basert på vurderinger og anmeldelser." : {
 
     },
@@ -1888,6 +1891,9 @@
 
     },
     "eller med e-post" : {
+
+    },
+    "Endre" : {
 
     },
     "Endre pris" : {
@@ -6977,6 +6983,9 @@
           }
         }
       }
+    },
+    "Trykk for å legge til" : {
+
     },
     "Trykk på datoer for å blokkere eller åpne dem. Blokkerte datoer vises i rødt." : {
       "extractionState" : "manual",
