@@ -623,6 +623,7 @@ struct WizardPricingCalendarView: View {
         let day = Self.osloCalendar.component(.day, from: date)
         let startOfToday = Self.osloCalendar.startOfDay(for: Date())
         let isPast = Self.osloCalendar.startOfDay(for: date) < startOfToday
+        let isToday = Self.osloCalendar.isDate(date, inSameDayAs: Date())
         let isSelected = selectedDates.contains(iso)
         // isAnchor fjernet — single-tap = toggle, ingen anker-konsept lenger.
         // Behold lokalvariabelen som `false` for å minimere downstream-endringer.
@@ -664,8 +665,12 @@ struct WizardPricingCalendarView: View {
 
             VStack(spacing: 0) {
                 Text("\(day)")
-                    .font(.system(size: 16, weight: (isSelected || isAnchor) ? .bold : .semibold))
-                    .foregroundStyle(cellText(isPast: isPast, isBlocked: dimAsBlocked))
+                    .font(.system(size: 16, weight: (isSelected || isAnchor || isToday) ? .bold : .semibold))
+                    .foregroundStyle(
+                        isToday && !dimAsBlocked
+                            ? Color.primary600
+                            : cellText(isPast: isPast, isBlocked: dimAsBlocked)
+                    )
                     .padding(.top, 8)
 
                 Spacer(minLength: 0)
