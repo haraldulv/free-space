@@ -21,7 +21,7 @@ settings:
     SWIFT_VERSION: "6.0"
     DEVELOPMENT_TEAM: 3VD2DMBJ6M
     MARKETING_VERSION: "1.0.0"
-    CURRENT_PROJECT_VERSION: 236
+    CURRENT_PROJECT_VERSION: 237
 
 packages:
   Supabase:
@@ -128,7 +128,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
         ITSAppUsesNonExemptEncryption: false
         NSLocationWhenInUseUsageDescription: "Tuno trenger tilgang til posisjonen din for å vise parkerings- og campingplasser i nærheten."
-        NSCameraUsageDescription: "Tuno bruker kameraet til å ta bilder av legitimasjon under Stripe-onboarding, profilbilde og bilder av plassene du leier ut."
+        NSCameraUsageDescription: "Tuno trenger tilgang til kameraet for å ta profilbilde og bilder av plassene du leier ut."
         NSPhotoLibraryUsageDescription: "Tuno trenger tilgang til bildebiblioteket ditt for å laste opp profilbilde og bilder av plassene dine."
         CFBundleURLTypes:
           - CFBundleURLSchemes:

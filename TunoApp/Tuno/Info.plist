@@ -40,7 +40,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSCameraUsageDescription</key>
-	<string>Tuno bruker kameraet til å ta bilder av legitimasjon under Stripe-onboarding, profilbilde og bilder av plassene du leier ut.</string>
+	<string>Tuno trenger tilgang til kameraet for å ta profilbilde og bilder av plassene du leier ut.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Tuno trenger tilgang til posisjonen din for å vise parkerings- og campingplasser i nærheten.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
