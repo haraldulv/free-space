@@ -11,6 +11,7 @@ struct LoginView: View {
     @State private var showRegister = false
     @State private var showForgotPassword = false
     @State private var showSuccess = false
+    @State private var passwordRevealed = false
 
     var body: some View {
         ZStack {
@@ -166,16 +167,36 @@ struct LoginView: View {
                             Text("Passord")
                                 .font(.system(size: 14, weight: .medium))
                                 .foregroundStyle(.neutral700)
-                            SecureField("••••••••", text: $password)
+                            HStack(spacing: 8) {
+                                Group {
+                                    if passwordRevealed {
+                                        TextField("••••••••", text: $password)
+                                            .textContentType(.password)
+                                            .autocorrectionDisabled()
+                                            .textInputAutocapitalization(.never)
+                                    } else {
+                                        SecureField("••••••••", text: $password)
+                                            .textContentType(.password)
+                                    }
+                                }
                                 .textFieldStyle(.plain)
-                                .padding(14)
-                                .background(.neutral50)
-                                .clipShape(RoundedRectangle(cornerRadius: 12))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.neutral200, lineWidth: 1)
-                                )
-                                .textContentType(.password)
+                                Button {
+                                    passwordRevealed.toggle()
+                                } label: {
+                                    Image(systemName: passwordRevealed ? "eye.slash" : "eye")
+                                        .font(.system(size: 16))
+                                        .foregroundStyle(.neutral500)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel(passwordRevealed ? "Skjul passord" : "Vis passord")
+                            }
+                            .padding(14)
+                            .background(.neutral50)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 12)
+                                    .stroke(Color.neutral200, lineWidth: 1)
+                            )
                         }
                     }
 
@@ -223,17 +244,31 @@ struct LoginView: View {
 
                     Spacer()
 
-                    // Register link
-                    HStack(spacing: 4) {
+                    // Register link — bygd opp i build 239 etter Harald-feedback
+                    // (TU-86): tidligere var "Registrer deg" en lite synlig inline-
+                    // link helt nederst. Nå er det en tydelig outlined button +
+                    // beskrivende tekst over.
+                    VStack(spacing: 10) {
                         Text("Har du ikke konto?")
                             .font(.system(size: 14))
                             .foregroundStyle(.neutral500)
-                        Button("Registrer deg") {
+                        Button {
                             showRegister = true
+                        } label: {
+                            Text("Registrer deg")
+                                .font(.system(size: 16, weight: .semibold))
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .foregroundStyle(.primary600)
+                                .background(Color.primary50)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 12)
+                                        .stroke(Color.primary600, lineWidth: 1.5)
+                                )
                         }
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary600)
                     }
+                    .padding(.top, 12)
                     .padding(.bottom, 20)
                 }
                 .padding(.horizontal, 24)

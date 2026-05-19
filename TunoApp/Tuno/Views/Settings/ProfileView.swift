@@ -251,10 +251,19 @@ struct ProfileView: View {
             // på iOS 18 — vi tvinger en reload her så isHost og listingCount
             // speiler post-onboarding-state med en gang sheetet lukkes.
             guard !isShown else { return }
+            let countBefore = profileStats.listingCount
             Task {
                 await authManager.loadProfile()
                 guard let userId = authManager.currentUser?.id.uuidString.lowercased() else { return }
                 await profileStats.refresh(userId: userId, isHost: authManager.isHost)
+                // TU-97: Hvis listingCount økte mens BecomeHost-sheet var oppe,
+                // har vert nettopp publisert en annonse. Naviger rett til Mine
+                // annonser — ellers lander de tilbake på Profil og må navigere
+                // selv. Liten delay så fullScreenCover-dismissen har settet.
+                if profileStats.listingCount > countBefore {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    await MainActor.run { presentedRoute = .myListings }
+                }
             }
         }
     }

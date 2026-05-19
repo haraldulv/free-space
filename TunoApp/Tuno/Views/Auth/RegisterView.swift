@@ -357,19 +357,41 @@ private struct CompactSecureField: View {
     let label: String
     @Binding var text: String
     var submitLabel: SubmitLabel = .return
+    @State private var isRevealed: Bool = false
 
     var body: some View {
-        SecureField(label, text: $text)
-            .textContentType(.newPassword)
+        HStack(spacing: 8) {
+            Group {
+                if isRevealed {
+                    TextField(label, text: $text)
+                        .textContentType(.newPassword)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                } else {
+                    SecureField(label, text: $text)
+                        .textContentType(.newPassword)
+                }
+            }
             .submitLabel(submitLabel)
             .font(.system(size: 16))
-            .padding(.horizontal, 14)
-            .frame(height: 52)
-            .background(Color.neutral50)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.neutral200, lineWidth: 1)
-            )
+
+            Button {
+                isRevealed.toggle()
+            } label: {
+                Image(systemName: isRevealed ? "eye.slash" : "eye")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.neutral500)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isRevealed ? "Skjul passord" : "Vis passord")
+        }
+        .padding(.horizontal, 14)
+        .frame(height: 52)
+        .background(Color.neutral50)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.neutral200, lineWidth: 1)
+        )
     }
 }

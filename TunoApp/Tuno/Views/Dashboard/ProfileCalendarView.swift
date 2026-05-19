@@ -19,6 +19,12 @@ struct ProfileCalendarView: View {
     @State private var previousSpotMarkers: [SpotMarker] = []
     @State private var showOpeningOverridesSheet = false
     @State private var bookings: [BookingService.BookingForCalendar] = []
+    /// Build 239 / TU-98: tannhjul-knapp nederst som åpner ConfirmationDialog
+    /// med hurtigvalg til Rediger annonse + Vis annonse. Lar host hoppe rett
+    /// til pris-redigering uten å gå via Profil → Mine annonser.
+    @State private var showQuickActions = false
+    @State private var showEditListing = false
+    @State private var showListingDetail = false
 
     enum SaveStatus: Equatable {
         case idle, saving, saved, error(String)
@@ -92,6 +98,47 @@ struct ProfileCalendarView: View {
             .padding(.horizontal, 16)
             .padding(.top, 8)
         }
+        .overlay(alignment: .bottomTrailing) {
+            quickActionsButton
+                .padding(.trailing, 18)
+                .padding(.bottom, 24)
+        }
+        .confirmationDialog(
+            "Annonsen",
+            isPresented: $showQuickActions,
+            titleVisibility: .visible
+        ) {
+            Button("Rediger annonse") { showEditListing = true }
+            Button("Vis annonse") { showListingDetail = true }
+            Button("Avbryt", role: .cancel) {}
+        }
+        .fullScreenCover(isPresented: $showEditListing) {
+            EditListingHub(listing: listing)
+        }
+        .fullScreenCover(isPresented: $showListingDetail) {
+            NavigationStack {
+                ListingDetailView(listingId: listing.id)
+            }
+        }
+    }
+
+    /// Tannhjul-knapp nederst-høyre (TU-98). Speiler "FAB"-mønstret fra
+    /// kart-skjermen — sirkulær knapp med skygge så den løfter seg over
+    /// kalenderen.
+    private var quickActionsButton: some View {
+        Button {
+            showQuickActions = true
+        } label: {
+            Image(systemName: "gearshape.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.neutral900)
+                .frame(width: 48, height: 48)
+                .background(Circle().fill(Color.white))
+                .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+                .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Annonse-handlinger")
     }
 
     @ViewBuilder

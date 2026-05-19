@@ -154,6 +154,11 @@ struct PublishStep: View {
                 form.goTo(step: 10, spotIndex: 0)
             }
             Divider().padding(.leading, 56)
+            summaryRow(icon: "textformat", label: "Tittel",
+                       value: titleSummary) {
+                form.goTo(step: 12)
+            }
+            Divider().padding(.leading, 56)
             summaryRow(icon: "text.alignleft", label: "Beskrivelse",
                        value: descriptionSummary) {
                 form.goTo(step: 12)
@@ -188,6 +193,12 @@ struct PublishStep: View {
         let addr = form.address.trimmingCharacters(in: .whitespaces)
         if addr.isEmpty { return "—" }
         return addr
+    }
+
+    private var titleSummary: String {
+        let trimmed = form.title.trimmingCharacters(in: .whitespaces)
+        if trimmed.isEmpty { return "Ingen" }
+        return trimmed.count > 28 ? String(trimmed.prefix(28)) + "…" : trimmed
     }
 
     private var descriptionSummary: String {

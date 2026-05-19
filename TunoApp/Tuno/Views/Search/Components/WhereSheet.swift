@@ -13,7 +13,6 @@ struct WhereSheet: View {
     @Binding var query: String
     @Binding var checkIn: Date?
     @Binding var checkOut: Date?
-    @Binding var flexibility: Int
     @Binding var bookingPref: BookingPreference
     @Binding var vehicles: Set<VehicleType>
     @Binding var openingHoursFilter: OpeningHoursFilter
@@ -246,11 +245,7 @@ struct WhereSheet: View {
             let df = DateFormatter()
             df.dateFormat = "d. MMM"
             df.locale = Locale(identifier: "nb_NO")
-            let dates = "\(df.string(from: i))–\(df.string(from: o))"
-            if flexibility > 0 {
-                return "\(dates) · ± \(flexibility) \(flexibility == 1 ? "dag" : "dager")"
-            }
-            return dates
+            return "\(df.string(from: i))–\(df.string(from: o))"
         }
         return "Legg til datoer"
     }
@@ -559,57 +554,16 @@ struct WhereSheet: View {
             )
             .frame(maxHeight: 280)
 
-            flexibilityChips
-
             if checkIn != nil || checkOut != nil {
                 Button("Nullstill datoer") {
                     checkIn = nil
                     checkOut = nil
-                    flexibility = 0
                     editingCheckIn = true
                 }
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.neutral600)
             }
         }
-    }
-
-    /// "Jeg er fleksibel"-chips. Lar brukeren utvide søket med ±N dager
-    /// rundt valgt periode. Speiler Airbnb sin "I'm flexible"-funksjonalitet.
-    @ViewBuilder
-    private var flexibilityChips: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Jeg er fleksibel")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.neutral700)
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    flexChip(label: "Eksakt", value: 0)
-                    flexChip(label: "± 1 dag", value: 1)
-                    flexChip(label: "± 2 dager", value: 2)
-                    flexChip(label: "± 3 dager", value: 3)
-                    flexChip(label: "± 7 dager", value: 7)
-                }
-                .padding(.horizontal, 1)
-            }
-        }
-    }
-
-    private func flexChip(label: String, value: Int) -> some View {
-        let active = flexibility == value
-        return Button {
-            withAnimation(.easeInOut(duration: 0.18)) { flexibility = value }
-        } label: {
-            Text(label)
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(active ? .white : .neutral800)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 8)
-                .background(active ? Color.neutral900 : Color.neutral50)
-                .clipShape(Capsule())
-                .overlay(Capsule().stroke(active ? Color.neutral900 : Color.neutral200, lineWidth: 1))
-        }
-        .buttonStyle(.plain)
     }
 
     private func dateTab(label: String, date: Date?, isActive: Bool, onTap: @escaping () -> Void) -> some View {
