@@ -307,13 +307,14 @@ struct EditListingHub: View {
                 title: "Booking",
                 subtitle: form.instantBooking ? "Direktebooking" : "Godkjenn først"
             )
-            divider
-            row(
-                dest: .openingHours,
-                icon: "clock.fill",
-                title: "Åpningstid",
-                subtitle: OpeningHoursService.compactLabel(form.openingHours) ?? "Hele dagen"
-            )
+            // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+            // divider
+            // row(
+            //     dest: .openingHours,
+            //     icon: "clock.fill",
+            //     title: "Åpningstid",
+            //     subtitle: OpeningHoursService.compactLabel(form.openingHours) ?? "Hele dagen"
+            // )
         }
     }
 

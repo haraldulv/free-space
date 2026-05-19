@@ -717,12 +717,14 @@ struct WizardPricingCalendarView: View {
             .padding(.horizontal, 12)
 
             // Bunn-rad bytter også basert på modus.
+            // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver toggle-knappen post-launch
             Group {
                 switch actionBarSubMode {
                 case .availability:
-                    if effectiveOpeningHours != nil {
-                        openingHoursToggleButton
-                    }
+                    EmptyView()
+                    // if effectiveOpeningHours != nil {
+                    //     openingHoursToggleButton
+                    // }
                 case .openingHours:
                     backToAvailabilityButton
                 }

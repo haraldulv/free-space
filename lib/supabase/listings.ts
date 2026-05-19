@@ -152,11 +152,12 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
     query = query.in("vehicle_type", acceptedTypes);
   }
 
-  if (filters.openingHours === "always") {
-    query = query.is("opening_hours", null);
-  } else if (filters.openingHours === "limited") {
-    query = query.not("opening_hours", "is", null);
-  }
+  // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+  // if (filters.openingHours === "always") {
+  //   query = query.is("opening_hours", null);
+  // } else if (filters.openingHours === "limited") {
+  //   query = query.not("opening_hours", "is", null);
+  // }
 
   if (filters.rentalPeriodTypes && filters.rentalPeriodTypes.length > 0) {
     // Array overlap (OR-semantikk: vis annonser som tilbyr minst én av valgte perioder)

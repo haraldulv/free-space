@@ -152,9 +152,10 @@ struct ListingDetailView: View {
 
                         pricePackagesCard(listing: listing)
 
-                        if let oh = listing.openingHours {
-                            openingHoursCard(hours: oh)
-                        }
+                        // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+                        // if let oh = listing.openingHours {
+                        //     openingHoursCard(hours: oh)
+                        // }
 
                         locationCard(listing: listing, hideExact: hideExact)
 
@@ -1178,12 +1179,14 @@ struct ListingDetailView: View {
                     thingsRow(icon: "clock",
                               title: "Inn- og utsjekking",
                               subtitle: "Innsjekking fra \(listing.checkInTime ?? "15:00") · Utsjekking innen \(listing.checkOutTime ?? "11:00")")
-                } else if listing.category == .parking,
-                          let label = OpeningHoursService.compactLabel(listing.openingHours) {
-                    thingsRow(icon: "clock",
-                              title: "Åpningstid",
-                              subtitle: openingHoursSubtitle(label: label))
                 }
+                // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+                // else if listing.category == .parking,
+                //           let label = OpeningHoursService.compactLabel(listing.openingHours) {
+                //     thingsRow(icon: "clock",
+                //               title: "Åpningstid",
+                //               subtitle: openingHoursSubtitle(label: label))
+                // }
 
                 if let spots = listing.spots {
                     thingsRow(icon: "car.2.fill",

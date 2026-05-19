@@ -11,8 +11,9 @@ import DatePicker from "@/components/ui/DatePicker";
 import Button from "@/components/ui/Button";
 import { Listing, SpotMarker, getDisplayPriceText } from "@/types";
 import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS } from "@/lib/config";
-import OpeningHoursDisplay from "@/components/features/OpeningHoursDisplay";
-import { hasLimitedHours } from "@/lib/opening-hours";
+// ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+// import OpeningHoursDisplay from "@/components/features/OpeningHoursDisplay";
+// import { hasLimitedHours } from "@/lib/opening-hours";
 import { checkAvailabilityAction } from "@/app/[locale]/(main)/book/actions";
 
 interface BookingFormProps {
@@ -217,11 +218,13 @@ export default function BookingForm({ listing, bookedDates }: BookingFormProps) 
         </div>
       </div>
 
+      {/* ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
       {hasLimitedHours(listing.openingHours) && (
         <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3">
           <OpeningHoursDisplay hours={listing.openingHours} compact />
         </div>
       )}
+      */}
 
       <div className="mt-6">
         <button

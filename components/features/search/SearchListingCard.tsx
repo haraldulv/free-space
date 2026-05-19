@@ -129,6 +129,7 @@ export default function SearchListingCard({
               </span>
             </p>
             <div className="flex items-center gap-1.5">
+              {/* ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
               {listing.openingHours && (
                 <span className="flex items-center gap-0.5 text-[10px] font-semibold text-amber-700" title={t("limitedHours")}>
                   <Clock className="h-3 w-3" />
@@ -137,6 +138,7 @@ export default function SearchListingCard({
                   )}
                 </span>
               )}
+              */}
               {listing.instantBooking && (
                 <span className="flex items-center text-[10px] font-semibold text-green-600" title={t("instantBook")}>
                   <Zap className="h-3 w-3 fill-green-600" />

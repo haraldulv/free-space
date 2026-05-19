@@ -37,10 +37,11 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
   const checkOut = typeof params.checkOut === "string" ? params.checkOut : undefined;
   const lat = typeof params.lat === "string" ? parseFloat(params.lat) : undefined;
   const lng = typeof params.lng === "string" ? parseFloat(params.lng) : undefined;
-  const openingHours: "any" | "always" | "limited" =
-    params.openingHours === "always" || params.openingHours === "limited"
-      ? params.openingHours
-      : "any";
+  // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+  // const openingHours: "any" | "always" | "limited" =
+  //   params.openingHours === "always" || params.openingHours === "limited"
+  //     ? params.openingHours
+  //     : "any";
 
   const rentalPeriodTypes = parsePeriodTypes(params.period);
 
@@ -52,7 +53,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
     checkOut,
     lat,
     lng,
-    openingHours,
+    // openingHours,
     rentalPeriodTypes,
   });
 
@@ -64,7 +65,7 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
       vehicleType={vehicleType}
       checkIn={checkIn}
       checkOut={checkOut}
-      openingHours={openingHours}
+      // openingHours={openingHours}
       rentalPeriodTypes={rentalPeriodTypes}
     />
   );

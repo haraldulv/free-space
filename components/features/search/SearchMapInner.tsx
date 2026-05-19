@@ -96,8 +96,9 @@ function ensureOverlayClass() {
       const el = document.createElement("button");
       const spotsLabel = listing.availableSpots !== undefined ? `${listing.availableSpots}/${listing.spots}p` : `${listing.spots}p`;
       const spots = listing.spots > 1 ? `<span style="margin-left:4px;opacity:0.5;font-weight:500;font-size:11px">${spotsLabel}</span>` : "";
-      const clock = listing.openingHours ? `<span style="margin-right:4px;display:inline-flex;vertical-align:-2px;color:#b45309" title="Begrenset åpningstid">🕒</span>` : "";
-      el.innerHTML = `${clock}${getDisplayPriceText(listing)} kr${spots}`;
+      // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+      // const clock = listing.openingHours ? `<span style="margin-right:4px;display:inline-flex;vertical-align:-2px;color:#b45309" title="Begrenset åpningstid">🕒</span>` : "";
+      el.innerHTML = `${getDisplayPriceText(listing)} kr${spots}`;
       el.style.cssText = `
         border-radius: 9999px;
         padding: 6px 14px;

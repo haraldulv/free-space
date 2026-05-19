@@ -13,10 +13,11 @@ import AmenitiesStep from "./steps/AmenitiesStep";
 import DiscountsStep from "./steps/DiscountsStep";
 import ReviewStep from "./steps/ReviewStep";
 import AvailabilityEditor from "./AvailabilityEditor";
-import OpeningHoursEditor from "@/components/features/OpeningHoursEditor";
+// ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+// import OpeningHoursEditor from "@/components/features/OpeningHoursEditor";
 import { listingStepSchemas } from "@/lib/utils/validation";
 import type { CreateListingData } from "@/lib/supabase/listings";
-import type { Amenity, OpeningHours, SpotMarker, VehicleType } from "@/types";
+import type { Amenity, SpotMarker, VehicleType } from "@/types";
 
 interface ListingFormWizardProps {
   userId: string;
@@ -211,6 +212,7 @@ export default function ListingFormWizard({
 
         {step === 6 && (
           <div className="space-y-8">
+            {/* ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
             {formData.category === "parking" && (
               <div>
                 <h2 className="text-2xl font-bold text-neutral-900">{t("openingHoursTitle")}</h2>
@@ -223,6 +225,7 @@ export default function ListingFormWizard({
                 </div>
               </div>
             )}
+            */}
             <div>
               <h2 className="text-2xl font-bold text-neutral-900">{t("availabilityTitle")}</h2>
               <p className="mt-2 text-sm text-neutral-500">{t("availabilitySubtitle")}</p>

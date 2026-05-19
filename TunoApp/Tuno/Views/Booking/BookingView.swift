@@ -467,10 +467,11 @@ struct BookingView: View {
             VStack(alignment: .leading, spacing: 24) {
                 listingSummary
 
-                if let oh = OpeningHoursService.effective(listing: listing, spot: selectedSpots.first),
-                   OpeningHoursService.hasLimitedHours(oh) {
-                    openingHoursBanner(oh)
-                }
+                // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+                // if let oh = OpeningHoursService.effective(listing: listing, spot: selectedSpots.first),
+                //    OpeningHoursService.hasLimitedHours(oh) {
+                //     openingHoursBanner(oh)
+                // }
 
                 Divider()
                 dateSection

@@ -250,8 +250,10 @@ final class ListingFormModel: ObservableObject {
     /// Åpningstid-steget (8) er listing-nivå og kun for parkering. Default
     /// døgnåpent (form.openingHours = nil). Vises på første plass-iterasjon i
     /// mini-wizarden — etterfølgende plasser hopper steget.
+    /// ÅPNINGSTIDER PAUSET pre-launch — alltid hopp steget. Re-aktiver:
+    /// `category != .parking` når åpningstider kommer tilbake.
     var skipsAvailabilityStep: Bool {
-        category != .parking
+        true
     }
 
     /// Rabatter-steget (12) er nå flettet inn under Pris-steget som en
@@ -935,7 +937,7 @@ extension ListingFormModel {
             extras: [],
             maxVehicleLength: derivedMaxLength,
             isActive: true,
-            openingHours: isParking ? openingHours : nil,
+            openingHours: nil, // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver: isParking ? openingHours : nil
             minStayDays: derivedMinStay,
             maxStayDays: maxStayDays,
             parkingType: isParking ? parkingType?.rawValue : nil,

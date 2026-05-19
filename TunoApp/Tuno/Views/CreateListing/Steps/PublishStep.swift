@@ -135,13 +135,14 @@ struct PublishStep: View {
             ) {
                 form.goTo(step: 5)
             }
-            if form.category == .parking {
-                Divider().padding(.leading, 56)
-                summaryRow(icon: "clock.fill", label: "Åpningstid",
-                           value: OpeningHoursService.compactLabel(form.openingHours) ?? "Hele dagen") {
-                    form.goTo(step: 7)
-                }
-            }
+            // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+            // if form.category == .parking {
+            //     Divider().padding(.leading, 56)
+            //     summaryRow(icon: "clock.fill", label: "Åpningstid",
+            //                value: OpeningHoursService.compactLabel(form.openingHours) ?? "Hele dagen") {
+            //         form.goTo(step: 7)
+            //     }
+            // }
             Divider().padding(.leading, 56)
             summaryRow(icon: "photo.stack", label: "Bilder",
                        value: form.imageURLs.isEmpty ? "Ingen" : "\(form.imageURLs.count)") {

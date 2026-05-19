@@ -261,15 +261,16 @@ final class ListingService: ObservableObject {
                 listings = listings.filter { $0.instantBooking == true }
             }
 
-            // Filter by opening hours
-            switch openingHours {
-            case .any:
-                break
-            case .alwaysOpen:
-                listings = listings.filter { $0.openingHours == nil }
-            case .limitedHours:
-                listings = listings.filter { OpeningHoursService.hasLimitedHours($0.openingHours) }
-            }
+            // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+            // switch openingHours {
+            // case .any:
+            //     break
+            // case .alwaysOpen:
+            //     listings = listings.filter { $0.openingHours == nil }
+            // case .limitedHours:
+            //     listings = listings.filter { OpeningHoursService.hasLimitedHours($0.openingHours) }
+            // }
+            _ = openingHours // unngå "unused parameter"-warning
 
             // Vi auto-filtrerer IKKE på åpningstid — gjest kan justere
             // pickup-dag, eller vert kan ha nøkkel/kode for tilgang utenfor

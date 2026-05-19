@@ -121,22 +121,22 @@ struct ProfileCalendarView: View {
 
             saveIndicator
 
-            // Åpningstid-overstyring per dato (kun for parkering med åpningstid)
-            if listing.category == .parking {
-                Button {
-                    showOpeningOverridesSheet = true
-                } label: {
-                    Image(systemName: "clock.badge")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                        .frame(width: 36, height: 36)
-                        .background(Circle().fill(Color.white))
-                        .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
-                        .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Åpningstid på spesifikke datoer")
-            }
+            // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+            // if listing.category == .parking {
+            //     Button {
+            //         showOpeningOverridesSheet = true
+            //     } label: {
+            //         Image(systemName: "clock.badge")
+            //             .font(.system(size: 15, weight: .semibold))
+            //             .foregroundStyle(.neutral900)
+            //             .frame(width: 36, height: 36)
+            //             .background(Circle().fill(Color.white))
+            //             .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+            //             .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
+            //     }
+            //     .buttonStyle(.plain)
+            //     .accessibilityLabel("Åpningstid på spesifikke datoer")
+            // }
         }
     }
 

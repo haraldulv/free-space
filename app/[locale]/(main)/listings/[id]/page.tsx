@@ -17,7 +17,8 @@ import ShareButton from "@/components/features/ShareButton";
 import ListingMap from "@/components/features/ListingMap";
 import ListingDistanceBadge from "@/components/features/ListingDistanceBadge";
 import ReviewList from "@/components/features/ReviewList";
-import OpeningHoursDisplay from "@/components/features/OpeningHoursDisplay";
+// ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+// import OpeningHoursDisplay from "@/components/features/OpeningHoursDisplay";
 
 export const dynamic = "force-dynamic";
 
@@ -66,13 +67,13 @@ export default async function ListingPage({
   params: Promise<{ id: string; locale: string }>;
 }) {
   const { id } = await params;
-  const [listing, reviews, bookedDates, tListing, tCategory, tOpening] = await Promise.all([
+  // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver tOpening + openingHours-translations
+  const [listing, reviews, bookedDates, tListing, tCategory] = await Promise.all([
     getListingById(id),
     getListingReviews(id),
     getFutureBookedDates(id),
     getTranslations("listing"),
     getTranslations("category"),
-    getTranslations("openingHours"),
   ]);
   if (!listing) notFound();
 
@@ -189,6 +190,7 @@ export default async function ListingPage({
             </div>
           )}
 
+          {/* ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
           {listing.openingHours && (
             <div className="mt-6 border-t border-neutral-100 pt-6">
               <h2 className="mb-4 text-lg font-semibold text-neutral-900">
@@ -199,6 +201,7 @@ export default async function ListingPage({
               </div>
             </div>
           )}
+          */}
 
           {(() => {
             const spotsWithExtras = (listing.spotMarkers ?? []).filter((s) => (s.extras ?? []).length > 0);

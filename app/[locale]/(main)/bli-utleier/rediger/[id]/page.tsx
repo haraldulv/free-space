@@ -16,7 +16,7 @@ import {
   Eye,
   EyeOff,
   Loader,
-  Clock,
+  // Clock, // ÅPNINGSTIDER PAUSET pre-launch
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
@@ -31,11 +31,12 @@ import ImageUploadStep from "@/components/features/listing-form/steps/ImageUploa
 import AmenitiesStep from "@/components/features/listing-form/steps/AmenitiesStep";
 import DiscountsStep from "@/components/features/listing-form/steps/DiscountsStep";
 import AvailabilityEditor from "@/components/features/listing-form/AvailabilityEditor";
-import OpeningHoursEditor from "@/components/features/OpeningHoursEditor";
+// ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+// import OpeningHoursEditor from "@/components/features/OpeningHoursEditor";
 import Button from "@/components/ui/Button";
 import Sheet from "@/components/ui/Sheet";
 import type { CreateListingData } from "@/lib/supabase/listings";
-import type { Amenity, OpeningHours, SpotMarker } from "@/types";
+import type { Amenity, SpotMarker } from "@/types";
 
 type SectionId =
   | "info"
@@ -43,8 +44,8 @@ type SectionId =
   | "images"
   | "amenities"
   | "discounts"
-  | "availability"
-  | "openingHours";
+  | "availability";
+// | "openingHours"; // ÅPNINGSTIDER PAUSET pre-launch
 
 export default function EditListingPage() {
   const t = useTranslations("host.edit");
@@ -110,7 +111,7 @@ export default function EditListingPage() {
         checkoutMessage: row.checkout_message || "",
         checkoutMessageSendHoursBefore: row.checkout_message_send_hours_before ?? 2,
         extras: row.extras || [],
-        openingHours: (row.opening_hours as OpeningHours | null) ?? null,
+        // openingHours: (row.opening_hours as OpeningHours | null) ?? null, // ÅPNINGSTIDER PAUSET pre-launch
         perSpotPricing: Array.isArray(row.spot_markers) && (row.spot_markers as SpotMarker[]).some((s) => s.price != null),
         perSpotCheckinMessage: Array.isArray(row.spot_markers) && (row.spot_markers as SpotMarker[]).some((s) => s.checkinMessage),
       });
@@ -279,6 +280,7 @@ export default function EditListingPage() {
           onClick={() => setOpenSheet("discounts")}
         />
 
+        {/* ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
         {formData.category === "parking" && (
           <SectionCard
             icon={Clock}
@@ -287,6 +289,7 @@ export default function EditListingPage() {
             onClick={() => setOpenSheet("openingHours")}
           />
         )}
+        */}
 
         <SectionCard
           icon={Sparkles}
@@ -430,6 +433,7 @@ export default function EditListingPage() {
         />
       </Sheet>
 
+      {/* ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
       <Sheet
         open={openSheet === "openingHours"}
         onClose={() => setOpenSheet(null)}
@@ -444,6 +448,7 @@ export default function EditListingPage() {
           />
         </div>
       </Sheet>
+      */}
     </div>
   );
 }
@@ -553,6 +558,7 @@ function discountsPreview(d: Partial<CreateListingData>, t: (key: string) => str
   return hasAny ? t("discountsActive") : t("discountsInactive");
 }
 
-function openingHoursPreview(d: Partial<CreateListingData>, t: (key: string) => string): string {
-  return d.openingHours ? t("openingHoursLimited") : t("openingHoursAlways");
-}
+// ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
+// function openingHoursPreview(d: Partial<CreateListingData>, t: (key: string) => string): string {
+//   return d.openingHours ? t("openingHoursLimited") : t("openingHoursAlways");
+// }
