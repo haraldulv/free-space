@@ -118,29 +118,32 @@ struct WizardPricingCalendarView: View {
         return s?.price ?? s?.pricePerNight ?? s?.pricePerHour ?? 0
     }
 
-    /// Effektiv åpningstid for plassen — spot.openingHours overstyrer
-    /// listing-nivå (form.openingHours).
+    // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver alle tre helpers
+    // post-launch. Stubbene returnerer "ingen begrensning" så all
+    // kallesteder (cell-rendering, filtre) oppfører seg som om
+    // ingen åpningstid er satt.
+    private var effectiveOpeningHours: OpeningHours? { nil }
+
+    private func closedByOpeningHours(_ date: Date) -> Bool { false }
+
+    enum CellOpeningDisplay: Equatable {
+        case none
+        case alwaysOpen
+        case limited(String)
+    }
+
+    private func openingHoursDisplay(for date: Date) -> CellOpeningDisplay { .none }
+
+    /* ORIGINAL — re-aktiver post-launch
     private var effectiveOpeningHours: OpeningHours? {
         spot?.openingHours ?? form.openingHours
     }
 
-    /// True hvis dagen er stengt etter åpningstid eller per-dato override.
-    /// Override har presedens over ukedags-default.
     private func closedByOpeningHours(_ date: Date) -> Bool {
         let oh = effectiveOpeningHours
         let overrides = spot?.openingHoursOverrides
-        // Hvis verken åpningstid eller overrides finnes → ingen begrensning
         if oh == nil && (overrides?.isEmpty ?? true) { return false }
         return !OpeningHoursService.isOpen(oh, on: date, overrides: overrides)
-    }
-
-    /// Kompakt visning av åpningstid for celle. Returnerer enum slik at
-    /// callers kan skille mellom døgnåpent (egen "24t"-pille) og begrenset
-    /// tid ("9–17"-tekst). Override har presedens over ukedags-default.
-    enum CellOpeningDisplay: Equatable {
-        case none           // ingen begrensning satt på listing/spot
-        case alwaysOpen     // 24/7 — vises som "24t"-pille
-        case limited(String) // "9–17"
     }
 
     private func openingHoursDisplay(for date: Date) -> CellOpeningDisplay {
@@ -150,7 +153,6 @@ struct WizardPricingCalendarView: View {
         guard let raw = OpeningHoursService.effectiveTime(oh, on: date, overrides: overrides) else {
             return .none
         }
-        // 24/7-sentineler — parseRange aksepterer ikke "24:00", så håndter eksplisitt.
         if raw == "00:00-24:00" || raw == "00:00-23:59" { return .alwaysOpen }
         guard let parsed = OpeningHoursService.parseRange(raw) else { return .none }
         if parsed.start == 0 && parsed.end >= 23 * 60 + 59 { return .alwaysOpen }
@@ -158,6 +160,7 @@ struct WizardPricingCalendarView: View {
         let endH = parsed.end / 60
         return .limited("\(startH)–\(endH)")
     }
+    */
 
     private var spot: SpotMarker? {
         form.spotMarkers.first(where: { $0.id == spotId })
@@ -878,16 +881,21 @@ struct WizardPricingCalendarView: View {
         }
     }
 
-    /// True hvis minst én av valgte datoer har en eksisterende åpningstid-override.
+    // ÅPNINGSTIDER PAUSET pre-launch — alle per-date override-helpers
+    // er no-op-stubbet. Logikken er uberørt under kommentaren slik at vi
+    // bare kan reverse-uncommente for å re-aktivere post-launch.
+    private var selectionHasExistingOpeningOverride: Bool { false }
+    private func primeOHEditorFromSelection() { /* paused */ }
+    private func applyOpeningHoursOverride() { /* paused */ }
+    private func removeOpeningHoursOverride() { /* paused */ }
+
+    /* ORIGINAL — re-aktiver post-launch
     private var selectionHasExistingOpeningOverride: Bool {
         guard let idx = spotIndex,
               let dict = form.spotMarkers[idx].openingHoursOverrides else { return false }
         return selectedDates.contains { dict[$0] != nil }
     }
 
-    /// Pre-fyll editor-state basert på første valgte dato med eksisterende
-    /// override. Hvis ingen finnes, default til "Egne tider 09-17" så
-    /// brukeren har et tydelig utgangspunkt.
     private func primeOHEditorFromSelection() {
         guard let idx = spotIndex,
               let dict = form.spotMarkers[idx].openingHoursOverrides else {
@@ -912,8 +920,6 @@ struct WizardPricingCalendarView: View {
             ohStartTime = Self.parseHM(from) ?? Self.defaultStartTime()
             ohEndTime = Self.parseHM(to) ?? Self.defaultEndTime()
         } else {
-            // Eksisterende stengt-override (legacy) — vis som Egne tider
-            // default; bruker kan eksplisitt blokkere dagen via Tilgjengelig
             ohEditorMode = .otherTime
             ohStartTime = Self.defaultStartTime()
             ohEndTime = Self.defaultEndTime()
@@ -946,6 +952,7 @@ struct WizardPricingCalendarView: View {
         actionBarSubMode = .availability
         clearSelectionState()
     }
+    */
 
     private static func defaultStartTime() -> Date {
         var c = DateComponents(); c.hour = 9; c.minute = 0

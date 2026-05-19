@@ -45,6 +45,11 @@ struct ProfileCalendarView: View {
         .toolbar(.hidden, for: .tabBar)
         .task { await load() }
         .onChange(of: form.spotMarkers) { _, _ in scheduleSave() }
+        // ÅPNINGSTIDER PAUSET pre-launch — sheet'en kan ikke nås (trigger-
+        // knappen er kommentert ut over), men la vi sheet-koden stå aktiv
+        // ville `showOpeningOverridesSheet` kunne settes andre steder. Vi
+        // kommenterer ut hele modifier'en så ingen kall lekker gjennom.
+        /*
         .sheet(isPresented: $showOpeningOverridesSheet) {
             if let spotId = canonicalSpotId,
                let idx = form.spotMarkers.firstIndex(where: { $0.id == spotId }) {
@@ -52,7 +57,6 @@ struct ProfileCalendarView: View {
                     overrides: Binding(
                         get: { form.spotMarkers[idx].openingHoursOverrides ?? [:] },
                         set: { newValue in
-                            // Sync til alle spots hvis allSpotsMode
                             let target = newValue.isEmpty ? nil : newValue
                             if allSpotsMode {
                                 for i in form.spotMarkers.indices {
@@ -70,6 +74,7 @@ struct ProfileCalendarView: View {
                 .presentationDragIndicator(.visible)
             }
         }
+        */
     }
 
     @ViewBuilder
