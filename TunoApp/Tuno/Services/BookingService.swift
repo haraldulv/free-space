@@ -340,6 +340,48 @@ final class BookingService: ObservableObject {
         }
     }
 
+    // MARK: - Bookinger for kalender-overlay (host-side)
+
+    /// Booking-objekt for visning som span i host-kalenderen. Bruker join på
+    /// `profiles` for å hente gjestens navn + avatar.
+    struct BookingForCalendar: Decodable, Identifiable {
+        let id: String
+        let check_in: String       // ISO yyyy-MM-dd
+        let check_out: String      // ISO yyyy-MM-dd (exclusive)
+        let selected_spot_ids: [String]?
+        let status: String
+        let guest: GuestInfo?
+        struct GuestInfo: Decodable {
+            let full_name: String?
+            let avatar_url: String?
+        }
+    }
+
+    /// Henter fremtidige bookinger for en annonse med joinet gjest-info.
+    /// Brukes til å vise sammenslåtte booking-spans (profilbilde + navn) i
+    /// host-kalenderen (`ProfileCalendarView`).
+    func fetchBookingsForListing(listingId: String) async -> [BookingForCalendar] {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd"
+        fmt.timeZone = TimeZone(identifier: "UTC")
+        let today = fmt.string(from: Date())
+
+        do {
+            let rows: [BookingForCalendar] = try await supabase
+                .from("bookings")
+                .select("id, check_in, check_out, selected_spot_ids, status, guest:profiles!user_id(full_name, avatar_url)")
+                .eq("listing_id", value: listingId)
+                .in("status", values: ["confirmed", "pending", "requested"])
+                .gte("check_out", value: today)
+                .execute()
+                .value
+            return rows
+        } catch {
+            print("fetchBookingsForListing error: \(error)")
+            return []
+        }
+    }
+
     func checkAvailability(listingId: String, checkIn: String, checkOut: String) async -> (available: Int, total: Int) {
         do {
             struct ListingSpots: Decodable {

@@ -29,6 +29,11 @@ struct CellFramesPreference: PreferenceKey {
 struct WizardPricingCalendarView: View {
     @ObservedObject var form: ListingFormModel
     let spotId: String
+    /// Eksisterende bookinger fra DB — vises som sammenhengende spans
+    /// (profilbilde + "Booked"-tekst) i kalenderen. Read-only, ikke
+    /// redigerbare. Wizarden sender alltid `[]` siden den ikke har bookinger
+    /// enda. ProfileCalendarView leverer ekte bookinger.
+    var bookings: [BookingService.BookingForCalendar] = []
 
     @State private var mode: CalendarMode = .idle
     @State private var selectedDates: Set<String> = []
@@ -50,6 +55,12 @@ struct WizardPricingCalendarView: View {
     /// Pre-warmed haptic for hver tap/drag-celle. Selection-typen er Apple
     /// sin standard for picker-aktige valg — mer subtilt enn impact.
     private let selectionHaptic = UISelectionFeedbackGenerator()
+    /// Stronger haptic ved long-press-aktivering (Airbnb-mønster: medium
+    /// impact bekrefter at multi-select-modus er aktivt).
+    private let longPressHaptic = UIImpactFeedbackGenerator(style: .medium)
+    /// Origin-celle for drag-en. Vises med subtil scale(1.05) som indikasjon
+    /// på at multi-select-modus er aktivt.
+    @State private var dragOriginISO: String? = nil
 
     // MARK: - Panel-minimer state
     /// True når bunn-panelet er kollapset til kun pille + reset + maks-knapp.
@@ -88,7 +99,8 @@ struct WizardPricingCalendarView: View {
 
     private let monthsAhead = 6
     private let cellHeight: CGFloat = 95
-    private let cellSpacing: CGFloat = 6
+    private let cellSpacing: CGFloat = 4
+    private let gridHorizontalPadding: CGFloat = 6
     /// Default-høyde per bånd. Skaleres ned dynamisk om mange lanes finnes
     /// slik at stacken aldri sprenger cellHeight.
     private let bandHeight: CGFloat = 22
@@ -297,20 +309,11 @@ struct WizardPricingCalendarView: View {
                 .onPreferenceChange(CellFramesPreference.self) { frames in
                     cellFrames = frames
                 }
-                // Drag-select: hold + slide trigger range-mark. simultaneousGesture
-                // lar ScrollView fortsatt scrolle vertikalt når brukeren ikke
-                // beveger fingeren fort nok til å trigge dragen. Når dragen
-                // begynner låser vi scroll via `.scrollDisabled(isDragging)`.
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 12, coordinateSpace: .named("calendarGrid"))
-                        .onChanged { value in
-                            handleDragChanged(at: value.location, startLocation: value.startLocation)
-                        }
-                        .onEnded { _ in
-                            commitDrag()
-                        }
-                )
-                .scrollDisabled(isDragging)
+                // Drag-select ligger nå PER CELLE (LongPressGesture(0.25)
+                // .sequenced(before: DragGesture)) — IKKE som simultaneous-
+                // Gesture på ScrollView. Det betyr at vanlig scroll vinner
+                // inntil bruker holder fingeren stille i 0.25s, og false-
+                // positives på scroll er borte. Se `dayCell` for setup.
                 // Auto-minimer panel ved scroll ned. Sjekker delta >30pt slik
                 // at små bevegelser (overscroll-bounce) ikke trigger.
                 .onScrollGeometryChange(for: CGFloat.self) { geo in
@@ -325,6 +328,9 @@ struct WizardPricingCalendarView: View {
                     }
                 }
                 .onAppear {
+                    // Pre-warm haptics for lavest mulig latency.
+                    selectionHaptic.prepare()
+                    longPressHaptic.prepare()
                     guard !hasScrolledToCurrent else { return }
                     if let target = currentWeekRowId {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -389,7 +395,7 @@ struct WizardPricingCalendarView: View {
                         .frame(maxWidth: .infinity)
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, gridHorizontalPadding)
             .padding(.vertical, 10)
 
             Rectangle()
@@ -434,7 +440,7 @@ struct WizardPricingCalendarView: View {
                     weekRow(week)
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, gridHorizontalPadding)
         }
     }
 
@@ -461,9 +467,152 @@ struct WizardPricingCalendarView: View {
                 bandsOverlay(week: week)
                     .frame(height: cellHeight)
             }
+
+            // 3. Booking-spans: sammenslåtte pills med avatar + "Booked" som
+            // dekker hele segmentet i uka. Read-only — tap konsumeres ikke
+            // av spanene selv så underliggende dato-celler kan fortsatt
+            // velges hvis host vil overstyre.
+            let segments = bookingSegments(for: week)
+            if !segments.isEmpty {
+                bookingSpansOverlay(week: week, segments: segments)
+                    .frame(height: cellHeight)
+                    .allowsHitTesting(false)
+            }
         }
         .frame(height: cellHeight)
         .id(week.id)
+    }
+
+    // MARK: - Booking-spans (sammenslåtte pills)
+
+    /// En sammenhengende booking-segment innenfor én ukerad. Brukes til å
+    /// tegne én pill som dekker flere celler horisontalt.
+    private struct BookingSegment: Identifiable {
+        let booking: BookingService.BookingForCalendar
+        let startCol: Int
+        let endCol: Int
+        /// True hvis bookingens første dato (check_in) ligger i denne uka.
+        /// Bestemmer om vi viser profilbilde + navn (kun på første rad).
+        let includesCheckIn: Bool
+        var id: String { "\(booking.id)-\(startCol)-\(endCol)" }
+    }
+
+    /// Bookinger filtrert til de som påvirker akkurat denne spotId-en.
+    /// Bookinger med `selected_spot_ids == nil` eller tom array tolkes som
+    /// "gjelder hele annonsen" og inkluderes for alle spots.
+    private var filteredBookings: [BookingService.BookingForCalendar] {
+        bookings.filter { booking in
+            guard let ids = booking.selected_spot_ids, !ids.isEmpty else { return true }
+            return ids.contains(spotId)
+        }
+    }
+
+    /// Returnerer alle booking-segmenter som overlapper denne uka.
+    private func bookingSegments(for week: WeekRow) -> [BookingSegment] {
+        guard !filteredBookings.isEmpty else { return [] }
+        var result: [BookingSegment] = []
+        for booking in filteredBookings {
+            guard let checkIn = Self.isoFormatter.date(from: booking.check_in),
+                  let checkOut = Self.isoFormatter.date(from: booking.check_out) else { continue }
+            var firstCol: Int? = nil
+            var lastCol: Int? = nil
+            var includesCheckIn = false
+            for col in 0..<7 {
+                guard let day = week.days[col] else { continue }
+                let startOfDay = Self.osloCalendar.startOfDay(for: day)
+                if startOfDay >= Self.osloCalendar.startOfDay(for: checkIn) &&
+                    startOfDay < Self.osloCalendar.startOfDay(for: checkOut) {
+                    if firstCol == nil { firstCol = col }
+                    lastCol = col
+                    if Self.osloCalendar.isDate(day, inSameDayAs: checkIn) {
+                        includesCheckIn = true
+                    }
+                }
+            }
+            if let s = firstCol, let e = lastCol {
+                result.append(BookingSegment(
+                    booking: booking,
+                    startCol: s,
+                    endCol: e,
+                    includesCheckIn: includesCheckIn
+                ))
+            }
+        }
+        return result
+    }
+
+    @ViewBuilder
+    private func bookingSpansOverlay(week: WeekRow, segments: [BookingSegment]) -> some View {
+        GeometryReader { g in
+            let totalSpacing = cellSpacing * 6
+            let cellWidth = max(0, (g.size.width - totalSpacing) / 7)
+            ForEach(segments) { seg in
+                let count = seg.endCol - seg.startCol + 1
+                let x = CGFloat(seg.startCol) * (cellWidth + cellSpacing)
+                let width = CGFloat(count) * cellWidth + CGFloat(count - 1) * cellSpacing
+                bookingPill(seg, width: width)
+                    .frame(width: width, height: cellHeight)
+                    .position(x: x + width / 2, y: cellHeight / 2)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func bookingPill(_ seg: BookingSegment, width: CGFloat) -> some View {
+        let avatarURL = seg.booking.guest?.avatar_url.flatMap { URL(string: $0) }
+        let guestName = seg.booking.guest?.full_name?.trimmingCharacters(in: .whitespaces) ?? ""
+        let displayName = guestName.isEmpty ? "Booked" : guestName
+
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.neutral100)
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(Color.neutral200, lineWidth: 1)
+
+            if seg.includesCheckIn {
+                // Vis profilbilde + navn kun på første segment av bookingen.
+                HStack(spacing: 8) {
+                    avatarCircle(url: avatarURL, name: guestName)
+                        .frame(width: 28, height: 28)
+                    if width > 110 {
+                        Text(displayName)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.neutral800)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 10)
+            } else {
+                // Fortsettelse-segment (booking startet forrige uke). Tom pill
+                // som indikerer at perioden fortsetter.
+                EmptyView()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func avatarCircle(url: URL?, name: String) -> some View {
+        let initial: String = {
+            let trimmed = name.trimmingCharacters(in: .whitespaces)
+            return trimmed.isEmpty ? "?" : String(trimmed.prefix(1)).uppercased()
+        }()
+        ZStack {
+            Circle().fill(Color.neutral200)
+            Text(initial)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(.neutral700)
+        }
+        .overlay(
+            CachedAsyncImage(url: url) { image in
+                image.resizable().aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Color.clear
+            }
+            .clipShape(Circle())
+        )
+        .overlay(Circle().stroke(Color.white, lineWidth: 1.5))
     }
 
     // MARK: - Day cell
@@ -495,58 +644,88 @@ struct WizardPricingCalendarView: View {
             ? openingHoursDisplay(for: date)
             : .none
 
-        Button {
-            handleDayTap(iso: iso, isPast: isPast)
-        } label: {
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(cellBackground(
-                        isPast: isPast,
+        let isDragOriginCell = (dragOriginISO == iso) && isDragging
+
+        ZStack {
+            RoundedRectangle(cornerRadius: 12)
+                .fill(cellBackground(
+                    isPast: isPast,
+                    isSelected: isSelected,
+                    isAnchor: isAnchor,
+                    isBlocked: isBlocked,
+                    isClosedByHours: isClosedByHours,
+                    hasOverride: hasOverride
+                ))
+            RoundedRectangle(cornerRadius: 12)
+                .strokeBorder(
+                    cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast, isBlocked: isBlocked, isClosedByHours: isClosedByHours),
+                    lineWidth: isAnchor ? 2 : (isSelected || dimAsBlocked ? 1.5 : 1)
+                )
+
+            VStack(spacing: 0) {
+                Text("\(day)")
+                    .font(.system(size: 16, weight: (isSelected || isAnchor) ? .bold : .semibold))
+                    .foregroundStyle(cellText(isPast: isPast, isBlocked: dimAsBlocked))
+                    .padding(.top, 8)
+
+                Spacer(minLength: 0)
+
+                // Faste linjer: pris og status alltid på samme y-koordinat
+                // — uavhengig av dag-state. Tomme rader er Color.clear med
+                // samme høyde som teksten ville hatt.
+                VStack(spacing: 5) {
+                    priceLine(
+                        priceInfo: priceInfo,
+                        show: showPrice,
                         isSelected: isSelected,
                         isAnchor: isAnchor,
+                        hasOverride: hasOverride
+                    )
+                    statusLine(
                         isBlocked: isBlocked,
                         isClosedByHours: isClosedByHours,
-                        hasOverride: hasOverride
-                    ))
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(
-                        cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast, isBlocked: isBlocked, isClosedByHours: isClosedByHours),
-                        lineWidth: isAnchor ? 2 : (isSelected || dimAsBlocked ? 1.5 : 1)
+                        ohDisplay: ohDisplay
                     )
-
-                VStack(spacing: 0) {
-                    Text("\(day)")
-                        .font(.system(size: 16, weight: (isSelected || isAnchor) ? .bold : .semibold))
-                        .foregroundStyle(cellText(isPast: isPast, isBlocked: dimAsBlocked))
-                        .padding(.top, 8)
-
-                    Spacer(minLength: 0)
-
-                    // Faste linjer: pris og status alltid på samme y-koordinat
-                    // — uavhengig av dag-state. Tomme rader er Color.clear med
-                    // samme høyde som teksten ville hatt.
-                    VStack(spacing: 5) {
-                        priceLine(
-                            priceInfo: priceInfo,
-                            show: showPrice,
-                            isSelected: isSelected,
-                            isAnchor: isAnchor,
-                            hasOverride: hasOverride
-                        )
-                        statusLine(
-                            isBlocked: isBlocked,
-                            isClosedByHours: isClosedByHours,
-                            ohDisplay: ohDisplay
-                        )
-                    }
-                    .padding(.bottom, 10)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .padding(.bottom, 10)
             }
-            .frame(height: cellHeight)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .buttonStyle(.plain)
-        .disabled(isPast)
+        .frame(height: cellHeight)
+        .contentShape(Rectangle())
+        .scaleEffect(isDragOriginCell ? 1.05 : 1.0)
+        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragOriginCell)
+        .onTapGesture {
+            if !isPast { handleDayTap(iso: iso, isPast: isPast) }
+        }
+        // Airbnb-mønster: hold 0.25s → haptic + drag aktiveres. Scroll vinner
+        // inntil long-press fyrer. Bruk `.gesture` (ikke `.simultaneousGesture`
+        // og ikke `.highPriorityGesture`) slik at ScrollView håndterer vanlig
+        // vertikal scroll uten interferens.
+        .gesture(
+            LongPressGesture(minimumDuration: 0.25)
+                .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("calendarGrid")))
+                .onChanged { value in
+                    guard !isPast else { return }
+                    switch value {
+                    case .first(true):
+                        // Long-press fyrte. Start drag-modus om vi ikke
+                        // allerede er der.
+                        if !isDragging {
+                            longPressHaptic.impactOccurred()
+                            longPressHaptic.prepare()
+                            startDrag(at: iso)
+                        }
+                    case .second(true, let drag?):
+                        handleDragChanged(at: drag.location, fallbackStartISO: iso)
+                    default:
+                        break
+                    }
+                }
+                .onEnded { _ in
+                    commitDrag()
+                }
+        )
         .background(
             // Rapporter cellens frame i navngitt coordinate space slik at
             // DragGesture kan mappe finger-koordinat → dato. PreferenceKey
@@ -558,6 +737,7 @@ struct WizardPricingCalendarView: View {
                 )
             }
         )
+        .allowsHitTesting(!isPast)
     }
 
     /// Pris-linje med fast høyde. Tom plassholder hvis pris ikke skal vises,
@@ -1326,19 +1506,27 @@ struct WizardPricingCalendarView: View {
         }
     }
 
-    // MARK: - Drag-select (iOS 18 simultaneousGesture)
+    // MARK: - Drag-select (iOS 18 per-celle long-press + drag)
 
-    /// Kalles fra `.simultaneousGesture(DragGesture...)` på ScrollView.
-    /// Mapper finger-koordinat til celle via `cellFrames` og legger til/fjerner
-    /// datoen i seleksjonen avhengig av drag-start-cellens initial-tilstand.
-    private func handleDragChanged(at location: CGPoint, startLocation: CGPoint) {
+    /// Kalles når LongPressGesture(0.25) på en celle har fyrt. Setter
+    /// drag-modus aktivt og bestemmer toggle-retning ut fra origin-cellens
+    /// initial-tilstand. Apple Reminders-mønster: start på valgt → fjerner;
+    /// start på uvalgt → legger til.
+    private func startDrag(at iso: String) {
+        isDragging = true
+        dragOriginISO = iso
+        dragStartedOnSelected = selectedDates.contains(iso)
+        dragVisited = [iso]
+        applyDragVisit(iso)
+    }
+
+    /// Kalles fra per-celle DragGesture mens fingeren beveger seg. Mapper
+    /// finger-koordinat til celle via `cellFrames` og toggler hver ny celle.
+    /// `fallbackStartISO` brukes om long-press fyrte men startDrag-staten
+    /// ikke ble satt enda (svært kort vindu mellom .first og .second).
+    private func handleDragChanged(at location: CGPoint, fallbackStartISO: String) {
         if !isDragging {
-            // Drag-en starter nå. Bestem toggle-retning ut fra første celle.
-            guard let startIso = cellAt(point: startLocation) else { return }
-            isDragging = true
-            dragStartedOnSelected = selectedDates.contains(startIso)
-            dragVisited = [startIso]
-            applyDragVisit(startIso)
+            startDrag(at: fallbackStartISO)
             return
         }
         if let iso = cellAt(point: location), !dragVisited.contains(iso) {
@@ -1361,6 +1549,7 @@ struct WizardPricingCalendarView: View {
 
     private func commitDrag() {
         isDragging = false
+        dragOriginISO = nil
         dragVisited.removeAll()
         mode = selectedDates.isEmpty ? .idle : .dateOverride
         if selectedDates.isEmpty {

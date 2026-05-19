@@ -144,8 +144,9 @@ struct SpotCalendarStep: View {
         if let id = currentSpotId {
             // Samme kalender for parkering og camping per Harald 2026-05-19.
             // Forskjellene mellom kategoriene (innsjekk/utsjekk-tid, extras)
-            // håndteres utenfor kalenderen.
-            WizardPricingCalendarView(form: form, spotId: id)
+            // håndteres utenfor kalenderen. Wizarden har ingen bookinger
+            // enda (annonsen er ikke publisert), så `bookings: []`.
+            WizardPricingCalendarView(form: form, spotId: id, bookings: [])
         } else {
             ProgressView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

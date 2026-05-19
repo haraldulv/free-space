@@ -18,6 +18,7 @@ struct ProfileCalendarView: View {
     @State private var saveStatus: SaveStatus = .idle
     @State private var previousSpotMarkers: [SpotMarker] = []
     @State private var showOpeningOverridesSheet = false
+    @State private var bookings: [BookingService.BookingForCalendar] = []
 
     enum SaveStatus: Equatable {
         case idle, saving, saved, error(String)
@@ -97,7 +98,9 @@ struct ProfileCalendarView: View {
     private var calendarBody: some View {
         if let id = canonicalSpotId {
             // Samme kalender for parkering og camping per Harald 2026-05-19.
-            WizardPricingCalendarView(form: form, spotId: id)
+            // Sender ekte bookinger så de kan tegnes som sammenslåtte spans
+            // (profilbilde + Booked) over relevante dager.
+            WizardPricingCalendarView(form: form, spotId: id, bookings: bookings)
         } else {
             emptyState
         }
@@ -253,6 +256,13 @@ struct ProfileCalendarView: View {
         focusedSpotId = form.spotMarkers.first?.id
         previousSpotMarkers = form.spotMarkers
         isLoading = false
+        // Hent eksisterende bookinger så kalenderen kan vise sammenslåtte
+        // spans med profilbilde + gjest-navn. Egen task så ikke loading-
+        // state blokkeres av netttverk.
+        Task {
+            let fetched = await BookingService().fetchBookingsForListing(listingId: listing.id)
+            await MainActor.run { self.bookings = fetched }
+        }
     }
 
     // MARK: - Save (debounced)
