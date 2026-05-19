@@ -303,17 +303,44 @@ struct WizardPricingCalendarView: View {
                     }
                     .padding(.top, 8)
                 }
-                .background(Color(.systemGroupedBackground))
+                .background(Color.white)
                 .coordinateSpace(name: "calendarGrid")
                 // Aggregere cell-frames fra alle dayCells i drag-mappingen.
                 .onPreferenceChange(CellFramesPreference.self) { frames in
                     cellFrames = frames
                 }
-                // Drag-select ligger nå PER CELLE (LongPressGesture(0.25)
-                // .sequenced(before: DragGesture)) — IKKE som simultaneous-
-                // Gesture på ScrollView. Det betyr at vanlig scroll vinner
-                // inntil bruker holder fingeren stille i 0.25s, og false-
-                // positives på scroll er borte. Se `dayCell` for setup.
+                // Drag-select på ScrollView som simultaneousGesture:
+                // LongPressGesture(0.3).sequenced(before: DragGesture) gjør
+                // at vanlig scroll vinner ved umiddelbar bevegelse, og bare
+                // hvis bruker bevisst holder fingeren stille i 0.3s tar
+                // drag-select over. Build 227 prøvde per-celle-gesture men
+                // den blokkerte scroll fullstendig — derfor tilbake til
+                // ScrollView-nivå (build 230).
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.3)
+                        .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("calendarGrid")))
+                        .onChanged { value in
+                            switch value {
+                            case .second(true, let drag?):
+                                if !isDragging {
+                                    longPressHaptic.impactOccurred()
+                                    longPressHaptic.prepare()
+                                    if let startISO = cellAt(point: drag.startLocation) {
+                                        startDrag(at: startISO)
+                                    }
+                                }
+                                if let iso = cellAt(point: drag.location),
+                                   !dragVisited.contains(iso) {
+                                    dragVisited.insert(iso)
+                                    applyDragVisit(iso)
+                                }
+                            default:
+                                break
+                            }
+                        }
+                        .onEnded { _ in commitDrag() }
+                )
+                .scrollDisabled(isDragging)
                 // Auto-minimer panel ved scroll ned. Sjekker delta >30pt slik
                 // at små bevegelser (overscroll-bounce) ikke trigger.
                 .onScrollGeometryChange(for: CGFloat.self) { geo in
@@ -664,21 +691,17 @@ struct WizardPricingCalendarView: View {
                 )
 
             VStack(spacing: 0) {
-                ZStack {
-                    if isToday && !dimAsBlocked {
-                        Circle()
-                            .fill(Color.neutral900)
-                            .frame(width: 24, height: 24)
-                    }
+                VStack(spacing: 3) {
                     Text("\(day)")
-                        .font(.system(size: 16, weight: (isSelected || isAnchor || isToday) ? .bold : .semibold))
-                        .foregroundStyle(
-                            isToday && !dimAsBlocked
-                                ? Color.white
-                                : cellText(isPast: isPast, isBlocked: dimAsBlocked)
-                        )
+                        .font(.system(size: 16, weight: (isSelected || isAnchor) ? .bold : .semibold))
+                        .foregroundStyle(cellText(isPast: isPast, isBlocked: dimAsBlocked))
+                    // Liten prikk under tallet for i dag. Tar samme plass
+                    // (Color.clear) på andre dager så cellene ikke hopper.
+                    Circle()
+                        .fill(isToday && !dimAsBlocked ? Color.neutral900 : Color.clear)
+                        .frame(width: 4, height: 4)
                 }
-                .padding(.top, 8)
+                .padding(.top, 14)
 
                 Spacer(minLength: 0)
 
@@ -707,37 +730,12 @@ struct WizardPricingCalendarView: View {
         .contentShape(Rectangle())
         .scaleEffect(isDragOriginCell ? 1.05 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isDragOriginCell)
+        // Tap-toggle. .onTapGesture blokkerer ikke scroll — SwiftUI cancellerer
+        // tap-recognizeren så snart fingeren beveger seg. Multi-select via
+        // hold+drag håndteres som .simultaneousGesture på ScrollView (se over).
         .onTapGesture {
             if !isPast { handleDayTap(iso: iso, isPast: isPast) }
         }
-        // Airbnb-mønster: hold 0.25s → haptic + drag aktiveres. Scroll vinner
-        // inntil long-press fyrer. Bruk `.gesture` (ikke `.simultaneousGesture`
-        // og ikke `.highPriorityGesture`) slik at ScrollView håndterer vanlig
-        // vertikal scroll uten interferens.
-        .gesture(
-            LongPressGesture(minimumDuration: 0.25)
-                .sequenced(before: DragGesture(minimumDistance: 0, coordinateSpace: .named("calendarGrid")))
-                .onChanged { value in
-                    guard !isPast else { return }
-                    switch value {
-                    case .first(true):
-                        // Long-press fyrte. Start drag-modus om vi ikke
-                        // allerede er der.
-                        if !isDragging {
-                            longPressHaptic.impactOccurred()
-                            longPressHaptic.prepare()
-                            startDrag(at: iso)
-                        }
-                    case .second(true, let drag?):
-                        handleDragChanged(at: drag.location, fallbackStartISO: iso)
-                    default:
-                        break
-                    }
-                }
-                .onEnded { _ in
-                    commitDrag()
-                }
-        )
         .background(
             // Rapporter cellens frame i navngitt coordinate space slik at
             // DragGesture kan mappe finger-koordinat → dato. PreferenceKey
@@ -1518,33 +1516,18 @@ struct WizardPricingCalendarView: View {
         }
     }
 
-    // MARK: - Drag-select (iOS 18 per-celle long-press + drag)
+    // MARK: - Drag-select (iOS 18 simultaneousGesture på ScrollView)
 
-    /// Kalles når LongPressGesture(0.25) på en celle har fyrt. Setter
-    /// drag-modus aktivt og bestemmer toggle-retning ut fra origin-cellens
-    /// initial-tilstand. Apple Reminders-mønster: start på valgt → fjerner;
-    /// start på uvalgt → legger til.
+    /// Kalles fra ScrollView sin .simultaneousGesture når LongPress(0.3) har
+    /// fyrt og drag-en har startet. Bestemmer toggle-retning ut fra
+    /// origin-cellens initial-tilstand. Apple Reminders-mønster: start på
+    /// valgt → fjerner; start på uvalgt → legger til.
     private func startDrag(at iso: String) {
         isDragging = true
         dragOriginISO = iso
         dragStartedOnSelected = selectedDates.contains(iso)
         dragVisited = [iso]
         applyDragVisit(iso)
-    }
-
-    /// Kalles fra per-celle DragGesture mens fingeren beveger seg. Mapper
-    /// finger-koordinat til celle via `cellFrames` og toggler hver ny celle.
-    /// `fallbackStartISO` brukes om long-press fyrte men startDrag-staten
-    /// ikke ble satt enda (svært kort vindu mellom .first og .second).
-    private func handleDragChanged(at location: CGPoint, fallbackStartISO: String) {
-        if !isDragging {
-            startDrag(at: fallbackStartISO)
-            return
-        }
-        if let iso = cellAt(point: location), !dragVisited.contains(iso) {
-            dragVisited.insert(iso)
-            applyDragVisit(iso)
-        }
     }
 
     private func applyDragVisit(_ iso: String) {
