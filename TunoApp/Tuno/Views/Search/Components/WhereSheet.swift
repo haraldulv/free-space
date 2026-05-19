@@ -330,8 +330,20 @@ struct WhereSheet: View {
                     if let cat = ListingCategory(rawValue: entry.category) {
                         category = cat
                     }
-                    checkIn = entry.checkIn
-                    checkOut = entry.checkOut
+                    // Klamp historikk-datoer til today/nil hvis de er forbi —
+                    // samme regel som ved app-restart (SearchContextStore.init).
+                    let cal = Calendar.current
+                    let today = cal.startOfDay(for: Date())
+                    let resolvedIn: Date = {
+                        if let ci = entry.checkIn, cal.startOfDay(for: ci) >= today { return ci }
+                        return today
+                    }()
+                    checkIn = resolvedIn
+                    if let co = entry.checkOut, cal.startOfDay(for: co) > cal.startOfDay(for: resolvedIn) {
+                        checkOut = co
+                    } else {
+                        checkOut = nil
+                    }
                     placesService.autocomplete(query: entry.placeName)
                     Task {
                         for _ in 0..<15 {

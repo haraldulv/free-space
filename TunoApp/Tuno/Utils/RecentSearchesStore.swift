@@ -74,8 +74,14 @@ struct RecentSearch: Codable, Identifiable, Hashable {
     let lng: Double
     let savedAt: Date
 
+    /// Skjul label hvis innsjekks-datoen er forbi — den klampes til today
+    /// ved tap, så å vise "13. mai" når søket faktisk havner på dagens
+    /// dato gir et inkonsistent inntrykk.
     var dateRangeLabel: String? {
         guard let ci = checkIn, let co = checkOut else { return nil }
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
+        guard cal.startOfDay(for: ci) >= today else { return nil }
         let df = DateFormatter()
         df.dateFormat = "d. MMM"
         df.locale = Locale(identifier: "nb_NO")
