@@ -27,14 +27,24 @@ final class SearchContextStore: ObservableObject {
         let d = UserDefaults.standard
         self.category = d.string(forKey: "\(key).category")
         self.query = d.string(forKey: "\(key).query") ?? ""
-        // Restorerte datoer som er i fortiden er ubrukelige (kalenderen
-        // blokkerer dem og en booking-forespørsel for fortiden gir ikke
-        // mening). Drop dem ved init.
-        let today = Calendar.current.startOfDay(for: Date())
+        // Innsjekk default-er til today når det ikke er noen lagret dato,
+        // eller når den lagrede er i fortiden (kalenderen blokkerer fortid
+        // og booking gir ikke mening). Utsjekk droppes til nil hvis forbi
+        // eller ≤ checkIn — brukeren fyller inn den selv.
+        let cal = Calendar.current
+        let today = cal.startOfDay(for: Date())
         let storedIn = d.object(forKey: "\(key).checkIn") as? Date
         let storedOut = d.object(forKey: "\(key).checkOut") as? Date
-        self.checkIn = storedIn.flatMap { Calendar.current.startOfDay(for: $0) >= today ? $0 : nil }
-        self.checkOut = storedOut.flatMap { Calendar.current.startOfDay(for: $0) >= today ? $0 : nil }
+        let resolvedIn: Date = {
+            if let s = storedIn, cal.startOfDay(for: s) >= today { return s }
+            return today
+        }()
+        self.checkIn = resolvedIn
+        if let s = storedOut, cal.startOfDay(for: s) > cal.startOfDay(for: resolvedIn) {
+            self.checkOut = s
+        } else {
+            self.checkOut = nil
+        }
         self.placeName = d.string(forKey: "\(key).placeName")
         self.placeLat = (d.object(forKey: "\(key).placeLat") as? NSNumber)?.doubleValue
         self.placeLng = (d.object(forKey: "\(key).placeLng") as? NSNumber)?.doubleValue
