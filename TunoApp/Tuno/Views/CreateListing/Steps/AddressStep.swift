@@ -6,6 +6,14 @@ struct AddressStep: View {
 
     @State private var searchText = ""
     @FocusState private var isSearchFocused: Bool
+    /// Splittet adresse. Disse driver UI; ved endring kombineres de tilbake
+    /// til `form.address` så resten av wizard'en/persistens-laget ikke trenger
+    /// å endres. Husnummer er typisk siste hvitspace-separerte token.
+    @State private var streetName: String = ""
+    @State private var houseNumber: String = ""
+    @FocusState private var splitFocus: SplitField?
+
+    private enum SplitField: Hashable { case street, number }
 
     var body: some View {
         WizardScreen(
@@ -87,36 +95,57 @@ struct AddressStep: View {
                 }
 
                 if !form.address.isEmpty {
-                    HStack(spacing: 10) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 18))
-                            .foregroundStyle(.primary600)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(form.address)
-                                .font(.system(size: 15, weight: .medium))
-                                .foregroundStyle(.neutral900)
-                            if !form.city.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        // Splittede felter — gatenavn på 70% bredde, husnr på 30%.
+                        // Husnr-feltet får numberPad så bruker raskt kan fikse
+                        // hvis Google parser feil eller adressen mangler nummer.
+                        HStack(alignment: .top, spacing: 10) {
+                            splitField(
+                                label: "Gatenavn",
+                                text: $streetName,
+                                placeholder: "Storgata",
+                                keyboard: .default,
+                                focusValue: .street
+                            )
+                            .frame(maxWidth: .infinity)
+
+                            splitField(
+                                label: "Husnr",
+                                text: $houseNumber,
+                                placeholder: "12",
+                                keyboard: .numbersAndPunctuation,
+                                focusValue: .number
+                            )
+                            .frame(width: 96)
+                        }
+
+                        if !form.city.isEmpty {
+                            HStack(spacing: 6) {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.neutral500)
                                 Text("\(form.city)\(form.region.isEmpty ? "" : ", " + form.region)")
                                     .font(.system(size: 13))
                                     .foregroundStyle(.neutral500)
+                                Spacer()
+                                Button {
+                                    clearAddress()
+                                } label: {
+                                    Text("Bytt adresse")
+                                        .font(.system(size: 13, weight: .semibold))
+                                        .foregroundStyle(.primary600)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
-                        Spacer()
-                        Button {
-                            clearAddress()
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 22))
-                                .foregroundStyle(.neutral400)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Slett valgt adresse")
                     }
                     .padding(14)
                     .background(Color.primary50)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary200, lineWidth: 1))
                     .transition(.opacity)
+                    .onChange(of: streetName) { _, _ in syncSplitToForm() }
+                    .onChange(of: houseNumber) { _, _ in syncSplitToForm() }
                 }
 
                 // Skjul-toggle (diskret nederst)
@@ -142,6 +171,7 @@ struct AddressStep: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
             }
+            .onAppear { seedSplitFromAddress() }
         }
     }
 
@@ -151,6 +181,8 @@ struct AddressStep: View {
         form.region = ""
         form.lat = 0
         form.lng = 0
+        streetName = ""
+        houseNumber = ""
         searchText = ""
         placesService.clear()
         isSearchFocused = true
@@ -171,11 +203,15 @@ struct AddressStep: View {
                 }
                 form.lat = detail.lat
                 form.lng = detail.lng
-                // Bruk parsed streetAddress hvis tilgjengelig (rute + nummer),
-                // ellers fallback til prediction.mainText for sjeldne adresser.
-                form.address = detail.streetAddress?.isEmpty == false
-                    ? detail.streetAddress!
-                    : prediction.mainText
+                // Splitt Google sin parse av route + street_number i to felter.
+                // Fallback: prediction.mainText hvis Google ikke leverte route.
+                if let s = detail.street, !s.isEmpty {
+                    streetName = s
+                } else {
+                    streetName = prediction.mainText
+                }
+                houseNumber = detail.houseNumber ?? ""
+                syncSplitToForm()
                 // Foretrekk parsed by + region fra address components — sikrere
                 // enn å splitte secondaryText (som kan inneholde ulike formater).
                 if let city = detail.city, !city.isEmpty {
@@ -193,6 +229,63 @@ struct AddressStep: View {
                 placesService.clear()
                 isSearchFocused = false
             }
+        }
+    }
+
+    /// Slår sammen `streetName` + `houseNumber` og skriver til `form.address`.
+    /// Trim sluttspace når husnummer er tomt.
+    private func syncSplitToForm() {
+        let combined = "\(streetName) \(houseNumber)"
+            .trimmingCharacters(in: .whitespaces)
+        form.address = combined
+    }
+
+    /// Splitt en eksisterende `form.address` (f.eks. fra utkast / edit-mode) i
+    /// gatenavn + husnr. Husnr er typisk siste hvitspace-separerte token som
+    /// inneholder minst ett siffer (f.eks. "12B" på samme måte som "12").
+    private func seedSplitFromAddress() {
+        let raw = form.address.trimmingCharacters(in: .whitespaces)
+        guard !raw.isEmpty else {
+            streetName = ""
+            houseNumber = ""
+            return
+        }
+        let parts = raw.split(separator: " ").map(String.init)
+        if let last = parts.last,
+           last.contains(where: { $0.isNumber }),
+           parts.count > 1 {
+            houseNumber = last
+            streetName = parts.dropLast().joined(separator: " ")
+        } else {
+            streetName = raw
+            houseNumber = ""
+        }
+    }
+
+    @ViewBuilder
+    private func splitField(
+        label: String,
+        text: Binding<String>,
+        placeholder: String,
+        keyboard: UIKeyboardType,
+        focusValue: SplitField
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(label)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(.neutral500)
+                .textCase(.uppercase)
+            TextField(placeholder, text: text)
+                .font(.system(size: 16, weight: .medium))
+                .foregroundStyle(.neutral900)
+                .keyboardType(keyboard)
+                .textInputAutocapitalization(keyboard == .default ? .words : .never)
+                .autocorrectionDisabled(keyboard != .default)
+                .focused($splitFocus, equals: focusValue)
+                .padding(12)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary200, lineWidth: 1))
         }
     }
 }

@@ -34,7 +34,7 @@ struct LocationPickerMapView: UIViewRepresentable {
         let center = CLLocationCoordinate2D(latitude: lat, longitude: lng)
         let region = MKCoordinateRegion(
             center: center,
-            span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+            span: MKCoordinateSpan(latitudeDelta: 0.0012, longitudeDelta: 0.0012)
         )
         mapView.setRegion(region, animated: false)
 
@@ -69,7 +69,7 @@ struct LocationPickerMapView: UIViewRepresentable {
             context.coordinator.lastTrigger = updateTrigger
             let region = MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: lat, longitude: lng),
-                span: MKCoordinateSpan(latitudeDelta: 0.003, longitudeDelta: 0.003)
+                span: MKCoordinateSpan(latitudeDelta: 0.0012, longitudeDelta: 0.0012)
             )
             mapView.setRegion(region, animated: true)
         }
@@ -141,12 +141,17 @@ struct LocationPickerMapView: UIViewRepresentable {
 
             if let main = annotation as? MainPositionAnnotation {
                 let id = "main-pin"
-                let view = (mapView.dequeueReusableAnnotationView(withIdentifier: id) as? MKMarkerAnnotationView)
-                    ?? MKMarkerAnnotationView(annotation: main, reuseIdentifier: id)
+                // Custom image-view i stedet for MKMarkerAnnotationView.
+                // Sistnevnte roterer under drag — image-view holder seg stødig.
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
+                    ?? MKAnnotationView(annotation: main, reuseIdentifier: id)
                 view.annotation = main
-                view.markerTintColor = .red
+                let img = MapBubbleRenderer.mainPin()
+                view.image = img
                 view.canShowCallout = false
                 view.isDraggable = mainMarkerDraggable
+                // Pek nederst (spiss-punktet) ligger sentrert i bunnen av bildet.
+                view.centerOffset = CGPoint(x: 0, y: -img.size.height / 2 + 2)
                 return view
             }
 
@@ -165,20 +170,32 @@ struct LocationPickerMapView: UIViewRepresentable {
             return nil
         }
 
-        // MARK: Drag end
+        // MARK: Drag start/end (m/ haptic feedback)
 
         func mapView(_ mapView: MKMapView, annotationView view: MKAnnotationView, didChange newState: MKAnnotationView.DragState, fromOldState oldState: MKAnnotationView.DragState) {
-            guard newState == .ending else { return }
-            guard let annotation = view.annotation else { return }
-            view.dragState = .none
+            switch newState {
+            case .starting:
+                // Litt fastere "lift"-haptic så bruker forstår at pinnen er løftet.
+                let g = UIImpactFeedbackGenerator(style: .medium)
+                g.prepare()
+                g.impactOccurred()
+            case .ending, .canceling:
+                guard let annotation = view.annotation else { return }
+                view.dragState = .none
 
-            if annotation is MainPositionAnnotation {
-                latBinding?.wrappedValue = annotation.coordinate.latitude
-                lngBinding?.wrappedValue = annotation.coordinate.longitude
-            } else if let spot = annotation as? SpotPickerAnnotation {
-                guard let binding = spotMarkersBinding, spot.index < binding.wrappedValue.count else { return }
-                binding.wrappedValue[spot.index].lat = annotation.coordinate.latitude
-                binding.wrappedValue[spot.index].lng = annotation.coordinate.longitude
+                if annotation is MainPositionAnnotation {
+                    latBinding?.wrappedValue = annotation.coordinate.latitude
+                    lngBinding?.wrappedValue = annotation.coordinate.longitude
+                } else if let spot = annotation as? SpotPickerAnnotation {
+                    guard let binding = spotMarkersBinding, spot.index < binding.wrappedValue.count else { return }
+                    binding.wrappedValue[spot.index].lat = annotation.coordinate.latitude
+                    binding.wrappedValue[spot.index].lng = annotation.coordinate.longitude
+                }
+                if newState == .ending {
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
+                }
+            default:
+                break
             }
         }
 
@@ -216,12 +233,16 @@ struct LocationPickerMapView: UIViewRepresentable {
                     images: nil
                 )
                 spotMarkersBinding?.wrappedValue.append(newSpot)
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
                 if maxSpots > 0 && count + 1 >= maxSpots {
                     onMaxReached?()
+                    // Litt sterkere bekreftelse når alle plassene er markert.
+                    UINotificationFeedbackGenerator().notificationOccurred(.success)
                 }
             } else {
                 latBinding?.wrappedValue = coordinate.latitude
                 lngBinding?.wrappedValue = coordinate.longitude
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
             }
         }
 

@@ -28,6 +28,13 @@ struct HostOnboardingFlowView: View {
 
             stepContent
         }
+        .overlay {
+            if viewModel.isSubmitting {
+                OnboardingLoadingOverlay(step: viewModel.step)
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.18), value: viewModel.isSubmitting)
         .navigationTitle("Bli utleier")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -517,6 +524,10 @@ private struct HostOnboardingAddressStep: View {
     var focusedField: FocusState<OnboardingField?>.Binding
 
     @StateObject private var placesService = PlacesService()
+    /// Splittet adresse — driver UI'en, kombineres tilbake til
+    /// `viewModel.addressLine1` på .onChange så Stripe-payload uendret.
+    @State private var addressStreet: String = ""
+    @State private var addressHouseNumber: String = ""
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -526,21 +537,39 @@ private struct HostOnboardingAddressStep: View {
             ) {
                 VStack(spacing: 16) {
                     VStack(alignment: .leading, spacing: 0) {
-                        OnboardingTextField(
-                            label: "Gateadresse",
-                            placeholder: "Storgata 1",
-                            text: $viewModel.addressLine1,
-                            error: viewModel.fieldErrors["line1"],
-                            submitLabel: .next
-                        )
-                        .focused(focusedField, equals: .addressLine1)
-                        .id(OnboardingField.addressLine1)
-                        .onSubmit { focusedField.wrappedValue = .postalCode }
-                        .onChange(of: viewModel.addressLine1) { _, newValue in
-                            // Trigger Places-autocomplete kun mens feltet er fokusert,
-                            // så vi ikke spør om forslag etter at brukeren har valgt.
-                            if focusedField.wrappedValue == .addressLine1 {
-                                placesService.autocomplete(query: newValue)
+                        // Gatenavn (m/ Places-autocomplete) + Husnr (numberPad)
+                        // — to felt så bruker ikke trenger huske "Storgata 1"-formatet.
+                        HStack(alignment: .top, spacing: 10) {
+                            OnboardingTextField(
+                                label: "Gatenavn",
+                                placeholder: "Storgata",
+                                text: $addressStreet,
+                                error: viewModel.fieldErrors["line1"],
+                                submitLabel: .next
+                            )
+                            .focused(focusedField, equals: .addressLine1)
+                            .id(OnboardingField.addressLine1)
+                            .onSubmit { focusedField.wrappedValue = .postalCode }
+                            .onChange(of: addressStreet) { _, newValue in
+                                syncAddressLine1()
+                                if focusedField.wrappedValue == .addressLine1 {
+                                    placesService.autocomplete(query: newValue)
+                                }
+                            }
+                            .frame(maxWidth: .infinity)
+
+                            OnboardingTextField(
+                                label: "Husnr",
+                                placeholder: "12",
+                                text: $addressHouseNumber,
+                                keyboard: .numbersAndPunctuation,
+                                autocapitalization: .never,
+                                error: nil,
+                                submitLabel: .next
+                            )
+                            .frame(width: 96)
+                            .onChange(of: addressHouseNumber) { _, _ in
+                                syncAddressLine1()
                             }
                         }
 
@@ -629,6 +658,7 @@ private struct HostOnboardingAddressStep: View {
                 }
                 .padding(.bottom, 280)
             }
+            .onAppear { seedSplitFromAddressLine1() }
             .onChange(of: focusedField.wrappedValue) { _, new in
                 guard let new else { return }
                 withAnimation(.easeInOut(duration: 0.25)) {
@@ -643,9 +673,15 @@ private struct HostOnboardingAddressStep: View {
     private func selectPlace(_ prediction: PlacePrediction) {
         Task {
             if let detail = await placesService.getPlaceDetail(placeId: prediction.id) {
-                viewModel.addressLine1 = detail.streetAddress?.isEmpty == false
-                    ? detail.streetAddress!
-                    : prediction.mainText
+                // Splitt route + street_number i to felt. Fallback til
+                // mainText hvis Google ikke leverte route (sjeldne adresser).
+                if let s = detail.street, !s.isEmpty {
+                    addressStreet = s
+                } else {
+                    addressStreet = prediction.mainText
+                }
+                addressHouseNumber = detail.houseNumber ?? ""
+                syncAddressLine1()
                 if let postalCode = detail.postalCode, !postalCode.isEmpty {
                     viewModel.postalCode = postalCode
                 }
@@ -655,6 +691,38 @@ private struct HostOnboardingAddressStep: View {
                 placesService.clear()
                 focusedField.wrappedValue = nil
             }
+        }
+    }
+
+    /// Slår sammen `addressStreet` + `addressHouseNumber` → viewModel.addressLine1
+    /// så Stripe-payloaden er uendret. Trimmer sluttspace når husnr er tomt.
+    private func syncAddressLine1() {
+        let combined = "\(addressStreet) \(addressHouseNumber)"
+            .trimmingCharacters(in: .whitespaces)
+        if viewModel.addressLine1 != combined {
+            viewModel.addressLine1 = combined
+        }
+    }
+
+    /// Splitt viewModel.addressLine1 i gatenavn + husnr ved første visning
+    /// (eks. etter prefill, Vipps-import eller edit-flow). Siste hvitspace-
+    /// separerte token som inneholder minst ett siffer = husnummer.
+    private func seedSplitFromAddressLine1() {
+        let raw = viewModel.addressLine1.trimmingCharacters(in: .whitespaces)
+        guard !raw.isEmpty else {
+            addressStreet = ""
+            addressHouseNumber = ""
+            return
+        }
+        let parts = raw.split(separator: " ").map(String.init)
+        if let last = parts.last,
+           last.contains(where: { $0.isNumber }),
+           parts.count > 1 {
+            addressHouseNumber = last
+            addressStreet = parts.dropLast().joined(separator: " ")
+        } else {
+            addressStreet = raw
+            addressHouseNumber = ""
         }
     }
 }
@@ -1066,5 +1134,55 @@ private struct OnboardingTextField: View {
         if error != nil { return .red }
         if isFocused { return .primary600 }
         return .neutral200
+    }
+}
+
+// MARK: - Loading overlay
+
+/// Full-screen loading-overlay som vises mens isSubmitting==true.
+/// Kontekstuell tekst per step så bruker forstår hvor vi er i flyten.
+private struct OnboardingLoadingOverlay: View {
+    let step: HostOnboardingStep
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.35)
+                .ignoresSafeArea()
+
+            VStack(spacing: 20) {
+                LottieOrFallback(name: "loading-pulse") {
+                    ZStack {
+                        Circle()
+                            .fill(Color.primary50)
+                            .frame(width: 96, height: 96)
+                        ProgressView()
+                            .scaleEffect(1.4)
+                            .tint(.primary600)
+                    }
+                }
+                .frame(width: 128, height: 128)
+
+                Text(label)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 24)
+            }
+            .padding(.horizontal, 32)
+            .padding(.vertical, 28)
+            .background(.regularMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 20))
+            .shadow(color: .black.opacity(0.18), radius: 16, y: 6)
+        }
+    }
+
+    private var label: String {
+        switch step {
+        case .welcome:  return "Setter opp utleier-kontoen…"
+        case .personal: return "Lagrer info…"
+        case .address:  return "Verifiserer adresse…"
+        case .bank:     return "Bekrefter bankkonto…"
+        case .status:   return "Snakker med Stripe…"
+        }
     }
 }

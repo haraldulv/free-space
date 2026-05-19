@@ -859,6 +859,75 @@ enum MapBubbleRenderer {
         return image
     }
 
+    nonisolated(unsafe) private static var mainPinCache: UIImage?
+
+    /// Hovedposisjon-pin (rød). Bruker statisk UIImage på en custom
+    /// MKAnnotationView i stedet for MKMarkerAnnotationView, som roterer
+    /// uheldig når brukeren drar pinnen rundt. Sirkel + spiss-design så
+    /// fotpunktet (centerOffset.y = -h/2) viser nøyaktig hvor pinnen står.
+    static func mainPin() -> UIImage {
+        if let cached = mainPinCache { return cached }
+
+        let circleDiameter: CGFloat = 32
+        let tipHeight: CGFloat = 14
+        let stroke: CGFloat = 3
+        let size = CGSize(width: circleDiameter + stroke * 2, height: circleDiameter + tipHeight + stroke)
+
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { ctx in
+            let cg = ctx.cgContext
+
+            // Spiss + sirkel som ett path så vi får én lukket kontur for stroke.
+            let centerX = size.width / 2
+            let circleY = stroke
+            let circleRect = CGRect(
+                x: centerX - circleDiameter / 2,
+                y: circleY,
+                width: circleDiameter,
+                height: circleDiameter
+            )
+
+            let path = UIBezierPath()
+            // Tegn dråpeformet pin: sirkel m/ trekantet spiss nederst
+            path.move(to: CGPoint(x: centerX, y: size.height - stroke / 2))
+            path.addLine(to: CGPoint(x: centerX - circleDiameter * 0.32, y: circleY + circleDiameter * 0.78))
+            path.addArc(
+                withCenter: CGPoint(x: centerX, y: circleY + circleDiameter / 2),
+                radius: circleDiameter / 2,
+                startAngle: .pi - .pi / 5,
+                endAngle: .pi / 5,
+                clockwise: false
+            )
+            path.addLine(to: CGPoint(x: centerX, y: size.height - stroke / 2))
+            path.close()
+
+            // Skygge for litt løft mot kartet
+            cg.saveGState()
+            cg.setShadow(offset: CGSize(width: 0, height: 1.5), blur: 3, color: UIColor.black.withAlphaComponent(0.35).cgColor)
+            UIColor(red: 0.92, green: 0.20, blue: 0.20, alpha: 1).setFill()
+            path.fill()
+            cg.restoreGState()
+
+            // Hvit ring rundt
+            UIColor.white.setStroke()
+            path.lineWidth = stroke
+            path.stroke()
+
+            // Indre hvit prikk for å understreke "punkt"-følelsen
+            let dotR: CGFloat = 6
+            let dotRect = CGRect(
+                x: centerX - dotR / 2,
+                y: circleRect.midY - dotR / 2,
+                width: dotR,
+                height: dotR
+            )
+            UIColor.white.setFill()
+            UIBezierPath(ovalIn: dotRect).fill()
+        }
+        mainPinCache = image
+        return image
+    }
+
     /// Nummerert pin (brukes for spot-markers på listing-detalj).
     static func numberedPin(number: Int) -> UIImage {
         if let cached = numberedPinCache[number] { return cached }

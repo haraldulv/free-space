@@ -526,6 +526,9 @@
         }
       }
     },
+    "+%@" : {
+
+    },
     "× %@ plasser" : {
 
     },
@@ -1228,6 +1231,9 @@
           }
         }
       }
+    },
+    "Booking" : {
+
     },
     "Bookings" : {
       "extractionState" : "manual",
@@ -3426,6 +3432,9 @@
           }
         }
       }
+    },
+    "Ingen valgt" : {
+
     },
     "Ingen varslinger ennå" : {
 

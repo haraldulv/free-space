@@ -15,6 +15,10 @@ struct PlaceDetail {
     /// Gateadresse + nummer parset fra address components (route + street_number).
     /// Kan være tom hvis Google ikke returnerer dem (sjeldne adresser).
     let streetAddress: String?
+    /// Bare gatenavnet (route), uten husnummer. Brukes til to-felts adresse-UI.
+    let street: String?
+    /// Bare husnummeret (street_number). Kan være nil for sjeldne adresser.
+    let houseNumber: String?
     /// Postnummer (locality.postal_code).
     let postalCode: String?
     /// Poststed / by (locality eller postal_town).
@@ -122,6 +126,8 @@ final class PlacesService: ObservableObject {
                         lng: place.coordinate.longitude,
                         name: place.name ?? "",
                         streetAddress: parsed.streetAddress,
+                        street: parsed.street,
+                        houseNumber: parsed.houseNumber,
                         postalCode: parsed.postalCode,
                         city: parsed.city,
                         region: parsed.region,
@@ -141,7 +147,7 @@ final class PlacesService: ObservableObject {
     /// Norge-spesifikt: postal_town brukes ofte i stedet for locality.
     private static func parseAddressComponents(
         _ components: [GMSAddressComponent]
-    ) -> (streetAddress: String?, postalCode: String?, city: String?, region: String?) {
+    ) -> (streetAddress: String?, street: String?, houseNumber: String?, postalCode: String?, city: String?, region: String?) {
         var route: String?
         var streetNumber: String?
         var postalCode: String?
@@ -180,6 +186,8 @@ final class PlacesService: ObservableObject {
 
         return (
             streetAddress: streetAddress,
+            street: route,
+            houseNumber: streetNumber,
             postalCode: postalCode,
             city: locality ?? postalTown,
             region: region

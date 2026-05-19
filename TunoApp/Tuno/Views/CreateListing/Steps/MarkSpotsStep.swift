@@ -72,15 +72,17 @@ struct MarkSpotsStep: View {
             instructionRow(
                 icon: "hand.tap.fill",
                 title: form.spotMarkers.isEmpty
-                    ? "Tap på kartet for å markere plass 1"
-                    : "Tap på kartet for å markere plass \(form.spotMarkers.count + 1)",
-                subtitle: "\(form.spotMarkers.count) av \(form.spots) markert"
+                    ? "Tap der plassen står"
+                    : "Tap der plass \(form.spotMarkers.count + 1) står",
+                subtitle: form.spotMarkers.isEmpty
+                    ? "Zoom inn for å treffe nøyaktig"
+                    : "\(form.spotMarkers.count) av \(form.spots) markert · zoom for presisjon"
             )
         } else {
             instructionRow(
-                icon: "hand.point.up.left.fill",
-                title: form.spots == 1 ? "Plassen er markert" : "Alle plasser er markert",
-                subtitle: "Trykk og hold på en pin for å flytte den"
+                icon: "checkmark.circle.fill",
+                title: form.spots == 1 ? "Plassen er markert" : "Alle plasser markert",
+                subtitle: "Hold og dra en pin for å justere"
             )
         }
     }
