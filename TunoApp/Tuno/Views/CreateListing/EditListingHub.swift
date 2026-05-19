@@ -355,19 +355,19 @@ struct EditListingHub: View {
                     }
                 } label: {
                     VStack(alignment: .leading, spacing: 14) {
-                        VStack(alignment: .leading, spacing: 6) {
+                        VStack(alignment: .leading, spacing: 4) {
                             Text("Bilder")
-                                .font(.system(size: 16))
+                                .font(.system(size: 13, weight: .medium))
                                 .foregroundStyle(.neutral500)
                             Text(valueText)
-                                .font(.system(size: 22, weight: .semibold))
+                                .font(.system(size: 17, weight: .semibold))
                                 .foregroundStyle(.neutral900)
                         }
                         photosStackPreview
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 18)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 14)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableCardStyle())
@@ -533,7 +533,69 @@ struct EditListingHub: View {
             ) {
                 inlineStayLengthEditor
             }
+            calendarValueCard
         }
+    }
+
+    /// Kalender-kort i Annonse-fanen. Med én plass linker det direkte til
+    /// plassens kalender; med flere pusher det til en list-picker som lar
+    /// vert velge hvilken plass. Sammendrag aggregerer blokkerte dager
+    /// på tvers av alle plasser.
+    @ViewBuilder
+    private var calendarValueCard: some View {
+        if form.spotMarkers.count <= 1 {
+            valueCard(
+                title: "Kalender",
+                value: aggregateCalendarSummary,
+                dest: .spotCalendar(0)
+            )
+        } else {
+            NavigationLink(value: EditDestination.calendarPicker) {
+                valueCardChrome(isExpanded: false) {
+                    valueCardHeader(
+                        title: "Kalender",
+                        value: aggregateCalendarSummary
+                    )
+                }
+            }
+            .buttonStyle(PressableCardStyle())
+        }
+    }
+
+    /// Summen av blokkerte dager på tvers av alle plasser, formatert som
+    /// "Tilgjengelig" eller "X dager blokkert".
+    private var aggregateCalendarSummary: String {
+        let total = form.spotMarkers.reduce(0) { acc, spot in
+            acc + (spot.blockedDates?.count ?? 0)
+        }
+        if total == 0 { return "Tilgjengelig" }
+        return "\(total) \(total == 1 ? "dag" : "dager") blokkert"
+    }
+
+    /// Multi-spot picker — vises bare når annonsen har 2+ plasser. Hver rad
+    /// pusher til SpotCalendarStep for den valgte plassen.
+    private var calendarPickerView: some View {
+        ScrollView {
+            VStack(spacing: 12) {
+                ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { idx, spot in
+                    NavigationLink(value: EditDestination.spotCalendar(idx)) {
+                        let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+                            ? spot.label!
+                            : "Plass \(idx + 1)"
+                        let blockedCount = spot.blockedDates?.count ?? 0
+                        let value = blockedCount == 0
+                            ? "Tilgjengelig"
+                            : "\(blockedCount) \(blockedCount == 1 ? "dag" : "dager") blokkert"
+                        valueCardChrome(isExpanded: false) {
+                            valueCardHeader(title: label, value: value)
+                        }
+                    }
+                    .buttonStyle(PressableCardStyle())
+                }
+            }
+            .padding(16)
+        }
+        .background(Color.neutral50)
     }
 
     /// Listing-nivå innstillinger som kun gjelder parkering.
@@ -562,21 +624,21 @@ struct EditListingHub: View {
                         expandedField = isExpanded ? nil : "amenities"
                     }
                 } label: {
-                    VStack(alignment: .leading, spacing: 10) {
+                    VStack(alignment: .leading, spacing: 8) {
                         Text("Fasiliteter")
-                            .font(.system(size: 16))
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.neutral500)
                         if form.selectedAmenities.isEmpty {
                             Text("Ingen valgt")
-                                .font(.system(size: 22, weight: .semibold))
+                                .font(.system(size: 17, weight: .semibold))
                                 .foregroundStyle(.neutral900)
                         } else {
                             selectedAmenitiesRow
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 18)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 14)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableCardStyle())
@@ -650,22 +712,22 @@ struct EditListingHub: View {
                         expandedField = isExpanded ? nil : "booking"
                     }
                 } label: {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: 4) {
                         Text("Booking")
-                            .font(.system(size: 16))
+                            .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.neutral500)
-                        HStack(spacing: 10) {
+                        HStack(spacing: 8) {
                             Image(systemName: icon)
-                                .font(.system(size: 18, weight: .semibold))
+                                .font(.system(size: 15, weight: .semibold))
                                 .foregroundStyle(.primary600)
                             Text(valueText)
-                                .font(.system(size: 22, weight: .semibold))
+                                .font(.system(size: 17, weight: .semibold))
                                 .foregroundStyle(.neutral900)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.vertical, 18)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 14)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(PressableCardStyle())
@@ -684,26 +746,111 @@ struct EditListingHub: View {
         .id("booking")
     }
 
-    /// Plass-kort. Én valueCard per plass — hver åpner SpotMiniHub for plassen.
-    /// Spots er for komplekse til inline-expand (har 5 felter selv), så de
-    /// pushes til SpotMiniHub som har sin egen valueCard-stack.
+    /// Plasser-fanen brettet ut (build 238): hver plass viser sin tittel +
+    /// alle sub-kort (Detaljer, Pris, Tillegg, Kalender, Lengre opphold)
+    /// direkte under hverandre. Ingen mellomnivå-SpotMiniHub-skjerm —
+    /// brukeren ser all info uten å trykke seg inn på en plass først.
     private var spotsSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Plasser")
+        VStack(alignment: .leading, spacing: 28) {
+            ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { idx, spot in
+                spotBlock(index: idx, spot: spot)
+            }
+        }
+    }
+
+    /// Render én plass som en stack med tittel + alle sub-kort.
+    @ViewBuilder
+    private func spotBlock(index: Int, spot: SpotMarker) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
+                ? spot.label!
+                : "Plass \(index + 1)"
+            Text(label.uppercased())
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.neutral500)
-                .textCase(.uppercase)
                 .padding(.leading, 4)
 
             VStack(spacing: 12) {
-                ForEach(Array(form.spotMarkers.enumerated()), id: \.offset) { idx, spot in
-                    NavigationLink(value: EditDestination.spotMiniHub(idx)) {
-                        spotCard(index: idx, spot: spot)
-                    }
-                    .buttonStyle(PressableCardStyle())
+                valueCard(
+                    title: "Detaljer",
+                    value: spotDetailsSummary(spot: spot),
+                    dest: .spotDetails(index)
+                )
+                valueCard(
+                    title: "Pris",
+                    value: spotPriceSummary(spot: spot),
+                    dest: .spotPrice(index)
+                )
+                valueCard(
+                    title: "Tillegg",
+                    value: spotExtrasSummary(spot: spot),
+                    dest: .spotExtras(index)
+                )
+                valueCard(
+                    title: "Kalender",
+                    value: spotCalendarSummary(spot: spot),
+                    dest: .spotCalendar(index)
+                )
+                if form.category == .parking {
+                    valueCard(
+                        title: "Lengre opphold",
+                        value: spotDiscountsSummary(spot: spot),
+                        dest: .spotDiscounts(index)
+                    )
                 }
             }
         }
+    }
+
+    // MARK: - Spot-sammendrag (brukt av brettet-ut Plasser-fane).
+    // Speiler logikken i SpotMiniHub sine egne summary-properties (linje
+    // 1736+), så vi viser konsistent info uansett om du ser på brettet-ut
+    // Plasser-fane eller SpotMiniHub-push.
+
+    private func spotDetailsSummary(spot: SpotMarker) -> String {
+        let types = spot.vehicleTypes ?? (spot.vehicleType.map { [$0] } ?? [])
+        let typeText: String
+        if types.isEmpty {
+            typeText = "Ikke valgt"
+        } else if types.count == 1 {
+            typeText = types[0].displayName
+        } else {
+            typeText = "\(types.count) typer"
+        }
+        if let len = spot.vehicleMaxLength, len > 0 {
+            return "\(typeText) · maks \(len) m"
+        }
+        return typeText
+    }
+
+    private func spotPriceSummary(spot: SpotMarker) -> String {
+        let unit = form.effectivePriceUnit(for: spot).displayName
+        if let p = spot.price, p > 0 { return "\(p) kr/\(unit)" }
+        if let p = spot.pricePerNight, p > 0 { return "\(p) kr/\(unit)" }
+        return "Pris mangler"
+    }
+
+    private func spotExtrasSummary(spot: SpotMarker) -> String {
+        let count = spot.extras?.count ?? 0
+        return count == 0 ? "Ingen" : "\(count) tillegg"
+    }
+
+    private func spotCalendarSummary(spot: SpotMarker) -> String {
+        let blocked = spot.blockedDates?.count ?? 0
+        let overrides = spot.datePriceOverrides?.count ?? 0
+        if blocked == 0 && overrides == 0 { return "Alle datoer åpne" }
+        var parts: [String] = []
+        if blocked > 0 { parts.append("\(blocked) blokkert") }
+        if overrides > 0 { parts.append("\(overrides) prisjustert") }
+        return parts.joined(separator: " · ")
+    }
+
+    private func spotDiscountsSummary(spot: SpotMarker) -> String {
+        let pkgCount = spot.pricePackages?.count ?? 0
+        let hasLegacy = (spot.weeklyPrice ?? 0) > 0 || (spot.monthlyPrice ?? 0) > 0 || (spot.yearPrice ?? 0) > 0
+        if pkgCount == 0 && !hasLegacy { return "Ingen tilbud" }
+        if pkgCount > 0 { return "\(pkgCount) tilbud" }
+        return "Aktive tilbud"
     }
 
     // MARK: - Destinations
@@ -756,6 +903,10 @@ struct EditListingHub: View {
                 .navigationTitle("Åpningstid")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar { stepToolbar }
+        case .calendarPicker:
+            calendarPickerView
+                .navigationTitle("Velg plass")
+                .navigationBarTitleDisplayMode(.inline)
         case .spotMiniHub(let idx):
             SpotMiniHub(form: form, spotIndex: idx, onSave: { await saveChanges() })
                 .toolbar { stepToolbar }
@@ -850,25 +1001,25 @@ struct EditListingHub: View {
             )
     }
 
-    /// Airbnb-stil kort-header: feltnavn (regular, grå) over verdi (semibold,
-    /// stor, neutral900). Ingen ikon-prefiks, ingen chevron — affordance er
-    /// at hele kortet er klikkbart. Identisk Airbnbs Listing editor (TU-99
-    /// redux i build 232 etter Harald-feedback på build 231).
+    /// Airbnb-stil kort-header: feltnavn (medium, grå) over verdi (semibold,
+    /// neutral900). Ingen ikon-prefiks, ingen chevron — affordance er
+    /// at hele kortet er klikkbart. Build 238: slanket ned fra 16/22 til
+    /// 13/17 etter Harald-feedback om at typografien var for voldsom.
     private func valueCardHeader(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.system(size: 16))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.neutral500)
             Text(value)
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.neutral900)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 18)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
         .contentShape(Rectangle())
     }
 
@@ -954,44 +1105,6 @@ struct EditListingHub: View {
             }
             .buttonStyle(.plain)
             .disabled(!canSave)
-        }
-    }
-
-    /// Spot-kort for hub-roten. Pushes til SpotMiniHub for å redigere
-    /// detaljer/pris/tillegg/kalender/rabatter. Verdien viser sammendraget
-    /// (pris + N tillegg + N blokkerte dater).
-    private func spotCard(index: Int, spot: SpotMarker) -> some View {
-        let label = spot.label?.trimmingCharacters(in: .whitespaces).isEmpty == false
-            ? spot.label!
-            : "Plass \(index + 1)"
-        let unit = form.effectivePriceUnit(for: spot).displayName
-        let priceText: String = {
-            if let p = spot.price, p > 0 { return "\(p) kr/\(unit)" }
-            if let p = spot.pricePerNight, p > 0 { return "\(p) kr/\(unit)" }
-            return "Pris mangler"
-        }()
-        let extrasCount = spot.extras?.count ?? 0
-        let blockedCount = spot.blockedDates?.count ?? 0
-        var bits: [String] = [priceText]
-        if extrasCount > 0 { bits.append("\(extrasCount) tillegg") }
-        if blockedCount > 0 { bits.append("\(blockedCount) blokkert") }
-        let summary = bits.joined(separator: " · ")
-        return valueCardChrome(isExpanded: false) {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(label)
-                    .font(.system(size: 16))
-                    .foregroundStyle(.neutral500)
-                Text(summary)
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 20)
-            .padding(.vertical, 18)
-            .contentShape(Rectangle())
         }
     }
 
@@ -1349,6 +1462,7 @@ enum EditDestination: Hashable {
     case instantBooking
     case stayLength
     case openingHours
+    case calendarPicker
     case spotMiniHub(Int)
     case spotDetails(Int)
     case spotPrice(Int)
@@ -1430,9 +1544,9 @@ struct SpotMiniHub: View {
     @ViewBuilder
     private var headerCard: some View {
         if let s = spot {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(s.label?.trimmingCharacters(in: .whitespaces).isEmpty == false ? s.label! : "Plass \(spotIndex + 1)")
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.system(size: 18, weight: .semibold))
                     .foregroundStyle(.neutral900)
                 if let desc = s.description?.trimmingCharacters(in: .whitespaces), !desc.isEmpty {
                     Text(desc)
@@ -1467,20 +1581,20 @@ struct SpotMiniHub: View {
     /// Airbnb-stil kort-header (TU-99 redux build 232). Ingen ikoner, ingen
     /// chevron, stor verdi over liten feltnavn-subtittel.
     private func valueCardHeader(title: String, value: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(title)
-                .font(.system(size: 16))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.neutral500)
             Text(value)
-                .font(.system(size: 22, weight: .semibold))
+                .font(.system(size: 17, weight: .semibold))
                 .foregroundStyle(.neutral900)
                 .lineLimit(2)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 20)
-        .padding(.vertical, 18)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 14)
         .contentShape(Rectangle())
     }
 

@@ -114,10 +114,7 @@ struct ProfileView: View {
                 .padding(.top, 8)
 
                 if authManager.isHost {
-                    if profileStats.hasLoaded && profileStats.listingCount == 0 {
-                        newListingCard
-                            .padding(.horizontal, 16)
-                    } else {
+                    if profileStats.hasLoaded && profileStats.listingCount > 0 {
                         NavigationLink {
                             EarningsView()
                         } label: {
@@ -132,6 +129,9 @@ struct ProfileView: View {
                         .buttonStyle(PressableCardStyle())
                         .padding(.horizontal, 16)
                     }
+
+                    newListingCard
+                        .padding(.horizontal, 16)
                 }
 
                 if authManager.isHost {
@@ -358,7 +358,12 @@ struct ProfileView: View {
     }
 
     private var newListingCard: some View {
-        Button {
+        let hasListings = profileStats.hasLoaded && profileStats.listingCount > 0
+        let title = hasListings ? "Lag ny annonse" : "Lag din første annonse"
+        let subtitle = hasListings
+            ? "Legg til flere plasser i porteføljen."
+            : "Publiser plassen din og begynn å tjene."
+        return Button {
             showBecomeHost = true
         } label: {
             HStack(spacing: 14) {
@@ -369,10 +374,10 @@ struct ProfileView: View {
                         .foregroundStyle(Color.primary600)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Lag din første annonse")
+                    Text(title)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(.neutral900)
-                    Text("Publiser plassen din og begynn å tjene.")
+                    Text(subtitle)
                         .font(.system(size: 12))
                         .foregroundStyle(.neutral500)
                         .lineLimit(2)
