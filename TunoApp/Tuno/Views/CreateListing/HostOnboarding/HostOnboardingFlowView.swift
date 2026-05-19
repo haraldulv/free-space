@@ -1139,50 +1139,52 @@ private struct OnboardingTextField: View {
 
 // MARK: - Loading overlay
 
-/// Full-screen loading-overlay som vises mens isSubmitting==true.
-/// Kontekstuell tekst per step så bruker forstår hvor vi er i flyten.
+/// Full-screen loading-skjerm som dekker hele appen mens isSubmitting==true.
+/// Lys-grønn bakgrunn + stor Lottie-animasjon + tittel/subtittel — føles som
+/// en "next-step"-skjerm i wizard'en i stedet for en boks/modal.
 private struct OnboardingLoadingOverlay: View {
     let step: HostOnboardingStep
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.35)
+            Color.primary50
                 .ignoresSafeArea()
 
-            VStack(spacing: 20) {
+            VStack(spacing: 24) {
                 LottieOrFallback(name: "loading-pulse") {
                     ZStack {
                         Circle()
-                            .fill(Color.primary50)
-                            .frame(width: 96, height: 96)
+                            .fill(Color.primary100)
+                            .frame(width: 180, height: 180)
                         ProgressView()
-                            .scaleEffect(1.4)
+                            .scaleEffect(2.2)
                             .tint(.primary600)
                     }
                 }
-                .frame(width: 128, height: 128)
+                .frame(width: 220, height: 220)
 
-                Text(label)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 24)
+                VStack(spacing: 10) {
+                    Text(label)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.neutral900)
+                        .multilineTextAlignment(.center)
+                    Text("Dette tar vanligvis noen sekunder")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.neutral600)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 32)
             }
-            .padding(.horizontal, 32)
-            .padding(.vertical, 28)
-            .background(.regularMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 20))
-            .shadow(color: .black.opacity(0.18), radius: 16, y: 6)
         }
     }
 
     private var label: String {
         switch step {
-        case .welcome:  return "Setter opp utleier-kontoen…"
-        case .personal: return "Lagrer info…"
-        case .address:  return "Verifiserer adresse…"
-        case .bank:     return "Bekrefter bankkonto…"
-        case .status:   return "Snakker med Stripe…"
+        case .welcome:  return "Setter opp utleier-kontoen"
+        case .personal: return "Lagrer info"
+        case .address:  return "Verifiserer adresse"
+        case .bank:     return "Bekrefter bankkonto"
+        case .status:   return "Snakker med Stripe"
         }
     }
 }

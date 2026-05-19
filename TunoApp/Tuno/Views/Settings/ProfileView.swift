@@ -367,11 +367,11 @@ struct ProfileView: View {
     }
 
     private var newListingCard: some View {
-        let hasListings = profileStats.hasLoaded && profileStats.listingCount > 0
-        let title = hasListings ? "Lag ny annonse" : "Lag din første annonse"
-        let subtitle = hasListings
-            ? "Legg til flere plasser i porteføljen."
-            : "Publiser plassen din og begynn å tjene."
+        // Nøytral CTA-copy uavhengig av listingCount — listingCount kan være
+        // stale eller miss-tellet på edge-cases (slettede annonser, seed-data
+        // med annen host_id, hasLoaded=false ved første render).
+        let title = "Lag annonse"
+        let subtitle = "Publiser en plass og begynn å tjene"
         return Button {
             showBecomeHost = true
         } label: {

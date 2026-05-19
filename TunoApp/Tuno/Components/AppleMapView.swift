@@ -863,61 +863,85 @@ enum MapBubbleRenderer {
 
     /// Hovedposisjon-pin (rød). Bruker statisk UIImage på en custom
     /// MKAnnotationView i stedet for MKMarkerAnnotationView, som roterer
-    /// uheldig når brukeren drar pinnen rundt. Sirkel + spiss-design så
-    /// fotpunktet (centerOffset.y = -h/2) viser nøyaktig hvor pinnen står.
+    /// uheldig når brukeren drar pinnen rundt. Klassisk pin-form: full sirkel
+    /// med kort trekantet spiss under, fotpunktet sentrert nederst.
     static func mainPin() -> UIImage {
         if let cached = mainPinCache { return cached }
 
-        let circleDiameter: CGFloat = 32
-        let tipHeight: CGFloat = 14
+        let circleDiameter: CGFloat = 36
+        let tipHeight: CGFloat = 12
         let stroke: CGFloat = 3
-        let size = CGSize(width: circleDiameter + stroke * 2, height: circleDiameter + tipHeight + stroke)
+        let padding: CGFloat = stroke + 2 // litt skygge-rom
+        let size = CGSize(
+            width: circleDiameter + padding * 2,
+            height: circleDiameter + tipHeight + padding * 2
+        )
+
+        let red = UIColor(red: 0.92, green: 0.20, blue: 0.20, alpha: 1)
 
         let renderer = UIGraphicsImageRenderer(size: size)
         let image = renderer.image { ctx in
             let cg = ctx.cgContext
 
-            // Spiss + sirkel som ett path så vi får én lukket kontur for stroke.
             let centerX = size.width / 2
-            let circleY = stroke
+            let circleY = padding
             let circleRect = CGRect(
                 x: centerX - circleDiameter / 2,
                 y: circleY,
                 width: circleDiameter,
                 height: circleDiameter
             )
+            let circleCenterY = circleRect.midY
 
-            let path = UIBezierPath()
-            // Tegn dråpeformet pin: sirkel m/ trekantet spiss nederst
-            path.move(to: CGPoint(x: centerX, y: size.height - stroke / 2))
-            path.addLine(to: CGPoint(x: centerX - circleDiameter * 0.32, y: circleY + circleDiameter * 0.78))
-            path.addArc(
-                withCenter: CGPoint(x: centerX, y: circleY + circleDiameter / 2),
-                radius: circleDiameter / 2,
-                startAngle: .pi - .pi / 5,
-                endAngle: .pi / 5,
-                clockwise: false
-            )
-            path.addLine(to: CGPoint(x: centerX, y: size.height - stroke / 2))
-            path.close()
+            // Trekant under sirkelen — tippen sentrert helt nederst.
+            // Vi fester trekant-basen LITT inne i sirkelen så de overlapper
+            // og blir én sammenhengende form etter fyll.
+            let triangleBaseY = circleY + circleDiameter * 0.72
+            let triangleTipY = size.height - padding
+            let triangleHalfWidth: CGFloat = circleDiameter * 0.22
 
-            // Skygge for litt løft mot kartet
+            let triangle = UIBezierPath()
+            triangle.move(to: CGPoint(x: centerX - triangleHalfWidth, y: triangleBaseY))
+            triangle.addLine(to: CGPoint(x: centerX + triangleHalfWidth, y: triangleBaseY))
+            triangle.addLine(to: CGPoint(x: centerX, y: triangleTipY))
+            triangle.close()
+
+            let circle = UIBezierPath(ovalIn: circleRect)
+
+            // Skygge: tegne én gang under hele kompositten
             cg.saveGState()
-            cg.setShadow(offset: CGSize(width: 0, height: 1.5), blur: 3, color: UIColor.black.withAlphaComponent(0.35).cgColor)
-            UIColor(red: 0.92, green: 0.20, blue: 0.20, alpha: 1).setFill()
-            path.fill()
+            cg.setShadow(
+                offset: CGSize(width: 0, height: 1.5),
+                blur: 4,
+                color: UIColor.black.withAlphaComponent(0.32).cgColor
+            )
+            red.setFill()
+            triangle.fill()
+            circle.fill()
             cg.restoreGState()
 
-            // Hvit ring rundt
+            // Hvit kontur rundt — tegne trekant + sirkel separat så vi unngår
+            // skjøter på "innsiden". Trekanten får stroke kun på sidene som
+            // ikke overlapper med sirkelen.
             UIColor.white.setStroke()
-            path.lineWidth = stroke
-            path.stroke()
+            circle.lineWidth = stroke
+            circle.stroke()
 
-            // Indre hvit prikk for å understreke "punkt"-følelsen
-            let dotR: CGFloat = 6
+            // Triangle outline: tegne kun de to skrå sidene
+            let triOutline = UIBezierPath()
+            triOutline.move(to: CGPoint(x: centerX - triangleHalfWidth, y: triangleBaseY))
+            triOutline.addLine(to: CGPoint(x: centerX, y: triangleTipY))
+            triOutline.addLine(to: CGPoint(x: centerX + triangleHalfWidth, y: triangleBaseY))
+            triOutline.lineWidth = stroke
+            triOutline.lineJoinStyle = .round
+            triOutline.lineCapStyle = .round
+            triOutline.stroke()
+
+            // Hvit prikk i sentrum av sirkelen
+            let dotR: CGFloat = 8
             let dotRect = CGRect(
                 x: centerX - dotR / 2,
-                y: circleRect.midY - dotR / 2,
+                y: circleCenterY - dotR / 2,
                 width: dotR,
                 height: dotR
             )

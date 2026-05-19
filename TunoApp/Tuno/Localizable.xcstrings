@@ -1346,6 +1346,9 @@
         }
       }
     },
+    "Bytt adresse" : {
+
+    },
     "Bytter språk…" : {
 
     },
@@ -3533,9 +3536,6 @@
         }
       }
     },
-    "Jeg er fleksibel" : {
-
-    },
     "Jeg godtar og fortsetter" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -4098,9 +4098,6 @@
           }
         }
       }
-    },
-    "Lag din første annonse" : {
-
     },
     "Lagre" : {
       "extractionState" : "manual",
@@ -5768,9 +5765,6 @@
           }
         }
       }
-    },
-    "Publiser plassen din og begynn å tjene." : {
-
     },
     "QR-koder" : {
       "extractionState" : "manual",

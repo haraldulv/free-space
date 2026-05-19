@@ -71,9 +71,9 @@ struct MarkSpotsStep: View {
         if !hasAllSpots {
             instructionRow(
                 icon: "hand.tap.fill",
-                title: form.spotMarkers.isEmpty
-                    ? "Tap der plassen står"
-                    : "Tap der plass \(form.spotMarkers.count + 1) står",
+                title: form.spots == 1
+                    ? "Marker der plassen din er"
+                    : "Marker plass \(form.spotMarkers.count + 1)",
                 subtitle: form.spotMarkers.isEmpty
                     ? "Zoom inn for å treffe nøyaktig"
                     : "\(form.spotMarkers.count) av \(form.spots) markert · zoom for presisjon"
