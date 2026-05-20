@@ -115,3 +115,195 @@ Også:     Engelsk
 
 (Tysk droppet til v1.1 — String Catalog ble laget på build 8,
 ikke vedlikeholdt gjennom build 9-241.)
+
+
+================================================================
+APP PRIVACY QUESTIONNAIRE
+================================================================
+
+Apple stiller spørsmål per data-type. Her er Tunos faktiske
+innsamling. Sett "Yes — used to track" til NO for alle (vi
+deler ikke data til tredjeparts annonseplattformer).
+
+
+Contact Info — Email Address
+---------------------------------------------------------------
+Collected:        YES
+Linked to user:   YES
+Used for tracking: NO
+Purposes:         App Functionality, Account Management
+
+
+Contact Info — Name
+---------------------------------------------------------------
+Collected:        YES (fornavn + etternavn ved registrering)
+Linked to user:   YES
+Used for tracking: NO
+Purposes:         App Functionality, Account Management
+
+
+Contact Info — Phone Number
+---------------------------------------------------------------
+Collected:        YES (valgfri, valid for SMS-varsling)
+Linked to user:   YES
+Used for tracking: NO
+Purposes:         App Functionality
+
+
+Identifiers — User ID
+---------------------------------------------------------------
+Collected:        YES (Supabase auth UUID)
+Linked to user:   YES
+Used for tracking: NO
+Purposes:         App Functionality
+
+
+Location — Coarse Location
+---------------------------------------------------------------
+Collected:        YES (kun ved aktiv "Finn i nærheten"-bruk)
+Linked to user:   NO (sent som søk-koordinat, ikke lagret)
+Used for tracking: NO
+Purposes:         App Functionality
+
+
+User Content — Photos
+---------------------------------------------------------------
+Collected:        YES (profilbilde + annonsebilder ved utleier)
+Linked to user:   YES
+Used for tracking: NO
+Purposes:         App Functionality
+
+
+User Content — Other User Content
+---------------------------------------------------------------
+Collected:        YES (annonsebeskrivelser, meldinger)
+Linked to user:   YES
+Used for tracking: NO
+Purposes:         App Functionality
+
+
+Financial Info — Payment Info
+---------------------------------------------------------------
+Collected:        NO  (← Stripe samler dette, ikke Tuno. Vi får aldri
+                       kortnummer; brukes via Apple Pay / Stripe SDK).
+
+
+Diagnostics — Crash Data, Performance Data
+---------------------------------------------------------------
+Collected:        NO (ikke konfigurert i v1.0; vurderes til v1.1)
+
+
+Other Data
+---------------------------------------------------------------
+NO
+
+
+Privacy Policy URL: https://tuno.no/personvern
+
+
+================================================================
+APP REVIEW INFORMATION
+================================================================
+
+
+Sign-In Required
+---------------------------------------------------------------
+YES — appen krever konto for å booke, men søk er åpent.
+
+
+Demo Account
+---------------------------------------------------------------
+Username: appstore-review@tuno.no
+Password: Tuno-Review-2026!
+
+Denne kontoen er forhåndsverifisert som vert med en pre-godkjent
+Stripe Connect-konto. Reviewer kan booke som gjest fra denne
+kontoen, eller administrere de 18 annonsene som vert.
+
+
+Notes (lim inn i "Notes"-feltet i App Review Information)
+---------------------------------------------------------------
+Hi App Review team,
+
+Tuno is a Norwegian peer-to-peer marketplace for parking spots
+and motorhome/camping locations. Private hosts list spaces;
+guests book them with Apple Pay or card.
+
+DEMO ACCOUNT
+- Email: appstore-review@tuno.no
+- Password: Tuno-Review-2026!
+
+This account is pre-configured as a host with an approved
+Stripe Connect Express account and 18 listings across Norway.
+You can sign in, browse, book, and manage as host.
+
+BANKID / IDENTITY VERIFICATION
+The "Bli utleier" (Become host) flow uses Norwegian BankID for
+ID verification. This requires a real Norwegian personal ID and
+cannot be completed by reviewers. The demo account is already
+fully onboarded — please do not run a new host-onboarding flow.
+If you want to inspect host functionality, sign in with the
+demo account above; it has charges_enabled and payouts_enabled
+on Stripe.
+
+PAYMENTS
+We use Stripe + Apple Pay in LIVE mode (no Stripe test mode in
+production). If you proceed to checkout, a real charge of the
+displayed amount will be made. We recommend NOT completing a
+booking; the flow up to the Apple Pay sheet is sufficient to
+verify functionality. If a booking is accidentally completed,
+contact us at support@tuno.no and we will refund and cancel.
+
+MARKETPLACE NOTES (3.1.5(a))
+Tuno is a physical-goods/services marketplace (parking spaces
+and camping spots). Transactions are between independent hosts
+and guests; Tuno facilitates and takes a service fee. Apple's
+in-app purchase requirement does not apply to physical
+services (3.1.5(a)).
+
+CONTENT
+The 18 listings shown were seeded by us for review purposes
+to demonstrate the app populated. They use realistic Norwegian
+addresses but are not actual rentable spaces; we will replace
+them with real host listings post-launch.
+
+CONTACT
+support@tuno.no
++47 93 46 51 42 (Harald Salvesen, founder)
+
+Thank you for reviewing Tuno!
+
+
+================================================================
+SUBMISSION CHECKLIST
+================================================================
+
+ASC → My Apps → Tuno: Bobil og parkering → 1.0.0
+
+[ ] App Information
+    [ ] Subtitle: Finn og lei ut plass i Norge
+    [ ] Privacy Policy URL: https://tuno.no/personvern
+    [ ] Category: Travel (Primary), Lifestyle (Secondary)
+    [ ] Content Rights: not third-party content
+
+[ ] Pricing and Availability
+    [ ] Price: Free
+    [ ] Availability: All countries / regions (or Norway only)
+
+[ ] App Privacy
+    [ ] Fyll inn alle data-typer per skjema ovenfor
+
+[ ] 1.0.0 Prepare for Submission
+    [ ] Promotional Text: (170 tegn fra over)
+    [ ] Description: (fra "BESKRIVELSE" over)
+    [ ] Keywords: (fra "KEYWORDS" over)
+    [ ] Support URL: https://tuno.no/kontakt
+    [ ] Marketing URL: https://tuno.no
+    [ ] Screenshots: 6.9" + 6.5" (drag-drop)
+    [ ] Build: 1.0.0 (244) — velges når processing er ferdig
+    [ ] Age Rating: 4+
+    [ ] App Review Information: (fra "Notes" over)
+    [ ] Demo Account: appstore-review@tuno.no / Tuno-Review-2026!
+    [ ] Contact: support@tuno.no, +47 93 46 51 42
+
+[ ] Submit for Review
