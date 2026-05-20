@@ -11,8 +11,9 @@ export default function VippsSignInButton({
 }) {
   const [loading, setLoading] = useState(false);
 
+  if (!ENABLED) return null;
+
   const handleVippsLogin = () => {
-    if (!ENABLED) return;
     setLoading(true);
     const url = new URL("/api/auth/vipps/start", window.location.origin);
     if (redirectTo) url.searchParams.set("return", redirectTo);
@@ -24,8 +25,7 @@ export default function VippsSignInButton({
     <button
       type="button"
       onClick={handleVippsLogin}
-      disabled={loading || !ENABLED}
-      title={ENABLED ? undefined : "Kommer snart"}
+      disabled={loading}
       className="flex w-full items-center justify-center gap-3 rounded-lg bg-[#FF5B24] px-4 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#E04E1E] disabled:cursor-not-allowed disabled:opacity-50"
     >
       <svg viewBox="0 0 32 32" className="h-5 w-5" aria-hidden="true">
