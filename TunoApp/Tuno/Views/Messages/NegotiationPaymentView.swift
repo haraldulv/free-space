@@ -122,8 +122,18 @@ struct NegotiationPaymentView: View {
         request.merchantCapabilities = .threeDSecure
         request.countryCode = "NO"
         request.currencyCode = "NOK"
+        // Apple Guideline 4.9: arket må vise produktbeskrivelse + merchant.
+        // Bunntekst "Pay <label>" leses fra siste item — sett til "Tuno".
         request.paymentSummaryItems = [
-            PKPaymentSummaryItem(label: listingTitle, amount: NSDecimalNumber(value: totalPrice)),
+            PKPaymentSummaryItem(
+                label: "\(listingTitle) (forhandlet pris)",
+                amount: NSDecimalNumber(value: totalPrice)
+            ),
+            PKPaymentSummaryItem(
+                label: "Tuno",
+                amount: NSDecimalNumber(value: totalPrice),
+                type: .final
+            ),
         ]
 
         let handler = ApplePayHandler(clientSecret: clientSecret) { success in

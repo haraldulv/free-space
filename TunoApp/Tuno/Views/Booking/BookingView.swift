@@ -1703,9 +1703,40 @@ struct BookingView: View {
         request.currencyCode = "NOK"
         request.supportedNetworks = [.visa, .masterCard, .amex]
         request.merchantCapabilities = .threeDSecure
-        request.paymentSummaryItems = [
-            PKPaymentSummaryItem(label: listing.title, amount: NSDecimalNumber(value: total))
+
+        // Apple Guideline 4.9: arket må vise produktbeskrivelse + merchant.
+        // Bunntekst "Pay <label>" leses fra siste item — sett til "Tuno".
+        let dateFmt = DateFormatter()
+        dateFmt.locale = Locale(identifier: "nb_NO")
+        dateFmt.dateFormat = "d. MMM."
+        let dateRange: String = {
+            guard let ci = checkIn, let co = checkOut else { return "" }
+            return "\(dateFmt.string(from: ci)) - \(dateFmt.string(from: co))"
+        }()
+        let unitLabel: String = {
+            if isHourly { return "\(hours) \(hours == 1 ? "time" : "timer")" }
+            return "\(nights) døgn"
+        }()
+        let spotCount = max(selectedSpotIds.count, 1)
+        let spotLabel = spotCount == 1 ? "1 plass" : "\(spotCount) plasser"
+        let descriptionParts = [listing.title, dateRange, unitLabel, spotLabel].filter { !$0.isEmpty }
+        let descriptionLabel = descriptionParts.joined(separator: " · ")
+
+        var summaryItems: [PKPaymentSummaryItem] = [
+            PKPaymentSummaryItem(label: descriptionLabel, amount: NSDecimalNumber(value: baseTotal))
         ]
+        if serviceFee > 0 {
+            summaryItems.append(PKPaymentSummaryItem(
+                label: "Tuno-serviceavgift",
+                amount: NSDecimalNumber(value: serviceFee)
+            ))
+        }
+        summaryItems.append(PKPaymentSummaryItem(
+            label: "Tuno",
+            amount: NSDecimalNumber(value: total),
+            type: .final
+        ))
+        request.paymentSummaryItems = summaryItems
 
         let handler = ApplePayHandler(clientSecret: clientSecret) { success in
             DispatchQueue.main.async {
