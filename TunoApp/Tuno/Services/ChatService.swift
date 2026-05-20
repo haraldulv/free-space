@@ -306,10 +306,18 @@ class ChatService: ObservableObject {
     /// Åpner Tuno-support-tråden fra hvor som helst i appen.
     /// Setter pushRouter.pendingConversationId — MainTabView lytter og bytter
     /// til Meldinger-fanen + pusher ChatView automatisk.
+    ///
+    /// MERK: Vi nullstiller pushRouter først og venter én frame før vi setter id'en.
+    /// SwiftUI batcher @Published-oppdateringer i samme runloop-tick, så hvis brukeren
+    /// taper Kontakt support to ganger på rad, kan .onChange hoppe over andre tap.
     func openOrCreateSupportConversation(userId: UUID, pushRouter: PushRouter) async {
         let guestId = userId.uuidString.lowercased()
         guard let id = await getOrCreateSupportConversation(guestId: guestId) else { return }
         await loadConversations(userId: guestId)
+        if pushRouter.pendingConversationId != nil {
+            pushRouter.pendingConversationId = nil
+        }
+        try? await Task.sleep(nanoseconds: 16_000_000)
         pushRouter.pendingConversationId = id
     }
 

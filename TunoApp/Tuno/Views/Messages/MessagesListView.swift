@@ -19,8 +19,7 @@ struct MessagesListView: View {
     @FocusState private var searchFocused: Bool
 
     private var filtered: [ConversationPreview] {
-        // Støtte-rader pinnes øverst manuelt — ekskluder dem fra hovedlisten her.
-        var result = chatService.conversations.filter { !$0.isSupport }
+        var result = chatService.conversations
         switch filter {
         case .all:
             result = result.filter { !$0.isArchived }
