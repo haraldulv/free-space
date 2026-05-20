@@ -31,21 +31,6 @@ export default function KontaktPage() {
         </p>
       </Section>
 
-      <Section title="Telefon">
-        <p>
-          <a
-            href="tel:+4793465142"
-            className="text-base font-medium text-neutral-900 underline hover:text-[#46C185]"
-          >
-            +47 93 46 51 42
-          </a>
-        </p>
-        <p className="text-sm text-neutral-500">
-          Tilgjengelig hverdager 09–17. La en beskjed utenom kontortid, så
-          ringer vi tilbake.
-        </p>
-      </Section>
-
       <Section title="I appen">
         <p>
           Når du er logget inn i Tuno-appen kan du nå oss direkte fra
