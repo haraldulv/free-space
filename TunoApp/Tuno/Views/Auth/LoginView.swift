@@ -22,6 +22,9 @@ struct LoginView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: showSuccess)
+        .onAppear {
+            authManager.error = nil
+        }
         .onChange(of: authManager.isAuthenticated) { _, isAuth in
             guard isAuth, !showSuccess else { return }
             UINotificationFeedbackGenerator().notificationOccurred(.success)

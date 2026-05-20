@@ -27,6 +27,9 @@ struct RegisterView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: showSuccess)
+        .onAppear {
+            authManager.error = nil
+        }
         .onChange(of: authManager.isAuthenticated) { _, isAuth in
             // E-post/passord-flyten er allerede håndtert via showVerificationAlert
             // (brukeren må verifisere før isAuthenticated blir true). Dette
