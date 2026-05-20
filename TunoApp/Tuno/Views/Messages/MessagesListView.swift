@@ -16,13 +16,7 @@ struct MessagesListView: View {
     @State private var searchActive = false
     @State private var searchText = ""
     @State private var showSettings = false
-    @State private var creatingSupport = false
     @FocusState private var searchFocused: Bool
-
-    /// Brukerens støtte-samtale (hvis den finnes). Vises som pinned rad — ikke i hovedlisten.
-    private var supportConversation: ConversationPreview? {
-        chatService.conversations.first(where: { $0.isSupport })
-    }
 
     private var filtered: [ConversationPreview] {
         // Støtte-rader pinnes øverst manuelt — ekskluder dem fra hovedlisten her.
@@ -46,14 +40,6 @@ struct MessagesListView: View {
             }
         }
         return result
-    }
-
-    /// Når brukeren ennå ikke har en støtte-samtale, viser vi en placeholder-rad.
-    /// Ved tap opprettes samtalen og vi naviger til ChatView via NavigationStack-id'en.
-    private var showSupportPlaceholder: Bool {
-        // Vis kun på "Alle" og når søk ikke er aktiv — søk skal ikke avsløre placeholder
-        guard filter == .all, searchText.trimmingCharacters(in: .whitespaces).isEmpty else { return false }
-        return supportConversation == nil
     }
 
     private var archivedCount: Int {
@@ -223,12 +209,11 @@ struct MessagesListView: View {
     private var content: some View {
         if chatService.isLoading && chatService.conversations.isEmpty {
             ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
-        } else if filtered.isEmpty && supportConversation == nil && !showSupportPlaceholder {
+        } else if filtered.isEmpty {
             emptyState
         } else {
             ScrollView {
                 LazyVStack(spacing: 0) {
-                    pinnedSupportSection
                     conversationsList
                 }
                 .padding(.top, 4)
@@ -252,29 +237,6 @@ struct MessagesListView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-    }
-
-    @ViewBuilder
-    private var pinnedSupportSection: some View {
-        let showPinned = filter == .all && searchText.trimmingCharacters(in: .whitespaces).isEmpty
-        if showPinned {
-            if let support = supportConversation {
-                NavigationLink(value: support.id) {
-                    SupportConversationRow(conversation: support)
-                }
-                .buttonStyle(.plain)
-                Divider().padding(.leading, 82)
-            } else {
-                Button {
-                    Task { await openOrCreateSupport() }
-                } label: {
-                    SupportConversationRow(conversation: nil)
-                }
-                .buttonStyle(.plain)
-                .disabled(creatingSupport)
-                Divider().padding(.leading, 82)
-            }
-        }
     }
 
     @ViewBuilder
@@ -322,18 +284,6 @@ struct MessagesListView: View {
         }
     }
 
-    private func openOrCreateSupport() async {
-        guard let userId = authManager.currentUser?.id else { return }
-        creatingSupport = true
-        defer { creatingSupport = false }
-        if let id = await chatService.getOrCreateSupportConversation(guestId: userId.uuidString.lowercased()) {
-            // Refresh listen så raden dukker opp som pinned conversation, så naviger via PushRouter
-            // (MainTabView lytter på pendingConversationId og pusher den onto messagesNavPath).
-            await chatService.loadConversations(userId: userId.uuidString.lowercased())
-            pushRouter.pendingConversationId = id
-        }
-    }
-
     /// Prefetch listing- og avatar-bilder til URLCache før rad-cellene rendres,
     /// så CachedAsyncImage treffer cache synkront og listen ikke flickrer.
     private func prefetchConversationImages() {
@@ -343,62 +293,6 @@ struct MessagesListView: View {
             if let s = conv.otherUserAvatar, let u = URL(string: s) { urls.append(u) }
         }
         ImagePrefetcher.prefetch(urls: urls)
-    }
-}
-
-// MARK: - Pinned support row
-
-struct SupportConversationRow: View {
-    /// nil = placeholder før samtale opprettes; ellers reell conversation-rad.
-    let conversation: ConversationPreview?
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image("TunoSupportAvatar")
-                .resizable()
-                .aspectRatio(contentMode: .fill)
-                .frame(width: 58, height: 58)
-                .clipShape(RoundedRectangle(cornerRadius: 10))
-
-            VStack(alignment: .leading, spacing: 3) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text("Tuno support")
-                        .font(.system(size: 15, weight: (conversation?.unreadCount ?? 0) > 0 ? .bold : .semibold))
-                        .foregroundStyle(.neutral900)
-                    Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.primary600)
-                    Spacer()
-                }
-
-                Text("Kundeservice")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.neutral500)
-                    .lineLimit(1)
-
-                if let convo = conversation, !convo.lastMessage.isEmpty {
-                    Text(convo.lastMessage)
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral500)
-                        .lineLimit(1)
-                } else {
-                    Text("Spør oss om hva som helst — vi svarer fortløpende.")
-                        .font(.system(size: 13))
-                        .foregroundStyle(.neutral500)
-                        .lineLimit(1)
-                }
-            }
-
-            if let convo = conversation, convo.unreadCount > 0 {
-                Circle()
-                    .fill(Color.primary600)
-                    .frame(width: 8, height: 8)
-                    .padding(.top, 6)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 12)
-        .contentShape(Rectangle())
     }
 }
 

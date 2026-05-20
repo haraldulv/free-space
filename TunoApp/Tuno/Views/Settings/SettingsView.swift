@@ -4,9 +4,12 @@ import UIKit
 struct SettingsView: View {
     @EnvironmentObject var localizationManager: LocalizationManager
     @EnvironmentObject var authManager: AuthManager
+    @EnvironmentObject var chatService: ChatService
+    @EnvironmentObject var pushRouter: PushRouter
     @State private var showDeleteAccountConfirm = false
     @State private var deletingAccount = false
     @State private var deleteError: String?
+    @State private var openingSupport = false
 
     private let languages: [(code: String, name: String, flag: String)] = [
         ("nb", "Norsk", "🇳🇴"),
@@ -65,10 +68,17 @@ struct SettingsView: View {
 
                 // Hjelp & support
                 Section {
-                    Button { openMail("support@tuno.no") } label: {
-                        settingsRow(icon: "envelope.fill", title: "Kontakt support", trailing: "support@tuno.no")
+                    Button {
+                        Task { await openSupportChat() }
+                    } label: {
+                        settingsRow(
+                            icon: "bubble.left.and.bubble.right.fill",
+                            title: "Kontakt support",
+                            trailing: openingSupport ? "Åpner…" : nil
+                        )
                     }
                     .buttonStyle(.plain)
+                    .disabled(openingSupport)
 
                     Button { openURL("https://tuno.no/retningslinjer") } label: {
                         settingsRow(icon: "book.fill", title: "Retningslinjer")
@@ -245,10 +255,14 @@ struct SettingsView: View {
         }
     }
 
-    private func openMail(_ address: String) {
-        if let url = URL(string: "mailto:\(address)"), UIApplication.shared.canOpenURL(url) {
-            UIApplication.shared.open(url)
-        }
+    private func openSupportChat() async {
+        guard let userId = authManager.currentUser?.id else { return }
+        openingSupport = true
+        defer { openingSupport = false }
+        await chatService.openOrCreateSupportConversation(
+            userId: userId,
+            pushRouter: pushRouter
+        )
     }
 
     private func openURL(_ urlString: String) {

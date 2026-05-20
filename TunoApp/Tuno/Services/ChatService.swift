@@ -303,6 +303,16 @@ class ChatService: ObservableObject {
         }
     }
 
+    /// Åpner Tuno-support-tråden fra hvor som helst i appen.
+    /// Setter pushRouter.pendingConversationId — MainTabView lytter og bytter
+    /// til Meldinger-fanen + pusher ChatView automatisk.
+    func openOrCreateSupportConversation(userId: UUID, pushRouter: PushRouter) async {
+        let guestId = userId.uuidString.lowercased()
+        guard let id = await getOrCreateSupportConversation(guestId: guestId) else { return }
+        await loadConversations(userId: guestId)
+        pushRouter.pendingConversationId = id
+    }
+
     // MARK: - Get or create conversation
 
     func getOrCreateConversation(listingId: String, guestId: String, hostId: String) async -> String? {
