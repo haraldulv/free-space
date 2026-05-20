@@ -4,8 +4,8 @@ import LegalPageLayout, {
 } from "@/components/ui/LegalPageLayout";
 
 export const metadata: Metadata = {
-  title: "Utleiervilkår | Tuno",
-  description: "Handelsbetingelser for utleiere på Tuno — parkering og camping i Norge.",
+  title: "Utleiervilkår",
+  description: "Handelsbetingelser for utleiere på Tuno. Parkering og camping i Norge.",
 };
 
 export default function UtleiervilkarPage() {

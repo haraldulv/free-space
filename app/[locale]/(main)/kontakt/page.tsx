@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import LegalPageLayout, { Section } from "@/components/ui/LegalPageLayout";
 
 export const metadata: Metadata = {
-  title: "Kontakt | Tuno",
+  title: "Kontakt",
   description:
     "Kontakt Tuno-support. Vi svarer på spørsmål om booking, utleie og betaling.",
 };

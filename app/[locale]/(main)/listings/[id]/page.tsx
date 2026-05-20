@@ -38,7 +38,7 @@ export async function generateMetadata({
   const url = `${siteUrl}/listings/${listing.id}`;
 
   return {
-    title: `${listing.title} — Tuno`,
+    title: listing.title,
     description,
     alternates: { canonical: url },
     openGraph: {

@@ -4,8 +4,8 @@ import LegalPageLayout, {
 } from "@/components/ui/LegalPageLayout";
 
 export const metadata: Metadata = {
-  title: "Brukervilkår | Tuno",
-  description: "Brukervilkår for Tuno — markedsplass for parkering og camping i Norge.",
+  title: "Brukervilkår",
+  description: "Brukervilkår for Tuno. Markedsplass for parkering og camping i Norge.",
 };
 
 export default function VilkarPage() {

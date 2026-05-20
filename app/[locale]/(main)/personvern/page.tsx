@@ -4,8 +4,8 @@ import LegalPageLayout, {
 } from "@/components/ui/LegalPageLayout";
 
 export const metadata: Metadata = {
-  title: "Personvern | Tuno",
-  description: "Personvernerklæring for Tuno — slik behandler vi dine personopplysninger.",
+  title: "Personvern",
+  description: "Personvernerklæring for Tuno. Slik behandler vi dine personopplysninger.",
 };
 
 export default function PersonvernPage() {

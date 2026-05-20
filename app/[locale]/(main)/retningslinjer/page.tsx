@@ -4,8 +4,8 @@ import LegalPageLayout, {
 } from "@/components/ui/LegalPageLayout";
 
 export const metadata: Metadata = {
-  title: "Retningslinjer | Tuno",
-  description: "Retningslinjer for annonser på Tuno — krav til innhold, bilder og oppførsel.",
+  title: "Retningslinjer",
+  description: "Retningslinjer for annonser på Tuno. Krav til innhold, bilder og oppførsel.",
 };
 
 export default function RetningslinjerPage() {
