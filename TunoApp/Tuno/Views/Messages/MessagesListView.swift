@@ -242,7 +242,11 @@ struct MessagesListView: View {
     private var conversationsList: some View {
         ForEach(filtered) { conversation in
             NavigationLink(value: conversation.id) {
-                AirbnbConversationRow(conversation: conversation)
+                if conversation.isSupport {
+                    SupportConversationRow(conversation: conversation)
+                } else {
+                    AirbnbConversationRow(conversation: conversation)
+                }
             }
             .buttonStyle(.plain)
             .contextMenu { conversationContextMenu(conversation) }
@@ -292,6 +296,85 @@ struct MessagesListView: View {
             if let s = conv.otherUserAvatar, let u = URL(string: s) { urls.append(u) }
         }
         ImagePrefetcher.prefetch(urls: urls)
+    }
+}
+
+// MARK: - Support conversation row
+
+struct SupportConversationRow: View {
+    let conversation: ConversationPreview
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image("TunoSupportAvatar")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: 58, height: 58)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    Text("Tuno support")
+                        .font(.system(size: 15, weight: conversation.unreadCount > 0 ? .bold : .semibold))
+                        .foregroundStyle(.neutral900)
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.primary600)
+                    Spacer()
+                    if let dateStr = conversation.lastMessageAt {
+                        Text(formatSupportDate(dateStr))
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral400)
+                    }
+                }
+
+                Text("Kundeservice")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
+                    .lineLimit(1)
+
+                if !conversation.lastMessage.isEmpty {
+                    Text(conversation.lastMessage)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral500)
+                        .lineLimit(1)
+                }
+            }
+
+            if conversation.unreadCount > 0 {
+                Circle()
+                    .fill(Color.primary600)
+                    .frame(width: 8, height: 8)
+                    .padding(.top, 6)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+    }
+
+    private func formatSupportDate(_ iso: String) -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        var date = formatter.date(from: iso)
+        if date == nil {
+            formatter.formatOptions = [.withInternetDateTime]
+            date = formatter.date(from: iso)
+        }
+        guard let d = date else { return "" }
+        let calendar = Calendar.current
+        if calendar.isDateInToday(d) {
+            let df = DateFormatter()
+            df.dateFormat = "HH:mm"
+            return df.string(from: d)
+        } else if calendar.isDateInYesterday(d) {
+            return "I går"
+        } else {
+            let df = DateFormatter()
+            df.dateFormat = "d. MMM"
+            df.locale = Locale(identifier: "nb_NO")
+            return df.string(from: d)
+        }
     }
 }
 
