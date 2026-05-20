@@ -843,7 +843,7 @@ private struct StatusStep: View {
 
     private var pollingCard: some View {
         VStack(spacing: 20) {
-            LottieOrFallback(name: "loading-pulse") {
+            LottieOrFallback(name: "loading-utleier") {
                 ZStack {
                     Circle()
                         .fill(Color.primary50)
@@ -1151,7 +1151,7 @@ private struct OnboardingLoadingOverlay: View {
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {
-                LottieOrFallback(name: "loading-pulse") {
+                LottieOrFallback(name: "loading-utleier") {
                     ZStack {
                         Circle()
                             .fill(Color.primary100)

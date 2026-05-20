@@ -59,6 +59,13 @@ struct CreateListingView: View {
                 Text("Vi lagrer fremdriften din som utkast så du kan fortsette senere fra Mine annonser.")
             })
             .overlay { successOverlay }
+            .overlay {
+                if form.isSubmitting {
+                    WizardLoadingOverlay(label: "Publiserer annonsen")
+                        .transition(.opacity)
+                }
+            }
+            .animation(.easeOut(duration: 0.18), value: form.isSubmitting)
             .animation(.easeInOut(duration: 0.3), value: showSuccess)
             .onAppear {
                 if let draft = initialDraft {
@@ -354,6 +361,48 @@ struct CreateListingView: View {
             } catch {
                 form.error = "Kunne ikke opprette annonse: \(error.localizedDescription)"
                 form.isSubmitting = false
+            }
+        }
+    }
+}
+
+// MARK: - Loading overlay
+
+/// Full-screen loading-skjerm som dekker hele wizard'en mens isSubmitting==true.
+/// Lys-grønn bakgrunn + stor Lottie-animasjon. Speiler OnboardingLoadingOverlay
+/// fra HostOnboardingFlowView for konsistent feel på tvers av Bli utleier-flyten.
+private struct WizardLoadingOverlay: View {
+    let label: String
+
+    var body: some View {
+        ZStack {
+            Color.primary50
+                .ignoresSafeArea()
+
+            VStack(spacing: 24) {
+                LottieOrFallback(name: "loading-utleier") {
+                    ZStack {
+                        Circle()
+                            .fill(Color.primary100)
+                            .frame(width: 180, height: 180)
+                        ProgressView()
+                            .scaleEffect(2.2)
+                            .tint(.primary600)
+                    }
+                }
+                .frame(width: 220, height: 220)
+
+                VStack(spacing: 10) {
+                    Text(label)
+                        .font(.system(size: 24, weight: .bold))
+                        .foregroundStyle(.neutral900)
+                        .multilineTextAlignment(.center)
+                    Text("Dette tar vanligvis noen sekunder")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.neutral600)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.horizontal, 32)
             }
         }
     }

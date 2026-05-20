@@ -84,6 +84,7 @@
 		7988CA1D8A60D501E4D5532E /* SpotExtrasContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD05EFAAFF75CA5314B3B4EE /* SpotExtrasContent.swift */; };
 		79F6757D7436EF3EEF1EEAC2 /* BookingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C5065BE9CC3C749754F554F /* BookingsView.swift */; };
 		7AF18FF996F0B291CFB71478 /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7DDD24B1220789582C10AF6F /* ChatView.swift */; };
+		7DE11ABF779151A3E41A940C /* loading-utleier.json in Resources */ = {isa = PBXBuildFile; fileRef = 9C112587BDFFBDB9C07037F0 /* loading-utleier.json */; };
 		8094B41AF970D760CD71175E /* NegotiationPaymentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68CA391C41E2F738998E3725 /* NegotiationPaymentView.swift */; };
 		80D0258D5D4F3DF9EBC406F5 /* MarkSpotsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = D04AE83B5E261BA41D246388 /* MarkSpotsStep.swift */; };
 		8225D7A59A196A15D1387988 /* PayoutsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86D6665556989227BEA372A6 /* PayoutsService.swift */; };
@@ -239,6 +240,7 @@
 		92E48039F546D58654A8CF5E /* CustomTabBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomTabBar.swift; sourceTree = "<group>"; };
 		99D6E2878D5F6CA4C992D5FB /* RecentSearchesStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentSearchesStore.swift; sourceTree = "<group>"; };
 		9BCA07B748FCC5E1497CD115 /* progress-pin.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "progress-pin.json"; sourceTree = "<group>"; };
+		9C112587BDFFBDB9C07037F0 /* loading-utleier.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "loading-utleier.json"; sourceTree = "<group>"; };
 		9DE80E0F57ED28043A953489 /* WhereSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhereSheet.swift; sourceTree = "<group>"; };
 		9F37F3CD542B4B76200AE7AE /* ProfileStatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStatsStore.swift; sourceTree = "<group>"; };
 		A4BE8903623B90ED0A8174BC /* DraftStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftStorage.swift; sourceTree = "<group>"; };
@@ -397,6 +399,7 @@
 				D3868CEAFB9411DDE736AF88 /* confetti.json */,
 				425E4953E02A6C131CFEB198 /* empty-spots.json */,
 				CB03B6FF2B6DA8FCAC15788C /* Globe.json */,
+				9C112587BDFFBDB9C07037F0 /* loading-utleier.json */,
 				ED8BDCBFB9D65C5B686E088E /* ny-annonse.json */,
 				9BCA07B748FCC5E1497CD115 /* progress-pin.json */,
 				147F3163867D581B11ED7A6D /* success-confetti.json */,
@@ -744,6 +747,7 @@
 				234D3400830F6E45E00E0099 /* confetti.json in Resources */,
 				87D3139C0104F4350A1AAC1B /* empty-spots.json in Resources */,
 				9823672A74799973F05F4ECC /* home.png in Resources */,
+				7DE11ABF779151A3E41A940C /* loading-utleier.json in Resources */,
 				23227ACC572BB0ECF18932ED /* ny-annonse.json in Resources */,
 				52F36D48C8D895936C319C5F /* parking.png in Resources */,
 				666AD7D7FA51A19DC149E1EF /* progress-pin.json in Resources */,
@@ -926,7 +930,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 243;
+				CURRENT_PROJECT_VERSION = 244;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1044,7 +1048,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 243;
+				CURRENT_PROJECT_VERSION = 244;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -1110,7 +1114,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 243;
+				CURRENT_PROJECT_VERSION = 244;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1169,7 +1173,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 243;
+				CURRENT_PROJECT_VERSION = 244;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 3VD2DMBJ6M;
 				ENABLE_NS_ASSERTIONS = NO;
