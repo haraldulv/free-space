@@ -1489,6 +1489,9 @@
     "Dette tar bare et øyeblikk." : {
 
     },
+    "Dette tar vanligvis noen sekunder" : {
+
+    },
     "Dette tar vanligvis noen sekunder." : {
 
     },
@@ -6533,9 +6536,6 @@
           }
         }
       }
-    },
-    "Spør oss om hva som helst — vi svarer fortløpende." : {
-
     },
     "Språk" : {
       "localizations" : {
