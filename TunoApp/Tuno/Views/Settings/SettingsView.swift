@@ -11,7 +11,6 @@ struct SettingsView: View {
     private let languages: [(code: String, name: String, flag: String)] = [
         ("nb", "Norsk", "🇳🇴"),
         ("en", "English", "🇬🇧"),
-        ("de", "Deutsch", "🇩🇪"),
     ]
 
     private var appVersion: String {

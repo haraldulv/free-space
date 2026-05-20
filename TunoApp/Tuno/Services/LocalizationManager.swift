@@ -64,7 +64,7 @@ final class LocalizationManager: ObservableObject {
         currentLocale.identifier
     }
 
-    static let supportedLanguages: Set<String> = ["nb", "en", "de"]
+    static let supportedLanguages: Set<String> = ["nb", "en"]
 
     static func normalize(_ code: String) -> String {
         let base = code.split(separator: "-").first.map(String.init) ?? code

@@ -1,0 +1,117 @@
+================================================================
+TUNO — APP STORE METADATA (nb)
+================================================================
+
+
+TITTEL (30 tegn maks)
+---------------------------------------------------------------
+Tuno: Bobil og parkering                 [24 tegn]
+
+Alternativer:
+  Tuno: Parkering og bobil                [24]
+  Tuno: Finn plassen din                  [22]
+  Tuno: Park & bobil                      [18]
+
+
+UNDERTITTEL (30 tegn maks)
+---------------------------------------------------------------
+Finn og lei ut plass i Norge             [28 tegn]
+
+
+PROMOTIONAL TEXT (170 tegn)
+---------------------------------------------------------------
+Finn bobilplass eller parkering hos lokale verter over hele
+Norge. Book på sekunder med Apple Pay eller kort. Eller lei
+ut din egen plass og tjen penger på den.
+
+
+BESKRIVELSE
+---------------------------------------------------------------
+Tuno gjør det enkelt å finne et sted å parkere bobilen eller
+bilen, uansett hvor du er i Norge. Du søker på kart, ser pris
+med en gang, og booker direkte i appen.
+
+Vi samler plasser fra private utleiere fra Lindesnes til Nordkapp. Mange ligger hos lokale verter
+med utsikt over fjorden eller fjellet, andre er praktiske
+pendlerplasser i sentrum av byene. Ofte rimeligere enn
+alternativene, og pengene går til verten.
+
+SØK OG BOOK
+Søk etter sted, dato og kjøretøy. Filtrer på bobil,
+campingbil eller personbil. Noen annonser kan bookes med
+ett trykk, andre må godkjennes av verten først.
+
+TRYGG BETALING
+Betalinger går gjennom Stripe, samme løsning som de fleste
+store nettbutikker bruker. Du kan bruke Apple Pay eller
+kort. Bekreftelsen kommer på sekundet, og kommunikasjon
+med verten skjer i appen.
+
+FOR BOBILEN
+Slipp de overfylte campingplassene. Tuno har stille
+gårdsplasser, plasser med strøm og vann, og noen med dusj
+og toalett. Perfekt for tur langs kysten, gjennom fjellet
+eller innover landet.
+
+FOR PENDLEREN
+En fast plass i Oslo, Bergen, Trondheim eller en mindre by,
+leid for en dag, en uke, eller en hel måned. Slipp å lete
+hver morgen.
+
+BLI UTLEIER
+Har du en innkjørsel eller et ledig hjørne på tomten? Du
+oppretter en annonse på under fem minutter, setter din egen
+pris, og blokkerer dagene du selv trenger plassen.
+Utbetalingen lander på konto automatisk.
+
+Tuno er bygget i Norge. Vi tar et lite gebyr av
+hver booking, resten går til verten.
+
+Last ned, søk i nærheten, og kom deg dit du skal.
+
+
+KEYWORDS (100 tegn maks, komma-separert, ingen mellomrom)
+---------------------------------------------------------------
+parkering,bobil,camping,bobilplass,utleie,airbnb,pendler,reise,plass,booking,host,p-plass
+
+(89 tegn)
+
+
+SUPPORT URL
+---------------------------------------------------------------
+https://tuno.no/kontakt
+
+
+MARKETING URL (valgfri)
+---------------------------------------------------------------
+https://tuno.no
+
+
+PRIVACY POLICY URL
+---------------------------------------------------------------
+https://tuno.no/personvern
+
+
+KATEGORI
+---------------------------------------------------------------
+Primary:   Travel
+Secondary: Lifestyle
+
+
+ALDERSGRENSE
+---------------------------------------------------------------
+4+
+
+
+PRICING
+---------------------------------------------------------------
+Free
+
+
+SPRÅK
+---------------------------------------------------------------
+Primary:  Norsk (Bokmål)
+Også:     Engelsk
+
+(Tysk droppet til v1.1 — String Catalog ble laget på build 8,
+ikke vedlikeholdt gjennom build 9-241.)
