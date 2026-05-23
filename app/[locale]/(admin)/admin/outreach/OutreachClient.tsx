@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { ChevronLeft, Download, Mail, Phone, RefreshCw, Search, Star, X } from "lucide-react";
 import {
@@ -44,6 +44,15 @@ interface Props {
 export default function OutreachClient({ initialTargets, initialTemplates }: Props) {
   const [targets, setTargets] = useState<OutreachTarget[]>(initialTargets);
   const [templates, setTemplates] = useState<OutreachEmailTemplate[]>(initialTemplates);
+  const [listWidth, setListWidth] = useState<number>(() => {
+    if (typeof window === "undefined") return 40;
+    const saved = window.localStorage.getItem("outreach_list_width");
+    if (!saved) return 40;
+    const n = Number(saved);
+    return Number.isFinite(n) ? Math.max(20, Math.min(70, n)) : 40;
+  });
+  const splitContainerRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
   const [filterCategory, setFilterCategory] = useState<OutreachCategory | "">("");
   const [filterStatus, setFilterStatus] = useState<OutreachStatus | "">("");
   const [search, setSearch] = useState("");
@@ -183,6 +192,39 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
     }
   }
 
+  function startSplitDrag(e: React.PointerEvent<HTMLDivElement>) {
+    draggingRef.current = true;
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    e.preventDefault();
+  }
+
+  useEffect(() => {
+    function onMove(e: PointerEvent) {
+      if (!draggingRef.current || !splitContainerRef.current) return;
+      const rect = splitContainerRef.current.getBoundingClientRect();
+      const pct = ((e.clientX - rect.left) / rect.width) * 100;
+      setListWidth(Math.max(20, Math.min(70, pct)));
+    }
+    function onUp() {
+      if (!draggingRef.current) return;
+      draggingRef.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+      try {
+        window.localStorage.setItem("outreach_list_width", String(listWidth));
+      } catch {
+        // ignore storage errors (private mode etc.)
+      }
+    }
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    return () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+  }, [listWidth]);
+
   return (
     <div className="h-[calc(100vh-58px)] w-full">
       {/* Header */}
@@ -274,8 +316,11 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
       </div>
 
       {/* List + Map */}
-      <div className="grid h-[calc(100%-152px)] grid-cols-1 lg:grid-cols-[minmax(360px,40%)_1fr]">
-        <div className="overflow-y-auto border-r border-neutral-200 bg-white">
+      <div ref={splitContainerRef} className="flex h-[calc(100%-152px)]">
+        <div
+          style={{ width: `${listWidth}%`, minWidth: 280 }}
+          className="overflow-y-auto bg-white"
+        >
           {filtered.length === 0 ? (
             <div className="p-6 text-center text-sm text-neutral-500">
               {targets.length === 0
@@ -340,7 +385,15 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
           )}
         </div>
 
-        <div className="relative h-full">
+        <div
+          onPointerDown={startSplitDrag}
+          className="group w-1 shrink-0 cursor-col-resize bg-neutral-200 transition-colors hover:bg-primary-500 active:bg-primary-500"
+          title="Dra for å endre størrelse"
+        >
+          <div className="h-full w-1" />
+        </div>
+
+        <div className="relative h-full flex-1">
           <OutreachMap
             targets={filtered}
             selectedId={selectedId}

@@ -58,8 +58,12 @@ const CATEGORY_QUERIES: Record<OutreachCategory, string[]> = {
 };
 
 // Areas → senterpunkt og radius for locationBias.
+// Google Places Text Search krever radius <= 50000 meter (50km).
+// Lofoten-arkipelet er ca 100km langt. Vi gjør én bias-pos i sentrum (Leknes-området)
+// med 50km radius — Place Search returnerer treff utenfor radius også, så det er en bias
+// ikke en hard cutoff. Dekker ekvivalent fra Å i sør til Svolvær i nord.
 const AREA_CENTERS: Record<string, { lat: number; lng: number; radiusMeters: number }> = {
-  lofoten: { lat: 68.15, lng: 14.0, radiusMeters: 80000 },
+  lofoten: { lat: 68.15, lng: 13.6, radiusMeters: 50000 },
 };
 
 async function isAuthorized(request: NextRequest): Promise<boolean> {
