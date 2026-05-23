@@ -112,9 +112,13 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
           setDiscoverMessage(`Feil: ${json.error ?? "ukjent"}`);
           return;
         }
-        setDiscoverMessage(
-          `Lagt til ${json.inserted}, oppdatert ${json.updated}, hoppet over ${json.skipped} (totalt ${json.totalFetched} fra Google)`,
-        );
+        const errs = Array.isArray(json.errors) ? json.errors : [];
+        const summary = `Lagt til ${json.inserted}, oppdatert ${json.updated}, hoppet over ${json.skipped} (totalt ${json.totalFetched} fra Google)`;
+        if (errs.length > 0) {
+          setDiscoverMessage(`${summary}. Feil: ${errs.slice(0, 3).join(" | ")}${errs.length > 3 ? ` (+${errs.length - 3} til)` : ""}`);
+        } else {
+          setDiscoverMessage(summary);
+        }
         await refresh();
       } catch (err) {
         setDiscoverMessage(`Feil: ${err instanceof Error ? err.message : "ukjent"}`);
@@ -180,11 +184,11 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
   }
 
   return (
-    <div className="mx-auto h-[calc(100vh-58px)] max-w-7xl">
+    <div className="h-[calc(100vh-58px)] w-full">
       {/* Header */}
       <div className="border-b border-neutral-200 bg-white px-4 py-3 sm:px-6">
         <div className="flex items-center gap-3">
-          <Link href="../" className="text-sm text-neutral-500 hover:text-neutral-700">
+          <Link href="/admin" className="text-sm text-neutral-500 hover:text-neutral-700">
             <ChevronLeft className="inline h-4 w-4" /> Admin
           </Link>
           <h1 className="text-lg font-semibold">Utleier-outreach · Lofoten</h1>
@@ -249,10 +253,24 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
           >
             Mal-bibliotek
           </button>
-          {discoverMessage && (
-            <span className="text-xs text-neutral-600">{discoverMessage}</span>
-          )}
         </div>
+        {discoverMessage && (
+          <div
+            className={`mt-2 rounded-md px-3 py-2 text-sm ${
+              discoverMessage.startsWith("Feil")
+                ? "bg-red-50 text-red-700"
+                : "bg-primary-50 text-primary-700"
+            }`}
+          >
+            {discoverMessage}
+            <button
+              onClick={() => setDiscoverMessage(null)}
+              className="ml-2 text-xs underline opacity-70 hover:opacity-100"
+            >
+              lukk
+            </button>
+          </div>
+        )}
       </div>
 
       {/* List + Map */}
