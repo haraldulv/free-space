@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
@@ -32,6 +32,7 @@ export default function VerifiedClient() {
 
 function VerifiedInner() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [status, setStatus] = useState<Status>("loading");
   const [errorMessage, setErrorMessage] = useState<string>("");
   const [tokenHash, setTokenHash] = useState<string>("");
@@ -64,11 +65,17 @@ function VerifiedInner() {
         if (error) {
           setErrorMessage(error.message);
           setStatus("error");
-        } else {
-          setStatus("ok");
+          return;
         }
+        // Passord-reset: brukeren skal sette nytt passord, ikke se "E-post bekreftet".
+        // Sessionen er nå etablert (recovery-session) så /reset-password kan kalle updateUser().
+        if (ty === "recovery") {
+          router.replace("/reset-password");
+          return;
+        }
+        setStatus("ok");
       });
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   if (status === "loading") {
     return <LoadingShell />;
