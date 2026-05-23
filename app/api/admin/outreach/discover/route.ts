@@ -4,6 +4,9 @@ import { upsertOutreachTarget } from "@/lib/supabase/outreach";
 import type { OutreachCategory } from "@/types";
 import type { UpsertOutreachInput, UpsertOutcome } from "@/lib/supabase/outreach";
 
+// Discover kan ta 2-3 min på første kjøring (~14 queries × 4 sentre × opptil 3 sider).
+export const maxDuration = 300;
+
 /**
  * POST /api/admin/outreach/discover
  *
@@ -47,23 +50,36 @@ const SEARCH_FIELD_MASK = [
   "nextPageToken",
 ].join(",");
 
-// Search-queries per kategori. Lofoten brukes som textQuery-suffix for å gi sterk lokasjons-bias.
+// Search-queries per kategori. Vi søker hver query fra alle sentre under for å unngå
+// Google sitt 60-treff-tak per (query, locationBias)-kombinasjon.
 const CATEGORY_QUERIES: Record<OutreachCategory, string[]> = {
-  rorbu: ["rorbuer Lofoten", "rorbu utleie Lofoten"],
-  hotell: ["hotell Lofoten"],
-  restaurant: ["restaurant Lofoten"],
-  camping: ["camping Lofoten", "bobilplass Lofoten"],
-  overnatting: ["overnatting Lofoten", "hytter Lofoten"],
+  rorbu: ["rorbuer Lofoten", "rorbu utleie Lofoten", "sjøhus Lofoten"],
+  hotell: ["hotell Lofoten", "boutique hotel Lofoten"],
+  restaurant: ["restaurant Lofoten", "spisested Lofoten"],
+  camping: ["camping Lofoten", "bobilplass Lofoten", "campingplass Lofoten"],
+  overnatting: [
+    "overnatting Lofoten",
+    "hytter Lofoten",
+    "hytteutleie Lofoten",
+    "feriebolig Lofoten",
+    "Airbnb Lofoten",
+    "vandrerhjem Lofoten",
+    "B&B Lofoten",
+    "gjestehus Lofoten",
+  ],
   other: [],
 };
 
-// Areas → senterpunkt og radius for locationBias.
-// Google Places Text Search krever radius <= 50000 meter (50km).
-// Lofoten-arkipelet er ca 100km langt. Vi gjør én bias-pos i sentrum (Leknes-området)
-// med 50km radius — Place Search returnerer treff utenfor radius også, så det er en bias
-// ikke en hard cutoff. Dekker ekvivalent fra Å i sør til Svolvær i nord.
-const AREA_CENTERS: Record<string, { lat: number; lng: number; radiusMeters: number }> = {
-  lofoten: { lat: 68.15, lng: 13.6, radiusMeters: 50000 },
+// Flere sentre for å dekke hele Lofoten-arkipelet. Google Places Text Search krever
+// radius <= 50000m (50km). Vi multiplexer queries på tvers av disse 4 senterne så
+// flere unike treff fra hver del av arkipelet kommer med.
+const AREA_CENTERS: Record<string, Array<{ lat: number; lng: number; radiusMeters: number; label: string }>> = {
+  lofoten: [
+    { lat: 68.23, lng: 14.56, radiusMeters: 30000, label: "svolvær" },   // Øst-Lofoten
+    { lat: 68.15, lng: 13.61, radiusMeters: 30000, label: "leknes" },    // Sentral-Lofoten
+    { lat: 67.93, lng: 13.10, radiusMeters: 30000, label: "reine" },     // Sør-Lofoten
+    { lat: 67.66, lng: 12.69, radiusMeters: 30000, label: "værøy-røst" }, // Ytre Lofoten
+  ],
 };
 
 async function isAuthorized(request: NextRequest): Promise<boolean> {
@@ -154,8 +170,8 @@ export async function POST(request: NextRequest) {
     categories?: OutreachCategory[];
   };
   const area = body.area ?? "lofoten";
-  const center = AREA_CENTERS[area];
-  if (!center) {
+  const centers = AREA_CENTERS[area];
+  if (!centers || centers.length === 0) {
     return NextResponse.json({ error: `Ukjent area: ${area}` }, { status: 400 });
   }
 
@@ -173,47 +189,49 @@ export async function POST(request: NextRequest) {
   for (const category of categories) {
     const queries = CATEGORY_QUERIES[category] ?? [];
     for (const q of queries) {
-      try {
-        const results = await searchTextPaged(apiKey, q, center);
-        stats.totalFetched += results.length;
+      for (const center of centers) {
+        try {
+          const results = await searchTextPaged(apiKey, q, center);
+          stats.totalFetched += results.length;
 
-        for (const place of results) {
-          if (!place.id) {
-            stats.skipped++;
-            continue;
-          }
-          if (seenPlaceIds.has(place.id)) {
-            stats.skipped++;
-            continue;
-          }
-          seenPlaceIds.add(place.id);
+          for (const place of results) {
+            if (!place.id) {
+              stats.skipped++;
+              continue;
+            }
+            if (seenPlaceIds.has(place.id)) {
+              stats.skipped++;
+              continue;
+            }
+            seenPlaceIds.add(place.id);
 
-          const upsertInput: UpsertOutreachInput = {
-            placeId: place.id,
-            name: place.displayName?.text ?? "Ukjent",
-            category,
-            area,
-            address: place.formattedAddress ?? null,
-            phone: place.nationalPhoneNumber ?? place.internationalPhoneNumber ?? null,
-            website: place.websiteUri ?? null,
-            lat: place.location?.latitude ?? null,
-            lng: place.location?.longitude ?? null,
-            rating: place.rating ?? null,
-            userRatingsTotal: place.userRatingCount ?? null,
-            rawPlacesJson: place as unknown,
-          };
+            const upsertInput: UpsertOutreachInput = {
+              placeId: place.id,
+              name: place.displayName?.text ?? "Ukjent",
+              category,
+              area,
+              address: place.formattedAddress ?? null,
+              phone: place.nationalPhoneNumber ?? place.internationalPhoneNumber ?? null,
+              website: place.websiteUri ?? null,
+              lat: place.location?.latitude ?? null,
+              lng: place.location?.longitude ?? null,
+              rating: place.rating ?? null,
+              userRatingsTotal: place.userRatingCount ?? null,
+              rawPlacesJson: place as unknown,
+            };
 
-          try {
-            const { outcome } = await upsertOutreachTarget(upsertInput);
-            stats[outcome as Exclude<UpsertOutcome, "skipped">]++;
-          } catch (err) {
-            stats.errors.push(
-              `${place.displayName?.text ?? place.id}: ${err instanceof Error ? err.message : "ukjent"}`,
-            );
+            try {
+              const { outcome } = await upsertOutreachTarget(upsertInput);
+              stats[outcome as Exclude<UpsertOutcome, "skipped">]++;
+            } catch (err) {
+              stats.errors.push(
+                `${place.displayName?.text ?? place.id}: ${err instanceof Error ? err.message : "ukjent"}`,
+              );
+            }
           }
+        } catch (err) {
+          stats.errors.push(`Query "${q}" (${center.label}): ${err instanceof Error ? err.message : "ukjent"}`);
         }
-      } catch (err) {
-        stats.errors.push(`Query "${q}": ${err instanceof Error ? err.message : "ukjent"}`);
       }
     }
   }
