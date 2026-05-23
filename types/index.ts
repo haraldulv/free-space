@@ -484,3 +484,94 @@ export interface UserProfile {
   joinedYear?: number;
   createdAt?: string;
 }
+
+// ─── Utleier-outreach (admin) ────────────────────────────────────────────────
+
+export type OutreachCategory = "rorbu" | "hotell" | "restaurant" | "camping" | "overnatting" | "other";
+
+export type OutreachStatus =
+  | "not_contacted"
+  | "queued"
+  | "contacted"
+  | "follow_up"
+  | "responded"
+  | "declined"
+  | "onboarded";
+
+export type OutreachContactType = "email" | "phone" | "note";
+
+export interface OutreachTarget {
+  id: string;
+  placeId: string;
+  name: string;
+  category: OutreachCategory;
+  area: string;
+  address?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  email?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  rating?: number | null;
+  userRatingsTotal?: number | null;
+  status: OutreachStatus;
+  notes?: string | null;
+  lastContactedAt?: string | null;
+  lastContactedBy?: string | null;
+  followUpAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OutreachContactLogEntry {
+  id: string;
+  targetId: string;
+  contactedBy?: string | null;
+  contactedByName?: string | null;
+  contactType: OutreachContactType;
+  recipient?: string | null;
+  subject?: string | null;
+  body?: string | null;
+  statusAfter?: string | null;
+  createdAt: string;
+}
+
+export interface OutreachEmailTemplate {
+  id: string;
+  name: string;
+  subject: string;
+  body: string;
+  isDefault: boolean;
+  createdBy?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const OUTREACH_STATUS_LABELS: Record<OutreachStatus, string> = {
+  not_contacted: "Ikke kontaktet",
+  queued: "I kø",
+  contacted: "Kontaktet",
+  follow_up: "Følges opp",
+  responded: "Svart",
+  declined: "Takket nei",
+  onboarded: "Registrert som vert",
+};
+
+export const OUTREACH_CATEGORY_LABELS: Record<OutreachCategory, string> = {
+  rorbu: "Rorbu",
+  hotell: "Hotell",
+  restaurant: "Restaurant",
+  camping: "Camping",
+  overnatting: "Overnatting",
+  other: "Annet",
+};
+
+export const OUTREACH_STATUS_COLORS: Record<OutreachStatus, string> = {
+  not_contacted: "#9CA3AF",
+  queued: "#A78BFA",
+  contacted: "#3B82F6",
+  follow_up: "#F59E0B",
+  responded: "#F97316",
+  declined: "#EF4444",
+  onboarded: "#46C185",
+};

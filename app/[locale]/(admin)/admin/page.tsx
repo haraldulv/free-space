@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { adminDeleteListingAction, adminCancelBookingAction, adminToggleListingAction, loadAdminDataAction, loadMessagesAction, loadSupportMessagesAction, loadSupportUserInfoAction, sendSupportMessageAction } from "./actions";
 import {
   CalendarCheck,
@@ -19,6 +20,7 @@ import {
   UserPlus,
   LifeBuoy,
   Send,
+  Target,
 } from "lucide-react";
 import { SERVICE_FEE_RATE } from "@/lib/config";
 
@@ -295,6 +297,13 @@ export default function AdminPage() {
             </button>
           );
         })}
+        <Link
+          href="/admin/outreach"
+          className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-700"
+        >
+          <Target className="h-4 w-4" />
+          Utleier-outreach
+        </Link>
       </div>
 
       {/* Search */}

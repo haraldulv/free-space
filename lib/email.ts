@@ -395,3 +395,30 @@ export async function sendReviewReminderEmail(to: string, data: {
     `),
   });
 }
+
+/**
+ * Outreach-mail til potensielle utleiere. Bruker harald@tuno.no som from + reply-to slik at
+ * mottakeren kan svare direkte. Body sendes inn som ren tekst og konverteres til HTML
+ * (linjeskift → <br>, lenker auto-detekteres).
+ */
+export async function sendHostOutreachEmail(opts: {
+  to: string;
+  subject: string;
+  body: string;
+  replyTo?: string;
+}) {
+  const escapeHtml = (s: string) =>
+    s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
+  const html = escapeHtml(opts.body)
+    .replaceAll(/(https?:\/\/\S+)/g, (url) => `<a href="${url}" style="color:#46C185;">${url}</a>`)
+    .replaceAll("\n", "<br>");
+
+  await resend.emails.send({
+    from: "Tuno <harald@tuno.no>",
+    replyTo: opts.replyTo ?? "harald@tuno.no",
+    to: opts.to,
+    subject: opts.subject,
+    html: wrap(opts.subject, `<div style="color:#404040;font-size:14px;line-height:1.65;">${html}</div>`),
+  });
+}
