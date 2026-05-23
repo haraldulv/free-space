@@ -26,6 +26,11 @@ import {
 } from "./actions";
 
 const CATEGORIES: OutreachCategory[] = ["rorbu", "hotell", "restaurant", "camping", "overnatting"];
+
+function googleMapsLink(placeId: string, name?: string): string {
+  const q = encodeURIComponent(name ?? "");
+  return `https://www.google.com/maps/search/?api=1&query=${q}&query_place_id=${encodeURIComponent(placeId)}`;
+}
 const STATUSES: OutreachStatus[] = [
   "not_contacted",
   "queued",
@@ -373,6 +378,15 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
                             Nettside
                           </a>
                         )}
+                        <a
+                          href={googleMapsLink(t.placeId, t.name)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="text-primary-600 hover:underline"
+                        >
+                          Google Maps
+                        </a>
                       </div>
                     </div>
                     <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-600">
@@ -539,6 +553,16 @@ function DetailDrawer({
               </a>
             </p>
           )}
+          <p className="text-sm">
+            <a
+              href={googleMapsLink(target.placeId, target.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary-600 hover:underline"
+            >
+              Vis i Google Maps
+            </a>
+          </p>
           {target.rating != null && (
             <p className="text-sm text-neutral-600">
               <Star className="inline h-3.5 w-3.5 text-amber-500" /> {target.rating.toFixed(1)} ({target.userRatingsTotal ?? 0} vurderinger)
