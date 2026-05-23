@@ -129,9 +129,10 @@ export async function upsertOutreachTarget(input: UpsertOutreachInput): Promise<
     .maybeSingle();
 
   if (existing) {
+    // Category beholdes som den ble satt ved første innsetting. Et sted som dukker opp
+    // både i "rorbu Lofoten" og senere i "overnatting Lofoten"-søket skal beholde "rorbu".
     const updatePayload: Record<string, unknown> = {
       name: input.name,
-      category: input.category,
       area: input.area,
       lat: input.lat ?? null,
       lng: input.lng ?? null,
