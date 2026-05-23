@@ -112,37 +112,41 @@ export interface UpsertOutreachInput {
 export type UpsertOutcome = "inserted" | "updated" | "skipped";
 
 /**
- * Idempotent upsert på place_id. Eksisterende rader oppdateres med ferskeste Places-data
- * (navn/adresse/telefon/web/rating), men status/notes/follow_up_at/email beholdes.
+ * Idempotent upsert på place_id.
+ *
+ * Ved re-kjøring av Google-import:
+ *  - Aldri overskrevet: status, notes, email, follow_up_at, last_contacted_at, last_contacted_by
+ *  - Bare fylt hvis tomt i eksisterende rad: phone, website, address (preserver manuelle redigeringer)
+ *  - Alltid oppdatert fra Google: name, category, lat, lng, rating, user_ratings_total
  */
 export async function upsertOutreachTarget(input: UpsertOutreachInput): Promise<{ outcome: UpsertOutcome; target: OutreachTarget | null }> {
   const supabase = await createClient();
 
   const { data: existing } = await supabase
     .from("outreach_targets")
-    .select("id, email")
+    .select("id, address, phone, website")
     .eq("place_id", input.placeId)
     .maybeSingle();
 
-  const payload = {
-    place_id: input.placeId,
-    name: input.name,
-    category: input.category,
-    area: input.area,
-    address: input.address ?? null,
-    phone: input.phone ?? null,
-    website: input.website ?? null,
-    lat: input.lat ?? null,
-    lng: input.lng ?? null,
-    rating: input.rating ?? null,
-    user_ratings_total: input.userRatingsTotal ?? null,
-    raw_places_json: input.rawPlacesJson ?? null,
-  };
-
   if (existing) {
+    const updatePayload: Record<string, unknown> = {
+      name: input.name,
+      category: input.category,
+      area: input.area,
+      lat: input.lat ?? null,
+      lng: input.lng ?? null,
+      rating: input.rating ?? null,
+      user_ratings_total: input.userRatingsTotal ?? null,
+      raw_places_json: input.rawPlacesJson ?? null,
+    };
+    // Bare fyll inn fra Google hvis feltet er tomt i eksisterende rad.
+    if (!existing.address && input.address) updatePayload.address = input.address;
+    if (!existing.phone && input.phone) updatePayload.phone = input.phone;
+    if (!existing.website && input.website) updatePayload.website = input.website;
+
     const { data, error } = await supabase
       .from("outreach_targets")
-      .update(payload)
+      .update(updatePayload)
       .eq("id", existing.id)
       .select("*")
       .single();
@@ -150,9 +154,25 @@ export async function upsertOutreachTarget(input: UpsertOutreachInput): Promise<
     return { outcome: "updated", target: rowToTarget(data as RowOutreachTarget) };
   }
 
+  const insertPayload = {
+    place_id: input.placeId,
+    name: input.name,
+    category: input.category,
+    area: input.area,
+    address: input.address ?? null,
+    phone: input.phone ?? null,
+    website: input.website ?? null,
+    email: input.email ?? null,
+    lat: input.lat ?? null,
+    lng: input.lng ?? null,
+    rating: input.rating ?? null,
+    user_ratings_total: input.userRatingsTotal ?? null,
+    raw_places_json: input.rawPlacesJson ?? null,
+  };
+
   const { data, error } = await supabase
     .from("outreach_targets")
-    .insert({ ...payload, email: input.email ?? null })
+    .insert(insertPayload)
     .select("*")
     .single();
   if (error) throw error;
