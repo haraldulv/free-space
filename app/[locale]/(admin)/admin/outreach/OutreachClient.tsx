@@ -23,6 +23,7 @@ import {
   loadTargetDetailAction,
   logNoteAction,
   logPhoneCallAction,
+  sendTestOutreachEmailAction,
   updateTargetAction,
 } from "./actions";
 
@@ -141,6 +142,20 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
         setDiscoverMessage(`Feil: ${err instanceof Error ? err.message : "ukjent"}`);
       }
     });
+  }
+
+  const [testMailPending, setTestMailPending] = useState(false);
+  const [testMailMsg, setTestMailMsg] = useState<string | null>(null);
+
+  async function sendTestMail() {
+    const email = prompt("Send test-mail til:", "haraldsalvesen@gmail.com");
+    if (!email) return;
+    setTestMailPending(true);
+    setTestMailMsg(null);
+    const res = await sendTestOutreachEmailAction(email);
+    setTestMailPending(false);
+    setTestMailMsg(res.error ? `Feil: ${res.error}` : `Test-mail sendt til ${email}`);
+    setTimeout(() => setTestMailMsg(null), 5000);
   }
 
   async function changeStatus(target: OutreachTarget, status: OutreachStatus) {
@@ -309,7 +324,20 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
           >
             Mal-bibliotek
           </button>
+          <button
+            onClick={sendTestMail}
+            disabled={testMailPending}
+            className="flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50 disabled:opacity-50"
+          >
+            <Mail className="h-4 w-4" />
+            {testMailPending ? "Sender..." : "Test-mail"}
+          </button>
         </div>
+        {testMailMsg && (
+          <div className={`mt-2 rounded-md px-3 py-2 text-sm ${testMailMsg.startsWith("Feil") ? "bg-red-50 text-red-700" : "bg-primary-50 text-primary-700"}`}>
+            {testMailMsg}
+          </div>
+        )}
         {discoverMessage && (
           <div
             className={`mt-2 rounded-md px-3 py-2 text-sm ${

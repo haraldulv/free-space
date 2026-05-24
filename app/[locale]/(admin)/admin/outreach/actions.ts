@@ -372,3 +372,22 @@ export async function exportTargetsCSVAction(filters: {
     return { error: err instanceof Error ? err.message : "Eksport feilet" };
   }
 }
+
+export async function sendTestOutreachEmailAction(
+  to: string,
+): Promise<{ ok?: true; error?: string }> {
+  try {
+    await requireAdmin();
+    const template = await getDefaultTemplate();
+    const body = applyTemplateVariables(template?.body ?? "Hei {name}, sjekk ut Tuno: {tuno_link}", {
+      name: "Test-bedrift AS",
+    });
+    const subject = applyTemplateVariables(template?.subject ?? "Tjen penger på plassen din med Tuno", {
+      name: "Test-bedrift AS",
+    });
+    await sendHostOutreachEmail({ to, subject, body });
+    return { ok: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Sending feilet" };
+  }
+}
