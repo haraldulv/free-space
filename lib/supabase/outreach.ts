@@ -384,5 +384,5 @@ export function applyTemplateVariables(text: string, vars: { name?: string; tuno
   return text
     .replaceAll("{name}", vars.name ?? "")
     .replaceAll("{tuno_link}", vars.tunoLink ?? "https://tuno.no/utleier")
-    .replaceAll("{app_store_link}", vars.appStoreLink ?? "https://apps.apple.com/no/app/tuno/id6749316123");
+    .replaceAll("{app_store_link}", vars.appStoreLink ?? "https://apps.apple.com/no/app/tuno-motorhome-and-parking/id6761529990");
 }

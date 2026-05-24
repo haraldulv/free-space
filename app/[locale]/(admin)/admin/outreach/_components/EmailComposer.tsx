@@ -12,7 +12,7 @@ interface Props {
   onSent: () => void;
 }
 
-const APP_STORE_URL = "https://apps.apple.com/no/app/tuno/id6749316123";
+const APP_STORE_URL = "https://apps.apple.com/no/app/tuno-motorhome-and-parking/id6761529990";
 const TUNO_URL = "https://tuno.no";
 
 function substitute(text: string, name: string): string {
