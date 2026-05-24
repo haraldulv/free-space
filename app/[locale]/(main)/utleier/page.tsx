@@ -9,6 +9,7 @@ import {
   CreditCard,
   Clock,
   Sparkles,
+  ShieldCheck,
   QrCode,
   Smartphone,
   Camera,
@@ -29,7 +30,7 @@ const APP_STORE_URL =
 const HERO_IMAGE =
   "https://images.unsplash.com/photo-1518124880777-cf8c82231ffb?w=1920&h=1080&fit=crop&q=80";
 const FEATURE_IMAGE =
-  "https://images.unsplash.com/photo-1527542902003-a675625fb1eb?w=800&h=600&fit=crop&q=80";
+  "https://images.unsplash.com/photo-1527542902003-a675625fb1eb?w=1200&h=700&fit=crop&q=80";
 
 const BENEFITS = [
   { icon: Wallet, titleKey: "benefit1Title", descKey: "benefit1Desc" },
@@ -41,6 +42,7 @@ const BENEFITS = [
   { icon: CreditCard, titleKey: "benefit3Title", descKey: "benefit3Desc" },
   { icon: Clock, titleKey: "benefit4Title", descKey: "benefit4Desc" },
   { icon: Sparkles, titleKey: "benefit5Title", descKey: "benefit5Desc" },
+  { icon: ShieldCheck, titleKey: "benefit6Title", descKey: "benefit6Desc" },
 ] as const;
 
 const FEATURES = [
@@ -58,6 +60,21 @@ const STEPS = [
   { icon: QrCode, titleKey: "step2Title", descKey: "step2Desc" },
   { icon: Banknote, titleKey: "step3Title", descKey: "step3Desc" },
 ] as const;
+
+function NorwayBadge({ variant }: { variant: "light" | "dark" }) {
+  const cls =
+    variant === "light"
+      ? "bg-white/15 text-white backdrop-blur-sm"
+      : "bg-neutral-100 text-neutral-700";
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-sm font-medium ${cls}`}
+    >
+      <span className="text-base">🇳🇴</span>
+      Utviklet i Norge
+    </span>
+  );
+}
 
 export default async function UtleierPage() {
   const t = await getTranslations("hostLanding");
@@ -77,11 +94,7 @@ export default async function UtleierPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
         <Container>
           <div className="relative z-10 max-w-2xl pb-12 sm:pb-16">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-sm">
-              <span className="text-base">🇳🇴</span>
-              {t("madeInNorway")}
-            </span>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
+            <h1 className="text-3xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
               {t("heroTitle")}
             </h1>
             <p className="mt-4 text-lg text-white/90 sm:text-xl">
@@ -108,6 +121,9 @@ export default async function UtleierPage() {
                 />
               </a>
             </div>
+            <div className="mt-5">
+              <NorwayBadge variant="light" />
+            </div>
           </div>
         </Container>
       </section>
@@ -115,17 +131,17 @@ export default async function UtleierPage() {
       {/* Feature highlight */}
       <section className="py-16 sm:py-24">
         <Container>
-          <div className="mx-auto grid max-w-6xl grid-cols-1 items-center gap-12 lg:grid-cols-2">
-            <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
+          <div className="mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-5">
+            <div className="relative aspect-[16/10] overflow-hidden rounded-2xl lg:col-span-3">
               <Image
                 src={FEATURE_IMAGE}
                 alt="Bobil ved sjøen i Norge"
                 fill
                 className="object-cover"
-                sizes="(min-width: 1024px) 50vw, 100vw"
+                sizes="(min-width: 1024px) 60vw, 100vw"
               />
             </div>
-            <div>
+            <div className="lg:col-span-2">
               <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl">
                 {t("featureSectionTitle")}
               </h2>
@@ -164,7 +180,7 @@ export default async function UtleierPage() {
             {t("howItWorksTitle")}
           </h2>
           <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-3">
-            {STEPS.map((s, i) => (
+            {STEPS.map((s) => (
               <div
                 key={s.titleKey}
                 className="rounded-xl border border-neutral-200 bg-white p-8 text-center shadow-sm"
@@ -175,10 +191,7 @@ export default async function UtleierPage() {
                     strokeWidth={1.8}
                   />
                 </div>
-                <div className="mt-2 text-xs font-bold text-[#46C185]">
-                  {i + 1}
-                </div>
-                <h3 className="mt-3 text-lg font-semibold text-neutral-900">
+                <h3 className="mt-5 text-lg font-semibold text-neutral-900">
                   {t(s.titleKey)}
                 </h3>
                 <p className="mt-2 text-base text-neutral-600">
@@ -246,6 +259,9 @@ export default async function UtleierPage() {
                   className="h-[52px] w-auto"
                 />
               </a>
+            </div>
+            <div className="mt-6">
+              <NorwayBadge variant="light" />
             </div>
           </div>
         </Container>
