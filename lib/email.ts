@@ -401,11 +401,11 @@ const UTLEIER_URL = "https://tuno.no/utleier";
 
 function wrapOutreach(body: string) {
   const usp = (icon: string, title: string, desc: string) =>
-    `<td style="padding:0 6px;vertical-align:top;width:33%;">
-      <div style="text-align:center;padding:16px 8px;background:#f9fafb;border-radius:10px;border:1px solid #f0f0f0;">
-        <div style="font-size:24px;line-height:1;">${icon}</div>
-        <div style="margin-top:8px;font-size:13px;font-weight:600;color:#171717;">${title}</div>
-        <div style="margin-top:4px;font-size:11px;color:#737373;line-height:1.4;">${desc}</div>
+    `<td style="padding:0 4px;vertical-align:top;width:33%;">
+      <div style="text-align:center;padding:14px 6px;background:#f9fafb;border-radius:10px;border:1px solid #f0f0f0;height:90px;">
+        <div style="font-size:22px;line-height:1;">${icon}</div>
+        <div style="margin-top:6px;font-size:12px;font-weight:600;color:#171717;">${title}</div>
+        <div style="margin-top:3px;font-size:11px;color:#737373;line-height:1.3;">${desc}</div>
       </div>
     </td>`;
 
@@ -421,12 +421,12 @@ function wrapOutreach(body: string) {
     <div style="color:#404040;font-size:15px;line-height:1.7;">${body}</div>
   </div>
 
-  <div style="margin-top:16px;background:#fff;border-radius:12px;padding:24px 16px;border:1px solid #e5e5e5;">
+  <div style="margin-top:16px;background:#fff;border-radius:12px;padding:20px 12px 24px;border:1px solid #e5e5e5;">
     <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
       <tr>
         ${usp("📸", "Klar på 5 min", "Lag annonsen din på et blunk")}
         ${usp("📱", "QR-kode", "Gjester scanner og booker selv")}
-        ${usp("💰", "Helt gratis", "Vi tar kun avgift fra leieren")}
+        ${usp("💰", "Helt gratis", "Kun avgift fra leieren")}
       </tr>
     </table>
     <div style="text-align:center;margin-top:20px;">
@@ -437,14 +437,12 @@ function wrapOutreach(body: string) {
         <img src="https://tuno.no/app-store-badge-nb.png" alt="Last ned fra App Store" width="150" style="width:150px;height:auto;" />
       </a>
     </div>
+    <div style="text-align:center;margin-top:14px;">
+      <span style="display:inline-block;font-size:11px;color:#737373;">🇳🇴 Utviklet i Norge</span>
+    </div>
   </div>
 
-  <div style="text-align:center;margin-top:20px;">
-    <span style="display:inline-block;font-size:12px;color:#737373;background:#fff;border:1px solid #e5e5e5;border-radius:20px;padding:6px 14px;">
-      🇳🇴 Utviklet i Norge
-    </span>
-  </div>
-  <p style="text-align:center;margin-top:16px;font-size:12px;color:#a3a3a3;">
+  <p style="text-align:center;margin-top:20px;font-size:12px;color:#a3a3a3;">
     Tuno AS · <a href="https://tuno.no" style="color:#a3a3a3;">tuno.no</a> · <a href="mailto:support@tuno.no" style="color:#a3a3a3;">support@tuno.no</a>
   </p>
 </div>
