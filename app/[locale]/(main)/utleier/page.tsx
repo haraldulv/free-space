@@ -6,12 +6,13 @@ import Container from "@/components/ui/Container";
 import {
   Wallet,
   SlidersHorizontal,
-  ShieldCheck,
   CreditCard,
   Clock,
   Sparkles,
   QrCode,
   Smartphone,
+  Camera,
+  Banknote,
 } from "lucide-react";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -30,14 +31,17 @@ const HERO_IMAGE =
 const FEATURE_IMAGE =
   "https://images.unsplash.com/photo-1527542902003-a675625fb1eb?w=800&h=600&fit=crop&q=80";
 
-const BENEFIT_ICONS = [
-  Wallet,
-  SlidersHorizontal,
-  ShieldCheck,
-  CreditCard,
-  Clock,
-  Sparkles,
-];
+const BENEFITS = [
+  { icon: Wallet, titleKey: "benefit1Title", descKey: "benefit1Desc" },
+  {
+    icon: SlidersHorizontal,
+    titleKey: "benefit2Title",
+    descKey: "benefit2Desc",
+  },
+  { icon: CreditCard, titleKey: "benefit3Title", descKey: "benefit3Desc" },
+  { icon: Clock, titleKey: "benefit4Title", descKey: "benefit4Desc" },
+  { icon: Sparkles, titleKey: "benefit5Title", descKey: "benefit5Desc" },
+] as const;
 
 const FEATURES = [
   { icon: QrCode, titleKey: "qrFeatureTitle", descKey: "qrFeatureDesc" },
@@ -49,14 +53,14 @@ const FEATURES = [
   },
 ] as const;
 
+const STEPS = [
+  { icon: Camera, titleKey: "step1Title", descKey: "step1Desc" },
+  { icon: QrCode, titleKey: "step2Title", descKey: "step2Desc" },
+  { icon: Banknote, titleKey: "step3Title", descKey: "step3Desc" },
+] as const;
+
 export default async function UtleierPage() {
   const t = await getTranslations("hostLanding");
-
-  const benefits = Array.from({ length: 6 }, (_, i) => ({
-    icon: BENEFIT_ICONS[i],
-    title: t(`benefit${i + 1}Title`),
-    desc: t(`benefit${i + 1}Desc`),
-  }));
 
   return (
     <div>
@@ -73,8 +77,9 @@ export default async function UtleierPage() {
         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
         <Container>
           <div className="relative z-10 max-w-2xl pb-12 sm:pb-16">
-            <span className="inline-block rounded-full bg-[#46C185] px-4 py-1.5 text-xs font-semibold text-white">
-              {t("heroBadge")}
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-4 py-1.5 text-sm font-medium text-white backdrop-blur-sm">
+              <span className="text-base">🇳🇴</span>
+              {t("madeInNorway")}
             </span>
             <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-5xl lg:text-6xl">
               {t("heroTitle")}
@@ -124,20 +129,20 @@ export default async function UtleierPage() {
               <h2 className="text-2xl font-bold text-neutral-900 sm:text-3xl">
                 {t("featureSectionTitle")}
               </h2>
-              <p className="mt-4 text-base text-neutral-600 leading-relaxed">
+              <p className="mt-4 text-base text-neutral-600 leading-relaxed sm:text-lg">
                 {t("featureSectionDesc")}
               </p>
               <div className="mt-8 space-y-6">
                 {FEATURES.map((f) => (
                   <div key={f.titleKey} className="flex items-start gap-4">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#46C185]/10">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#46C185]/10">
                       <f.icon
                         className="h-5 w-5 text-[#46C185]"
                         strokeWidth={1.8}
                       />
                     </div>
                     <div>
-                      <h3 className="text-sm font-semibold text-neutral-900">
+                      <h3 className="text-base font-semibold text-neutral-900">
                         {t(f.titleKey)}
                       </h3>
                       <p className="mt-0.5 text-sm text-neutral-600">
@@ -158,17 +163,26 @@ export default async function UtleierPage() {
           <h2 className="text-center text-2xl font-bold text-neutral-900 sm:text-3xl">
             {t("howItWorksTitle")}
           </h2>
-          <div className="mx-auto mt-12 grid max-w-4xl grid-cols-1 gap-8 sm:grid-cols-3">
-            {[1, 2, 3].map((num) => (
-              <div key={num} className="text-center">
-                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#46C185] text-lg font-bold text-white">
-                  {num}
+          <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-6 sm:grid-cols-3">
+            {STEPS.map((s, i) => (
+              <div
+                key={s.titleKey}
+                className="rounded-xl border border-neutral-200 bg-white p-8 text-center shadow-sm"
+              >
+                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#46C185]/10">
+                  <s.icon
+                    className="h-7 w-7 text-[#46C185]"
+                    strokeWidth={1.8}
+                  />
                 </div>
-                <h3 className="mt-4 text-base font-semibold text-neutral-900">
-                  {t(`step${num}Title`)}
+                <div className="mt-2 text-xs font-bold text-[#46C185]">
+                  {i + 1}
+                </div>
+                <h3 className="mt-3 text-lg font-semibold text-neutral-900">
+                  {t(s.titleKey)}
                 </h3>
-                <p className="mt-2 text-sm text-neutral-600">
-                  {t(`step${num}Desc`)}
+                <p className="mt-2 text-base text-neutral-600">
+                  {t(s.descKey)}
                 </p>
               </div>
             ))}
@@ -183,19 +197,19 @@ export default async function UtleierPage() {
             {t("benefitsTitle")}
           </h2>
           <div className="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {benefits.map((b) => (
+            {BENEFITS.map((b) => (
               <div
-                key={b.title}
-                className="rounded-xl border border-neutral-100 bg-white p-5 shadow-sm"
+                key={b.titleKey}
+                className="rounded-xl border border-neutral-200 bg-white p-6 shadow-sm"
               >
                 <b.icon
-                  className="h-6 w-6 text-[#46C185]"
-                  strokeWidth={1.8}
+                  className="h-8 w-8 text-[#46C185]"
+                  strokeWidth={1.6}
                 />
-                <h3 className="mt-3 text-sm font-semibold text-neutral-900">
-                  {b.title}
+                <h3 className="mt-3 text-base font-semibold text-neutral-900">
+                  {t(b.titleKey)}
                 </h3>
-                <p className="mt-1 text-xs text-neutral-500">{b.desc}</p>
+                <p className="mt-1 text-sm text-neutral-500">{t(b.descKey)}</p>
               </div>
             ))}
           </div>
@@ -209,19 +223,15 @@ export default async function UtleierPage() {
             <h2 className="text-2xl font-bold text-white sm:text-3xl">
               {t("ctaTitle")}
             </h2>
-            <p className="mt-3 text-base text-white/90">{t("ctaSubtitle")}</p>
+            <p className="mt-3 text-base text-white/90 sm:text-lg">
+              {t("ctaSubtitle")}
+            </p>
             <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
               <Link
                 href="/register"
-                className="rounded-full bg-white px-8 py-3 text-base font-semibold text-[#46C185] shadow-sm transition hover:bg-neutral-100"
+                className="rounded-full bg-white px-8 py-3.5 text-base font-semibold text-[#46C185] shadow-sm transition hover:bg-neutral-100"
               >
                 {t("registerButton")}
-              </Link>
-              <Link
-                href="/bli-utleier"
-                className="rounded-full border-2 border-white px-8 py-3 text-base font-semibold text-white transition hover:bg-white/10"
-              >
-                {t("createListing")}
               </Link>
               <a
                 href={APP_STORE_URL}
