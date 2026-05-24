@@ -396,10 +396,54 @@ export async function sendReviewReminderEmail(to: string, data: {
   });
 }
 
+const APP_STORE_URL_EMAIL = "https://apps.apple.com/no/app/tuno-motorhome-and-parking/id6761529990";
+const UTLEIER_URL = "https://tuno.no/utleier";
+
+function wrapOutreach(body: string) {
+  return `<!DOCTYPE html>
+<html lang="nb">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+<div style="max-width:560px;margin:0 auto;padding:32px 16px;">
+  <div style="text-align:center;margin-bottom:24px;">
+    <img src="${LOGO_URL}" alt="Tuno" height="28" style="height:28px;" />
+  </div>
+  <div style="background:#fff;border-radius:12px;padding:32px 24px;border:1px solid #e5e5e5;">
+    <div style="color:#404040;font-size:15px;line-height:1.7;">${body}</div>
+
+    <div style="margin-top:28px;padding-top:24px;border-top:1px solid #f0f0f0;">
+      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+        <tr>
+          <td style="padding-right:12px;">
+            <a href="${UTLEIER_URL}" style="display:inline-block;padding:12px 28px;background:#46C185;color:#fff;border-radius:24px;text-decoration:none;font-weight:600;font-size:14px;">Les mer om Tuno</a>
+          </td>
+          <td>
+            <a href="${APP_STORE_URL_EMAIL}" style="display:inline-block;">
+              <img src="https://tuno.no/app-store-badge-nb.png" alt="Last ned fra App Store" width="140" style="width:140px;height:auto;vertical-align:middle;" />
+            </a>
+          </td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:20px;">
+    <span style="display:inline-block;font-size:12px;color:#737373;background:#fff;border:1px solid #e5e5e5;border-radius:20px;padding:6px 14px;">
+      🇳🇴 Utviklet i Norge
+    </span>
+  </div>
+  <p style="text-align:center;margin-top:16px;font-size:12px;color:#a3a3a3;">
+    Tuno AS · <a href="https://tuno.no" style="color:#a3a3a3;">tuno.no</a> · <a href="mailto:support@tuno.no" style="color:#a3a3a3;">support@tuno.no</a>
+  </p>
+</div>
+</body>
+</html>`;
+}
+
 /**
- * Outreach-mail til potensielle utleiere. Bruker harald@tuno.no som from + reply-to slik at
- * mottakeren kan svare direkte. Body sendes inn som ren tekst og konverteres til HTML
- * (linjeskift → <br>, lenker auto-detekteres).
+ * Outreach-mail til potensielle utleiere. Bruker kim@tuno.no som from + reply-to
+ * slik at mottakeren kan svare direkte. Body sendes inn som ren tekst og konverteres
+ * til HTML (linjeskift → <br>, lenker auto-detekteres).
  */
 export async function sendHostOutreachEmail(opts: {
   to: string;
@@ -415,15 +459,10 @@ export async function sendHostOutreachEmail(opts: {
     .replaceAll("\n", "<br>");
 
   await resend.emails.send({
-    from: "Tuno <harald@tuno.no>",
-    replyTo: opts.replyTo ?? "harald@tuno.no",
+    from: "Kim fra Tuno <kim@tuno.no>",
+    replyTo: opts.replyTo ?? "kim@tuno.no",
     to: opts.to,
     subject: opts.subject,
-    html: wrap(opts.subject, `<div style="color:#404040;font-size:14px;line-height:1.65;">${html}</div>
-      <div style="margin-top:24px;text-align:center;">
-        <a href="https://apps.apple.com/no/app/tuno-motorhome-and-parking/id6761529990" style="display:inline-block;">
-          <img src="https://tuno.no/app-store-badge-nb.png" alt="Last ned fra App Store" width="180" style="width:180px;height:auto;" />
-        </a>
-      </div>`),
+    html: wrapOutreach(html),
   });
 }
