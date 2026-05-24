@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, Download, Mail, Phone, RefreshCw, Search, Star, X } from "lucide-react";
+import { ChevronLeft, Download, Mail, Phone, Plus, RefreshCw, Search, Star, X } from "lucide-react";
 import {
   OUTREACH_CATEGORY_LABELS,
   OUTREACH_STATUS_COLORS,
@@ -16,6 +16,7 @@ import {
 import OutreachMap from "./_components/OutreachMap";
 import EmailComposer from "./_components/EmailComposer";
 import TemplateManager from "./_components/TemplateManager";
+import AddTargetModal from "./_components/AddTargetModal";
 import {
   exportTargetsCSVAction,
   loadOutreachAction,
@@ -35,6 +36,7 @@ const STATUSES: OutreachStatus[] = [
   "not_contacted",
   "queued",
   "contacted",
+  "no_response",
   "follow_up",
   "responded",
   "declined",
@@ -69,6 +71,7 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
   const [discoverMessage, setDiscoverMessage] = useState<string | null>(null);
   const [showComposer, setShowComposer] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showAddTarget, setShowAddTarget] = useState(false);
 
   const filtered = useMemo(() => {
     return targets.filter((t) => {
@@ -83,7 +86,7 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
 
   const counts = useMemo(() => {
     const c: Record<OutreachStatus, number> = {
-      not_contacted: 0, queued: 0, contacted: 0, follow_up: 0, responded: 0, declined: 0, onboarded: 0,
+      not_contacted: 0, queued: 0, contacted: 0, no_response: 0, follow_up: 0, responded: 0, declined: 0, onboarded: 0,
     };
     targets.forEach((t) => { c[t.status]++; });
     return c;
@@ -295,6 +298,12 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
             <Download className="h-4 w-4" /> Eksporter CSV
           </button>
           <button
+            onClick={() => setShowAddTarget(true)}
+            className="flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
+          >
+            <Plus className="h-4 w-4" /> Legg til
+          </button>
+          <button
             onClick={() => setShowTemplates(true)}
             className="rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50"
           >
@@ -460,6 +469,14 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
           templates={templates}
           onClose={() => setShowTemplates(false)}
           onChanged={(updated) => setTemplates(updated)}
+        />
+      )}
+
+      {/* Add target modal */}
+      {showAddTarget && (
+        <AddTargetModal
+          onClose={() => setShowAddTarget(false)}
+          onCreated={() => { setShowAddTarget(false); refresh(); }}
         />
       )}
     </div>

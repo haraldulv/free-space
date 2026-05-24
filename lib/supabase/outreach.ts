@@ -383,6 +383,6 @@ export async function deleteEmailTemplate(id: string): Promise<void> {
 export function applyTemplateVariables(text: string, vars: { name?: string; tunoLink?: string; appStoreLink?: string }): string {
   return text
     .replaceAll("{name}", vars.name ?? "")
-    .replaceAll("{tuno_link}", vars.tunoLink ?? "https://tuno.no")
+    .replaceAll("{tuno_link}", vars.tunoLink ?? "https://tuno.no/utleier")
     .replaceAll("{app_store_link}", vars.appStoreLink ?? "https://apps.apple.com/no/app/tuno/id6749316123");
 }

@@ -5,6 +5,7 @@ import {
   listOutreachTargets,
   getOutreachTargetById,
   updateOutreachTarget,
+  upsertOutreachTarget,
   appendContactLog,
   listContactLogForTarget,
   listEmailTemplates,
@@ -198,6 +199,144 @@ export async function getDefaultTemplateAction(): Promise<{ template?: OutreachE
     return { template };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Lasting feilet" };
+  }
+}
+
+export async function resolveGoogleMapsUrlAction(rawUrl: string): Promise<{
+  placeId?: string | null;
+  name?: string | null;
+  address?: string | null;
+  phone?: string | null;
+  website?: string | null;
+  lat?: number | null;
+  lng?: number | null;
+  rating?: number | null;
+  userRatingsTotal?: number | null;
+  error?: string;
+}> {
+  try {
+    await requireAdmin();
+    const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+    if (!apiKey) return { error: "Mangler GOOGLE_PLACES_API_KEY" };
+
+    let url = rawUrl.trim();
+    if (/maps\.app\.goo\.gl|goo\.gl\/maps/i.test(url)) {
+      const res = await fetch(url, { redirect: "follow" });
+      url = res.url;
+    }
+
+    const placeId = (() => {
+      try {
+        const u = new URL(url);
+        return u.searchParams.get("query_place_id") || u.searchParams.get("ftid") || null;
+      } catch { return null; }
+    })();
+
+    const placeName = (() => {
+      const m = url.match(/\/place\/([^/@]+)/);
+      if (m) return decodeURIComponent(m[1].replaceAll("+", " "));
+      try {
+        const u = new URL(url);
+        const q = u.searchParams.get("q") || u.searchParams.get("query");
+        if (q && !/^[\d.,-]+$/.test(q)) return q;
+      } catch { /* ignore */ }
+      return null;
+    })();
+
+    const coords = (() => {
+      const m = url.match(/@(-?\d+\.\d+),(-?\d+\.\d+)/);
+      if (m) return { lat: parseFloat(m[1]), lng: parseFloat(m[2]) };
+      return null;
+    })();
+
+    const fieldMask = "id,displayName,formattedAddress,location,rating,userRatingCount,nationalPhoneNumber,internationalPhoneNumber,websiteUri";
+
+    const toResult = (p: Record<string, unknown>) => {
+      const loc = p.location as Record<string, number> | undefined;
+      const dn = p.displayName as Record<string, string> | undefined;
+      return {
+        placeId: (p.id as string) || null,
+        name: dn?.text || null,
+        address: (p.formattedAddress as string) || null,
+        phone: (p.nationalPhoneNumber as string) || (p.internationalPhoneNumber as string) || null,
+        website: (p.websiteUri as string) || null,
+        lat: loc?.latitude ?? null,
+        lng: loc?.longitude ?? null,
+        rating: (p.rating as number) ?? null,
+        userRatingsTotal: (p.userRatingCount as number) ?? null,
+      };
+    };
+
+    if (placeId) {
+      const r = await fetch(`https://places.googleapis.com/v1/places/${placeId}?languageCode=no`, {
+        headers: { "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": fieldMask },
+      });
+      if (r.ok) return toResult(await r.json());
+    }
+
+    const searchForPlace = async (query: string) => {
+      const body: Record<string, unknown> = { textQuery: query, languageCode: "no", maxResultCount: 1 };
+      if (coords) body.locationBias = { circle: { center: { latitude: coords.lat, longitude: coords.lng }, radius: 5000 } };
+      const r = await fetch("https://places.googleapis.com/v1/places:searchText", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "X-Goog-Api-Key": apiKey, "X-Goog-FieldMask": `places.${fieldMask.replaceAll(",", ",places.")}` },
+        body: JSON.stringify(body),
+      });
+      if (!r.ok) return null;
+      const d = await r.json();
+      return d.places?.[0] ?? null;
+    };
+
+    if (placeName) {
+      const p = await searchForPlace(placeName);
+      if (p) return toResult(p);
+    }
+
+    if (coords) {
+      const p = await searchForPlace(`${coords.lat},${coords.lng}`);
+      if (p) return toResult(p);
+    }
+
+    return { error: "Kunne ikke finne sted fra denne lenken. Prøv å legge til manuelt." };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Oppslag feilet" };
+  }
+}
+
+export async function createManualTargetAction(input: {
+  name: string;
+  category: OutreachCategory;
+  area?: string;
+  address?: string;
+  phone?: string;
+  website?: string;
+  email?: string;
+  lat?: number;
+  lng?: number;
+  rating?: number;
+  userRatingsTotal?: number;
+  placeId?: string;
+}): Promise<{ target?: OutreachTarget; error?: string }> {
+  try {
+    await requireAdmin();
+    const placeId = input.placeId || `manual_${crypto.randomUUID()}`;
+    const { target } = await upsertOutreachTarget({
+      placeId,
+      name: input.name,
+      category: input.category,
+      area: input.area || "lofoten",
+      address: input.address,
+      phone: input.phone,
+      website: input.website,
+      email: input.email,
+      lat: input.lat,
+      lng: input.lng,
+      rating: input.rating,
+      userRatingsTotal: input.userRatingsTotal,
+    });
+    return { target: target ?? undefined };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Opprettelse feilet" };
   }
 }
 

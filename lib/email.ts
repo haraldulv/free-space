@@ -419,6 +419,11 @@ export async function sendHostOutreachEmail(opts: {
     replyTo: opts.replyTo ?? "harald@tuno.no",
     to: opts.to,
     subject: opts.subject,
-    html: wrap(opts.subject, `<div style="color:#404040;font-size:14px;line-height:1.65;">${html}</div>`),
+    html: wrap(opts.subject, `<div style="color:#404040;font-size:14px;line-height:1.65;">${html}</div>
+      <div style="margin-top:24px;text-align:center;">
+        <a href="https://apps.apple.com/no/app/tuno/id6749316123" style="display:inline-block;">
+          <img src="https://tuno.no/app-store-badge-nb.png" alt="Last ned fra App Store" width="180" style="width:180px;height:auto;" />
+        </a>
+      </div>`),
   });
 }

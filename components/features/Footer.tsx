@@ -39,6 +39,14 @@ export default function Footer() {
                   {t("camping")}
                 </Link>
               </li>
+              <li>
+                <Link
+                  href="/utleier"
+                  className="text-sm text-neutral-500 hover:text-neutral-700"
+                >
+                  {t("forHosts")}
+                </Link>
+              </li>
             </ul>
           </div>
 

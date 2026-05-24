@@ -493,6 +493,7 @@ export type OutreachStatus =
   | "not_contacted"
   | "queued"
   | "contacted"
+  | "no_response"
   | "follow_up"
   | "responded"
   | "declined"
@@ -551,6 +552,7 @@ export const OUTREACH_STATUS_LABELS: Record<OutreachStatus, string> = {
   not_contacted: "Ikke kontaktet",
   queued: "I kø",
   contacted: "Kontaktet",
+  no_response: "Ingen svar",
   follow_up: "Følges opp",
   responded: "Svart",
   declined: "Takket nei",
@@ -570,6 +572,7 @@ export const OUTREACH_STATUS_COLORS: Record<OutreachStatus, string> = {
   not_contacted: "#9CA3AF",
   queued: "#A78BFA",
   contacted: "#3B82F6",
+  no_response: "#6B7280",
   follow_up: "#F59E0B",
   responded: "#F97316",
   declined: "#EF4444",
