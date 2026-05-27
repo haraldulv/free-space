@@ -40,6 +40,7 @@ const STATUSES: OutreachStatus[] = [
   "no_response",
   "follow_up",
   "responded",
+  "interested",
   "declined",
   "onboarded",
 ];
@@ -62,7 +63,7 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
   const splitContainerRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
   const [filterCategory, setFilterCategory] = useState<OutreachCategory | "">("");
-  const [filterStatus, setFilterStatus] = useState<OutreachStatus | "">("");
+  const [filterStatuses, setFilterStatuses] = useState<Set<OutreachStatus>>(new Set());
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
@@ -77,17 +78,17 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
   const filtered = useMemo(() => {
     return targets.filter((t) => {
       if (filterCategory && t.category !== filterCategory) return false;
-      if (filterStatus && t.status !== filterStatus) return false;
+      if (filterStatuses.size > 0 && !filterStatuses.has(t.status)) return false;
       if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
-  }, [targets, filterCategory, filterStatus, search]);
+  }, [targets, filterCategory, filterStatuses, search]);
 
   const selected = useMemo(() => targets.find((t) => t.id === selectedId) ?? null, [targets, selectedId]);
 
   const counts = useMemo(() => {
     const c: Record<OutreachStatus, number> = {
-      not_contacted: 0, queued: 0, contacted: 0, no_response: 0, follow_up: 0, responded: 0, declined: 0, onboarded: 0,
+      not_contacted: 0, queued: 0, contacted: 0, no_response: 0, follow_up: 0, responded: 0, interested: 0, declined: 0, onboarded: 0,
     };
     targets.forEach((t) => { c[t.status]++; });
     return c;
@@ -190,7 +191,7 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
     const res = await exportTargetsCSVAction({
       area: "lofoten",
       category: filterCategory || undefined,
-      status: filterStatus || undefined,
+      status: filterStatuses.size === 1 ? [...filterStatuses][0] : undefined,
     });
     if (res.error) {
       alert(`Eksport feilet: ${res.error}`);
@@ -272,9 +273,13 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
           {STATUSES.map((s) => (
             <button
               key={s}
-              onClick={() => setFilterStatus(filterStatus === s ? "" : s)}
+              onClick={() => setFilterStatuses((prev) => {
+                const next = new Set(prev);
+                if (next.has(s)) next.delete(s); else next.add(s);
+                return next;
+              })}
               className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs ${
-                filterStatus === s ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-200 bg-white text-neutral-700"
+                filterStatuses.has(s) ? "border-neutral-900 bg-neutral-900 text-white" : "border-neutral-200 bg-white text-neutral-700"
               }`}
             >
               <span className="inline-block h-2 w-2 rounded-full" style={{ background: OUTREACH_STATUS_COLORS[s] }} />

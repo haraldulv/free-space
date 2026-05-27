@@ -496,6 +496,7 @@ export type OutreachStatus =
   | "no_response"
   | "follow_up"
   | "responded"
+  | "interested"
   | "declined"
   | "onboarded";
 
@@ -556,6 +557,7 @@ export const OUTREACH_STATUS_LABELS: Record<OutreachStatus, string> = {
   no_response: "Ingen svar",
   follow_up: "Følges opp",
   responded: "Svart",
+  interested: "Interessert",
   declined: "Takket nei",
   onboarded: "Registrert som vert",
 };
@@ -576,6 +578,7 @@ export const OUTREACH_STATUS_COLORS: Record<OutreachStatus, string> = {
   no_response: "#6B7280",
   follow_up: "#F59E0B",
   responded: "#F97316",
+  interested: "#10B981",
   declined: "#EF4444",
   onboarded: "#46C185",
 };
