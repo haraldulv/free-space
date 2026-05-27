@@ -402,7 +402,7 @@ const UTLEIER_URL = "https://tuno.no/utleier";
 function wrapOutreach(body: string) {
   const usp = (icon: string, title: string, desc: string) =>
     `<td style="padding:0 4px;vertical-align:top;width:33%;">
-      <div style="text-align:center;padding:14px 6px;background:#f9fafb;border-radius:10px;border:1px solid #f0f0f0;height:90px;">
+      <div style="text-align:center;padding:14px 8px 16px;background:#f9fafb;border-radius:10px;border:1px solid #f0f0f0;">
         <div style="font-size:22px;line-height:1;">${icon}</div>
         <div style="margin-top:6px;font-size:12px;font-weight:600;color:#171717;">${title}</div>
         <div style="margin-top:3px;font-size:11px;color:#737373;line-height:1.3;">${desc}</div>
