@@ -44,6 +44,7 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
   );
 
   const [templateId, setTemplateId] = useState<string>(defaultTemplate?.id ?? "");
+  const [sender, setSender] = useState<"kim" | "harald">("kim");
   const [subject, setSubject] = useState(defaultTemplate?.subject ?? "");
   const [body, setBody] = useState(defaultTemplate?.body ?? "");
   const [recipient, setRecipient] = useState(target.email ?? "");
@@ -100,6 +101,7 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
       body,
       recipientEmail: recipient,
       templateId: templateId || undefined,
+      sender,
       attachments: attachments.length > 0
         ? attachments.map(({ filename, content, contentType }) => ({ filename, content, contentType }))
         : undefined,
@@ -138,6 +140,18 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
                   {t.name}{t.isDefault ? " (standard)" : ""}
                 </option>
               ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Fra</label>
+            <select
+              value={sender}
+              onChange={(e) => setSender(e.target.value as "kim" | "harald")}
+              className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-2 text-sm"
+            >
+              <option value="kim">Kim fra Tuno (kim@tuno.no)</option>
+              <option value="harald">Harald fra Tuno (harald@tuno.no)</option>
             </select>
           </div>
 

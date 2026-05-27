@@ -455,10 +455,16 @@ function wrapOutreach(body: string) {
  * slik at mottakeren kan svare direkte. Body sendes inn som ren tekst og konverteres
  * til HTML (linjeskift → <br>, lenker auto-detekteres).
  */
+const SENDERS = {
+  kim: { from: "Kim fra Tuno <kim@tuno.no>", replyTo: "kim@tuno.no" },
+  harald: { from: "Harald fra Tuno <harald@tuno.no>", replyTo: "harald@tuno.no" },
+} as const;
+
 export async function sendHostOutreachEmail(opts: {
   to: string;
   subject: string;
   body: string;
+  sender?: "kim" | "harald";
   replyTo?: string;
   attachments?: { filename: string; content: string; contentType?: string }[];
 }) {
@@ -469,9 +475,11 @@ export async function sendHostOutreachEmail(opts: {
     .replaceAll(/(https?:\/\/\S+)/g, (url) => `<a href="${url}" style="color:#46C185;">${url}</a>`)
     .replaceAll("\n", "<br>");
 
+  const s = SENDERS[opts.sender ?? "kim"];
+
   await resend.emails.send({
-    from: "Kim fra Tuno <kim@tuno.no>",
-    replyTo: opts.replyTo ?? "kim@tuno.no",
+    from: s.from,
+    replyTo: opts.replyTo ?? s.replyTo,
     to: opts.to,
     subject: opts.subject,
     html: wrapOutreach(html),

@@ -133,6 +133,7 @@ export async function sendOutreachEmailAction(
     body: string;
     recipientEmail: string;
     templateId?: string;
+    sender?: "kim" | "harald";
     attachments?: { filename: string; content: string; contentType?: string }[];
   },
 ): Promise<{ ok?: true; error?: string }> {
@@ -149,6 +150,7 @@ export async function sendOutreachEmailAction(
       to: payload.recipientEmail,
       subject: substitutedSubject,
       body: substituted,
+      sender: payload.sender,
       attachments: payload.attachments,
     });
 
