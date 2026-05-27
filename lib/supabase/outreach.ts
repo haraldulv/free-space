@@ -18,6 +18,7 @@ interface RowOutreachTarget {
   phone: string | null;
   website: string | null;
   email: string | null;
+  contact_person: string | null;
   lat: number | string | null;
   lng: number | string | null;
   rating: number | string | null;
@@ -42,6 +43,7 @@ function rowToTarget(row: RowOutreachTarget): OutreachTarget {
     phone: row.phone,
     website: row.website,
     email: row.email,
+    contactPerson: row.contact_person,
     lat: row.lat != null ? Number(row.lat) : null,
     lng: row.lng != null ? Number(row.lng) : null,
     rating: row.rating != null ? Number(row.rating) : null,
@@ -185,6 +187,7 @@ export interface UpdateOutreachPatch {
   notes?: string | null;
   email?: string | null;
   phone?: string | null;
+  contactPerson?: string | null;
   followUpAt?: string | null;
   lastContactedAt?: string | null;
   lastContactedBy?: string | null;
@@ -197,6 +200,7 @@ export async function updateOutreachTarget(id: string, patch: UpdateOutreachPatc
   if (patch.notes !== undefined) dbPatch.notes = patch.notes;
   if (patch.email !== undefined) dbPatch.email = patch.email;
   if (patch.phone !== undefined) dbPatch.phone = patch.phone;
+  if (patch.contactPerson !== undefined) dbPatch.contact_person = patch.contactPerson;
   if (patch.followUpAt !== undefined) dbPatch.follow_up_at = patch.followUpAt;
   if (patch.lastContactedAt !== undefined) dbPatch.last_contacted_at = patch.lastContactedAt;
   if (patch.lastContactedBy !== undefined) dbPatch.last_contacted_by = patch.lastContactedBy;
@@ -380,9 +384,10 @@ export async function deleteEmailTemplate(id: string): Promise<void> {
 /**
  * Substituer variabler i mailmal. Støttede placeholders: {name}, {tuno_link}, {app_store_link}.
  */
-export function applyTemplateVariables(text: string, vars: { name?: string; tunoLink?: string; appStoreLink?: string }): string {
+export function applyTemplateVariables(text: string, vars: { name?: string; contactPerson?: string; tunoLink?: string; appStoreLink?: string }): string {
   return text
     .replaceAll("{name}", vars.name ?? "")
+    .replaceAll("{contact_person}", vars.contactPerson ?? "")
     .replaceAll("{tuno_link}", vars.tunoLink ?? "https://tuno.no/utleier")
     .replaceAll("{app_store_link}", vars.appStoreLink ?? "https://apps.apple.com/no/app/tuno-motorhome-and-parking/id6761529990");
 }

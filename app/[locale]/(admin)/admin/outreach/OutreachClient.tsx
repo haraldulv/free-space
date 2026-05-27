@@ -179,6 +179,13 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
     }
   }
 
+  async function saveContactPerson(target: OutreachTarget, cp: string) {
+    const res = await updateTargetAction(target.id, { contactPerson: cp || null });
+    if (res.target) {
+      setTargets((prev) => prev.map((t) => (t.id === target.id ? res.target! : t)));
+    }
+  }
+
   async function downloadCSV() {
     const res = await exportTargetsCSVAction({
       area: "lofoten",
@@ -399,6 +406,9 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
                           </>
                         )}
                       </p>
+                      {t.contactPerson && (
+                        <p className="mt-0.5 text-xs text-neutral-500">Kontakt: {t.contactPerson}</p>
+                      )}
                       {t.address && (
                         <p className="mt-0.5 truncate text-xs text-neutral-500">{t.address}</p>
                       )}
@@ -466,6 +476,7 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
           onChangeStatus={(s) => changeStatus(selected, s)}
           onSaveNotes={(n) => saveNotes(selected, n)}
           onSaveEmail={(e) => saveEmail(selected, e)}
+          onSaveContactPerson={(cp) => saveContactPerson(selected, cp)}
           onLogPhone={(o, s) => logPhone(selected, o, s)}
           onLogNote={(n) => logNote(selected, n)}
           onOpenComposer={() => setShowComposer(true)}
@@ -522,6 +533,7 @@ interface DrawerProps {
   onChangeStatus: (s: OutreachStatus) => void;
   onSaveNotes: (n: string) => void;
   onSaveEmail: (e: string) => void;
+  onSaveContactPerson: (cp: string) => void;
   onLogPhone: (outcome: string, newStatus?: OutreachStatus) => void;
   onLogNote: (note: string) => void;
   onOpenComposer: () => void;
@@ -529,10 +541,11 @@ interface DrawerProps {
 
 function DetailDrawer({
   target, contactLog, loading,
-  onClose, onChangeStatus, onSaveNotes, onSaveEmail, onLogPhone, onLogNote, onOpenComposer,
+  onClose, onChangeStatus, onSaveNotes, onSaveEmail, onSaveContactPerson, onLogPhone, onLogNote, onOpenComposer,
 }: DrawerProps) {
   const [notes, setNotes] = useState(target.notes ?? "");
   const [email, setEmail] = useState(target.email ?? "");
+  const [contactPerson, setContactPerson] = useState(target.contactPerson ?? "");
   const [phoneOutcome, setPhoneOutcome] = useState("");
   const [phoneStatus, setPhoneStatus] = useState<OutreachStatus | "">("");
   const [noteText, setNoteText] = useState("");
@@ -541,10 +554,11 @@ function DetailDrawer({
   useEffect(() => {
     setNotes(target.notes ?? "");
     setEmail(target.email ?? "");
+    setContactPerson(target.contactPerson ?? "");
     setPhoneOutcome("");
     setPhoneStatus("");
     setNoteText("");
-  }, [target.id, target.notes, target.email]);
+  }, [target.id, target.notes, target.email, target.contactPerson]);
 
   // Debounced notes save
   useEffect(() => {
@@ -613,6 +627,21 @@ function DetailDrawer({
               <Star className="inline h-3.5 w-3.5 text-amber-500" /> {target.rating.toFixed(1)} ({target.userRatingsTotal ?? 0} vurderinger)
             </p>
           )}
+        </div>
+
+        {/* Kontaktperson */}
+        <div>
+          <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
+            Kontaktperson
+          </label>
+          <input
+            type="text"
+            value={contactPerson}
+            onChange={(e) => setContactPerson(e.target.value)}
+            onBlur={() => onSaveContactPerson(contactPerson)}
+            placeholder="Navn på kontaktperson"
+            className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-2 text-sm"
+          />
         </div>
 
         {/* E-post */}

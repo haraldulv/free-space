@@ -511,6 +511,7 @@ export interface OutreachTarget {
   phone?: string | null;
   website?: string | null;
   email?: string | null;
+  contactPerson?: string | null;
   lat?: number | null;
   lng?: number | null;
   rating?: number | null;

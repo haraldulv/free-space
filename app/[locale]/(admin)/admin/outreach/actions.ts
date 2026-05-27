@@ -128,20 +128,28 @@ export async function logPhoneCallAction(
 
 export async function sendOutreachEmailAction(
   targetId: string,
-  payload: { subject: string; body: string; recipientEmail: string; templateId?: string },
+  payload: {
+    subject: string;
+    body: string;
+    recipientEmail: string;
+    templateId?: string;
+    attachments?: { filename: string; content: string; contentType?: string }[];
+  },
 ): Promise<{ ok?: true; error?: string }> {
   try {
     const { user } = await requireAdmin();
     const target = await getOutreachTargetById(targetId);
     if (!target) return { error: "Fant ikke target" };
 
-    const substituted = applyTemplateVariables(payload.body, { name: target.name });
-    const substitutedSubject = applyTemplateVariables(payload.subject, { name: target.name });
+    const vars = { name: target.name, contactPerson: target.contactPerson ?? "" };
+    const substituted = applyTemplateVariables(payload.body, vars);
+    const substitutedSubject = applyTemplateVariables(payload.subject, vars);
 
     await sendHostOutreachEmail({
       to: payload.recipientEmail,
       subject: substitutedSubject,
       body: substituted,
+      attachments: payload.attachments,
     });
 
     await appendContactLog({
@@ -350,7 +358,7 @@ export async function exportTargetsCSVAction(filters: {
     const targets = await listOutreachTargets(filters);
     const headers = [
       "name", "category", "area", "status",
-      "address", "phone", "website", "email",
+      "contact_person", "address", "phone", "website", "email",
       "rating", "user_ratings_total",
       "last_contacted_at", "follow_up_at", "notes",
     ];
@@ -362,7 +370,7 @@ export async function exportTargetsCSVAction(filters: {
     const rows = targets.map((t) =>
       [
         t.name, t.category, t.area, t.status,
-        t.address ?? "", t.phone ?? "", t.website ?? "", t.email ?? "",
+        t.contactPerson ?? "", t.address ?? "", t.phone ?? "", t.website ?? "", t.email ?? "",
         t.rating ?? "", t.userRatingsTotal ?? "",
         t.lastContactedAt ?? "", t.followUpAt ?? "", t.notes ?? "",
       ].map(escape).join(","),

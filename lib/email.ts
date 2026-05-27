@@ -460,6 +460,7 @@ export async function sendHostOutreachEmail(opts: {
   subject: string;
   body: string;
   replyTo?: string;
+  attachments?: { filename: string; content: string; contentType?: string }[];
 }) {
   const escapeHtml = (s: string) =>
     s.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
@@ -474,5 +475,10 @@ export async function sendHostOutreachEmail(opts: {
     to: opts.to,
     subject: opts.subject,
     html: wrapOutreach(html),
+    attachments: opts.attachments?.map((a) => ({
+      filename: a.filename,
+      content: Buffer.from(a.content, "base64"),
+      content_type: a.contentType,
+    })),
   });
 }

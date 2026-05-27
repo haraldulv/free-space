@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
 import { OUTREACH_STATUS_COLORS, type OutreachTarget } from "@/types";
 
@@ -15,11 +15,19 @@ interface Props {
   onHover: (id: string | null) => void;
 }
 
+function markerSize(zoom: number, isSelected: boolean, isHovered: boolean): number {
+  const base = Math.min(30, Math.max(10, Math.round(6 + zoom * 1.5)));
+  if (isSelected) return Math.round(base * 1.5);
+  if (isHovered) return Math.round(base * 1.25);
+  return base;
+}
+
 export default function OutreachMap({ targets, selectedId, hoveredId, onSelect, onHover }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<Map<string, google.maps.marker.AdvancedMarkerElement>>(new Map());
   const lastTargetIdsRef = useRef<string>("");
+  const [zoom, setZoom] = useState(9);
 
   useEffect(() => {
     if (!containerRef.current || !API_KEY) return;
@@ -46,6 +54,11 @@ export default function OutreachMap({ targets, selectedId, hoveredId, onSelect, 
         mapTypeId: "hybrid",
       });
 
+      map.addListener("zoom_changed", () => {
+        const z = map.getZoom();
+        if (z !== undefined) setZoom(z);
+      });
+
       mapRef.current = map;
       renderMarkers();
     }
@@ -64,14 +77,14 @@ export default function OutreachMap({ targets, selectedId, hoveredId, onSelect, 
   function buildPin(target: OutreachTarget, isSelected: boolean, isHovered: boolean): HTMLElement {
     const wrap = document.createElement("div");
     const color = OUTREACH_STATUS_COLORS[target.status];
-    const size = isSelected ? 18 : isHovered ? 16 : 12;
+    const size = markerSize(zoom, isSelected, isHovered);
     wrap.style.cssText = `
       width:${size}px;height:${size}px;border-radius:50%;
       background:${color};border:2px solid #fff;
       box-shadow:0 2px 6px rgba(0,0,0,0.35);
       transition:transform 120ms ease;
       cursor:pointer;
-      ${isSelected ? "transform:scale(1.4);outline:2px solid #46C185;outline-offset:2px;" : ""}
+      ${isSelected ? "outline:2px solid #46C185;outline-offset:2px;" : ""}
     `;
     return wrap;
   }
@@ -81,7 +94,6 @@ export default function OutreachMap({ targets, selectedId, hoveredId, onSelect, 
     if (!map) return;
     const currentIds = targets.map((t) => t.id).sort().join(",");
 
-    // Full rebuild on data change.
     if (currentIds !== lastTargetIdsRef.current) {
       markersRef.current.forEach((m) => (m.map = null));
       markersRef.current.clear();
@@ -113,7 +125,6 @@ export default function OutreachMap({ targets, selectedId, hoveredId, onSelect, 
       return;
     }
 
-    // Selection/hover-only update — just rerender content of affected pins.
     targets.forEach((t) => {
       const m = markersRef.current.get(t.id);
       if (!m) return;
@@ -124,7 +135,7 @@ export default function OutreachMap({ targets, selectedId, hoveredId, onSelect, 
   useEffect(() => {
     renderMarkers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [targets, selectedId, hoveredId]);
+  }, [targets, selectedId, hoveredId, zoom]);
 
   if (!API_KEY) {
     return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { X } from "lucide-react";
+import { X, Paperclip, FileText } from "lucide-react";
 import type { OutreachEmailTemplate, OutreachTarget } from "@/types";
 import { sendOutreachEmailAction } from "../actions";
 
@@ -14,12 +14,27 @@ interface Props {
 
 const APP_STORE_URL = "https://apps.apple.com/no/app/tuno-motorhome-and-parking/id6761529990";
 const TUNO_URL = "https://tuno.no";
+const MAX_FILE_SIZE = 4 * 1024 * 1024; // 4MB (Vercel payload limit)
 
-function substitute(text: string, name: string): string {
+interface Attachment {
+  filename: string;
+  content: string;
+  contentType: string;
+  size: number;
+}
+
+function substitute(text: string, name: string, contactPerson: string): string {
   return text
     .replaceAll("{name}", name)
+    .replaceAll("{contact_person}", contactPerson)
     .replaceAll("{tuno_link}", TUNO_URL)
     .replaceAll("{app_store_link}", APP_STORE_URL);
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export default function EmailComposer({ target, templates, onClose, onSent }: Props) {
@@ -35,6 +50,7 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
   const [preview, setPreview] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [attachments, setAttachments] = useState<Attachment[]>([]);
 
   function loadTemplate(id: string) {
     setTemplateId(id);
@@ -43,6 +59,33 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
       setSubject(t.subject);
       setBody(t.body);
     }
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach((file) => {
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`«${file.name}» er for stor (maks ${formatSize(MAX_FILE_SIZE)}).`);
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = (reader.result as string).split(",")[1];
+        setAttachments((prev) => [...prev, {
+          filename: file.name,
+          content: base64,
+          contentType: file.type || "application/octet-stream",
+          size: file.size,
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+  }
+
+  function removeAttachment(index: number) {
+    setAttachments((prev) => prev.filter((_, i) => i !== index));
   }
 
   async function send() {
@@ -57,6 +100,9 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
       body,
       recipientEmail: recipient,
       templateId: templateId || undefined,
+      attachments: attachments.length > 0
+        ? attachments.map(({ filename, content, contentType }) => ({ filename, content, contentType }))
+        : undefined,
     });
     setSending(false);
     if (res.error) {
@@ -65,6 +111,8 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
     }
     onSent();
   }
+
+  const cp = target.contactPerson ?? "";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -117,7 +165,7 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
           <div>
             <div className="flex items-center justify-between">
               <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
-                Innhold {!preview && <span className="text-neutral-400">(støtter {"{name}"}, {"{tuno_link}"}, {"{app_store_link}"})</span>}
+                Innhold {!preview && <span className="text-neutral-400">(støtter {"{name}"}, {"{contact_person}"}, {"{tuno_link}"}, {"{app_store_link}"})</span>}
               </label>
               <button
                 type="button"
@@ -129,7 +177,7 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
             </div>
             {preview ? (
               <pre className="mt-1 h-64 overflow-y-auto whitespace-pre-wrap rounded-md border border-neutral-200 bg-neutral-50 p-3 font-sans text-sm">
-                {substitute(body, target.name)}
+                {substitute(body, target.name, cp)}
               </pre>
             ) : (
               <textarea
@@ -137,6 +185,38 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
                 onChange={(e) => setBody(e.target.value)}
                 className="mt-1 h-64 w-full rounded-md border border-neutral-200 px-2 py-2 font-mono text-sm"
               />
+            )}
+          </div>
+
+          {/* Vedlegg */}
+          <div>
+            <label className="flex cursor-pointer items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-900">
+              <Paperclip className="h-4 w-4" />
+              <span>Legg til vedlegg</span>
+              <input
+                type="file"
+                accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
+                multiple
+                onChange={handleFileSelect}
+                className="hidden"
+              />
+            </label>
+            {attachments.length > 0 && (
+              <div className="mt-2 space-y-1.5">
+                {attachments.map((a, i) => (
+                  <div key={i} className="flex items-center gap-2 rounded-md bg-neutral-50 px-3 py-2 text-sm">
+                    <FileText className="h-4 w-4 shrink-0 text-neutral-400" />
+                    <span className="flex-1 truncate">{a.filename}</span>
+                    <span className="shrink-0 text-xs text-neutral-400">{formatSize(a.size)}</span>
+                    <button
+                      onClick={() => removeAttachment(i)}
+                      className="shrink-0 rounded p-0.5 hover:bg-neutral-200"
+                    >
+                      <X className="h-3.5 w-3.5 text-neutral-500" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
 
