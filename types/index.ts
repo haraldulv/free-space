@@ -517,7 +517,7 @@ export interface OutreachTarget {
   lng?: number | null;
   rating?: number | null;
   userRatingsTotal?: number | null;
-  status: OutreachStatus;
+  statuses: OutreachStatus[];
   notes?: string | null;
   lastContactedAt?: string | null;
   lastContactedBy?: string | null;

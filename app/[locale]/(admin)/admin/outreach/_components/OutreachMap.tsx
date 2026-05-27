@@ -2,7 +2,18 @@
 
 import { useEffect, useRef, useState } from "react";
 import { importLibrary, setOptions } from "@googlemaps/js-api-loader";
-import { OUTREACH_STATUS_COLORS, type OutreachTarget } from "@/types";
+import { OUTREACH_STATUS_COLORS, type OutreachTarget, type OutreachStatus } from "@/types";
+
+const STATUS_PRIORITY: OutreachStatus[] = [
+  "onboarded", "interested", "responded", "follow_up", "contacted", "no_response", "queued", "declined", "not_contacted",
+];
+
+function primaryColor(statuses: OutreachStatus[]): string {
+  for (const s of STATUS_PRIORITY) {
+    if (statuses.includes(s)) return OUTREACH_STATUS_COLORS[s];
+  }
+  return OUTREACH_STATUS_COLORS.not_contacted;
+}
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 let loaderInitialized = false;
@@ -76,7 +87,7 @@ export default function OutreachMap({ targets, selectedId, hoveredId, onSelect, 
 
   function buildPin(target: OutreachTarget, isSelected: boolean, isHovered: boolean): HTMLElement {
     const wrap = document.createElement("div");
-    const color = OUTREACH_STATUS_COLORS[target.status];
+    const color = primaryColor(target.statuses);
     const size = markerSize(zoom, isSelected, isHovered);
     wrap.style.cssText = `
       width:${size}px;height:${size}px;border-radius:50%;

@@ -41,7 +41,7 @@ async function requireAdmin() {
 export async function loadOutreachAction(filters: {
   area?: string;
   category?: OutreachCategory;
-  status?: OutreachStatus;
+  statuses?: OutreachStatus[];
   search?: string;
 }): Promise<{ targets?: OutreachTarget[]; templates?: OutreachEmailTemplate[]; error?: string }> {
   try {
@@ -115,11 +115,20 @@ export async function logPhoneCallAction(
       body: outcome,
       statusAfter: newStatus ?? null,
     });
-    await updateOutreachTarget(targetId, {
-      lastContactedAt: new Date().toISOString(),
-      lastContactedBy: user.id,
-      ...(newStatus ? { status: newStatus } : {}),
-    });
+    if (newStatus) {
+      const target = await getOutreachTargetById(targetId);
+      const updated = target ? [...new Set([...target.statuses, newStatus])] : [newStatus];
+      await updateOutreachTarget(targetId, {
+        lastContactedAt: new Date().toISOString(),
+        lastContactedBy: user.id,
+        statuses: updated as OutreachStatus[],
+      });
+    } else {
+      await updateOutreachTarget(targetId, {
+        lastContactedAt: new Date().toISOString(),
+        lastContactedBy: user.id,
+      });
+    }
     return { ok: true };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Logging feilet" };
@@ -163,15 +172,14 @@ export async function sendOutreachEmailAction(
       statusAfter: "contacted",
     });
 
-    const newStatus: OutreachStatus = target.status === "not_contacted" || target.status === "queued"
-      ? "contacted"
-      : target.status;
+    const newStatuses = [...target.statuses.filter((s) => s !== "not_contacted" && s !== "queued")];
+    if (!newStatuses.includes("contacted")) newStatuses.push("contacted");
 
     await updateOutreachTarget(targetId, {
       email: payload.recipientEmail,
       lastContactedAt: new Date().toISOString(),
       lastContactedBy: user.id,
-      status: newStatus,
+      statuses: newStatuses as OutreachStatus[],
     });
 
     return { ok: true };
@@ -353,13 +361,13 @@ export async function createManualTargetAction(input: {
 export async function exportTargetsCSVAction(filters: {
   area?: string;
   category?: OutreachCategory;
-  status?: OutreachStatus;
+  statuses?: OutreachStatus[];
 }): Promise<{ csv?: string; error?: string }> {
   try {
     await requireAdmin();
     const targets = await listOutreachTargets(filters);
     const headers = [
-      "name", "category", "area", "status",
+      "name", "category", "area", "statuses",
       "contact_person", "address", "phone", "website", "email",
       "rating", "user_ratings_total",
       "last_contacted_at", "follow_up_at", "notes",
@@ -371,7 +379,7 @@ export async function exportTargetsCSVAction(filters: {
     };
     const rows = targets.map((t) =>
       [
-        t.name, t.category, t.area, t.status,
+        t.name, t.category, t.area, t.statuses.join("; "),
         t.contactPerson ?? "", t.address ?? "", t.phone ?? "", t.website ?? "", t.email ?? "",
         t.rating ?? "", t.userRatingsTotal ?? "",
         t.lastContactedAt ?? "", t.followUpAt ?? "", t.notes ?? "",

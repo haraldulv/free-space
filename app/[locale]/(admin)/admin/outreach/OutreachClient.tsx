@@ -78,7 +78,7 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
   const filtered = useMemo(() => {
     return targets.filter((t) => {
       if (filterCategory && t.category !== filterCategory) return false;
-      if (filterStatuses.size > 0 && !filterStatuses.has(t.status)) return false;
+      if (filterStatuses.size > 0 && !t.statuses.some((s) => filterStatuses.has(s))) return false;
       if (search && !t.name.toLowerCase().includes(search.toLowerCase())) return false;
       return true;
     });
@@ -90,7 +90,7 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
     const c: Record<OutreachStatus, number> = {
       not_contacted: 0, queued: 0, contacted: 0, no_response: 0, follow_up: 0, responded: 0, interested: 0, declined: 0, onboarded: 0,
     };
-    targets.forEach((t) => { c[t.status]++; });
+    targets.forEach((t) => { t.statuses.forEach((s) => { c[s]++; }); });
     return c;
   }, [targets]);
 
@@ -159,8 +159,13 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
     setTimeout(() => setTestMailMsg(null), 5000);
   }
 
-  async function changeStatus(target: OutreachTarget, status: OutreachStatus) {
-    const res = await updateTargetAction(target.id, { status });
+  async function toggleStatus(target: OutreachTarget, status: OutreachStatus) {
+    const has = target.statuses.includes(status);
+    const updated = has
+      ? target.statuses.filter((s) => s !== status)
+      : [...target.statuses, status];
+    const final = updated.length === 0 ? ["not_contacted" as OutreachStatus] : updated;
+    const res = await updateTargetAction(target.id, { statuses: final });
     if (res.target) {
       setTargets((prev) => prev.map((t) => (t.id === target.id ? res.target! : t)));
     }
@@ -191,7 +196,7 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
     const res = await exportTargetsCSVAction({
       area: "lofoten",
       category: filterCategory || undefined,
-      status: filterStatuses.size === 1 ? [...filterStatuses][0] : undefined,
+      statuses: filterStatuses.size > 0 ? [...filterStatuses] : undefined,
     });
     if (res.error) {
       alert(`Eksport feilet: ${res.error}`);
@@ -395,12 +400,17 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="inline-block h-2 w-2 rounded-full"
-                          style={{ background: OUTREACH_STATUS_COLORS[t.status] }}
-                        />
-                        <p className="truncate text-sm font-medium text-neutral-900">{t.name}</p>
+                      <p className="truncate text-sm font-medium text-neutral-900">{t.name}</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {t.statuses.map((s) => (
+                          <span
+                            key={s}
+                            className="rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white"
+                            style={{ background: OUTREACH_STATUS_COLORS[s] }}
+                          >
+                            {OUTREACH_STATUS_LABELS[s]}
+                          </span>
+                        ))}
                       </div>
                       <p className="mt-0.5 text-xs text-neutral-500">
                         {OUTREACH_CATEGORY_LABELS[t.category]}
@@ -441,9 +451,14 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
                         </a>
                       </div>
                     </div>
-                    <span className="rounded bg-neutral-100 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-neutral-600">
-                      {OUTREACH_STATUS_LABELS[t.status]}
-                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {t.statuses.slice(0, 2).map((s) => (
+                        <span key={s} className="rounded-full px-1.5 py-0.5 text-[10px] font-medium text-white" style={{ background: OUTREACH_STATUS_COLORS[s] }}>
+                          {OUTREACH_STATUS_LABELS[s]}
+                        </span>
+                      ))}
+                      {t.statuses.length > 2 && <span className="text-[10px] text-neutral-400">+{t.statuses.length - 2}</span>}
+                    </div>
                   </div>
                 </li>
               ))}
@@ -478,7 +493,7 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
           loading={loadingDetail}
           templates={templates}
           onClose={() => setSelectedId(null)}
-          onChangeStatus={(s) => changeStatus(selected, s)}
+          onToggleStatus={(s) => toggleStatus(selected, s)}
           onSaveNotes={(n) => saveNotes(selected, n)}
           onSaveEmail={(e) => saveEmail(selected, e)}
           onSaveContactPerson={(cp) => saveContactPerson(selected, cp)}
@@ -535,7 +550,7 @@ interface DrawerProps {
   loading: boolean;
   templates: OutreachEmailTemplate[];
   onClose: () => void;
-  onChangeStatus: (s: OutreachStatus) => void;
+  onToggleStatus: (s: OutreachStatus) => void;
   onSaveNotes: (n: string) => void;
   onSaveEmail: (e: string) => void;
   onSaveContactPerson: (cp: string) => void;
@@ -546,7 +561,7 @@ interface DrawerProps {
 
 function DetailDrawer({
   target, contactLog, loading,
-  onClose, onChangeStatus, onSaveNotes, onSaveEmail, onSaveContactPerson, onLogPhone, onLogNote, onOpenComposer,
+  onClose, onToggleStatus, onSaveNotes, onSaveEmail, onSaveContactPerson, onLogPhone, onLogNote, onOpenComposer,
 }: DrawerProps) {
   const [notes, setNotes] = useState(target.notes ?? "");
   const [email, setEmail] = useState(target.email ?? "");
@@ -586,18 +601,28 @@ function DetailDrawer({
       </div>
 
       <div className="space-y-5 px-4 py-4">
-        {/* Status */}
+        {/* Status tags */}
         <div>
           <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Status</label>
-          <select
-            value={target.status}
-            onChange={(e) => onChangeStatus(e.target.value as OutreachStatus)}
-            className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-2 text-sm"
-          >
-            {STATUSES.map((s) => (
-              <option key={s} value={s}>{OUTREACH_STATUS_LABELS[s]}</option>
-            ))}
-          </select>
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {STATUSES.map((s) => {
+              const active = target.statuses.includes(s);
+              return (
+                <button
+                  key={s}
+                  onClick={() => onToggleStatus(s)}
+                  className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                    active
+                      ? "text-white"
+                      : "border border-neutral-200 bg-white text-neutral-500 hover:bg-neutral-50"
+                  }`}
+                  style={active ? { background: OUTREACH_STATUS_COLORS[s] } : undefined}
+                >
+                  {OUTREACH_STATUS_LABELS[s]}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Contact info */}
@@ -709,7 +734,7 @@ function DetailDrawer({
             >
               <option value="">Ingen status-endring</option>
               {STATUSES.map((s) => (
-                <option key={s} value={s}>Sett til: {OUTREACH_STATUS_LABELS[s]}</option>
+                <option key={s} value={s}>Legg til: {OUTREACH_STATUS_LABELS[s]}</option>
               ))}
             </select>
             <button

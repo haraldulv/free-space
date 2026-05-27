@@ -27,9 +27,9 @@ export async function GET(request: NextRequest) {
 
   const { data, error } = await supabase
     .from("outreach_targets")
-    .select("id, name, status, category, area, phone, email, follow_up_at, notes")
+    .select("id, name, statuses, category, area, phone, email, follow_up_at, notes")
     .lte("follow_up_at", nowIso)
-    .not("status", "in", `(${TERMINAL_STATUSES.join(",")})`)
+    .not("statuses", "ov", `{${TERMINAL_STATUSES.join(",")}}`)
     .order("follow_up_at", { ascending: true })
     .limit(200);
 
@@ -45,7 +45,7 @@ export async function GET(request: NextRequest) {
   const rows = overdue.map((t) => `
     <tr>
       <td style="padding:6px 8px;font-size:13px;color:#171717;border-bottom:1px solid #f5f5f5;">${t.name}</td>
-      <td style="padding:6px 8px;font-size:12px;color:#525252;border-bottom:1px solid #f5f5f5;">${t.status}</td>
+      <td style="padding:6px 8px;font-size:12px;color:#525252;border-bottom:1px solid #f5f5f5;">${(t.statuses ?? []).join(", ")}</td>
       <td style="padding:6px 8px;font-size:12px;color:#525252;border-bottom:1px solid #f5f5f5;">${t.phone ?? ""}</td>
       <td style="padding:6px 8px;font-size:12px;color:#525252;border-bottom:1px solid #f5f5f5;">${t.email ?? ""}</td>
       <td style="padding:6px 8px;font-size:11px;color:#737373;border-bottom:1px solid #f5f5f5;">${t.notes ?? ""}</td>

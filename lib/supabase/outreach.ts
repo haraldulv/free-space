@@ -23,7 +23,7 @@ interface RowOutreachTarget {
   lng: number | string | null;
   rating: number | string | null;
   user_ratings_total: number | null;
-  status: OutreachStatus;
+  statuses: string[];
   notes: string | null;
   last_contacted_at: string | null;
   last_contacted_by: string | null;
@@ -48,7 +48,7 @@ function rowToTarget(row: RowOutreachTarget): OutreachTarget {
     lng: row.lng != null ? Number(row.lng) : null,
     rating: row.rating != null ? Number(row.rating) : null,
     userRatingsTotal: row.user_ratings_total,
-    status: row.status,
+    statuses: (row.statuses ?? ["not_contacted"]) as OutreachStatus[],
     notes: row.notes,
     lastContactedAt: row.last_contacted_at,
     lastContactedBy: row.last_contacted_by,
@@ -61,7 +61,7 @@ function rowToTarget(row: RowOutreachTarget): OutreachTarget {
 export interface ListOutreachFilters {
   area?: string;
   category?: OutreachCategory;
-  status?: OutreachStatus;
+  statuses?: OutreachStatus[];
   search?: string;
   limit?: number;
 }
@@ -76,7 +76,7 @@ export async function listOutreachTargets(filters: ListOutreachFilters = {}): Pr
 
   if (filters.area) query = query.eq("area", filters.area);
   if (filters.category) query = query.eq("category", filters.category);
-  if (filters.status) query = query.eq("status", filters.status);
+  if (filters.statuses?.length) query = query.overlaps("statuses", filters.statuses);
   if (filters.search) query = query.ilike("name", `%${filters.search}%`);
 
   const { data, error } = await query;
@@ -183,7 +183,7 @@ export async function upsertOutreachTarget(input: UpsertOutreachInput): Promise<
 }
 
 export interface UpdateOutreachPatch {
-  status?: OutreachStatus;
+  statuses?: OutreachStatus[];
   notes?: string | null;
   email?: string | null;
   phone?: string | null;
@@ -196,7 +196,7 @@ export interface UpdateOutreachPatch {
 export async function updateOutreachTarget(id: string, patch: UpdateOutreachPatch): Promise<OutreachTarget> {
   const supabase = await createClient();
   const dbPatch: Record<string, unknown> = {};
-  if (patch.status !== undefined) dbPatch.status = patch.status;
+  if (patch.statuses !== undefined) dbPatch.statuses = patch.statuses;
   if (patch.notes !== undefined) dbPatch.notes = patch.notes;
   if (patch.email !== undefined) dbPatch.email = patch.email;
   if (patch.phone !== undefined) dbPatch.phone = patch.phone;
