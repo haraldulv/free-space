@@ -143,6 +143,7 @@ export async function sendOutreachEmailAction(
     recipientEmail: string;
     templateId?: string;
     sender?: "kim" | "harald";
+    language?: "nb" | "en" | "de";
     attachments?: { filename: string; content: string; contentType?: string }[];
   },
 ): Promise<{ ok?: true; error?: string }> {
@@ -151,7 +152,14 @@ export async function sendOutreachEmailAction(
     const target = await getOutreachTargetById(targetId);
     if (!target) return { error: "Fant ikke target" };
 
-    const vars = { name: target.name, contactPerson: target.contactPerson ?? "" };
+    const language = payload.language ?? "nb";
+    // Lenken {tuno_link} i brødteksten skal peke på samme språkversjon som mailen.
+    const tunoLink =
+      language === "en" ? "https://tuno.no/en/utleier"
+      : language === "de" ? "https://tuno.no/de/utleier"
+      : "https://tuno.no/utleier";
+
+    const vars = { name: target.name, contactPerson: target.contactPerson ?? "", tunoLink };
     const substituted = applyTemplateVariables(payload.body, vars);
     const substitutedSubject = applyTemplateVariables(payload.subject, vars);
 
@@ -160,6 +168,7 @@ export async function sendOutreachEmailAction(
       subject: substitutedSubject,
       body: substituted,
       sender: payload.sender,
+      locale: language,
       attachments: payload.attachments,
     });
 

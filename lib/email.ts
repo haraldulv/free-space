@@ -45,7 +45,7 @@ function wrap(title: string, content: string) {
     ${content}
   </div>
   <p style="text-align:center;margin-top:24px;font-size:12px;color:#a3a3a3;">
-    Tuno AS · <a href="https://tuno.no" style="color:#a3a3a3;">tuno.no</a> · <a href="mailto:support@tuno.no" style="color:#a3a3a3;">support@tuno.no</a>
+    Tuno · <a href="https://tuno.no" style="color:#a3a3a3;">tuno.no</a> · <a href="mailto:support@tuno.no" style="color:#a3a3a3;">support@tuno.no</a>
   </p>
 </div>
 </body>
@@ -397,9 +397,64 @@ export async function sendReviewReminderEmail(to: string, data: {
 }
 
 const APP_STORE_URL_EMAIL = "https://apps.apple.com/no/app/tuno-motorhome-and-parking/id6761529990";
-const UTLEIER_URL = "https://tuno.no/utleier";
+export type OutreachLocale = "nb" | "en" | "de";
 
-function wrapOutreach(body: string) {
+interface OutreachShellCopy {
+  lang: string;
+  usp: readonly (readonly [icon: string, title: string, desc: string])[];
+  cta: string;
+  appStoreAlt: string;
+  madeIn: string;
+  utleierUrl: string;
+}
+
+/**
+ * Lokalisert tekst for outreach-mailens "skall" (de tre USP-boksene, knappen,
+ * App Store-merket og bunnteksten). Selve meldingen + emnet skrives av avsenderen
+ * i komposeren; denne mappen styrer kun det Tuno auto-genererer under meldingen,
+ * samt hvilken språkversjon av landingssiden knappen peker til.
+ */
+const OUTREACH_COPY: Record<OutreachLocale, OutreachShellCopy> = {
+  nb: {
+    lang: "nb",
+    usp: [
+      ["📸", "Klar på 5 min", "Lag annonsen din på et blunk"],
+      ["📱", "QR-kode", "Gjester scanner og booker selv"],
+      ["💰", "Helt gratis", "Kun avgift fra leieren"],
+    ],
+    cta: "Se hvordan det fungerer →",
+    appStoreAlt: "Last ned fra App Store",
+    madeIn: "🇳🇴 Utviklet i Norge",
+    utleierUrl: "https://tuno.no/utleier",
+  },
+  en: {
+    lang: "en",
+    usp: [
+      ["📸", "Ready in 5 min", "Create your listing in a flash"],
+      ["📱", "QR code", "Guests scan and book themselves"],
+      ["💰", "Completely free", "Only the guest pays a fee"],
+    ],
+    cta: "See how it works →",
+    appStoreAlt: "Download on the App Store",
+    madeIn: "🇳🇴 Made in Norway",
+    utleierUrl: "https://tuno.no/en/utleier",
+  },
+  de: {
+    lang: "de",
+    usp: [
+      ["📸", "In 5 Min. fertig", "Erstellen Sie Ihre Anzeige im Nu"],
+      ["📱", "QR-Code", "Gäste scannen und buchen selbst"],
+      ["💰", "Völlig kostenlos", "Nur der Gast zahlt eine Gebühr"],
+    ],
+    cta: "So funktioniert es →",
+    appStoreAlt: "Im App Store laden",
+    madeIn: "🇳🇴 Entwickelt in Norwegen",
+    utleierUrl: "https://tuno.no/de/utleier",
+  },
+};
+
+function wrapOutreach(body: string, locale: OutreachLocale = "nb") {
+  const copy = OUTREACH_COPY[locale];
   const usp = (icon: string, title: string, desc: string) =>
     `<td style="padding:0 4px;vertical-align:top;width:33%;">
       <div style="text-align:center;padding:14px 8px 16px;background:#f9fafb;border-radius:10px;border:1px solid #f0f0f0;min-height:95px;">
@@ -410,7 +465,7 @@ function wrapOutreach(body: string) {
     </td>`;
 
   return `<!DOCTYPE html>
-<html lang="nb">
+<html lang="${copy.lang}">
 <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background:#f5f5f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
 <div style="max-width:560px;margin:0 auto;padding:32px 16px;">
@@ -424,26 +479,24 @@ function wrapOutreach(body: string) {
   <div style="margin-top:16px;background:#fff;border-radius:12px;padding:20px 12px 24px;border:1px solid #e5e5e5;">
     <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;">
       <tr>
-        ${usp("📸", "Klar på 5 min", "Lag annonsen din på et blunk")}
-        ${usp("📱", "QR-kode", "Gjester scanner og booker selv")}
-        ${usp("💰", "Helt gratis", "Kun avgift fra leieren")}
+        ${copy.usp.map(([icon, title, desc]) => usp(icon, title, desc)).join("")}
       </tr>
     </table>
     <div style="text-align:center;margin-top:20px;">
-      <a href="${UTLEIER_URL}" style="display:inline-block;padding:14px 32px;background:#46C185;color:#fff;border-radius:24px;text-decoration:none;font-weight:600;font-size:15px;">Se hvordan det fungerer →</a>
+      <a href="${copy.utleierUrl}" style="display:inline-block;padding:14px 32px;background:#46C185;color:#fff;border-radius:24px;text-decoration:none;font-weight:600;font-size:15px;">${copy.cta}</a>
     </div>
     <div style="text-align:center;margin-top:14px;">
       <a href="${APP_STORE_URL_EMAIL}" style="display:inline-block;">
-        <img src="https://tuno.no/app-store-badge-nb.png" alt="Last ned fra App Store" width="150" style="width:150px;height:auto;" />
+        <img src="https://tuno.no/app-store-badge-nb.png" alt="${copy.appStoreAlt}" width="150" style="width:150px;height:auto;" />
       </a>
     </div>
     <div style="text-align:center;margin-top:14px;">
-      <span style="display:inline-block;font-size:11px;color:#737373;">🇳🇴 Utviklet i Norge</span>
+      <span style="display:inline-block;font-size:11px;color:#737373;">${copy.madeIn}</span>
     </div>
   </div>
 
   <p style="text-align:center;margin-top:20px;font-size:12px;color:#a3a3a3;">
-    Tuno AS · <a href="https://tuno.no" style="color:#a3a3a3;">tuno.no</a> · <a href="mailto:support@tuno.no" style="color:#a3a3a3;">support@tuno.no</a>
+    Tuno · <a href="https://tuno.no" style="color:#a3a3a3;">tuno.no</a> · <a href="mailto:support@tuno.no" style="color:#a3a3a3;">support@tuno.no</a>
   </p>
 </div>
 </body>
@@ -465,6 +518,7 @@ export async function sendHostOutreachEmail(opts: {
   subject: string;
   body: string;
   sender?: "kim" | "harald";
+  locale?: OutreachLocale;
   replyTo?: string;
   attachments?: { filename: string; content: string; contentType?: string }[];
 }) {
@@ -482,7 +536,7 @@ export async function sendHostOutreachEmail(opts: {
     replyTo: opts.replyTo ?? s.replyTo,
     to: opts.to,
     subject: opts.subject,
-    html: wrapOutreach(html),
+    html: wrapOutreach(html, opts.locale ?? "nb"),
     attachments: opts.attachments?.map((a) => ({
       filename: a.filename,
       content: Buffer.from(a.content, "base64"),

@@ -45,6 +45,7 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
 
   const [templateId, setTemplateId] = useState<string>(defaultTemplate?.id ?? "");
   const [sender, setSender] = useState<"kim" | "harald">("kim");
+  const [language, setLanguage] = useState<"nb" | "en" | "de">("nb");
   const [subject, setSubject] = useState(defaultTemplate?.subject ?? "");
   const [body, setBody] = useState(defaultTemplate?.body ?? "");
   const [recipient, setRecipient] = useState(target.email ?? "");
@@ -102,6 +103,7 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
       recipientEmail: recipient,
       templateId: templateId || undefined,
       sender,
+      language,
       attachments: attachments.length > 0
         ? attachments.map(({ filename, content, contentType }) => ({ filename, content, contentType }))
         : undefined,
@@ -153,6 +155,22 @@ export default function EmailComposer({ target, templates, onClose, onSent }: Pr
               <option value="kim">Kim fra Tuno (kim@tuno.no)</option>
               <option value="harald">Harald fra Tuno (harald@tuno.no)</option>
             </select>
+          </div>
+
+          <div>
+            <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Språk</label>
+            <select
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as "nb" | "en" | "de")}
+              className="mt-1 w-full rounded-md border border-neutral-200 px-2 py-2 text-sm"
+            >
+              <option value="nb">🇳🇴 Norsk</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="de">🇩🇪 Deutsch</option>
+            </select>
+            <p className="mt-1 text-[11px] text-neutral-400">
+              Styrer boksene, knappen og lenken under meldingen. Meldingsteksten skriver du selv.
+            </p>
           </div>
 
           <div>
