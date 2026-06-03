@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, Download, Mail, Phone, Plus, RefreshCw, Search, Star, X } from "lucide-react";
+import { ChevronLeft, Download, Mail, MapPin, Phone, Plus, RefreshCw, Search, Star, X } from "lucide-react";
 import {
   OUTREACH_CATEGORY_LABELS,
   OUTREACH_STATUS_COLORS,
@@ -19,15 +19,15 @@ import TemplateManager from "./_components/TemplateManager";
 import AddTargetModal from "./_components/AddTargetModal";
 import {
   exportTargetsCSVAction,
+  geocodeTargetAction,
   loadOutreachAction,
   loadTargetDetailAction,
   logNoteAction,
-  logPhoneCallAction,
   sendTestOutreachEmailAction,
   updateTargetAction,
 } from "./actions";
 
-const CATEGORIES: OutreachCategory[] = ["rorbu", "hotell", "restaurant", "camping", "overnatting"];
+const CATEGORIES: OutreachCategory[] = ["rorbu", "hotell", "restaurant", "camping", "overnatting", "gård", "other"];
 
 function googleMapsLink(placeId: string, name?: string): string {
   const q = encodeURIComponent(name ?? "");
@@ -171,13 +171,6 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
     }
   }
 
-  async function saveNotes(target: OutreachTarget, notes: string) {
-    const res = await updateTargetAction(target.id, { notes });
-    if (res.target) {
-      setTargets((prev) => prev.map((t) => (t.id === target.id ? res.target! : t)));
-    }
-  }
-
   async function saveEmail(target: OutreachTarget, email: string) {
     const res = await updateTargetAction(target.id, { email: email || null });
     if (res.target) {
@@ -211,13 +204,12 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
     URL.revokeObjectURL(url);
   }
 
-  async function logPhone(target: OutreachTarget, outcome: string, newStatus?: OutreachStatus) {
-    const res = await logPhoneCallAction(target.id, outcome, newStatus);
-    if (res.ok) {
-      const detail = await loadTargetDetailAction(target.id);
-      if (detail.log) setContactLog(detail.log);
-      if (detail.target) setTargets((prev) => prev.map((t) => (t.id === target.id ? detail.target! : t)));
+  async function geocodeTarget(target: OutreachTarget): Promise<{ error?: string }> {
+    const res = await geocodeTargetAction(target.id);
+    if (res.target) {
+      setTargets((prev) => prev.map((t) => (t.id === target.id ? res.target! : t)));
     }
+    return { error: res.error };
   }
 
   async function logNote(target: OutreachTarget, note: string) {
@@ -494,11 +486,10 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
           templates={templates}
           onClose={() => setSelectedId(null)}
           onToggleStatus={(s) => toggleStatus(selected, s)}
-          onSaveNotes={(n) => saveNotes(selected, n)}
           onSaveEmail={(e) => saveEmail(selected, e)}
           onSaveContactPerson={(cp) => saveContactPerson(selected, cp)}
-          onLogPhone={(o, s) => logPhone(selected, o, s)}
           onLogNote={(n) => logNote(selected, n)}
+          onGeocode={() => geocodeTarget(selected)}
           onOpenComposer={() => setShowComposer(true)}
         />
       )}
@@ -551,42 +542,30 @@ interface DrawerProps {
   templates: OutreachEmailTemplate[];
   onClose: () => void;
   onToggleStatus: (s: OutreachStatus) => void;
-  onSaveNotes: (n: string) => void;
   onSaveEmail: (e: string) => void;
   onSaveContactPerson: (cp: string) => void;
-  onLogPhone: (outcome: string, newStatus?: OutreachStatus) => void;
   onLogNote: (note: string) => void;
+  onGeocode: () => Promise<{ error?: string }>;
   onOpenComposer: () => void;
 }
 
 function DetailDrawer({
   target, contactLog, loading,
-  onClose, onToggleStatus, onSaveNotes, onSaveEmail, onSaveContactPerson, onLogPhone, onLogNote, onOpenComposer,
+  onClose, onToggleStatus, onSaveEmail, onSaveContactPerson, onLogNote, onGeocode, onOpenComposer,
 }: DrawerProps) {
-  const [notes, setNotes] = useState(target.notes ?? "");
   const [email, setEmail] = useState(target.email ?? "");
   const [contactPerson, setContactPerson] = useState(target.contactPerson ?? "");
-  const [phoneOutcome, setPhoneOutcome] = useState("");
-  const [phoneStatus, setPhoneStatus] = useState<OutreachStatus | "">("");
   const [noteText, setNoteText] = useState("");
+  const [geocoding, setGeocoding] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
 
   // Resync when target changes
   useEffect(() => {
-    setNotes(target.notes ?? "");
     setEmail(target.email ?? "");
     setContactPerson(target.contactPerson ?? "");
-    setPhoneOutcome("");
-    setPhoneStatus("");
     setNoteText("");
-  }, [target.id, target.notes, target.email, target.contactPerson]);
-
-  // Debounced notes save
-  useEffect(() => {
-    if ((target.notes ?? "") === notes) return;
-    const t = setTimeout(() => onSaveNotes(notes), 800);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes]);
+    setGeoError(null);
+  }, [target.id, target.email, target.contactPerson]);
 
   return (
     <div className="fixed inset-y-0 right-0 z-40 w-full max-w-md overflow-y-auto border-l border-neutral-200 bg-white shadow-xl">
@@ -657,6 +636,25 @@ function DetailDrawer({
               <Star className="inline h-3.5 w-3.5 text-amber-500" /> {target.rating.toFixed(1)} ({target.userRatingsTotal ?? 0} vurderinger)
             </p>
           )}
+          {target.lat == null && (target.address || target.name) && (
+            <div>
+              <button
+                onClick={async () => {
+                  setGeocoding(true);
+                  setGeoError(null);
+                  const res = await onGeocode();
+                  setGeocoding(false);
+                  if (res?.error) setGeoError(res.error);
+                }}
+                disabled={geocoding}
+                className="flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm hover:bg-neutral-50 disabled:opacity-50"
+              >
+                <MapPin className="h-4 w-4 text-neutral-500" />
+                {geocoding ? "Finner posisjon..." : "Finn posisjon på kart"}
+              </button>
+              {geoError && <p className="mt-1 text-xs text-red-600">{geoError}</p>}
+            </div>
+          )}
         </div>
 
         {/* Kontaktperson */}
@@ -703,63 +701,14 @@ function DetailDrawer({
           )}
         </div>
 
-        {/* Notater */}
-        <div>
-          <label className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">
-            Notater (auto-lagrer)
-          </label>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder="Hva ble sagt? Plan for oppfølging..."
-            className="mt-1 h-20 w-full rounded-md border border-neutral-200 px-2 py-2 text-sm"
-          />
-        </div>
-
-        {/* Logg telefon */}
-        <div className="rounded-lg border border-neutral-200 p-3">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Logg samtale</p>
-          <input
-            type="text"
-            value={phoneOutcome}
-            onChange={(e) => setPhoneOutcome(e.target.value)}
-            placeholder="Hva ble sagt?"
-            className="mt-2 w-full rounded-md border border-neutral-200 px-2 py-2 text-sm"
-          />
-          <div className="mt-2 flex gap-2">
-            <select
-              value={phoneStatus}
-              onChange={(e) => setPhoneStatus(e.target.value as OutreachStatus | "")}
-              className="flex-1 rounded-md border border-neutral-200 px-2 py-2 text-sm"
-            >
-              <option value="">Ingen status-endring</option>
-              {STATUSES.map((s) => (
-                <option key={s} value={s}>Legg til: {OUTREACH_STATUS_LABELS[s]}</option>
-              ))}
-            </select>
-            <button
-              onClick={() => {
-                if (!phoneOutcome.trim()) return;
-                onLogPhone(phoneOutcome, phoneStatus || undefined);
-                setPhoneOutcome("");
-                setPhoneStatus("");
-              }}
-              disabled={!phoneOutcome.trim()}
-              className="rounded-md bg-neutral-900 px-3 py-2 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
-            >
-              Logg
-            </button>
-          </div>
-        </div>
-
-        {/* Logg note */}
+        {/* Legg til notat */}
         <div className="rounded-lg border border-neutral-200 p-3">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Legg til notat</p>
           <textarea
             value={noteText}
             onChange={(e) => setNoteText(e.target.value)}
-            placeholder="Fri-tekst notat..."
-            className="mt-2 h-16 w-full rounded-md border border-neutral-200 px-2 py-2 text-sm"
+            placeholder="Hva ble sagt? Plan for oppfølging..."
+            className="mt-2 h-24 w-full rounded-md border border-neutral-200 px-2 py-2 text-sm leading-relaxed"
           />
           <button
             onClick={() => {
@@ -774,18 +723,28 @@ function DetailDrawer({
           </button>
         </div>
 
+        {/* Generelt notat (bevart, read-only) */}
+        {target.notes && target.notes.trim() && (
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Notat</p>
+            <div className="mt-1 whitespace-pre-wrap rounded-md border border-neutral-200 bg-neutral-50 p-3 text-sm leading-relaxed text-neutral-700">
+              {target.notes}
+            </div>
+          </div>
+        )}
+
         {/* Historikk */}
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wide text-neutral-500">Historikk</p>
           {loading ? (
-            <p className="mt-2 text-xs text-neutral-500">Laster...</p>
+            <p className="mt-2 text-sm text-neutral-500">Laster...</p>
           ) : contactLog.length === 0 ? (
-            <p className="mt-2 text-xs text-neutral-500">Ingen kontakt-historikk enda.</p>
+            <p className="mt-2 text-sm text-neutral-500">Ingen kontakt-historikk enda.</p>
           ) : (
             <ul className="mt-2 space-y-3">
               {contactLog.map((e) => (
-                <li key={e.id} className="rounded-md bg-neutral-50 p-2 text-xs">
-                  <div className="flex justify-between text-neutral-500">
+                <li key={e.id} className="rounded-md bg-neutral-50 p-3 text-sm">
+                  <div className="flex justify-between text-xs text-neutral-500">
                     <span>
                       {e.contactType === "email" ? "E-post" : e.contactType === "phone" ? "Telefon" : "Notat"}
                       {e.contactedByName ? ` · ${e.contactedByName}` : ""}
@@ -795,7 +754,7 @@ function DetailDrawer({
                   {e.subject && <p className="mt-1 font-medium text-neutral-700">{e.subject}</p>}
                   {e.recipient && <p className="text-neutral-500">Til: {e.recipient}</p>}
                   {e.body && (
-                    <pre className="mt-1 whitespace-pre-wrap font-sans text-neutral-700">{e.body}</pre>
+                    <pre className="mt-1 whitespace-pre-wrap font-sans leading-relaxed text-neutral-700">{e.body}</pre>
                   )}
                   {e.statusAfter && (
                     <p className="mt-1 text-neutral-500">→ {OUTREACH_STATUS_LABELS[e.statusAfter as OutreachStatus] ?? e.statusAfter}</p>

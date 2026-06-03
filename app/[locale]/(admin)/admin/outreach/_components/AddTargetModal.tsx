@@ -10,7 +10,7 @@ interface Props {
   onCreated: () => void;
 }
 
-const CATEGORIES: OutreachCategory[] = ["rorbu", "hotell", "restaurant", "camping", "overnatting", "other"];
+const CATEGORIES: OutreachCategory[] = ["rorbu", "hotell", "restaurant", "camping", "overnatting", "gård", "other"];
 
 export default function AddTargetModal({ onClose, onCreated }: Props) {
   const [mode, setMode] = useState<"url" | "manual">("url");

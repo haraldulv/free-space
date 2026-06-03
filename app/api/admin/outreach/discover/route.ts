@@ -67,6 +67,8 @@ const CATEGORY_QUERIES: Record<OutreachCategory, string[]> = {
     "B&B Lofoten",
     "gjestehus Lofoten",
   ],
+  // Gård er en import/manuell-kategori; ingen auto-discovery via Google.
+  gård: [],
   other: [],
 };
 

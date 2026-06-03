@@ -487,7 +487,7 @@ export interface UserProfile {
 
 // ─── Utleier-outreach (admin) ────────────────────────────────────────────────
 
-export type OutreachCategory = "rorbu" | "hotell" | "restaurant" | "camping" | "overnatting" | "other";
+export type OutreachCategory = "rorbu" | "hotell" | "restaurant" | "camping" | "overnatting" | "gård" | "other";
 
 export type OutreachStatus =
   | "not_contacted"
@@ -568,6 +568,7 @@ export const OUTREACH_CATEGORY_LABELS: Record<OutreachCategory, string> = {
   restaurant: "Restaurant",
   camping: "Camping",
   overnatting: "Overnatting",
+  gård: "Gård",
   other: "Annet",
 };
 

@@ -188,6 +188,8 @@ export interface UpdateOutreachPatch {
   email?: string | null;
   phone?: string | null;
   contactPerson?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   followUpAt?: string | null;
   lastContactedAt?: string | null;
   lastContactedBy?: string | null;
@@ -201,6 +203,8 @@ export async function updateOutreachTarget(id: string, patch: UpdateOutreachPatc
   if (patch.email !== undefined) dbPatch.email = patch.email;
   if (patch.phone !== undefined) dbPatch.phone = patch.phone;
   if (patch.contactPerson !== undefined) dbPatch.contact_person = patch.contactPerson;
+  if (patch.lat !== undefined) dbPatch.lat = patch.lat;
+  if (patch.lng !== undefined) dbPatch.lng = patch.lng;
   if (patch.followUpAt !== undefined) dbPatch.follow_up_at = patch.followUpAt;
   if (patch.lastContactedAt !== undefined) dbPatch.last_contacted_at = patch.lastContactedAt;
   if (patch.lastContactedBy !== undefined) dbPatch.last_contacted_by = patch.lastContactedBy;

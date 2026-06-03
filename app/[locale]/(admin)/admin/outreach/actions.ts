@@ -38,6 +38,45 @@ async function requireAdmin() {
   return { user };
 }
 
+// Senter for Lofoten-arkipelet, brukt som location bias ved geokoding.
+const LOFOTEN_CENTER = { latitude: 68.15, longitude: 13.61 };
+
+/**
+ * Geokoder en fritekst (adresse eller navn) til lat/lng via Google Places
+ * Text Search (samme API som discover/URL-import allerede bruker, så vi vet
+ * nøkkelen har Places aktivert). Returnerer null hvis ingenting blir funnet.
+ */
+async function geocodeOutreachQuery(query: string): Promise<{ lat: number; lng: number } | null> {
+  const q = query.trim();
+  if (!q) return null;
+  const apiKey = process.env.GOOGLE_PLACES_API_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
+  if (!apiKey) return null;
+  try {
+    const r = await fetch("https://places.googleapis.com/v1/places:searchText", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Goog-Api-Key": apiKey,
+        "X-Goog-FieldMask": "places.location",
+      },
+      body: JSON.stringify({
+        textQuery: q,
+        languageCode: "no",
+        regionCode: "no",
+        maxResultCount: 1,
+        locationBias: { circle: { center: LOFOTEN_CENTER, radius: 50000 } },
+      }),
+    });
+    if (!r.ok) return null;
+    const d = await r.json();
+    const loc = d.places?.[0]?.location as { latitude?: number; longitude?: number } | undefined;
+    if (loc?.latitude == null || loc?.longitude == null) return null;
+    return { lat: loc.latitude, lng: loc.longitude };
+  } catch {
+    return null;
+  }
+}
+
 export async function loadOutreachAction(filters: {
   area?: string;
   category?: OutreachCategory;
@@ -346,6 +385,17 @@ export async function createManualTargetAction(input: {
 }): Promise<{ target?: OutreachTarget; error?: string }> {
   try {
     await requireAdmin();
+    // Manuelt lagt-til leads har ingen koordinater fra Google. Geokod adresse/navn
+    // så de faktisk dukker opp på kartet (ellers hopper OutreachMap stille over dem).
+    let lat = input.lat;
+    let lng = input.lng;
+    if (lat == null || lng == null) {
+      const geo = await geocodeOutreachQuery(input.address || input.name);
+      if (geo) {
+        lat = geo.lat;
+        lng = geo.lng;
+      }
+    }
     const placeId = input.placeId || `manual_${crypto.randomUUID()}`;
     const { target } = await upsertOutreachTarget({
       placeId,
@@ -356,14 +406,34 @@ export async function createManualTargetAction(input: {
       phone: input.phone,
       website: input.website,
       email: input.email,
-      lat: input.lat,
-      lng: input.lng,
+      lat,
+      lng,
       rating: input.rating,
       userRatingsTotal: input.userRatingsTotal,
     });
     return { target: target ?? undefined };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Opprettelse feilet" };
+  }
+}
+
+/**
+ * Geokoder en eksisterende target på nytt fra adresse/navn og lagrer koordinatene.
+ * Brukes til å rette opp leads som ble lagt til uten posisjon (vises ikke på kartet).
+ */
+export async function geocodeTargetAction(
+  targetId: string,
+): Promise<{ target?: OutreachTarget; error?: string }> {
+  try {
+    await requireAdmin();
+    const target = await getOutreachTargetById(targetId);
+    if (!target) return { error: "Fant ikke target" };
+    const geo = await geocodeOutreachQuery(target.address || target.name);
+    if (!geo) return { error: "Fant ingen posisjon for denne adressen/navnet." };
+    const updated = await updateOutreachTarget(targetId, { lat: geo.lat, lng: geo.lng });
+    return { target: updated };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Geokoding feilet" };
   }
 }
 
