@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
-import { ChevronLeft, Download, Mail, MapPin, Phone, Plus, RefreshCw, Search, Star, X } from "lucide-react";
+import { ChevronLeft, Download, Mail, MapPin, Pencil, Phone, Plus, RefreshCw, RotateCcw, Search, Star, Trash2, X } from "lucide-react";
 import {
   OUTREACH_CATEGORY_LABELS,
   OUTREACH_STATUS_COLORS,
@@ -18,16 +18,18 @@ import EmailComposer from "./_components/EmailComposer";
 import TemplateManager from "./_components/TemplateManager";
 import AddTargetModal from "./_components/AddTargetModal";
 import {
+  deleteNoteAction,
   exportTargetsCSVAction,
   geocodeTargetAction,
   loadOutreachAction,
   loadTargetDetailAction,
   logNoteAction,
   sendTestOutreachEmailAction,
+  updateNoteAction,
   updateTargetAction,
 } from "./actions";
 
-const CATEGORIES: OutreachCategory[] = ["rorbu", "hotell", "restaurant", "camping", "overnatting", "gård", "other"];
+const CATEGORIES: OutreachCategory[] = ["rorbu", "hotell", "restaurant", "camping", "overnatting", "gård", "parkering", "other"];
 
 function googleMapsLink(placeId: string, name?: string): string {
   const q = encodeURIComponent(name ?? "");
@@ -220,6 +222,31 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
     }
   }
 
+  async function editNote(targetId: string, entryId: string, body: string): Promise<{ error?: string }> {
+    const res = await updateNoteAction(entryId, body);
+    if (res.ok) {
+      const detail = await loadTargetDetailAction(targetId);
+      if (detail.log) setContactLog(detail.log);
+    }
+    return { error: res.error };
+  }
+
+  async function deleteNote(targetId: string, entryId: string): Promise<{ error?: string }> {
+    const res = await deleteNoteAction(entryId);
+    if (res.ok) {
+      const detail = await loadTargetDetailAction(targetId);
+      if (detail.log) setContactLog(detail.log);
+    }
+    return { error: res.error };
+  }
+
+  const hasActiveFilters = search !== "" || filterCategory !== "" || filterStatuses.size > 0;
+  function resetFilters() {
+    setSearch("");
+    setFilterCategory("");
+    setFilterStatuses(new Set());
+  }
+
   function startSplitDrag(e: React.PointerEvent<HTMLDivElement>) {
     draggingRef.current = true;
     document.body.style.cursor = "col-resize";
@@ -294,8 +321,17 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
               placeholder="Søk navn"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="rounded-md border border-neutral-200 py-1.5 pl-8 pr-3 text-sm focus:border-primary-500 focus:outline-none"
+              className="rounded-md border border-neutral-200 py-1.5 pl-8 pr-8 text-sm focus:border-primary-500 focus:outline-none"
             />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                aria-label="Tøm søk"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-700"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
           <select
             value={filterCategory}
@@ -307,6 +343,14 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
               <option key={c} value={c}>{OUTREACH_CATEGORY_LABELS[c]}</option>
             ))}
           </select>
+          {hasActiveFilters && (
+            <button
+              onClick={resetFilters}
+              className="flex items-center gap-1.5 rounded-md border border-neutral-200 bg-white px-3 py-1.5 text-sm text-neutral-600 hover:bg-neutral-50"
+            >
+              <RotateCcw className="h-4 w-4" /> Nullstill
+            </button>
+          )}
           <button
             onClick={runDiscover}
             disabled={discoverPending}
@@ -489,6 +533,8 @@ export default function OutreachClient({ initialTargets, initialTemplates }: Pro
           onSaveEmail={(e) => saveEmail(selected, e)}
           onSaveContactPerson={(cp) => saveContactPerson(selected, cp)}
           onLogNote={(n) => logNote(selected, n)}
+          onEditNote={(entryId, body) => editNote(selected.id, entryId, body)}
+          onDeleteNote={(entryId) => deleteNote(selected.id, entryId)}
           onGeocode={() => geocodeTarget(selected)}
           onOpenComposer={() => setShowComposer(true)}
         />
@@ -545,19 +591,24 @@ interface DrawerProps {
   onSaveEmail: (e: string) => void;
   onSaveContactPerson: (cp: string) => void;
   onLogNote: (note: string) => void;
+  onEditNote: (entryId: string, body: string) => Promise<{ error?: string }>;
+  onDeleteNote: (entryId: string) => Promise<{ error?: string }>;
   onGeocode: () => Promise<{ error?: string }>;
   onOpenComposer: () => void;
 }
 
 function DetailDrawer({
   target, contactLog, loading,
-  onClose, onToggleStatus, onSaveEmail, onSaveContactPerson, onLogNote, onGeocode, onOpenComposer,
+  onClose, onToggleStatus, onSaveEmail, onSaveContactPerson, onLogNote, onEditNote, onDeleteNote, onGeocode, onOpenComposer,
 }: DrawerProps) {
   const [email, setEmail] = useState(target.email ?? "");
   const [contactPerson, setContactPerson] = useState(target.contactPerson ?? "");
   const [noteText, setNoteText] = useState("");
   const [geocoding, setGeocoding] = useState(false);
   const [geoError, setGeoError] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
 
   // Resync when target changes
   useEffect(() => {
@@ -565,6 +616,7 @@ function DetailDrawer({
     setContactPerson(target.contactPerson ?? "");
     setNoteText("");
     setGeoError(null);
+    setEditingId(null);
   }, [target.id, target.email, target.contactPerson]);
 
   return (
@@ -742,25 +794,83 @@ function DetailDrawer({
             <p className="mt-2 text-sm text-neutral-500">Ingen kontakt-historikk enda.</p>
           ) : (
             <ul className="mt-2 space-y-3">
-              {contactLog.map((e) => (
+              {contactLog.map((e) => {
+                const isNote = e.contactType === "note";
+                const isEditing = editingId === e.id;
+                return (
                 <li key={e.id} className="rounded-md bg-neutral-50 p-3 text-sm">
-                  <div className="flex justify-between text-xs text-neutral-500">
+                  <div className="flex items-start justify-between gap-2 text-xs text-neutral-500">
                     <span>
                       {e.contactType === "email" ? "E-post" : e.contactType === "phone" ? "Telefon" : "Notat"}
                       {e.contactedByName ? ` · ${e.contactedByName}` : ""}
                     </span>
-                    <span>{new Date(e.createdAt).toLocaleString("nb-NO")}</span>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <span>{new Date(e.createdAt).toLocaleString("nb-NO")}</span>
+                      {isNote && !isEditing && (
+                        <>
+                          <button
+                            onClick={() => { setEditingId(e.id); setEditText(e.body ?? ""); }}
+                            aria-label="Rediger notat"
+                            className="rounded p-0.5 hover:bg-neutral-200 hover:text-neutral-700"
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button
+                            onClick={async () => {
+                              if (!window.confirm("Slette dette notatet?")) return;
+                              await onDeleteNote(e.id);
+                            }}
+                            aria-label="Slett notat"
+                            className="rounded p-0.5 hover:bg-red-100 hover:text-red-600"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </>
+                      )}
+                    </div>
                   </div>
                   {e.subject && <p className="mt-1 font-medium text-neutral-700">{e.subject}</p>}
                   {e.recipient && <p className="text-neutral-500">Til: {e.recipient}</p>}
-                  {e.body && (
-                    <pre className="mt-1 whitespace-pre-wrap font-sans leading-relaxed text-neutral-700">{e.body}</pre>
+                  {isEditing ? (
+                    <div className="mt-1">
+                      <textarea
+                        value={editText}
+                        onChange={(ev) => setEditText(ev.target.value)}
+                        className="h-24 w-full rounded-md border border-neutral-200 px-2 py-2 text-sm leading-relaxed"
+                      />
+                      <div className="mt-1 flex gap-2">
+                        <button
+                          onClick={async () => {
+                            if (!editText.trim()) return;
+                            setSavingNote(true);
+                            const res = await onEditNote(e.id, editText);
+                            setSavingNote(false);
+                            if (!res?.error) setEditingId(null);
+                          }}
+                          disabled={savingNote || !editText.trim()}
+                          className="rounded-md bg-neutral-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-neutral-800 disabled:opacity-50"
+                        >
+                          {savingNote ? "Lagrer..." : "Lagre"}
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="rounded-md border border-neutral-200 px-3 py-1.5 text-sm hover:bg-neutral-100"
+                        >
+                          Avbryt
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    e.body && (
+                      <pre className="mt-1 whitespace-pre-wrap font-sans leading-relaxed text-neutral-700">{e.body}</pre>
+                    )
                   )}
                   {e.statusAfter && (
                     <p className="mt-1 text-neutral-500">→ {OUTREACH_STATUS_LABELS[e.statusAfter as OutreachStatus] ?? e.statusAfter}</p>
                   )}
                 </li>
-              ))}
+                );
+              })}
             </ul>
           )}
         </div>

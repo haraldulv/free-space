@@ -8,6 +8,8 @@ import {
   upsertOutreachTarget,
   appendContactLog,
   listContactLogForTarget,
+  updateContactLogNote,
+  deleteContactLogNote,
   listEmailTemplates,
   getDefaultTemplate,
   saveEmailTemplate,
@@ -138,6 +140,32 @@ export async function logNoteAction(
     return { ok: true };
   } catch (err) {
     return { error: err instanceof Error ? err.message : "Logging feilet" };
+  }
+}
+
+export async function updateNoteAction(
+  entryId: string,
+  body: string,
+): Promise<{ ok?: true; error?: string }> {
+  try {
+    await requireAdmin();
+    if (!body.trim()) return { error: "Notatet kan ikke være tomt" };
+    await updateContactLogNote(entryId, body.trim());
+    return { ok: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Oppdatering feilet" };
+  }
+}
+
+export async function deleteNoteAction(
+  entryId: string,
+): Promise<{ ok?: true; error?: string }> {
+  try {
+    await requireAdmin();
+    await deleteContactLogNote(entryId);
+    return { ok: true };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Sletting feilet" };
   }
 }
 

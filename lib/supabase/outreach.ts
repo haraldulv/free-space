@@ -296,6 +296,28 @@ export async function listContactLogForTarget(targetId: string): Promise<Outreac
   });
 }
 
+/** Rediger brødteksten på en notat-oppføring. Begrenset til contact_type = 'note'. */
+export async function updateContactLogNote(id: string, body: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("outreach_contact_log")
+    .update({ body })
+    .eq("id", id)
+    .eq("contact_type", "note");
+  if (error) throw error;
+}
+
+/** Slett en notat-oppføring. Begrenset til contact_type = 'note'. */
+export async function deleteContactLogNote(id: string): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("outreach_contact_log")
+    .delete()
+    .eq("id", id)
+    .eq("contact_type", "note");
+  if (error) throw error;
+}
+
 function rowToTemplate(row: Record<string, unknown>): OutreachEmailTemplate {
   return {
     id: row.id as string,

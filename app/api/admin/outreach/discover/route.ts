@@ -67,8 +67,9 @@ const CATEGORY_QUERIES: Record<OutreachCategory, string[]> = {
     "B&B Lofoten",
     "gjestehus Lofoten",
   ],
-  // Gård er en import/manuell-kategori; ingen auto-discovery via Google.
-  gård: [],
+  gård: ["gård Lofoten", "gårdsutleie Lofoten", "gårdscamping Lofoten", "gårdsturisme Lofoten"],
+  // Parkering gir mange offentlige treff; begrenses til 1 side per senter (se maxPages under).
+  parkering: ["parkeringsplass Lofoten", "bobilparkering Lofoten", "parkering bobil Lofoten"],
   other: [],
 };
 
@@ -183,6 +184,8 @@ export async function POST(request: NextRequest) {
     "restaurant",
     "camping",
     "overnatting",
+    "gård",
+    "parkering",
   ];
 
   const stats = { inserted: 0, updated: 0, skipped: 0, totalFetched: 0, errors: [] as string[] };
@@ -190,10 +193,12 @@ export async function POST(request: NextRequest) {
 
   for (const category of categories) {
     const queries = CATEGORY_QUERIES[category] ?? [];
+    // Parkering gir mange offentlige treff; 1 side per senter holder støy + kjøretid nede.
+    const maxPages = category === "parkering" ? 1 : 3;
     for (const q of queries) {
       for (const center of centers) {
         try {
-          const results = await searchTextPaged(apiKey, q, center);
+          const results = await searchTextPaged(apiKey, q, center, maxPages);
           stats.totalFetched += results.length;
 
           for (const place of results) {
