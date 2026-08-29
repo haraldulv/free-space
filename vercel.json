@@ -31,6 +31,14 @@
     {
       "path": "/api/cron/moderation-sweep",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/security-digest",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/security-digest?quiet=1",
+      "schedule": "0 17 * * *"
     }
   ]
 }

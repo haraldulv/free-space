@@ -20,7 +20,9 @@ import { sendPushToAllAdmins, sendPushToUser } from "@/lib/push";
  * usynlig annonse — ikke en publisert en.
  */
 
-const MODEL = "claude-opus-5";
+// Haiku 4.5: 10x billigere enn Opus og mer enn godt nok til «plass eller dokument?».
+// Bytt til "claude-opus-5" hvis vurderingene blir for grove.
+const MODEL = "claude-haiku-4-5";
 
 const ImageVerdict = z.object({
   index: z.number().int(),
@@ -114,7 +116,7 @@ async function runClaudeOnListing(listing: ListingRow): Promise<ListingModeratio
   const response = await client.messages.parse({
     model: MODEL,
     max_tokens: 4000,
-    output_config: { effort: "low", format: zodOutputFormat(ListingVerdict) },
+    output_config: { format: zodOutputFormat(ListingVerdict) }, // effort støttes ikke på Haiku 4.5
     system: SYSTEM_PROMPT,
     messages: [{ role: "user", content }],
   });
@@ -370,7 +372,7 @@ export async function moderateImageWithClaude(
     const response = await client.messages.parse({
       model: MODEL,
       max_tokens: 1000,
-      output_config: { effort: "low", format: zodOutputFormat(SingleImageVerdict) },
+      output_config: { format: zodOutputFormat(SingleImageVerdict) },
       system: SYSTEM_PROMPT,
       messages: [
         {
