@@ -20,7 +20,10 @@ export default function ForgotPasswordPage() {
 
     const { error } = await supabase.auth.resetPasswordForEmail(
       result.data.email,
-      { redirectTo: `${window.location.origin}/reset-password` }
+      {
+        redirectTo: `${window.location.origin}/reset-password`,
+        captchaToken: values.captchaToken || undefined,
+      }
     );
 
     if (error) throw new Error(error.message);
@@ -58,6 +61,7 @@ export default function ForgotPasswordPage() {
         },
       ]}
       submitLabel={t("sendResetLink")}
+      captcha
       onSubmit={handleSubmit}
       footer={
         <Link

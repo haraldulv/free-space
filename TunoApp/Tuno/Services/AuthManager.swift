@@ -110,10 +110,10 @@ final class AuthManager: ObservableObject {
 
     // MARK: - Email/Password Auth
 
-    func signIn(email: String, password: String) async {
+    func signIn(email: String, password: String, captchaToken: String? = nil) async {
         self.error = nil
         do {
-            let session = try await supabase.auth.signIn(email: email, password: password)
+            let session = try await supabase.auth.signIn(email: email, password: password, captchaToken: captchaToken)
             currentUser = session.user
             isAuthenticated = true
             await loadProfile()
@@ -123,7 +123,7 @@ final class AuthManager: ObservableObject {
     }
 
     /// Returns true if signup succeeded (user should check email)
-    func signUp(fullName: String, email: String, password: String) async -> Bool {
+    func signUp(fullName: String, email: String, password: String, captchaToken: String? = nil) async -> Bool {
         self.error = nil
         do {
             let result = try await supabase.auth.signUp(
@@ -137,7 +137,8 @@ final class AuthManager: ObservableObject {
                 // arbeid på klient: viser "Verifisert!"-melding +
                 // "Åpne Tuno-appen"-knapp som åpner appen via custom
                 // scheme + auto-trigger på iOS.
-                redirectTo: URL(string: "\(AppConfig.siteURL)/auth/verified")
+                redirectTo: URL(string: "\(AppConfig.siteURL)/auth/verified"),
+                captchaToken: captchaToken
             )
 
             // Supabase returnerer ikke en eksplisitt feil hvis e-posten
@@ -399,9 +400,9 @@ final class AuthManager: ObservableObject {
         isAuthenticated = false
     }
 
-    func resetPassword(email: String) async -> Bool {
+    func resetPassword(email: String, captchaToken: String? = nil) async -> Bool {
         do {
-            try await supabase.auth.resetPasswordForEmail(email)
+            try await supabase.auth.resetPasswordForEmail(email, captchaToken: captchaToken)
             return true
         } catch {
             self.error = "Kunne ikke sende tilbakestillingslenke"

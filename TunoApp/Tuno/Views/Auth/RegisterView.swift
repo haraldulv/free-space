@@ -7,6 +7,7 @@ struct RegisterView: View {
     @Environment(\.webAuthenticationSession) var webAuthenticationSession
     @Environment(\.openURL) var openURL
     @State private var fullName = ""
+    @State private var showCaptcha = false
     @State private var email = ""
     @State private var password = ""
     @State private var isLoading = false
@@ -281,13 +282,10 @@ struct RegisterView: View {
                 return
             }
             focusedField = nil
-            Task {
-                isLoading = true
-                let success = await authManager.signUp(fullName: fullName, email: email, password: password)
-                isLoading = false
-                if success {
-                    showVerificationAlert = true
-                }
+            if AppConfig.turnstileEnabled {
+                showCaptcha = true
+            } else {
+                performSignUp(captchaToken: nil)
             }
         } label: {
             Group {
@@ -305,6 +303,20 @@ struct RegisterView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .disabled(!canSubmit || isLoading)
+        .sheet(isPresented: $showCaptcha) {
+            TurnstileSheet { token in performSignUp(captchaToken: token) }
+        }
+    }
+
+    private func performSignUp(captchaToken: String?) {
+        Task {
+            isLoading = true
+            let success = await authManager.signUp(fullName: fullName, email: email, password: password, captchaToken: captchaToken)
+            isLoading = false
+            if success {
+                showVerificationAlert = true
+            }
+        }
     }
 
     private var loginLink: some View {

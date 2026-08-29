@@ -544,3 +544,107 @@ export async function sendHostOutreachEmail(opts: {
     })),
   });
 }
+
+// ---------------------------------------------------------------------
+// Moderering av annonser
+// ---------------------------------------------------------------------
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+}
+
+export async function sendListingModerationAdminEmail(to: string[], data: {
+  status: "approved" | "flagged";
+  listingId: string;
+  listingTitle: string;
+  hostName: string;
+  hostEmail: string | null;
+  city: string | null;
+  images: string[];
+  result: { verdict: string; confidence: string; reasons: string[]; text_quality: string; images: Array<{ index: number; category: string; note: string }> };
+  adminUrl: string;
+  stripeReady: boolean;
+}) {
+  const flagged = data.status === "flagged";
+  const subject = flagged
+    ? `⚠️ Annonse flagget: ${data.listingTitle}`
+    : `Ny annonse: ${data.listingTitle}`;
+
+  const thumbs = data.images.slice(0, 6).map((url, i) => {
+    const v = data.result.images.find((x) => x.index === i + 1 || x.index === i);
+    const bad = v && v.category !== "ok" && v.category !== "unclear";
+    return `<td style="padding:4px;vertical-align:top;">
+      <a href="${url}"><img src="${url}" width="150" style="width:150px;height:100px;object-fit:cover;border-radius:8px;border:${bad ? "3px solid #dc2626" : "1px solid #e5e5e5"};" /></a>
+      ${v ? `<p style="margin:4px 0 0;font-size:11px;color:${bad ? "#dc2626" : "#737373"};max-width:150px;">${escapeHtml(v.category)}${v.note ? ": " + escapeHtml(v.note) : ""}</p>` : ""}
+    </td>`;
+  }).join("");
+
+  const reasons = data.result.reasons.length
+    ? `<ul style="margin:8px 0 0;padding-left:18px;color:#525252;font-size:14px;line-height:1.6;">${data.result.reasons.map((r) => `<li>${escapeHtml(r)}</li>`).join("")}</ul>`
+    : "";
+
+  const statusLine = flagged
+    ? `<p style="margin:0 0 12px;padding:10px 12px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;color:#991b1b;font-size:14px;font-weight:600;">Flagget av AI (${escapeHtml(data.result.confidence)} sikkerhet). Annonsen er skjult til du tar stilling.</p>`
+    : `<p style="margin:0 0 12px;padding:10px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;color:#166534;font-size:14px;font-weight:600;">Godkjent automatisk av AI (${escapeHtml(data.result.confidence)} sikkerhet).${data.stripeReady ? "" : " Hosten er ikke Stripe-verifisert ennå, så annonsen er fortsatt skjult."}</p>`;
+
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject,
+    html: wrap(flagged ? "Annonse trenger gjennomgang" : "Ny annonse publisert", `
+      ${statusLine}
+      <p style="margin:0;color:#171717;font-size:16px;font-weight:600;">${escapeHtml(data.listingTitle)}</p>
+      <p style="margin:4px 0 0;color:#525252;font-size:14px;">${escapeHtml(data.hostName)}${data.hostEmail ? ` · ${escapeHtml(data.hostEmail)}` : ""}${data.city ? ` · ${escapeHtml(data.city)}` : ""}</p>
+      <p style="margin:4px 0 0;color:#737373;font-size:12px;">Tekstkvalitet: ${escapeHtml(data.result.text_quality)}</p>
+      ${reasons}
+      <table style="border-collapse:collapse;margin-top:12px;"><tr>${thumbs}</tr></table>
+      ${btn(flagged ? "Åpne moderering" : "Se i admin", data.adminUrl)}
+    `),
+  });
+}
+
+export async function sendListingApprovedToHost(to: string, data: {
+  hostName: string;
+  listingTitle: string;
+  listingId: string;
+  stripeReady: boolean;
+}) {
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Annonsen din er godkjent",
+    html: wrap("Annonsen din er godkjent 🎉", `
+      <p style="color:#525252;font-size:14px;line-height:1.6;">Hei ${escapeHtml(data.hostName)}!</p>
+      <p style="color:#525252;font-size:14px;line-height:1.6;">
+        «${escapeHtml(data.listingTitle)}» er gjennomgått og godkjent.
+        ${data.stripeReady
+          ? "Den er nå synlig for leietakere på tuno.no og i appen."
+          : "Den blir synlig for leietakere så snart Stripe har verifisert utleierkontoen din. Sjekk Innstillinger i appen om noe mangler."}
+      </p>
+      ${btn("Se annonsen", `https://tuno.no/listings/${data.listingId}`)}
+    `),
+  });
+}
+
+export async function sendListingRejectedToHost(to: string, data: {
+  hostName: string;
+  listingTitle: string;
+  reason: string | null;
+}) {
+  await resend.emails.send({
+    from: FROM,
+    to,
+    subject: "Annonsen din ble ikke godkjent",
+    html: wrap("Annonsen din ble ikke godkjent", `
+      <p style="color:#525252;font-size:14px;line-height:1.6;">Hei ${escapeHtml(data.hostName)},</p>
+      <p style="color:#525252;font-size:14px;line-height:1.6;">
+        Vi har gjennomgått «${escapeHtml(data.listingTitle)}» og kan dessverre ikke publisere den.
+      </p>
+      ${data.reason ? `<p style="margin:12px 0;padding:12px 16px;background:#fafafa;border:1px solid #e5e5e5;border-radius:8px;color:#525252;font-size:14px;line-height:1.6;">${escapeHtml(data.reason)}</p>` : ""}
+      <p style="color:#525252;font-size:14px;line-height:1.6;">
+        Annonser på Tuno skal vise selve plassen som leies ut, med ekte bilder og en forståelig beskrivelse.
+        Mener du dette er feil, svar på denne e-posten eller kontakt support@tuno.no.
+      </p>
+    `),
+  });
+}

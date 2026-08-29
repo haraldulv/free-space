@@ -13,6 +13,19 @@ async function getAuthUserId(): Promise<string> {
 export async function createListingAction(data: CreateListingData): Promise<{ id?: string; error?: string }> {
   try {
     const userId = await getAuthUserId();
+
+    // Server-side gate (UI-en viser onboarding-wizard i stedet for skjemaet,
+    // men en direkte server-action-kall skal ikke kunne omgå det).
+    const supabase = await createClient();
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("stripe_account_id, stripe_onboarding_complete")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!profile?.stripe_account_id || !profile.stripe_onboarding_complete) {
+      return { error: "Du må fullføre utleier-oppsettet (Stripe) før du kan publisere en annonse." };
+    }
+
     const id = await createListing(data, userId);
     return { id };
   } catch (err) {

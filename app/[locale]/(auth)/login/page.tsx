@@ -26,6 +26,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithPassword({
       email: result.data.email,
       password: result.data.password,
+      options: values.captchaToken ? { captchaToken: values.captchaToken } : undefined,
     });
 
     if (error) throw new Error(error.message);
@@ -71,6 +72,7 @@ export default function LoginPage() {
           },
         ]}
         submitLabel={t("loginButton")}
+        captcha
         onSubmit={handleLogin}
         footer={
           <>

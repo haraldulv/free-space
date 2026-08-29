@@ -291,16 +291,34 @@ export async function POST(request: NextRequest) {
           { type: "stripe_onboarding_complete" },
         );
       }
-    } else if (account.charges_enabled && !account.payouts_enabled) {
-      // Charges OK men payouts blokkert. Vanligste årsak: bank ikke lagt
-      // til, eller currently_due krever ID-dokument. Varsle hosten så de
-      // vet hva som mangler — eller så blir pengene liggende i Stripe.
+    } else {
+      // Ikke (lenger) fullt verifisert. Hvis hosten tidligere var markert
+      // som ferdig (f.eks. Stripe har deaktivert charges pga. mislykket
+      // identitetssjekk eller rejected konto), trekk tilbake flagget.
+      // DB-triggeren skjuler da alle annonsene til hosten automatisk
+      // (listings.host_stripe_ready), og booking-endepunktene avviser.
       const { data: profile } = await supabase
         .from("profiles")
-        .select("id")
+        .select("id, stripe_onboarding_complete")
         .eq("stripe_account_id", account.id)
         .maybeSingle();
-      if (profile?.id) {
+
+      if (profile?.stripe_onboarding_complete === true) {
+        await supabase
+          .from("profiles")
+          .update({ stripe_onboarding_complete: false })
+          .eq("stripe_account_id", account.id);
+        console.warn(`[Stripe] Revoked onboarding_complete for ${account.id} (charges=${account.charges_enabled}, payouts=${account.payouts_enabled}, reason=${account.requirements?.disabled_reason ?? "-"})`);
+        await sendPushToUser(
+          profile.id,
+          "Utleierkontoen din er satt på pause",
+          "Stripe trenger mer informasjon før annonsene dine kan vises igjen. Åpne Tuno → Innstillinger.",
+          { type: "stripe_action_required" },
+        ).catch((err) => console.error("[Push] revoked failed:", err));
+      } else if (profile?.id && account.charges_enabled && !account.payouts_enabled) {
+        // Charges OK men payouts blokkert. Vanligste årsak: bank ikke lagt
+        // til, eller currently_due krever ID-dokument. Varsle hosten så de
+        // vet hva som mangler — eller så blir pengene liggende i Stripe.
         const dueCount = account.requirements?.currently_due?.length ?? 0;
         if (dueCount > 0) {
           await sendPushToUser(

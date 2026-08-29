@@ -68,6 +68,12 @@ struct Listing: Codable, Identifiable, Hashable {
     let displayPrice: Int?
     /// Suffix: tom for DAY, "/uke", "/mnd", "/år".
     let displayPriceSuffix: String?
+    /// pending/flagged = skjult i påvente av godkjenning, rejected = avvist av admin.
+    let moderationStatus: String?
+    /// Begrunnelse fra AI/admin når status er flagged/rejected.
+    let moderationReason: String?
+    /// Skjult inntil hostens Stripe-konto er verifisert.
+    let hostStripeReady: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id, title, description, category, city, region, address, lat, lng, price, amenities, spots, images, rating, tags, source
@@ -106,6 +112,21 @@ struct Listing: Codable, Identifiable, Hashable {
         case sourceId = "source_id"
         case displayPrice = "display_price"
         case displayPriceSuffix = "display_price_suffix"
+        case moderationStatus = "moderation_status"
+        case moderationReason = "moderation_reason"
+        case hostStripeReady = "host_stripe_ready"
+    }
+}
+
+extension Listing {
+    /// Kort status-tekst for host-visninger. nil = publisert og synlig.
+    var moderationBadge: String? {
+        switch moderationStatus {
+        case "pending", "flagged": return "Under vurdering"
+        case "rejected": return "Avvist"
+        case "approved" where hostStripeReady == false: return "Venter på Stripe"
+        default: return nil
+        }
     }
 }
 

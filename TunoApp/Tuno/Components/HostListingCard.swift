@@ -77,6 +77,18 @@ struct HostListingCard: View {
             .overlay(alignment: .topLeading) {
                 statusPillMenu.padding(12)
             }
+            .overlay(alignment: .topTrailing) {
+                if let badge = listing.moderationBadge {
+                    Text(badge)
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(listing.moderationStatus == "rejected" ? .white : .neutral900)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(listing.moderationStatus == "rejected" ? Color.red : Color.white.opacity(0.92))
+                        .clipShape(Capsule())
+                        .padding(12)
+                }
+            }
     }
 
     /// Status-pille wrappet i SwiftUI `Menu` så tap åpner et lokalt

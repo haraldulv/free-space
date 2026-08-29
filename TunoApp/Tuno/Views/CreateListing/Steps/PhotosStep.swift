@@ -367,6 +367,16 @@ enum PhotoUploader {
                             let publicURL = try supabase.storage
                                 .from("listing-images")
                                 .getPublicURL(path: fileName)
+                            // Rask innholdssjekk (ID-dokumenter, skjermbilder,
+                            // upassende). Blokkerte bilder slettes igjen.
+                            let verdict = await ModerationService.moderateImage(url: publicURL.absoluteString)
+                            if !verdict.approved {
+                                try? await supabase.storage.from("listing-images").remove(paths: [fileName])
+                                await MainActor.run {
+                                    form.error = verdict.reason ?? "Bildet ble blokkert av innholdsfilteret."
+                                }
+                                return (photo.id, nil)
+                            }
                             return (photo.id, publicURL.absoluteString)
                         } catch {
                             print("Image upload failed: \(error)")

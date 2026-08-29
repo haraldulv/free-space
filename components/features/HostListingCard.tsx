@@ -69,7 +69,19 @@ export default function HostListingCard({ listing, onDelete, onToggleActive }: H
             {!isActive && (
               <Badge variant="secondary">{t("inactive")}</Badge>
             )}
+            {(listing.moderationStatus === "pending" || listing.moderationStatus === "flagged") && (
+              <Badge variant="secondary">{t("pendingReview")}</Badge>
+            )}
+            {listing.moderationStatus === "rejected" && (
+              <Badge variant="secondary">{t("rejected")}</Badge>
+            )}
+            {listing.moderationStatus === "approved" && listing.hostStripeReady === false && (
+              <Badge variant="secondary">{t("awaitingStripe")}</Badge>
+            )}
           </div>
+          {listing.moderationStatus === "rejected" && listing.moderationReason && (
+            <p className="mt-1 text-xs text-red-600">{listing.moderationReason}</p>
+          )}
           {listing.internalName && (
             <p className="text-xs text-neutral-500 truncate">{listing.title}</p>
           )}

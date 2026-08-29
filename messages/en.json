@@ -401,7 +401,10 @@
     "total": "Total",
     "awaitingApproval": "Awaiting host",
     "requestsToReview": "Requests to respond to",
-    "editListing": "Edit listing"
+    "editListing": "Edit listing",
+    "pendingReview": "Under review",
+    "rejected": "Rejected",
+    "awaitingStripe": "Awaiting Stripe verification"
   },
   "messages": {
     "title": "Messages",
@@ -499,7 +502,9 @@
     "passwordMismatch": "Passwords don't match",
     "emailInvalid": "Invalid email address",
     "requiredField": "This field is required",
-    "mustAcceptTerms": "You must accept the terms to continue"
+    "mustAcceptTerms": "You must accept the terms to continue",
+    "captchaRequired": "Please confirm you are not a robot.",
+    "captchaFailed": "The robot check failed. Please try again."
   },
   "host": {
     "stepCategory": "Category",
@@ -795,7 +800,8 @@
       "weekdayFri": "Fr",
       "weekdaySat": "Sa",
       "weekdaySun": "Su"
-    }
+    },
+    "submittedForReview": "Your listing has been submitted for review. It becomes visible to renters as soon as it is approved, usually within minutes."
   },
   "common": {
     "loading": "Loading...",

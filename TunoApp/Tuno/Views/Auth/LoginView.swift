@@ -12,6 +12,15 @@ struct LoginView: View {
     @State private var showForgotPassword = false
     @State private var showSuccess = false
     @State private var passwordRevealed = false
+    @State private var showCaptcha = false
+
+    private func performLogin(captchaToken: String?) {
+        Task {
+            isLoading = true
+            await authManager.signIn(email: email, password: password, captchaToken: captchaToken)
+            isLoading = false
+        }
+    }
 
     var body: some View {
         ZStack {
@@ -212,10 +221,10 @@ struct LoginView: View {
 
                     // Login button
                     Button {
-                        Task {
-                            isLoading = true
-                            await authManager.signIn(email: email, password: password)
-                            isLoading = false
+                        if AppConfig.turnstileEnabled {
+                            showCaptcha = true
+                        } else {
+                            performLogin(captchaToken: nil)
                         }
                     } label: {
                         Group {
@@ -235,6 +244,9 @@ struct LoginView: View {
                     }
                     .disabled(email.isEmpty || password.isEmpty || isLoading)
                     .opacity(email.isEmpty || password.isEmpty ? 0.6 : 1)
+                    .sheet(isPresented: $showCaptcha) {
+                        TurnstileSheet { token in performLogin(captchaToken: token) }
+                    }
 
                     // Forgot password
                     Button {

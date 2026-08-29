@@ -401,7 +401,10 @@
     "total": "Gesamt",
     "awaitingApproval": "Warten auf Gastgeber",
     "requestsToReview": "Anfragen zur Beantwortung",
-    "editListing": "Anzeige bearbeiten"
+    "editListing": "Anzeige bearbeiten",
+    "pendingReview": "Wird geprüft",
+    "rejected": "Abgelehnt",
+    "awaitingStripe": "Wartet auf Stripe-Verifizierung"
   },
   "messages": {
     "title": "Nachrichten",
@@ -499,7 +502,9 @@
     "passwordMismatch": "Die Passwörter stimmen nicht überein",
     "emailInvalid": "Ungültige E-Mail-Adresse",
     "requiredField": "Dieses Feld ist erforderlich",
-    "mustAcceptTerms": "Du musst die Bedingungen akzeptieren, um fortzufahren"
+    "mustAcceptTerms": "Du musst die Bedingungen akzeptieren, um fortzufahren",
+    "captchaRequired": "Bitte bestätige, dass du kein Roboter bist.",
+    "captchaFailed": "Die Roboterprüfung ist fehlgeschlagen. Bitte erneut versuchen."
   },
   "host": {
     "stepCategory": "Kategorie",
@@ -795,7 +800,8 @@
       "weekdayFri": "Fr",
       "weekdaySat": "Sa",
       "weekdaySun": "So"
-    }
+    },
+    "submittedForReview": "Deine Anzeige wurde zur Prüfung eingereicht. Sie wird für Mieter sichtbar, sobald sie genehmigt ist, meist innerhalb weniger Minuten."
   },
   "common": {
     "loading": "Wird geladen ...",

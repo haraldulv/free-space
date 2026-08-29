@@ -114,7 +114,7 @@ export default function ListingFormWizard({
     setGlobalError("");
     try {
       await onSubmit(formData as CreateListingData);
-      window.location.href = "/dashboard?tab=annonser";
+      window.location.href = "/dashboard?tab=annonser&review=1";
     } catch (err) {
       setGlobalError(err instanceof Error ? err.message : t("somethingWentWrong"));
       setSubmitting(false);

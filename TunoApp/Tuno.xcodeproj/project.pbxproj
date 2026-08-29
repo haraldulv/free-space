@@ -94,6 +94,7 @@
 		8B3FFD2821A8DBF0C4752B71 /* BookingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A031A3724EC9DE0FAFF7A4A /* BookingView.swift */; };
 		8DE4BBDB474E278A300397DE /* BlockedSlots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41E71E1C8EA6E28F59A76B9A /* BlockedSlots.swift */; };
 		90D70482683053BEFF821336 /* EarningsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C68D73AEFE78CC1D1DEE15 /* EarningsView.swift */; };
+		94FB5AF1112FC3731BA29E3E /* ModerationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC0A801BFB0591C84AFD834 /* ModerationService.swift */; };
 		96B48987F842D9D98F4FE0F7 /* SearchContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D0D12BC80A797DF8A6DEED /* SearchContextStore.swift */; };
 		96BC4BC4EB06699B3E5A5D69 /* HostSpotDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26E78282D80E5F27037C4EC4 /* HostSpotDetailView.swift */; };
 		9823672A74799973F05F4ECC /* home.png in Resources */ = {isa = PBXBuildFile; fileRef = 40D5D06E16F5E9919282FBCB /* home.png */; };
@@ -128,6 +129,7 @@
 		CCC01BD7E34A8531A3C71E2A /* SearchHerePill.swift in Sources */ = {isa = PBXBuildFile; fileRef = B432FE81E7D9B6ECAB6EE3F8 /* SearchHerePill.swift */; };
 		CF469E1FC5E6FD6315FD4442 /* FavoritesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 728D58EED8EDC45FC329EE6F /* FavoritesView.swift */; };
 		D1350E52B346514BBFB120CA /* SpotPriceStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4FAE01C676255DD56E0570A /* SpotPriceStep.swift */; };
+		D1897733E089705C297273FD /* TurnstileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFDEEECFA35CB2F4651AEEF7 /* TurnstileView.swift */; };
 		D419BBEA241B1C886CA82778 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 177959CBC6EFAB9035701BA2 /* Supabase */; };
 		D66A3C676F36A7AC0C7FA620 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF829CF95A92CC9F95F9C3E /* ProfileView.swift */; };
 		D810CB11774F2D2C919200B8 /* SpotDetailsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = E168ECC061FD115C52320C1F /* SpotDetailsStep.swift */; };
@@ -169,6 +171,7 @@
 		147F3163867D581B11ED7A6D /* success-confetti.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "success-confetti.json"; sourceTree = "<group>"; };
 		19AAAD22A9AEF5440B70DF82 /* PressableStyles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PressableStyles.swift; sourceTree = "<group>"; };
 		1A031A3724EC9DE0FAFF7A4A /* BookingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingView.swift; sourceTree = "<group>"; };
+		1AC0A801BFB0591C84AFD834 /* ModerationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModerationService.swift; sourceTree = "<group>"; };
 		1C62328BAF7DE7328480EAF9 /* LottieView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LottieView.swift; sourceTree = "<group>"; };
 		1EAC854F4475506A9E845BA2 /* BottomListDrawer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BottomListDrawer.swift; sourceTree = "<group>"; };
 		20BABEC0564518876FF3BB11 /* AuthPromptView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthPromptView.swift; sourceTree = "<group>"; };
@@ -259,6 +262,7 @@
 		BBA16C264EC99BF4AD61C2FC /* CounterOfferSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterOfferSheet.swift; sourceTree = "<group>"; };
 		BD05EFAAFF75CA5314B3B4EE /* SpotExtrasContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotExtrasContent.swift; sourceTree = "<group>"; };
 		BE401FA37FDD4B606814F30C /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
+		BFDEEECFA35CB2F4651AEEF7 /* TurnstileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnstileView.swift; sourceTree = "<group>"; };
 		C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		C60A79D4D54F1069BB4CA915 /* complete-phone.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "complete-phone.png"; sourceTree = "<group>"; };
 		CB03B6FF2B6DA8FCAC15788C /* Globe.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Globe.json; sourceTree = "<group>"; };
@@ -359,6 +363,7 @@
 				E9E57AB4DC338617AB61C3E7 /* ListingService.swift */,
 				653B4F2F1D411111416483A4 /* LocalizationManager.swift */,
 				5416B142A121192B7EDCA9A2 /* LocationManager.swift */,
+				1AC0A801BFB0591C84AFD834 /* ModerationService.swift */,
 				6A884CCDAD07F56994881803 /* OpeningHoursService.swift */,
 				86D6665556989227BEA372A6 /* PayoutsService.swift */,
 				3CB173E040FBC726599E7A89 /* PlacesService.swift */,
@@ -484,6 +489,7 @@
 				8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */,
 				F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */,
 				F9A10E906BFD039DCF513926 /* TimePickerField.swift */,
+				BFDEEECFA35CB2F4651AEEF7 /* TurnstileView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -831,6 +837,7 @@
 				3F2C71CB33819E76B0A47700 /* MessagesListView.swift in Sources */,
 				2E38CBEC06F52A83F883289B /* MessagesStep.swift in Sources */,
 				4C8980AF3DD41E9C89F1E49F /* Models.swift in Sources */,
+				94FB5AF1112FC3731BA29E3E /* ModerationService.swift in Sources */,
 				F5C607CAFB1A650AC022C486 /* MotorhomeIcon.swift in Sources */,
 				8094B41AF970D760CD71175E /* NegotiationPaymentView.swift in Sources */,
 				B2A276C68ACCEB05DBF4F7DB /* NotificationsView.swift in Sources */,
@@ -882,6 +889,7 @@
 				3205E24587B15BBF7B75324D /* TimePickerField.swift in Sources */,
 				659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */,
 				400CCE6F1D6B0AF5A1699287 /* TunoCalendar.swift in Sources */,
+				D1897733E089705C297273FD /* TurnstileView.swift in Sources */,
 				468941D0A90A4A4D9C423A60 /* VisitedListingsStore.swift in Sources */,
 				B6F0518213F5AE5FEF63012A /* WelcomeStep.swift in Sources */,
 				4ED3E93250A6738DFDAD8848 /* WhereSheet.swift in Sources */,

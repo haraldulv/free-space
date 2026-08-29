@@ -341,7 +341,15 @@ export interface Listing {
   source?: string | null;
   /** Stabil unik id i kildens system. */
   sourceId?: string | null;
+  /** pending/flagged = skjult i påvente av godkjenning, rejected = avvist av admin. */
+  moderationStatus?: ModerationStatus;
+  /** Begrunnelse fra AI/admin når status er flagged/rejected. */
+  moderationReason?: string | null;
+  /** Skjult inntil hostens Stripe-konto er verifisert. */
+  hostStripeReady?: boolean;
 }
+
+export type ModerationStatus = "pending" | "approved" | "flagged" | "rejected";
 
 /** Returnér unik liste av PricePackage-perioder fra alle spots. */
 export function derivePeriodTypesFromSpots(spots: SpotMarker[] | undefined | null): PricePackagePeriodType[] {
@@ -466,7 +474,7 @@ export interface Message {
 export interface AppNotification {
   id: string;
   userId: string;
-  type: "booking_received" | "booking_confirmed" | "booking_cancelled" | "new_message" | "new_review" | "payout_sent";
+  type: "booking_received" | "booking_confirmed" | "booking_cancelled" | "new_message" | "new_review" | "payout_sent" | "listing_approved" | "listing_rejected" | "listing_pending" | "admin_moderation";
   title: string;
   body?: string;
   metadata?: Record<string, unknown>;

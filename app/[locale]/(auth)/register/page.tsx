@@ -37,6 +37,7 @@ export default function RegisterPage() {
       password: result.data.password,
       options: {
         data: { full_name: result.data.fullName },
+        captchaToken: values.captchaToken || undefined,
       },
     });
 
@@ -112,6 +113,7 @@ export default function RegisterPage() {
           },
         ]}
         submitLabel={t("createAccount")}
+        captcha
         onSubmit={handleRegister}
         extraContent={
           <div>

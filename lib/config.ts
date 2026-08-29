@@ -7,6 +7,15 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
 /** Platform service fee rate (10% = 0.10). Charged on top of listing price. */
 export const SERVICE_FEE_RATE = 0.10;
 
+/** Admin-adresser som får moderasjonsvarsler (ny/flagget annonse). */
+export const ADMIN_EMAILS = ["harald@tuno.no", "kim@tuno.no"];
+
+/**
+ * Om AI-godkjente annonser publiseres automatisk. false = alt må godkjennes
+ * manuelt i /admin/moderering (AI-resultatet vises som hjelp).
+ */
+export const AUTO_APPROVE_LISTINGS = true;
+
 /** Hours after check-in before host payout is processed */
 export const HOST_PAYOUT_DELAY_HOURS = 24;
 

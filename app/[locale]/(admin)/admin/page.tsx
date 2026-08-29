@@ -21,6 +21,7 @@ import {
   LifeBuoy,
   Send,
   Target,
+  ShieldCheck,
 } from "lucide-react";
 import { SERVICE_FEE_RATE } from "@/lib/config";
 
@@ -303,6 +304,13 @@ export default function AdminPage() {
         >
           <Target className="h-4 w-4" />
           Utleier-outreach
+        </Link>
+        <Link
+          href="/admin/moderering"
+          className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-700"
+        >
+          <ShieldCheck className="h-4 w-4" />
+          Moderering
         </Link>
       </div>
 

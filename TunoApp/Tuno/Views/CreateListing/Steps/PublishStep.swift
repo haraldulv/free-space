@@ -456,10 +456,10 @@ struct ListingPublishedCelebration: View {
                 }
 
                 VStack(spacing: 8) {
-                    Text("Annonsen er publisert!")
+                    Text("Annonsen er sendt inn!")
                         .font(.system(size: 24, weight: .bold))
                         .foregroundStyle(.neutral900)
-                    Text("Gjester kan nå finne og bestille hos deg.")
+                    Text("Vi sjekker bilder og tekst før den blir synlig. Det tar vanligvis bare noen minutter, og du får beskjed når den er godkjent.")
                         .font(.system(size: 15))
                         .foregroundStyle(.neutral600)
                         .multilineTextAlignment(.center)

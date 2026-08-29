@@ -6,6 +6,7 @@ import { Mail } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { createClient } from "@/lib/supabase/client";
 import Button from "@/components/ui/Button";
+import Turnstile, { TURNSTILE_ENABLED } from "@/components/features/Turnstile";
 
 export default function BekreftEpostPage() {
   const t = useTranslations("auth");
@@ -13,12 +14,18 @@ export default function BekreftEpostPage() {
   const email = searchParams.get("email") || "";
   const [resending, setResending] = useState(false);
   const [resent, setResent] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const handleResend = async () => {
     if (!email || resending) return;
     setResending(true);
     const supabase = createClient();
-    await supabase.auth.resend({ type: "signup", email });
+    await supabase.auth.resend({
+      type: "signup",
+      email,
+      options: captchaToken ? { captchaToken } : undefined,
+    });
+    setCaptchaToken(null);
     setResending(false);
     setResent(true);
     setTimeout(() => setResent(false), 5000);
@@ -46,11 +53,13 @@ export default function BekreftEpostPage() {
           {t("checkSpam")}
         </p>
 
+        <Turnstile onToken={setCaptchaToken} />
+
         <Button
           variant="outline"
           size="sm"
           onClick={handleResend}
-          disabled={resending || resent}
+          disabled={resending || resent || (TURNSTILE_ENABLED && !captchaToken)}
           className="mx-auto"
         >
           {resending

@@ -138,6 +138,7 @@ export default function DashboardPage() {
   const t = useTranslations("dashboard");
   const tListing = useTranslations("listing");
   const tNav = useTranslations("nav");
+  const tHost = useTranslations("host");
   const locale = useLocale();
   const dateLocale = bcpLocale(locale);
   const numLocale = numberLocale(locale);
@@ -686,6 +687,11 @@ export default function DashboardPage() {
             {/* Listings */}
             {tab === "listings" && (
               <>
+                {searchParams.get("review") === "1" && (
+                  <div className="mt-4 lg:mt-0 mb-4 rounded-xl border border-primary-200 bg-primary-50 px-4 py-3 text-sm text-primary-800">
+                    {tHost("submittedForReview")}
+                  </div>
+                )}
                 <div className="mt-4 lg:mt-0 flex items-center justify-between gap-3 flex-wrap">
                   <p className="text-sm text-neutral-500">
                     {t("listingsCount", { count: listings.length })}

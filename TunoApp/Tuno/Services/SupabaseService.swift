@@ -41,6 +41,13 @@ enum AppConfig {
     /// lar Login leve i prod mens nin-knappen i Bli utleier sover til
     /// scopen er klar. Skru på sammen med NEXT_PUBLIC_VIPPS_NIN_ENABLED.
     static let vippsNinEnabled = false
+
+    /// Cloudflare Turnstile ved e-post-login/registrering/passord-reset.
+    /// Widgeten rendres i en WKWebView som laster `siteURL/captcha` (samme
+    /// domene som er registrert hos Cloudflare) og poster tokenet tilbake.
+    /// MÅ være true når Turnstile er skrudd på i Supabase Dashboard, ellers
+    /// feiler alle e-post-innlogginger med "captcha verification failed".
+    static let turnstileEnabled = false
 }
 
 let supabase = SupabaseClient(

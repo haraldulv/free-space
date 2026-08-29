@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, type FormEvent, type ReactNode } from "react";
+import { useRef, useState, type FormEvent, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Turnstile, { TURNSTILE_ENABLED, type TurnstileHandle } from "@/components/features/Turnstile";
 
 interface AuthFormProps {
   title?: string;
@@ -17,6 +19,8 @@ interface AuthFormProps {
   submitLabel: string;
   footer?: ReactNode;
   extraContent?: ReactNode;
+  /** Vis Turnstile-captcha. Tokenet leveres som `values.captchaToken`. */
+  captcha?: boolean;
   onSubmit: (values: Record<string, string>) => Promise<void>;
 }
 
@@ -27,24 +31,38 @@ export default function AuthForm({
   submitLabel,
   footer,
   extraContent,
+  captcha = false,
   onSubmit,
 }: AuthFormProps) {
+  const t = useTranslations("auth");
   const [values, setValues] = useState<Record<string, string>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [globalError, setGlobalError] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaHandle = useRef<TurnstileHandle | null>(null);
+
+  const needsCaptcha = captcha && TURNSTILE_ENABLED;
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrors({});
     setGlobalError("");
+    if (needsCaptcha && !captchaToken) {
+      setGlobalError(t("captchaRequired"));
+      return;
+    }
     setLoading(true);
     try {
-      await onSubmit(values);
+      await onSubmit(captchaToken ? { ...values, captchaToken } : values);
     } catch (err) {
       if (err instanceof Error) {
-        setGlobalError(err.message);
+        const msg = /captcha/i.test(err.message) ? t("captchaFailed") : err.message;
+        setGlobalError(msg);
       }
+      // Turnstile-tokens er engangs; nullstill så neste forsøk får nytt token.
+      captchaHandle.current?.reset();
+      setCaptchaToken(null);
     } finally {
       setLoading(false);
     }
@@ -82,6 +100,13 @@ export default function AuthForm({
       ))}
 
       {extraContent}
+
+      {captcha && (
+        <Turnstile
+          onToken={setCaptchaToken}
+          onReady={(h) => { captchaHandle.current = h; }}
+        />
+      )}
 
       <Button type="submit" size="lg" className="w-full" disabled={loading}>
         {loading ? "Vennligst vent..." : submitLabel}

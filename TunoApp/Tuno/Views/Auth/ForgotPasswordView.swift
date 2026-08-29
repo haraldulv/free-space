@@ -4,8 +4,17 @@ struct ForgotPasswordView: View {
     @EnvironmentObject var authManager: AuthManager
     @Environment(\.dismiss) var dismiss
     @State private var email = ""
+    @State private var showCaptcha = false
     @State private var sent = false
     @State private var isLoading = false
+
+    private func performReset(captchaToken: String?) {
+        Task {
+            isLoading = true
+            sent = await authManager.resetPassword(email: email, captchaToken: captchaToken)
+            isLoading = false
+        }
+    }
 
     var body: some View {
         NavigationStack {
@@ -53,10 +62,10 @@ struct ForgotPasswordView: View {
                     }
 
                     Button {
-                        Task {
-                            isLoading = true
-                            sent = await authManager.resetPassword(email: email)
-                            isLoading = false
+                        if AppConfig.turnstileEnabled {
+                            showCaptcha = true
+                        } else {
+                            performReset(captchaToken: nil)
                         }
                     } label: {
                         Group {
@@ -75,6 +84,9 @@ struct ForgotPasswordView: View {
                     }
                     .disabled(email.isEmpty || isLoading)
                     .opacity(email.isEmpty ? 0.6 : 1)
+                    .sheet(isPresented: $showCaptcha) {
+                        TurnstileSheet { token in performReset(captchaToken: token) }
+                    }
                 }
 
                 Spacer()

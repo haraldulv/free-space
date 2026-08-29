@@ -129,6 +129,9 @@ function rowToListing(row: Record<string, unknown>): Listing {
     rentalPeriodTypes: (row.rental_period_types as PricePackagePeriodType[] | null) ?? [],
     source: (row.source as string | null) ?? null,
     sourceId: (row.source_id as string | null) ?? null,
+    moderationStatus: (row.moderation_status as Listing["moderationStatus"]) ?? undefined,
+    moderationReason: (row.moderation_reason as string | null) ?? null,
+    hostStripeReady: row.host_stripe_ready as boolean | undefined,
   };
 }
 

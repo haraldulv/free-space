@@ -401,7 +401,10 @@
     "total": "Totalt",
     "awaitingApproval": "Venter på utleier",
     "requestsToReview": "Forespørsler du må svare på",
-    "editListing": "Rediger annonse"
+    "editListing": "Rediger annonse",
+    "pendingReview": "Under vurdering",
+    "rejected": "Avvist",
+    "awaitingStripe": "Venter på Stripe-verifisering"
   },
   "messages": {
     "title": "Meldinger",
@@ -499,7 +502,9 @@
     "passwordMismatch": "Passordene er ikke like",
     "emailInvalid": "Ugyldig e-postadresse",
     "requiredField": "Dette feltet er påkrevd",
-    "mustAcceptTerms": "Du må godta vilkårene for å fortsette"
+    "mustAcceptTerms": "Du må godta vilkårene for å fortsette",
+    "captchaRequired": "Bekreft at du ikke er en robot.",
+    "captchaFailed": "Robotsjekken feilet. Prøv igjen."
   },
   "host": {
     "stepCategory": "Kategori",
@@ -795,7 +800,8 @@
       "weekdayFri": "Fr",
       "weekdaySat": "Lø",
       "weekdaySun": "Sø"
-    }
+    },
+    "submittedForReview": "Annonsen er sendt til vurdering. Den blir synlig for leietakere så snart den er godkjent, vanligvis innen få minutter."
   },
   "common": {
     "loading": "Laster...",
