@@ -101,7 +101,9 @@ async function isAuthorized(request: NextRequest): Promise<boolean> {
     .select("is_admin")
     .eq("id", user.id)
     .single();
-  return profile?.is_admin === true;
+  if (profile?.is_admin !== true) return false;
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  return aal?.currentLevel === "aal2";
 }
 
 async function searchTextPaged(

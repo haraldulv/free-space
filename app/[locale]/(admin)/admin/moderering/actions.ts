@@ -23,6 +23,8 @@ async function requireAdmin() {
     .eq("id", user.id)
     .single();
   if (!profile?.is_admin) throw new Error("Ikke admin");
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  if (aal?.currentLevel !== "aal2") throw new Error("Tofaktor kreves. Åpne /admin/mfa.");
   return { supabase: getServiceClient(), user };
 }
 

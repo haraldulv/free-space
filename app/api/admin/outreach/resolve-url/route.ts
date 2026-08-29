@@ -22,7 +22,9 @@ async function isAdmin(): Promise<boolean> {
     .select("is_admin")
     .eq("id", user.id)
     .single();
-  return data?.is_admin === true;
+  if (data?.is_admin !== true) return false;
+  const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  return aal?.currentLevel === "aal2";
 }
 
 function getApiKey(): string {

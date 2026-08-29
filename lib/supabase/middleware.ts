@@ -72,6 +72,19 @@ export async function updateSession(request: NextRequest) {
       url.pathname = prefix || "/";
       return NextResponse.redirect(url);
     }
+
+    // Tofaktor: admin-sider krever AAL2 (passord + TOTP-kode). /admin/mfa er
+    // selve oppsett-/kodesiden og må være tilgjengelig på AAL1.
+    if (!path.startsWith("/admin/mfa")) {
+      const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      if (aal?.currentLevel !== "aal2") {
+        const url = request.nextUrl.clone();
+        url.pathname = `${prefix}/admin/mfa`;
+        url.search = "";
+        url.searchParams.set("returnTo", request.nextUrl.pathname + request.nextUrl.search);
+        return NextResponse.redirect(url);
+      }
+    }
   }
 
   return supabaseResponse;
