@@ -134,6 +134,7 @@
 		D66A3C676F36A7AC0C7FA620 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF829CF95A92CC9F95F9C3E /* ProfileView.swift */; };
 		D810CB11774F2D2C919200B8 /* SpotDetailsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = E168ECC061FD115C52320C1F /* SpotDetailsStep.swift */; };
 		DD5F9A568DB0596D6BB597CE /* DraftStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4BE8903623B90ED0A8174BC /* DraftStorage.swift */; };
+		DE57C044FE9D25732D8DD87B /* ReportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8759EABE9447A2E1E46D4BC5 /* ReportSheet.swift */; };
 		DF4CB397EEC21B6155822A74 /* PersonnummerHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8912249569F172B1FAC73845 /* PersonnummerHelper.swift */; };
 		E12BD446142FEAEF21A97826 /* HostInntektCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 04FEA73740940C702629F4D7 /* HostInntektCard.swift */; };
 		E280A497623DB50EB8DB28E0 /* HostOnboardingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54806C1D2B79947D8E8CE6C9 /* HostOnboardingService.swift */; };
@@ -235,6 +236,7 @@
 		867091F53CF483B9DC6E3E33 /* WelcomeStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeStep.swift; sourceTree = "<group>"; };
 		86D6665556989227BEA372A6 /* PayoutsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayoutsService.swift; sourceTree = "<group>"; };
 		8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotPlacementSheet.swift; sourceTree = "<group>"; };
+		8759EABE9447A2E1E46D4BC5 /* ReportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportSheet.swift; sourceTree = "<group>"; };
 		8912249569F172B1FAC73845 /* PersonnummerHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonnummerHelper.swift; sourceTree = "<group>"; };
 		8BA98D1AD8A6E41FE60C2C91 /* CategoryStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CategoryStep.swift; sourceTree = "<group>"; };
 		8CF2C4D557CBB8DCF564CD2A /* ChatService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatService.swift; sourceTree = "<group>"; };
@@ -484,6 +486,7 @@
 				820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */,
 				F65149FFDD665E73DD3401C9 /* ProfileSummaryCard.swift */,
 				69D03627A981C3C64EF47F06 /* PublicProfileView.swift */,
+				8759EABE9447A2E1E46D4BC5 /* ReportSheet.swift */,
 				F8B062DEA5D924A40BC340AB /* ReviewCard.swift */,
 				633F2046F5DC659D1D443A25 /* SpotBlockedDatesSection.swift */,
 				8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */,
@@ -864,6 +867,7 @@
 				E73EE58A4F48616B26338D4E /* ReceiptBuilder.swift in Sources */,
 				5B59756933B0CFA0A84E11A3 /* RecentSearchesStore.swift in Sources */,
 				30DB0664F70CAF9A54C49E83 /* RegisterView.swift in Sources */,
+				DE57C044FE9D25732D8DD87B /* ReportSheet.swift in Sources */,
 				37A2317282EF5728BC73D64F /* ReviewCard.swift in Sources */,
 				5F9A2C2EC2495CE2792C781D /* ReviewService.swift in Sources */,
 				96B48987F842D9D98F4FE0F7 /* SearchContextStore.swift in Sources */,

@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/security-digest?quiet=1",
       "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/security-audit",
+      "schedule": "0 4 * * 1"
     }
   ]
 }

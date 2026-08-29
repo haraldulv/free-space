@@ -15,6 +15,7 @@ struct PublicProfileView: View {
     @EnvironmentObject var authManager: AuthManager
     @StateObject private var chatService = ChatService()
     @State private var profile: PublicHostProfile?
+    @State private var showReportSheet = false
     @State private var hostListings: [Listing] = []
     @State private var isLoading = true
     @State private var selectedListing: Listing?
@@ -58,9 +59,21 @@ struct PublicProfileView: View {
             .navigationTitle("Profil")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showReportSheet = true
+                    } label: {
+                        Image(systemName: "flag")
+                            .foregroundStyle(.neutral600)
+                    }
+                    .accessibilityLabel("Rapporter bruker")
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Lukk") { dismiss() }
                 }
+            }
+            .sheet(isPresented: $showReportSheet) {
+                ReportSheet(targetType: .user, targetId: hostId)
             }
             .navigationDestination(item: $selectedListing) { listing in
                 ListingDetailView(listingId: listing.id)

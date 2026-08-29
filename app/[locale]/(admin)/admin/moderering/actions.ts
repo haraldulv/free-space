@@ -196,3 +196,184 @@ export async function deleteUserHardAction(userId: string, opts: { rejectStripe:
     return { error: err instanceof Error ? err.message : "Noe gikk galt" };
   }
 }
+
+// ---------------------------------------------------------------------
+// Rapporter + innholdsflagg
+// ---------------------------------------------------------------------
+
+export interface AdminReport {
+  id: string;
+  target_type: "listing" | "user" | "conversation" | "review";
+  target_id: string;
+  reason: string;
+  details: string | null;
+  status: "open" | "reviewed" | "dismissed";
+  admin_note: string | null;
+  created_at: string;
+  reporter: { full_name: string | null } | null;
+  target_label: string;
+  target_user_id: string | null;
+}
+
+export interface AdminContentFlag {
+  id: string;
+  content_type: "message" | "review" | "avatar";
+  content_id: string;
+  author_id: string | null;
+  severity: "low" | "medium" | "high";
+  category: string;
+  reason: string | null;
+  excerpt: string | null;
+  status: "open" | "reviewed" | "dismissed";
+  created_at: string;
+  author: { full_name: string | null } | null;
+  content_exists: boolean;
+}
+
+export async function loadReportsAction(): Promise<{ reports?: AdminReport[]; flags?: AdminContentFlag[]; error?: string }> {
+  try {
+    const { supabase } = await requireAdmin();
+    const [{ data: reports, error: e1 }, { data: flags, error: e2 }] = await Promise.all([
+      supabase
+        .from("reports")
+        .select("id, target_type, target_id, reason, details, status, admin_note, created_at, reporter:reporter_id(full_name)")
+        .order("created_at", { ascending: false })
+        .limit(200),
+      supabase
+        .from("content_flags")
+        .select("id, content_type, content_id, author_id, severity, category, reason, excerpt, status, created_at, author:author_id(full_name)")
+        .order("created_at", { ascending: false })
+        .limit(200),
+    ]);
+    if (e1) return { error: e1.message };
+    if (e2) return { error: e2.message };
+
+    type RawReport = Omit<AdminReport, "target_label" | "target_user_id" | "reporter"> & { reporter: { full_name: string | null } | { full_name: string | null }[] | null };
+    const rawReports = (reports ?? []) as unknown as RawReport[];
+
+    const listingIds = rawReports.filter((r) => r.target_type === "listing").map((r) => r.target_id);
+    const userIds = rawReports.filter((r) => r.target_type === "user").map((r) => r.target_id);
+    const convIds = rawReports.filter((r) => r.target_type === "conversation").map((r) => r.target_id);
+    const [{ data: ls }, { data: us }, { data: cs }] = await Promise.all([
+      listingIds.length ? supabase.from("listings").select("id, title, host_id").in("id", listingIds) : Promise.resolve({ data: [] as Array<{ id: string; title: string; host_id: string | null }> }),
+      userIds.length ? supabase.from("profiles").select("id, full_name").in("id", userIds) : Promise.resolve({ data: [] as Array<{ id: string; full_name: string | null }> }),
+      convIds.length ? supabase.from("conversations").select("id, guest_id, host_id, guest:guest_id(full_name), host:host_id(full_name)").in("id", convIds) : Promise.resolve({ data: [] as unknown[] }),
+    ]);
+
+    const out: AdminReport[] = rawReports.map((r) => {
+      let target_label = r.target_id;
+      let target_user_id: string | null = null;
+      if (r.target_type === "listing") {
+        const l = (ls ?? []).find((x) => x.id === r.target_id);
+        target_label = l?.title ?? r.target_id;
+        target_user_id = l?.host_id ?? null;
+      } else if (r.target_type === "user") {
+        const u = (us ?? []).find((x) => x.id === r.target_id);
+        target_label = u?.full_name ?? r.target_id;
+        target_user_id = r.target_id;
+      } else if (r.target_type === "conversation") {
+        const c = (cs as Array<{ id: string; guest_id: string; host_id: string; guest: { full_name: string } | null; host: { full_name: string } | null }> | null ?? []).find((x) => x.id === r.target_id);
+        target_label = c ? `${c.guest?.full_name ?? "?"} ↔ ${c.host?.full_name ?? "?"}` : r.target_id;
+      }
+      const reporter = Array.isArray(r.reporter) ? r.reporter[0] ?? null : r.reporter;
+      return { ...r, reporter, target_label, target_user_id };
+    });
+
+    type RawFlag = Omit<AdminContentFlag, "author" | "content_exists"> & { author: { full_name: string | null } | { full_name: string | null }[] | null };
+    const rawFlags = (flags ?? []) as unknown as RawFlag[];
+    const msgIds = rawFlags.filter((f) => f.content_type === "message").map((f) => f.content_id);
+    const revIds = rawFlags.filter((f) => f.content_type === "review").map((f) => f.content_id);
+    const [{ data: ms }, { data: rs }] = await Promise.all([
+      msgIds.length ? supabase.from("messages").select("id").in("id", msgIds) : Promise.resolve({ data: [] as Array<{ id: string }> }),
+      revIds.length ? supabase.from("reviews").select("id").in("id", revIds) : Promise.resolve({ data: [] as Array<{ id: string }> }),
+    ]);
+    const outFlags: AdminContentFlag[] = rawFlags.map((f) => ({
+      ...f,
+      author: Array.isArray(f.author) ? f.author[0] ?? null : f.author,
+      content_exists:
+        f.content_type === "message" ? (ms ?? []).some((m) => m.id === f.content_id)
+        : f.content_type === "review" ? (rs ?? []).some((r) => r.id === f.content_id)
+        : true,
+    }));
+
+    return { reports: out, flags: outFlags };
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
+}
+
+export async function resolveReportAction(id: string, status: "reviewed" | "dismissed", note?: string): Promise<{ error?: string }> {
+  try {
+    const { supabase, user } = await requireAdmin();
+    const { error } = await supabase
+      .from("reports")
+      .update({ status, admin_note: note?.trim() || null, handled_by: user.id, handled_at: new Date().toISOString() })
+      .eq("id", id);
+    return error ? { error: error.message } : {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
+}
+
+export async function resolveFlagAction(id: string, status: "reviewed" | "dismissed"): Promise<{ error?: string }> {
+  try {
+    const { supabase, user } = await requireAdmin();
+    const { error } = await supabase
+      .from("content_flags")
+      .update({ status, handled_by: user.id, handled_at: new Date().toISOString() })
+      .eq("id", id);
+    return error ? { error: error.message } : {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
+}
+
+/** Sletter flagget innhold (melding/anmeldelse) og markerer flagget som behandlet. */
+export async function deleteFlaggedContentAction(flagId: string): Promise<{ error?: string }> {
+  try {
+    const { supabase, user } = await requireAdmin();
+    const { data: flag } = await supabase.from("content_flags").select("content_type, content_id").eq("id", flagId).maybeSingle();
+    if (!flag) return { error: "Flagg ikke funnet" };
+    if (flag.content_type === "message") {
+      await supabase.from("messages").update({ content: "[Meldingen ble fjernet av Tuno]" }).eq("id", flag.content_id);
+    } else if (flag.content_type === "review") {
+      await supabase.from("reviews").delete().eq("id", flag.content_id);
+    }
+    await supabase
+      .from("content_flags")
+      .update({ status: "reviewed", handled_by: user.id, handled_at: new Date().toISOString() })
+      .eq("id", flagId);
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
+}
+
+// ---------------------------------------------------------------------
+// Nødbryter for registrering
+// ---------------------------------------------------------------------
+
+export async function loadSignupSettingAction(): Promise<{ enabled: boolean; reason: string; lastSweepAt: string | null; sweepAgeMin: number | null }> {
+  const { supabase } = await requireAdmin();
+  const { data } = await supabase.from("app_settings").select("key, value").in("key", ["signups_enabled", "signups_disabled_reason", "last_sweep_at"]);
+  const get = (k: string) => data?.find((r) => r.key === k)?.value;
+  return {
+    enabled: get("signups_enabled") !== false,
+    reason: typeof get("signups_disabled_reason") === "string" ? (get("signups_disabled_reason") as string) : "",
+    lastSweepAt: typeof get("last_sweep_at") === "string" ? (get("last_sweep_at") as string) : null,
+    sweepAgeMin: typeof get("last_sweep_at") === "string" ? (Date.now() - new Date(get("last_sweep_at") as string).getTime()) / 60_000 : null,
+  };
+}
+
+export async function setSignupsEnabledAction(enabled: boolean, reason?: string): Promise<{ error?: string }> {
+  try {
+    const { supabase, user } = await requireAdmin();
+    const now = new Date().toISOString();
+    const { error } = await supabase.from("app_settings").update({ value: enabled, updated_at: now, updated_by: user.id }).eq("key", "signups_enabled");
+    if (error) return { error: error.message };
+    await supabase.from("app_settings").update({ value: enabled ? "" : (reason?.trim() || `Stengt manuelt av admin ${now}`), updated_at: now, updated_by: user.id }).eq("key", "signups_disabled_reason");
+    return {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
+}

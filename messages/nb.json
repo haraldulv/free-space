@@ -504,7 +504,8 @@
     "requiredField": "Dette feltet er påkrevd",
     "mustAcceptTerms": "Du må godta vilkårene for å fortsette",
     "captchaRequired": "Bekreft at du ikke er en robot.",
-    "captchaFailed": "Robotsjekken feilet. Prøv igjen."
+    "captchaFailed": "Robotsjekken feilet. Prøv igjen.",
+    "signupsClosed": "Registrering er midlertidig stengt. Prøv igjen om en liten stund."
   },
   "host": {
     "stepCategory": "Kategori",
@@ -941,5 +942,24 @@
       "always": "Døgnåpent",
       "limited": "Med åpningstid"
     }
+  },
+  "report": {
+    "title": "Rapporter",
+    "reportUser": "Rapporter bruker",
+    "reportListing": "Rapporter annonse",
+    "subtitle": "Hva er galt? Rapporten går til Tuno-teamet, ikke til den du rapporterer.",
+    "reason_scam": "Svindel eller betaling utenom Tuno",
+    "reason_inappropriate": "Upassende innhold",
+    "reason_harassment": "Trakassering eller trusler",
+    "reason_fake": "Falsk annonse eller profil",
+    "reason_spam": "Spam",
+    "reason_other": "Annet",
+    "detailsPlaceholder": "Beskriv gjerne kort (valgfritt)",
+    "send": "Send rapport",
+    "sending": "Sender...",
+    "thanks": "Takk. Vi ser på det så fort vi kan.",
+    "close": "Lukk",
+    "failed": "Kunne ikke sende rapporten. Prøv igjen.",
+    "loginRequired": "Logg inn for å rapportere."
   }
 }

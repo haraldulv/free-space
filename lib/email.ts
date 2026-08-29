@@ -648,3 +648,14 @@ export async function sendListingRejectedToHost(to: string, data: {
     `),
   });
 }
+
+/** Generisk admin-varsel (innholdsflagg, rapporter). Kun til ADMIN_EMAILS-lista. */
+export async function sendAdminAlertEmail(subject: string, bodyHtml: string, url: string) {
+  const { ADMIN_EMAILS } = await import("@/lib/config");
+  await resend.emails.send({
+    from: FROM,
+    to: ADMIN_EMAILS,
+    subject,
+    html: wrap(subject, `${bodyHtml}${btn("Åpne i admin", url)}`),
+  });
+}

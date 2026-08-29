@@ -5,6 +5,7 @@ import { Host } from "@/types";
 import { Star, Home } from "lucide-react";
 import { useTranslations } from "next-intl";
 import ContactHostButton from "./ContactHostButton";
+import ReportButton from "./ReportButton";
 
 interface HostCardProps {
   host: Host;
@@ -69,6 +70,11 @@ export default function HostCard({ host, listingId }: HostCardProps) {
       </div>
       {listingId && (
         <ContactHostButton listingId={listingId} hostId={host.id} />
+      )}
+      {host.id && host.id !== "unknown" && (
+        <div className="mt-3">
+          <ReportButton targetType="user" targetId={host.id} variant="link" />
+        </div>
       )}
     </div>
   );

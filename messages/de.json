@@ -504,7 +504,8 @@
     "requiredField": "Dieses Feld ist erforderlich",
     "mustAcceptTerms": "Du musst die Bedingungen akzeptieren, um fortzufahren",
     "captchaRequired": "Bitte bestätige, dass du kein Roboter bist.",
-    "captchaFailed": "Die Roboterprüfung ist fehlgeschlagen. Bitte erneut versuchen."
+    "captchaFailed": "Die Roboterprüfung ist fehlgeschlagen. Bitte erneut versuchen.",
+    "signupsClosed": "Die Registrierung ist vorübergehend geschlossen. Bitte versuche es später erneut."
   },
   "host": {
     "stepCategory": "Kategorie",
@@ -941,5 +942,24 @@
       "always": "Rund um die Uhr",
       "limited": "Mit Öffnungszeiten"
     }
+  },
+  "report": {
+    "title": "Melden",
+    "reportUser": "Nutzer melden",
+    "reportListing": "Anzeige melden",
+    "subtitle": "Was stimmt nicht? Die Meldung geht an das Tuno-Team, nicht an die gemeldete Person.",
+    "reason_scam": "Betrug oder Zahlung außerhalb von Tuno",
+    "reason_inappropriate": "Unangemessener Inhalt",
+    "reason_harassment": "Belästigung oder Drohungen",
+    "reason_fake": "Gefälschte Anzeige oder Profil",
+    "reason_spam": "Spam",
+    "reason_other": "Sonstiges",
+    "detailsPlaceholder": "Kurze Beschreibung (optional)",
+    "send": "Meldung senden",
+    "sending": "Wird gesendet...",
+    "thanks": "Danke. Wir sehen es uns so schnell wie möglich an.",
+    "close": "Schließen",
+    "failed": "Meldung konnte nicht gesendet werden. Bitte erneut versuchen.",
+    "loginRequired": "Melde dich an, um zu melden."
   }
 }

@@ -1,5 +1,7 @@
 "use client";
 
+import ReportButton from "@/components/features/ReportButton";
+
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "@/i18n/navigation";
 import { formatDistanceToNow } from "date-fns";
@@ -300,6 +302,7 @@ export default function ChatView({
             </div>
           </div>
         )}
+        <ReportButton targetType="conversation" targetId={conversationId} variant="icon" className="ml-2 shrink-0 rounded-full p-2 text-neutral-500 hover:bg-neutral-100" />
       </div>
 
       {bookingState && bookingState.isNegotiating && (

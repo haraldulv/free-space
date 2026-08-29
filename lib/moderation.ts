@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { ADMIN_EMAILS, AUTO_APPROVE_LISTINGS, SITE_URL } from "@/lib/config";
 import {
+  sendAdminAlertEmail,
   sendListingApprovedToHost,
   sendListingModerationAdminEmail,
   sendListingRejectedToHost,
@@ -281,7 +282,7 @@ async function insertAdminNotifications(title: string, body: string, listingId: 
 export async function setListingModeration(
   listingId: string,
   status: "approved" | "rejected",
-  adminId: string,
+  adminId: string | null,
   reason?: string,
 ) {
   const supabase = serviceClient();
@@ -396,6 +397,177 @@ export async function moderateImageWithClaude(
   } catch (err) {
     console.error("[Moderation] single image error:", err);
     // Opplastingssjekken er kun rask tilbakemelding; annonsesjekken er porten.
+    return { approved: true };
+  }
+}
+
+// ---------------------------------------------------------------------
+// Tekst (meldinger / anmeldelser) — asynkront, fail open
+// ---------------------------------------------------------------------
+
+const TextVerdict = z.object({
+  flag: z.boolean(),
+  severity: z.enum(["low", "medium", "high"]),
+  category: z.enum([
+    "ok",
+    "harassment",
+    "hate",
+    "sexual",
+    "threat",
+    "scam_or_phishing",
+    "off_platform_payment",
+    "spam",
+    "personal_data",
+    "other",
+  ]),
+  reason: z.string(),
+});
+
+const TEXT_SYSTEM_PROMPT = `Du er innholdsmoderator for Tuno, en norsk markedsplass for utleie av parkerings- og bobilplasser. Du vurderer én melding mellom gjest og utleier, eller én anmeldelse.
+
+Flagg ("flag": true) ved:
+- Trakassering, hets, trusler, hatefulle ytringer, seksuelt innhold.
+- Svindelforsøk: be om betaling utenom Tuno (Vipps direkte, kontanter, bankoverføring), phishing-lenker, "send meg passordet", falske bookingbekreftelser.
+- Spam / reklame for andre tjenester.
+- Deling av andres personopplysninger (fødselsnummer, kortnummer).
+
+Normal, direkte eller sur tone er IKKE flagg. Å oppgi eget telefonnummer for å avtale nøkkeloverlevering er IKKE flagg. Vær presis og kort på norsk i reason. severity: high = trusler/svindel/hat, medium = tydelig upassende, low = grensetilfelle.`;
+
+export async function moderateText(input: {
+  type: "message" | "review";
+  id: string;
+}): Promise<{ flagged: boolean; severity?: string } | null> {
+  const client = getClient();
+  const supabase = serviceClient();
+
+  let text: string | null = null;
+  let authorId: string | null = null;
+  let context = "";
+  if (input.type === "message") {
+    const { data } = await supabase
+      .from("messages")
+      .select("id, content, sender_id, conversation_id")
+      .eq("id", input.id)
+      .maybeSingle();
+    if (!data) return null;
+    text = data.content;
+    authorId = data.sender_id;
+    context = `Melding i samtale ${data.conversation_id}`;
+  } else {
+    const { data } = await supabase
+      .from("reviews")
+      .select("id, comment, user_id, rating, listing_id")
+      .eq("id", input.id)
+      .maybeSingle();
+    if (!data) return null;
+    text = data.comment;
+    authorId = data.user_id;
+    context = `Anmeldelse (${data.rating}/5) av annonse ${data.listing_id}`;
+  }
+  if (!text || !client) return null;
+
+  let verdict: z.infer<typeof TextVerdict> | null = null;
+  try {
+    const response = await client.messages.parse({
+      model: MODEL,
+      max_tokens: 600,
+      output_config: { format: zodOutputFormat(TextVerdict) },
+      system: TEXT_SYSTEM_PROMPT,
+      messages: [{ role: "user", content: `${context}\n\nTekst:\n"""${text.slice(0, 4000)}"""` }],
+    });
+    if (response.stop_reason === "refusal") {
+      verdict = { flag: true, severity: "medium", category: "other", reason: "Modellen avviste å vurdere innholdet." };
+    } else {
+      verdict = response.parsed_output ?? null;
+    }
+  } catch (err) {
+    console.error("[Moderation] text error:", err);
+    return null;
+  }
+  if (!verdict) return null;
+  if (!verdict.flag) return { flagged: false };
+
+  await supabase.from("content_flags").upsert(
+    {
+      content_type: input.type,
+      content_id: input.id,
+      author_id: authorId,
+      severity: verdict.severity,
+      category: verdict.category,
+      reason: verdict.reason,
+      excerpt: text.slice(0, 280),
+      ai: { ...verdict, model: MODEL, at: new Date().toISOString() },
+    },
+    { onConflict: "content_type,content_id" },
+  );
+
+  let authorName = "Ukjent";
+  if (authorId) {
+    const { data: p } = await supabase.from("profiles").select("full_name").eq("id", authorId).maybeSingle();
+    authorName = p?.full_name ?? authorName;
+  }
+  const title = `${verdict.severity === "high" ? "🚨" : "⚠️"} ${input.type === "message" ? "Melding" : "Anmeldelse"} flagget: ${verdict.category}`;
+  const body = `${authorName}: «${text.slice(0, 120)}» · ${verdict.reason}`;
+  await Promise.all([
+    insertAdminNotificationsOfType("admin_content_flag", title, body, { contentType: input.type, contentId: input.id }),
+    verdict.severity !== "low"
+      ? sendPushToAllAdmins(title, body, { type: "admin_content_flag", contentId: input.id })
+      : Promise.resolve(),
+    sendAdminAlertEmail(title, `<p style="font-size:14px;color:#404040;"><b>${escapeForHtml(authorName)}</b> (${context})</p><blockquote style="margin:12px 0;padding:12px 16px;background:#fafafa;border-left:3px solid #dc2626;color:#404040;font-size:14px;white-space:pre-wrap;">${escapeForHtml(text.slice(0, 1500))}</blockquote><p style="font-size:14px;color:#404040;"><b>${escapeForHtml(verdict.category)}</b> (${verdict.severity}): ${escapeForHtml(verdict.reason)}</p>`, `${SITE_URL}/admin/moderering?tab=content`),
+  ]);
+  return { flagged: true, severity: verdict.severity };
+}
+
+async function insertAdminNotificationsOfType(type: string, title: string, body: string, metadata: Record<string, unknown>) {
+  const supabase = serviceClient();
+  const { data: admins } = await supabase.from("profiles").select("id").eq("is_admin", true);
+  if (!admins?.length) return;
+  await supabase.from("notifications").insert(admins.map((a) => ({ user_id: a.id, type, title, body, metadata })));
+}
+
+function escapeForHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+}
+
+// ---------------------------------------------------------------------
+// Profilbilde — sjekkes server-side etter opplasting; blokkerte bilder
+// fjernes fra profilen og flagges.
+// ---------------------------------------------------------------------
+
+export async function moderateAvatar(userId: string, avatarUrl: string): Promise<{ approved: boolean; reason?: string }> {
+  const client = getClient();
+  if (!client) return { approved: true };
+  const supabase = serviceClient();
+
+  const AvatarVerdict = z.object({
+    category: z.enum(["ok", "explicit_or_violent", "hateful_symbol", "identity_document", "unclear"]),
+    note: z.string(),
+  });
+  try {
+    const response = await client.messages.parse({
+      model: MODEL,
+      max_tokens: 400,
+      output_config: { format: zodOutputFormat(AvatarVerdict) },
+      system: "Du vurderer profilbilder på en norsk markedsplass. Flagg kun seksuelt/voldelig innhold, hatsymboler, eller bilder av ID-dokumenter/kort. Vanlige portretter, logoer, dyr, landskap og kjøretøy er ok.",
+      messages: [{ role: "user", content: [{ type: "image", source: { type: "url", url: avatarUrl } }, { type: "text", text: "Klassifiser dette profilbildet." }] }],
+    });
+    const out = response.stop_reason === "refusal"
+      ? { category: "explicit_or_violent" as const, note: "refusal" }
+      : response.parsed_output;
+    if (!out || out.category === "ok" || out.category === "unclear") return { approved: true };
+
+    await Promise.all([
+      supabase.from("profiles").update({ avatar_url: "" }).eq("id", userId),
+      supabase.from("content_flags").upsert(
+        { content_type: "avatar", content_id: userId, author_id: userId, severity: "high", category: out.category, reason: out.note, excerpt: avatarUrl, ai: { ...out, model: MODEL, at: new Date().toISOString() } },
+        { onConflict: "content_type,content_id" },
+      ),
+      insertAdminNotificationsOfType("admin_content_flag", "Profilbilde fjernet", `${out.category}: ${out.note}`, { contentType: "avatar", contentId: userId }),
+      sendPushToAllAdmins("Profilbilde fjernet", `${out.category}: ${out.note}`, { type: "admin_content_flag" }),
+    ]);
+    return { approved: false, reason: "Profilbildet ble avvist av innholdsfilteret." };
+  } catch (err) {
+    console.error("[Moderation] avatar error:", err);
     return { approved: true };
   }
 }

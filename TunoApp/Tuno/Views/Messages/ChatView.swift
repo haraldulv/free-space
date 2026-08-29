@@ -14,6 +14,7 @@ struct ChatView: View {
     @State private var messageText = ""
     @State private var showListingDetail = false
     @State private var showOpplysninger = false
+    @State private var showReportSheet = false
     @State private var showQuickReplies = false
     @State private var showOtherProfile = false
     @State private var conversationDetails: ConversationDetails?
@@ -383,8 +384,17 @@ struct ChatView: View {
                         await globalChat.toggleMute(conversation: convo)
                         flashToast(convo.isMuted ? "Varsler slått på" : "Varsler slått av")
                     }
+                },
+                onReport: {
+                    showOpplysninger = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showReportSheet = true
+                    }
                 }
             )
+        }
+        .sheet(isPresented: $showReportSheet) {
+            ReportSheet(targetType: .conversation, targetId: conversationId)
         }
         .sheet(isPresented: $showQuickReplies) {
             QuickRepliesSheet(
@@ -1078,6 +1088,7 @@ struct OpplysningerSheet: View {
     let onToggleStar: () -> Void
     let onToggleArchive: () -> Void
     let onToggleMute: () -> Void
+    let onReport: () -> Void
 
     @Environment(\.dismiss) private var dismiss
 
@@ -1197,6 +1208,8 @@ struct OpplysningerSheet: View {
                             icon: (preview?.isMuted ?? false) ? "bell" : "bell.slash",
                             label: (preview?.isMuted ?? false) ? "Slå på varsler igjen" : "Slå av varsler for denne samtalen"
                         ) { onToggleMute() }
+                        Divider()
+                        actionRow(icon: "flag", label: "Rapporter bruker") { onReport() }
                     }
                 }
                 .padding(20)

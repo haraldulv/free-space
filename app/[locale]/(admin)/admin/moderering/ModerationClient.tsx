@@ -17,6 +17,8 @@ import {
   X,
 } from "lucide-react";
 import type { ModerationStatus } from "@/types";
+import ReportsPanel from "./ReportsPanel";
+import SignupSwitch from "./SignupSwitch";
 import {
   approveListingAction,
   deleteListingHardAction,
@@ -60,7 +62,10 @@ function fmt(iso: string | null) {
   return new Date(iso).toLocaleString("nb-NO", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
 }
 
-export default function ModerationClient({ focusListingId, currentAdminId }: { focusListingId: string | null; currentAdminId: string }) {
+type View = "listings" | "reports" | "content";
+
+export default function ModerationClient({ focusListingId, currentAdminId, initialView, focusReportId }: { focusListingId: string | null; currentAdminId: string; initialView: View; focusReportId: string | null }) {
+  const [view, setView] = useState<View>(initialView);
   const [listings, setListings] = useState<ModerationListing[]>([]);
   const [filter, setFilter] = useState<Filter>("flagged");
   const [loading, setLoading] = useState(true);
@@ -149,6 +154,23 @@ export default function ModerationClient({ focusListingId, currentAdminId }: { f
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>
       )}
 
+      <SignupSwitch />
+
+      <div className="mt-6 flex gap-2">
+        {([["listings", "Annonser"], ["reports", "Rapporter"], ["content", "Flagget innhold"]] as [View, string][]).map(([k, label]) => (
+          <button
+            key={k}
+            onClick={() => setView(k)}
+            className={`rounded-full px-4 py-1.5 text-sm font-medium ${view === k ? "bg-neutral-900 text-white" : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"}`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {view !== "listings" && <ReportsPanel mode={view} focusReportId={focusReportId} />}
+
+      {view === "listings" && (<>
       <div className="mt-6 flex gap-1 border-b border-neutral-200">
         {tabs.map((t) => {
           const Icon = t.icon;
@@ -329,6 +351,8 @@ export default function ModerationClient({ focusListingId, currentAdminId }: { f
           })}
         </div>
       )}
+
+      </>)}
 
       {rejecting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={() => setRejecting(null)}>

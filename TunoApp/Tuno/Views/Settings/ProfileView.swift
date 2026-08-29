@@ -735,6 +735,12 @@ struct EditProfileView: View {
                 .update(["avatar_url": publicURL.absoluteString])
                 .eq("id", value: userId)
                 .execute()
+            // Innholdssjekk server-side (nakenhet/hat/ID-dokument). Ved treff
+            // nulles avatar_url av serveren og vi viser feil.
+            let check = await ModerationService.moderateAvatar(url: publicURL.absoluteString)
+            if !check.approved {
+                avatarError = check.reason ?? "Profilbildet ble avvist av innholdsfilteret."
+            }
             await authManager.loadProfile()
         } catch {
             avatarError = "Kunne ikke laste opp: \(error.localizedDescription)"

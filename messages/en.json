@@ -504,7 +504,8 @@
     "requiredField": "This field is required",
     "mustAcceptTerms": "You must accept the terms to continue",
     "captchaRequired": "Please confirm you are not a robot.",
-    "captchaFailed": "The robot check failed. Please try again."
+    "captchaFailed": "The robot check failed. Please try again.",
+    "signupsClosed": "Sign-up is temporarily closed. Please try again in a little while."
   },
   "host": {
     "stepCategory": "Category",
@@ -941,5 +942,24 @@
       "always": "Open 24/7",
       "limited": "Limited hours"
     }
+  },
+  "report": {
+    "title": "Report",
+    "reportUser": "Report user",
+    "reportListing": "Report listing",
+    "subtitle": "What is wrong? The report goes to the Tuno team, not to the person you report.",
+    "reason_scam": "Scam or payment outside Tuno",
+    "reason_inappropriate": "Inappropriate content",
+    "reason_harassment": "Harassment or threats",
+    "reason_fake": "Fake listing or profile",
+    "reason_spam": "Spam",
+    "reason_other": "Other",
+    "detailsPlaceholder": "Add a short description (optional)",
+    "send": "Send report",
+    "sending": "Sending...",
+    "thanks": "Thanks. We will look into it as soon as we can.",
+    "close": "Close",
+    "failed": "Could not send the report. Please try again.",
+    "loginRequired": "Log in to report."
   }
 }

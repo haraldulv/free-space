@@ -14,6 +14,7 @@ import HostCard from "@/components/features/HostCard";
 import BookingForm from "@/components/features/BookingForm";
 import ListingFavoriteButton from "@/components/features/ListingFavoriteButton";
 import ShareButton from "@/components/features/ShareButton";
+import ReportButton from "@/components/features/ReportButton";
 import ListingMap from "@/components/features/ListingMap";
 import ListingDistanceBadge from "@/components/features/ListingDistanceBadge";
 import ReviewList from "@/components/features/ReviewList";
@@ -148,6 +149,7 @@ export default async function ListingPage({
             <div className="flex items-center gap-2">
               <ShareButton title={listing.title} listingId={listing.id} />
               <ListingFavoriteButton listingId={listing.id} />
+              <ReportButton targetType="listing" targetId={listing.id} variant="icon" />
             </div>
           </div>
 

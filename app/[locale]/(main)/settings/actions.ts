@@ -1,5 +1,7 @@
 "use server";
 
+import { moderateAvatar } from "@/lib/moderation";
+
 import { createClient } from "@/lib/supabase/server";
 
 async function getAuthUser() {
@@ -98,6 +100,14 @@ export async function updateAvatarAction(avatarUrl: string): Promise<{ error?: s
     await supabase.auth.updateUser({
       data: { avatar_url: avatarUrl },
     });
+
+    // Innholdssjekk (nakenhet/hat/ID-dokument). Ved treff nulles avatar_url
+    // server-side og admin varsles; brukeren får feilmelding.
+    const check = await moderateAvatar(user.id, avatarUrl);
+    if (!check.approved) {
+      await supabase.auth.updateUser({ data: { avatar_url: "" } });
+      return { error: check.reason ?? "Profilbildet ble avvist." };
+    }
 
     return {};
   } catch (err) {

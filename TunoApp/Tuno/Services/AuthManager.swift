@@ -125,6 +125,14 @@ final class AuthManager: ObservableObject {
     /// Returns true if signup succeeded (user should check email)
     func signUp(fullName: String, email: String, password: String, captchaToken: String? = nil) async -> Bool {
         self.error = nil
+        // Nødbryter (app_settings.signups_enabled). DB-triggeren avviser
+        // uansett; dette gir en forståelig melding.
+        struct Setting: Decodable { let value: Bool? }
+        if let setting: Setting = try? await supabase.from("app_settings").select("value").eq("key", value: "signups_enabled").single().execute().value,
+           setting.value == false {
+            self.error = "Registrering er midlertidig stengt. Prøv igjen om en liten stund."
+            return false
+        }
         do {
             let result = try await supabase.auth.signUp(
                 email: email,

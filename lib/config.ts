@@ -8,13 +8,23 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
 export const SERVICE_FEE_RATE = 0.10;
 
 /** Admin-adresser som får moderasjonsvarsler (ny/flagget annonse). */
-export const ADMIN_EMAILS = ["harald@tuno.no", "kim@tuno.no"];
+export const ADMIN_EMAILS = ["harald@tuno.no"];
 
 /**
  * Om AI-godkjente annonser publiseres automatisk. false = alt må godkjennes
  * manuelt i /admin/moderering (AI-resultatet vises som hjelp).
  */
 export const AUTO_APPROVE_LISTINGS = true;
+
+/** Flaggede annonser uten admin-avgjørelse avvises automatisk etter så mange timer. */
+export const FLAGGED_AUTO_REJECT_HOURS = 48;
+
+/**
+ * Nødbryter: hvis flere enn så mange nye brukere på 10 minutter, stenger
+ * vaktbikkja registrering automatisk (app_settings.signups_enabled=false)
+ * og varsler admin. Slås på igjen i /admin/moderering.
+ */
+export const SIGNUP_BURST_LIMIT_PER_10_MIN = 25;
 
 /** Hours after check-in before host payout is processed */
 export const HOST_PAYOUT_DELAY_HOURS = 24;

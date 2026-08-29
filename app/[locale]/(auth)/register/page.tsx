@@ -32,6 +32,13 @@ export default function RegisterPage() {
       throw new Error(result.error.issues[0].message);
     }
 
+    // Nødbryter (app_settings.signups_enabled). DB-triggeren avviser uansett,
+    // dette gir bare en forståelig melding i stedet for en generisk feil.
+    const { data: setting } = await supabase.from("app_settings").select("value").eq("key", "signups_enabled").maybeSingle();
+    if (setting?.value === false) {
+      throw new Error(t("signupsClosed"));
+    }
+
     const { data: signUpData, error } = await supabase.auth.signUp({
       email: result.data.email,
       password: result.data.password,
@@ -41,7 +48,9 @@ export default function RegisterPage() {
       },
     });
 
-    if (error) throw new Error(error.message);
+    if (error) {
+      throw new Error(/Database error saving new user|midlertidig stengt/i.test(error.message) ? t("signupsClosed") : error.message);
+    }
 
     // Supabase signaliserer "e-post finnes allerede" via tom identities-array OG
     // ingen ny bekreftelses-e-post — for å unngå email-enumeration. Vi må derfor

@@ -21,6 +21,7 @@ struct ListingDetailView: View {
     @State private var isSatellite = false
     @State private var hostStats: HostStats?
     @State private var showShareSheet = false
+    @State private var showReportSheet = false
     @State private var spotFullscreenImages: [String]?
     @State private var spotFullscreenStartIndex: Int = 0
     @State private var bookingSpotId: String?
@@ -223,6 +224,9 @@ struct ListingDetailView: View {
         )) { payload in
             FullscreenGalleryView(images: payload.images, startIndex: payload.startIndex)
         }
+        .sheet(isPresented: $showReportSheet) {
+            ReportSheet(targetType: .listing, targetId: listingId)
+        }
         .sheet(isPresented: $showShareSheet) {
             let url = URL(string: "https://tuno.no/listings/\(listing.id)")!
             let text = "\(listing.title) · \(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "døgn") på Tuno"
@@ -377,6 +381,11 @@ struct ListingDetailView: View {
                             ) {
                                 guard let userId = authManager.currentUser?.id else { return }
                                 Task { await favoritesService.toggle(listingId: listingId, userId: userId.uuidString) }
+                            }
+                        }
+                        if authManager.isAuthenticated {
+                            glassIconButton(systemName: "flag") {
+                                showReportSheet = true
                             }
                         }
                     }
@@ -1115,6 +1124,13 @@ struct ListingDetailView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                }
+
+                if authManager.isAuthenticated {
+                    Button("Rapporter annonse") { showReportSheet = true }
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral500)
+                        .buttonStyle(.plain)
                 }
             }
         }

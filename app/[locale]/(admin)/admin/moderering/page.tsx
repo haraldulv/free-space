@@ -6,12 +6,12 @@ export const dynamic = "force-dynamic";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ listing?: string }>;
+  searchParams: Promise<{ listing?: string; tab?: string; report?: string }>;
 }
 
 export default async function ModerationPage({ params, searchParams }: PageProps) {
   const { locale } = await params;
-  const { listing } = await searchParams;
+  const { listing, tab, report } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect(`/${locale}/login?redirectTo=/${locale}/admin/moderering`);
@@ -23,5 +23,6 @@ export default async function ModerationPage({ params, searchParams }: PageProps
     .single();
   if (!profile?.is_admin) redirect(`/${locale}/`);
 
-  return <ModerationClient focusListingId={listing ?? null} currentAdminId={user.id} />;
+  const initialView = tab === "reports" ? "reports" : tab === "content" ? "content" : "listings";
+  return <ModerationClient focusListingId={listing ?? null} currentAdminId={user.id} initialView={initialView} focusReportId={report ?? null} />;
 }
