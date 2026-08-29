@@ -4,6 +4,7 @@ import { createClient as createServiceClient } from "@supabase/supabase-js";
 import { sendAdminAlertEmail } from "@/lib/email";
 import { sendPushToAllAdmins } from "@/lib/push";
 import { SITE_URL } from "@/lib/config";
+import { getNotifyAdminIds } from "@/lib/admins";
 
 const TARGET_TYPES = ["listing", "user", "conversation", "review"] as const;
 const REASONS = ["scam", "inappropriate", "harassment", "fake", "spam", "other"] as const;
@@ -71,10 +72,10 @@ export async function POST(req: NextRequest) {
   const summary = `${reporter?.full_name ?? "Bruker"} rapporterte ${targetType} «${targetLabel}»${details ? `: ${details.slice(0, 140)}` : ""}`;
   const adminUrl = `${SITE_URL}/admin/moderering?tab=reports&report=${report.id}`;
 
-  const { data: admins } = await service.from("profiles").select("id").eq("is_admin", true);
+  const adminIds = await getNotifyAdminIds();
   await Promise.all([
-    admins?.length
-      ? service.from("notifications").insert(admins.map((a) => ({ user_id: a.id, type: "admin_report", title, body: summary, metadata: { reportId: report.id, targetType, targetId } })))
+    adminIds.length
+      ? service.from("notifications").insert(adminIds.map((id) => ({ user_id: id, type: "admin_report", title, body: summary, metadata: { reportId: report.id, targetType, targetId } })))
       : Promise.resolve(),
     sendPushToAllAdmins(title, summary, { type: "admin_report", reportId: report.id }),
     sendAdminAlertEmail(

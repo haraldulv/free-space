@@ -141,24 +141,13 @@ export async function sendPushToAllAdmins(
   data?: Record<string, string>,
 ) {
   try {
-    const { createClient } = await import("@supabase/supabase-js");
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    );
-    const { data: admins } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("is_admin", true);
-
-    if (!admins || admins.length === 0) {
-      console.log("[Push] No admins to notify");
+    const { getNotifyAdminIds } = await import("@/lib/admins");
+    const ids = await getNotifyAdminIds();
+    if (ids.length === 0) {
+      console.log("[Push] No notify-admins (ADMIN_EMAILS) to notify");
       return;
     }
-
-    await Promise.all(
-      admins.map((a) => sendPushToUser(a.id, title, body, data)),
-    );
+    await Promise.all(ids.map((id) => sendPushToUser(id, title, body, data)));
   } catch (err) {
     console.error("[Push] sendPushToAllAdmins error:", err);
   }

@@ -7,8 +7,13 @@ export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
 /** Platform service fee rate (10% = 0.10). Charged on top of listing price. */
 export const SERVICE_FEE_RATE = 0.10;
 
-/** Admin-adresser som får moderasjonsvarsler (ny/flagget annonse). */
-export const ADMIN_EMAILS = ["harald@tuno.no"];
+/**
+ * Adresser som får ALLE automatiske varsler (moderering, rapporter,
+ * vaktbikkje, audit). Styrer også hvilke admin-brukere som får push/in-app
+ * (se lib/admins.ts). Gmail er med så levering ikke avhenger av
+ * videresending fra Proton (MX for tuno.no er Proton Mail).
+ */
+export const ADMIN_EMAILS = ["harald@tuno.no", "haraldsalvesen@gmail.com"];
 
 /**
  * Om AI-godkjente annonser publiseres automatisk. false = alt må godkjennes

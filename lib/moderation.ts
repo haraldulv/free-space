@@ -10,6 +10,7 @@ import {
   sendListingRejectedToHost,
 } from "@/lib/email";
 import { sendPushToAllAdmins, sendPushToUser } from "@/lib/push";
+import { getNotifyAdminIds } from "@/lib/admins";
 
 /**
  * AI-moderering av annonser og enkeltbilder.
@@ -262,11 +263,11 @@ async function notifyAfterModeration(
 
 async function insertAdminNotifications(title: string, body: string, listingId: string) {
   const supabase = serviceClient();
-  const { data: admins } = await supabase.from("profiles").select("id").eq("is_admin", true);
-  if (!admins?.length) return;
+  const ids = await getNotifyAdminIds();
+  if (!ids.length) return;
   await supabase.from("notifications").insert(
-    admins.map((a) => ({
-      user_id: a.id,
+    ids.map((id) => ({
+      user_id: id,
       type: "admin_moderation",
       title,
       body,
@@ -520,9 +521,9 @@ export async function moderateText(input: {
 
 async function insertAdminNotificationsOfType(type: string, title: string, body: string, metadata: Record<string, unknown>) {
   const supabase = serviceClient();
-  const { data: admins } = await supabase.from("profiles").select("id").eq("is_admin", true);
-  if (!admins?.length) return;
-  await supabase.from("notifications").insert(admins.map((a) => ({ user_id: a.id, type, title, body, metadata })));
+  const ids = await getNotifyAdminIds();
+  if (!ids.length) return;
+  await supabase.from("notifications").insert(ids.map((id) => ({ user_id: id, type, title, body, metadata })));
 }
 
 function escapeForHtml(s: string): string {
