@@ -161,12 +161,17 @@ export async function POST(request: NextRequest) {
     // Check availability
     const { data: listing } = await supabase
       .from("listings")
-      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, category, min_stay_days, max_stay_days")
+      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, category, min_stay_days, max_stay_days, moderation_status, host_stripe_ready, is_active")
       .eq("id", listingId)
       .single();
 
     if (!listing) {
       return NextResponse.json({ error: "Annonse ikke funnet" }, { status: 404 });
+    }
+    // Kun godkjente, synlige annonser fra Stripe-verifiserte hosts kan bookes
+    // (service-role omgår RLS, så vi sjekker eksplisitt).
+    if (listing.moderation_status !== "approved" || !listing.host_stripe_ready || listing.is_active === false) {
+      return NextResponse.json({ error: "Annonsen er ikke tilgjengelig for booking" }, { status: 403 });
     }
 
     if (listing.host_id === user.id) {
