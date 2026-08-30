@@ -61,7 +61,13 @@ Flagg annonsen ("flag") hvis noe av dette gjelder:
 - Tittel eller beskrivelse er tullerier/tastaturmos (f.eks. "GFDSG SGDFSFGS"), spam, reklame for noe annet, eller støtende.
 - Bildene har åpenbart ingenting med parkering, gårdsplass, tomt, camping, bobil eller uteområde å gjøre.
 
-Godkjenn ("approve") når bildene viser en plausibel plass (innkjørsel, gårdsplass, parkering, gressplen, tomt, garasje, campingplass, utsikt fra plassen o.l.) og teksten er forståelig. Amatørbilder, dårlig lys og korte beskrivelser er helt normalt og skal IKKE flagges. Vær streng på dokumenter og personopplysninger, raus på bildekvalitet.
+Godkjenn ("approve") når bildene viser en plausibel plass (innkjørsel, gårdsplass, parkering, gressplen, tomt, garasje, campingplass, bobil på en plass, utsikt fra plassen o.l.) og teksten er forståelig.
+
+Viktige presiseringer:
+- Amatørbilder, dårlig lys og korte beskrivelser er helt normalt og skal IKKE flagges.
+- Pene, profesjonelle eller "for fine" bilder er heller IKKE grunn til flagg. Du kan ikke vite om et bilde er stock-foto, og utleiere kan ha gode kameraer. Flagg kun "screenshot_or_text" når bildet åpenbart er et skjermbilde (UI-elementer, tekstbokser, nettleserrammer) eller en tekst/mal.
+- Ord som "test" i tittelen er ikke grunn til flagg.
+- Vær streng på dokumenter, personopplysninger og seksuelt/voldelig innhold. Vær raus på alt annet. Ved tvil om et bilde: "unclear", ikke flagg.
 
 Svar kort og konkret på norsk i note/reasons.`;
 
@@ -164,13 +170,30 @@ export async function moderateListing(listingId: string): Promise<ListingModerat
   }
 
   if (!result) {
-    // Ingen dom. Annonsen forblir pending (usynlig). Varsle admin så den
-    // ikke blir liggende, men ikke spam ved hver sweep: kun første gang.
+    // Ingen dom (API-feil, bilde kunne ikke hentes, nøkkel mangler).
+    // Første gang: bli liggende pending så sweep-cronen prøver igjen.
+    // Andre gang: flagg til manuell gjennomgang så den ikke henger stille.
+    const { data: current } = await supabase.from("listings").select("moderation_ai").eq("id", listingId).maybeSingle();
+    const prevError = (current?.moderation_ai as { error?: string } | null)?.error;
+    if (!prevError) {
+      await supabase
+        .from("listings")
+        .update({ moderation_ai: { error: "no_result", at: new Date().toISOString() } })
+        .eq("id", listingId);
+      return null;
+    }
+    const reason = "AI-sjekk feilet to ganger (bilde kunne ikke hentes eller API-feil). Trenger manuell gjennomgang.";
     await supabase
       .from("listings")
-      .update({ moderation_ai: { error: "no_result", at: new Date().toISOString() } })
+      .update({
+        moderation_status: "flagged",
+        moderation_reason: reason,
+        moderation_ai: { error: "no_result_twice", at: new Date().toISOString() },
+        moderated_at: new Date().toISOString(),
+      })
       .eq("id", listingId)
-      .is("moderation_ai", null);
+      .eq("moderation_status", "pending");
+    await notifyAfterModeration(listing, "flagged", { verdict: "flag", confidence: "low", reasons: [reason], images: [], text_quality: "unclear" });
     return null;
   }
 
