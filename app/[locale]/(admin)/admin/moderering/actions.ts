@@ -379,3 +379,22 @@ export async function setSignupsEnabledAction(enabled: boolean, reason?: string)
     return { error: err instanceof Error ? err.message : "Noe gikk galt" };
   }
 }
+
+/** Captcha-krav i iOS-appen (app_settings.turnstile_enabled). Skru på KUN når Turnstile også er aktivert i Supabase Dashboard og app-versjonen med TurnstileSheet er ute. */
+export async function loadTurnstileSettingAction(): Promise<{ enabled: boolean }> {
+  const { supabase } = await requireAdmin();
+  const { data } = await supabase.from("app_settings").select("value").eq("key", "turnstile_enabled").maybeSingle();
+  return { enabled: data?.value === true };
+}
+
+export async function setTurnstileEnabledAction(enabled: boolean): Promise<{ error?: string }> {
+  try {
+    const { supabase, user } = await requireAdmin();
+    const { error } = await supabase
+      .from("app_settings")
+      .upsert({ key: "turnstile_enabled", value: enabled, updated_at: new Date().toISOString(), updated_by: user.id }, { onConflict: "key" });
+    return error ? { error: error.message } : {};
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Noe gikk galt" };
+  }
+}

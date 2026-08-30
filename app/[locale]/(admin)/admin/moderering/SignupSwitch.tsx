@@ -2,14 +2,17 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { ShieldAlert, ShieldCheck } from "lucide-react";
-import { loadSignupSettingAction, setSignupsEnabledAction } from "./actions";
+import { loadSignupSettingAction, loadTurnstileSettingAction, setSignupsEnabledAction, setTurnstileEnabledAction } from "./actions";
 
 export default function SignupSwitch() {
   const [state, setState] = useState<{ enabled: boolean; reason: string; lastSweepAt: string | null; sweepAgeMin: number | null } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [turnstile, setTurnstile] = useState<boolean | null>(null);
 
   const reload = useCallback(async () => {
-    setState(await loadSignupSettingAction());
+    const [s, t] = await Promise.all([loadSignupSettingAction(), loadTurnstileSettingAction()]);
+    setState(s);
+    setTurnstile(t.enabled);
   }, []);
 
   useEffect(() => {
@@ -30,7 +33,26 @@ export default function SignupSwitch() {
     setBusy(false);
   };
 
+  const toggleTurnstile = async () => {
+    const next = !turnstile;
+    if (next && !confirm("Slå på captcha-krav i appen? Krever at Turnstile er aktivert i Supabase Dashboard (Attack Protection) og at app-versjonen med captcha-støtte er ute. Ellers feiler e-post-innlogging.")) return;
+    setBusy(true);
+    await setTurnstileEnabledAction(next);
+    await reload();
+    setBusy(false);
+  };
+
   return (
+    <>
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-200 bg-white px-4 py-3 text-sm">
+      <div>
+        <p className="font-medium text-neutral-900">Captcha i appen (Turnstile): {turnstile ? "på" : "av"}</p>
+        <p className="text-xs text-neutral-400">Web styres av NEXT_PUBLIC_TURNSTILE_SITE_KEY. Supabase-siden må være på i Dashboard → Auth → Attack Protection.</p>
+      </div>
+      <button onClick={toggleTurnstile} disabled={busy || turnstile === null} className="rounded-lg border border-neutral-200 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-50 disabled:opacity-50">
+        {turnstile ? "Slå av" : "Slå på"}
+      </button>
+    </div>
     <div className={`mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm ${state.enabled ? "border-neutral-200 bg-white" : "border-red-300 bg-red-50"}`}>
       <div className="flex items-center gap-3">
         {state.enabled ? <ShieldCheck className="h-5 w-5 text-primary-600" /> : <ShieldAlert className="h-5 w-5 text-red-600" />}
@@ -52,5 +74,6 @@ export default function SignupSwitch() {
         {state.enabled ? "Steng registrering" : "Åpne registrering"}
       </button>
     </div>
+    </>
   );
 }

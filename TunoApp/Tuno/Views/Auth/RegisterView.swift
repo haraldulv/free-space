@@ -282,10 +282,12 @@ struct RegisterView: View {
                 return
             }
             focusedField = nil
-            if AppConfig.turnstileEnabled {
-                showCaptcha = true
-            } else {
-                performSignUp(captchaToken: nil)
+            Task {
+                if await authManager.isTurnstileRequired() {
+                    showCaptcha = true
+                } else {
+                    performSignUp(captchaToken: nil)
+                }
             }
         } label: {
             Group {

@@ -18,6 +18,18 @@ final class AuthManager: ObservableObject {
         }
     }
 
+    /// Leser app_settings.turnstile_enabled. Styres fra databasen (admin) så
+    /// captcha kan skrus på uten ny app-build, etter at brukerne har en
+    /// versjon med TurnstileSheet. MÅ være true når Turnstile er på i
+    /// Supabase Dashboard, ellers feiler e-post-innlogging.
+    func isTurnstileRequired() async -> Bool {
+        struct Setting: Decodable { let value: Bool? }
+        if let s: Setting = try? await supabase.from("app_settings").select("value").eq("key", value: "turnstile_enabled").single().execute().value {
+            return s.value == true
+        }
+        return false
+    }
+
     private func checkSession() async {
         do {
             let session = try await supabase.auth.session

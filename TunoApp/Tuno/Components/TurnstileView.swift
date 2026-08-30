@@ -7,7 +7,7 @@ import WebKit
 /// tilbake via `window.webkit.messageHandlers.turnstile.postMessage(token)`.
 ///
 /// Brukes som sheet før e-post-login/registrering/passord-reset når
-/// `AppConfig.turnstileEnabled` er true.
+/// `app_settings.turnstile_enabled` er true (AuthManager.isTurnstileRequired).
 struct TurnstileSheet: View {
     let onToken: (String) -> Void
     @Environment(\.dismiss) private var dismiss

@@ -62,10 +62,12 @@ struct ForgotPasswordView: View {
                     }
 
                     Button {
-                        if AppConfig.turnstileEnabled {
-                            showCaptcha = true
-                        } else {
-                            performReset(captchaToken: nil)
+                        Task {
+                            if await authManager.isTurnstileRequired() {
+                                showCaptcha = true
+                            } else {
+                                performReset(captchaToken: nil)
+                            }
                         }
                     } label: {
                         Group {

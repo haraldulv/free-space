@@ -221,10 +221,12 @@ struct LoginView: View {
 
                     // Login button
                     Button {
-                        if AppConfig.turnstileEnabled {
-                            showCaptcha = true
-                        } else {
-                            performLogin(captchaToken: nil)
+                        Task {
+                            if await authManager.isTurnstileRequired() {
+                                showCaptcha = true
+                            } else {
+                                performLogin(captchaToken: nil)
+                            }
                         }
                     } label: {
                         Group {
