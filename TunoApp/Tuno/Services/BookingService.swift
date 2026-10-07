@@ -22,6 +22,9 @@ struct CreateBookingResponse: Decodable {
     let clientSecret: String?
     let publishableKey: String?
     let error: String?
+    /// true når serveren bruker manual capture (lange opphold / ikke-instant):
+    /// betalingen reserveres og verten må godkjenne før den trekkes.
+    let requiresApproval: Bool?
 }
 
 struct BookingErrorBody: Decodable {
@@ -34,6 +37,9 @@ final class BookingService: ObservableObject {
     @Published var error: String?
     @Published var bookingId: String?
     @Published var clientSecret: String?
+    /// Speiler serverens requiresApproval: betalingen reserveres (requires_capture)
+    /// i stedet for å trekkes, og bekreftelsesskjermen skal si «reservert».
+    @Published var requiresApproval = false
 
     static let serviceFeeRate = 0.10
 
@@ -89,6 +95,7 @@ final class BookingService: ObservableObject {
             STPAPIClient.shared.publishableKey = publishableKey
             self.bookingId = result.bookingId
             self.clientSecret = secret
+            self.requiresApproval = result.requiresApproval ?? false
             isProcessing = false
             return true
         } catch {
@@ -272,8 +279,10 @@ final class BookingService: ObservableObject {
 
                     print("💳 Payment status: \(paymentIntent.status)")
 
-                    if paymentIntent.status == .succeeded {
-                        print("✅ Payment succeeded!")
+                    // requiresCapture = manual capture (vert må godkjenne): betalingen
+                    // er reservert, ikke feilet.
+                    if paymentIntent.status == .succeeded || paymentIntent.status == .requiresCapture {
+                        print("✅ Payment succeeded (status: \(paymentIntent.status))")
                         continuation.resume(returning: true)
                     } else {
                         self.error = "Betaling feilet"

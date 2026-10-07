@@ -28,13 +28,14 @@ struct WhereSheet: View {
     /// Hvilket date-felt som åpnes i wheel-picker — nil = lukket.
     @State private var wheelPickerField: DateWheelField? = nil
 
+    // Asker-lanseringen: forslagene er stasjonsnære områder der vi starter.
     private static let suggestedDestinations: [SuggestedDestination] = [
-        .init(name: "Oslo", subtitle: "Hovedstaden", icon: "building.2.fill",
-              tint: Color(red: 0.91, green: 0.31, blue: 0.31), bg: Color(red: 1.0, green: 0.92, blue: 0.92)),
-        .init(name: "Bergen", subtitle: "Vestlandet — fjord og fjell", icon: "mountain.2.fill",
-              tint: Color(red: 0.23, green: 0.51, blue: 0.96), bg: Color(red: 0.91, green: 0.94, blue: 1.0)),
-        .init(name: "Lofoten", subtitle: "Strand og fiske", icon: "fish.fill",
-              tint: Color(red: 1.0, green: 0.66, blue: 0.18), bg: Color(red: 1.0, green: 0.96, blue: 0.86)),
+        .init(name: "Asker", subtitle: "Sentrum og stasjonen", icon: "tram.fill",
+              tint: Color(red: 0.22, green: 0.55, blue: 0.4), bg: Color(red: 0.9, green: 0.96, blue: 0.93)),
+        .init(name: "Heggedal", subtitle: "Stasjon på Spikkestadbanen", icon: "house.fill",
+              tint: Color(red: 0.55, green: 0.45, blue: 0.25), bg: Color(red: 0.98, green: 0.95, blue: 0.88)),
+        .init(name: "Billingstad", subtitle: "Billingstad og Slependen", icon: "car.fill",
+              tint: Color(red: 0.3, green: 0.4, blue: 0.5), bg: Color(red: 0.92, green: 0.95, blue: 0.97)),
     ]
 
     var body: some View {
@@ -126,8 +127,16 @@ struct WhereSheet: View {
     /// kort sort strek under teksten.
     private var categoryFloatingTabs: some View {
         HStack(alignment: .top, spacing: 28) {
-            categoryFloatingTab(.camping, label: "Camping")
-            categoryFloatingTab(.parking, label: "Parkering")
+            if AppConfig.parkingOnly {
+                // Asker-pivoten: kun parkering — ingen fanevalg, bare tittel.
+                Text("Parkering")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .padding(.top, 10)
+            } else {
+                categoryFloatingTab(.camping, label: "Camping")
+                categoryFloatingTab(.parking, label: "Parkering")
+            }
         }
     }
 
@@ -533,11 +542,11 @@ struct WhereSheet: View {
     private var inlineDatePicker: some View {
         VStack(spacing: 12) {
             HStack(spacing: 8) {
-                dateTab(label: "Innsjekk", date: checkIn, isActive: editingCheckIn) {
+                dateTab(label: AppConfig.parkingOnly ? "Fra dato" : "Innsjekk", date: checkIn, isActive: editingCheckIn) {
                     editingCheckIn = true
                     wheelPickerField = .checkIn
                 }
-                dateTab(label: "Utsjekk", date: checkOut, isActive: !editingCheckIn) {
+                dateTab(label: AppConfig.parkingOnly ? "Til dato" : "Utsjekk", date: checkOut, isActive: !editingCheckIn) {
                     editingCheckIn = false
                     wheelPickerField = .checkOut
                 }
@@ -688,7 +697,8 @@ struct WhereSheet: View {
     private var vehicleSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
-                ForEach(VehicleType.allCases, id: \.self) { type in
+                // parkingOnly: bobil/campingbil hører til camping og skjules.
+                ForEach(AppConfig.parkingOnly ? [VehicleType.car, .van, .motorcycle] : VehicleType.allCases, id: \.self) { type in
                     vehicleChip(type)
                 }
             }
@@ -892,8 +902,8 @@ struct DateWheelSheet: View {
 
     private var fieldLabel: String {
         switch field {
-        case .checkIn: return "Innsjekk"
-        case .checkOut: return "Utsjekk"
+        case .checkIn: return AppConfig.parkingOnly ? "Fra dato" : "Innsjekk"
+        case .checkOut: return AppConfig.parkingOnly ? "Til dato" : "Utsjekk"
         }
     }
 

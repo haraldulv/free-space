@@ -49,7 +49,7 @@ struct SearchView: View {
         initialLat: Double? = nil,
         initialLng: Double? = nil,
         initialBookingPref: BookingPreference = .all,
-        initialVehicles: Set<VehicleType> = [.motorhome],
+        initialVehicles: Set<VehicleType> = AppConfig.parkingOnly ? [.car] : [.motorhome],
         initialCategory: ListingCategory? = nil,
         initialPlace: PlacePrediction? = nil,
         useMyLocationOnAppear: Bool = false,
@@ -77,7 +77,11 @@ struct SearchView: View {
         var f = SearchFilters()
         f.bookingPreference = initialBookingPref
         f.vehicleTypes = initialVehicles
-        if let cat = initialCategory { f.category = cat }
+        if let cat = initialCategory {
+            f.category = cat
+        } else if AppConfig.parkingOnly {
+            f.category = .parking
+        }
         _filters = State(initialValue: f)
         _vehicles = State(initialValue: initialVehicles)
         _bookingPref = State(initialValue: initialBookingPref)
@@ -613,9 +617,12 @@ struct SearchView: View {
         let df = DateFormatter()
         df.dateFormat = "yyyy-MM-dd"
         let amenitiesArg = filters.amenities.isEmpty ? nil : filters.amenities
-        // Server-søket tar én kjøretøytype i dag — bruk første valgte. Multi-select
-        // håndteres så klient-side i `filteredListings`.
-        let vehicleArg = filters.vehicleTypes.first ?? .motorhome
+        // Server-søket tar én kjøretøytype. `Set.first` er tilfeldig rekkefølge,
+        // så velg det MINSTE valgte kjøretøyet (gir bredest server-resultat,
+        // siden små kjøretøy passer på flest plasser); multi-select snevres
+        // deretter inn klient-side i `filteredListings`. Fallback: bil.
+        let vehiclePermissiveness: [VehicleType] = [.motorcycle, .car, .van, .campervan, .motorhome]
+        let vehicleArg = vehiclePermissiveness.first(where: { filters.vehicleTypes.contains($0) }) ?? .car
         await listingService.search(
             query: query.isEmpty ? nil : query,
             vehicleType: vehicleArg,

@@ -201,7 +201,7 @@ final class ProfileStatsStore: ObservableObject {
             let serviceFee = 0.10
 
             let thisMonthRows = rows.filter { ($0.createdAt ?? "") >= fromThisMonth }
-            monthlyNet = thisMonthRows.reduce(0) { $0 + Int(Double($1.totalPrice) * (1 - serviceFee)) }
+            monthlyNet = thisMonthRows.reduce(0) { $0 + PricingService.splitHostAndFee(totalPriceNok: $1.totalPrice).hostShare }
             monthlyBookings = thisMonthRows.count
 
             let keyFormatter = DateFormatter()
@@ -225,7 +225,7 @@ final class ProfileStatsStore: ObservableObject {
                           return parser.date(from: isoDate)
                       }() else { continue }
                 let key = keyFormatter.string(from: date)
-                bucket[key, default: 0] += Int(Double(row.totalPrice) * (1 - serviceFee))
+                bucket[key, default: 0] += PricingService.splitHostAndFee(totalPriceNok: row.totalPrice).hostShare
             }
 
             var months: [HostInntektCard.MonthlyEarning] = []

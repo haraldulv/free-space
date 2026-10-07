@@ -6,7 +6,7 @@ struct HomeView: View {
     @StateObject private var listingService = ListingService()
     @State private var searchText = ""
     @State private var showSearch = false
-    @State private var selectedCategory: ListingCategory = .camping
+    @State private var selectedCategory: ListingCategory = AppConfig.parkingOnly ? .parking : .camping
 
     // State som videreføres fra Hvor-modal til SearchView
     @State private var pendingQuery: String = ""
@@ -15,7 +15,7 @@ struct HomeView: View {
     @State private var pendingLat: Double?
     @State private var pendingLng: Double?
     @State private var pendingBookingPref: BookingPreference = .all
-    @State private var pendingVehicles: Set<VehicleType> = [.motorhome, .campervan]
+    @State private var pendingVehicles: Set<VehicleType> = AppConfig.parkingOnly ? [.car] : [.motorhome, .campervan]
     @State private var pendingPlace: PlacePrediction?
     @State private var pendingUseMyLocation: Bool = false
     /// Når satt til true åpner SearchView direkte til kart (uten WhereSheet).
@@ -58,7 +58,9 @@ struct HomeView: View {
                         .shadow(color: .black.opacity(0.08), radius: 10, y: 3)
                     }
 
-                    // Kategori-picker: Camping (telt-ikon) / Parkering (bil-ikon)
+                    // Kategori-picker: Camping (telt-ikon) / Parkering (bil-ikon).
+                    // Skjult i parkingOnly-modus (Asker-pivoten): Tuno er kun parkering nå.
+                    if !AppConfig.parkingOnly {
                     HStack(spacing: 0) {
                         ForEach([ListingCategory.camping, .parking], id: \.self) { category in
                             Button {
@@ -104,6 +106,7 @@ struct HomeView: View {
                             .fill(Color.neutral200.opacity(0.7))
                             .frame(height: 0.5)
                             .offset(y: 1)
+                    }
                     }
                 }
                 .padding(.horizontal, 20)

@@ -18,7 +18,7 @@ struct EarningsView: View {
     }
 
     private var hostShare: Int {
-        Int(Double(totalRevenue) * (1 - SERVICE_FEE))
+        PricingService.splitHostAndFee(totalPriceNok: totalRevenue).hostShare
     }
 
     private var platformFee: Int {
@@ -36,7 +36,7 @@ struct EarningsView: View {
     private var thisMonthEarnings: Int {
         confirmedBookings
             .filter { $0.createdAt?.hasPrefix(thisMonthKey) == true }
-            .reduce(0) { $0 + Int(Double($1.totalPrice) * (1 - SERVICE_FEE)) }
+            .reduce(0) { $0 + PricingService.splitHostAndFee(totalPriceNok: $1.totalPrice).hostShare }
     }
 
     private var activeListings: Int {
@@ -348,7 +348,7 @@ struct EarningsView: View {
             let key = String(format: "%04d-%02d", y, m)
             let label = formatter.string(from: d)
             let matched = confirmedBookings.filter { $0.createdAt?.hasPrefix(key) == true }
-            let earnings = matched.reduce(0) { $0 + Int(Double($1.totalPrice) * (1 - SERVICE_FEE)) }
+            let earnings = matched.reduce(0) { $0 + PricingService.splitHostAndFee(totalPriceNok: $1.totalPrice).hostShare }
             return (label, key, earnings, matched.count)
         }
     }
@@ -421,7 +421,7 @@ struct EarningsView: View {
             map[b.listingId] = (
                 title: existing.title,
                 image: existing.image,
-                earnings: existing.earnings + Int(Double(b.totalPrice) * (1 - SERVICE_FEE)),
+                earnings: existing.earnings + PricingService.splitHostAndFee(totalPriceNok: b.totalPrice).hostShare,
                 count: existing.count + 1
             )
         }
@@ -528,7 +528,7 @@ struct EarningsView: View {
                         Spacer()
 
                         VStack(alignment: .trailing, spacing: 2) {
-                            Text("\(formatKr(Int(Double(b.totalPrice) * (1 - SERVICE_FEE)))) kr")
+                            Text("\(formatKr(PricingService.splitHostAndFee(totalPriceNok: b.totalPrice).hostShare)) kr")
                                 .font(.system(size: 14, weight: .semibold))
                             Text(b.status == .confirmed ? "Bekreftet" : "Kansellert")
                                 .font(.system(size: 11, weight: .medium))

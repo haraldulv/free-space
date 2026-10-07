@@ -73,7 +73,8 @@ class ApplePayHandler: NSObject, PKPaymentAuthorizationControllerDelegate {
             params.paymentMethodId = paymentMethod.stripeId
 
             STPAPIClient.shared.confirmPaymentIntent(with: params) { paymentIntent, confirmError in
-                if paymentIntent?.status == .succeeded {
+                // requiresCapture = reservert betaling (vert må godkjenne) — suksess.
+                if paymentIntent?.status == .succeeded || paymentIntent?.status == .requiresCapture {
                     print("✅ Apple Pay succeeded!")
                     handler(PKPaymentAuthorizationResult(status: .success, errors: nil))
                     self.completion(true)
@@ -433,7 +434,8 @@ struct BookingView: View {
     }
 
     private var serviceFee: Int {
-        Int(ceil(Double(subtotal) * BookingService.serviceFeeRate))
+        // Math.round på serveren (lib/booking-pricing.ts) — ceil her ga 1 kr avvik.
+        Int((Double(subtotal) * BookingService.serviceFeeRate).rounded())
     }
 
     private var total: Int {
@@ -657,7 +659,8 @@ struct BookingView: View {
                 listing: listing,
                 checkIn: checkIn ?? Date(),
                 checkOut: checkOut ?? Date(),
-                total: total
+                total: total,
+                mode: bookingService.requiresApproval ? .reserved : .confirmed
             )
         }
         .navigationDestination(isPresented: $showRequestSent) {
@@ -1715,6 +1718,7 @@ struct BookingView: View {
         }()
         let unitLabel: String = {
             if isHourly { return "\(hours) \(hours == 1 ? "time" : "timer")" }
+            if listing.category == .parking { return "\(nights) \(nights == 1 ? "dag" : "dager")" }
             return "\(nights) døgn"
         }()
         let spotCount = max(selectedSpotIds.count, 1)

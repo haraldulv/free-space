@@ -224,11 +224,17 @@ struct SearchMapView: UIViewRepresentable {
         let key = Self.searchKey(lat: centerLat, lng: centerLng, zoom: centerZoom)
         let saved = Self.readSavedCamera(searchKey: key)
 
-        let lat = saved?.lat ?? centerLat ?? 64.5
-        let lng = saved?.lng ?? centerLng ?? 14.0
+        // Fallback uten søkested: Asker i parkingOnly (lanseringsområdet),
+        // ellers hele Norge som før.
+        let fallbackLat = AppConfig.parkingOnly ? AskerDefaults.centerLat : 64.5
+        let fallbackLng = AppConfig.parkingOnly ? AskerDefaults.centerLng : 14.0
+        let lat = saved?.lat ?? centerLat ?? fallbackLat
+        let lng = saved?.lng ?? centerLng ?? fallbackLng
         let span = saved?.span
             ?? centerSpan
-            ?? Self.spanForZoom(centerZoom ?? (centerLat != nil ? 11 : 4))
+            ?? (centerLat == nil && AppConfig.parkingOnly
+                ? AskerDefaults.regionSpanDegrees
+                : Self.spanForZoom(centerZoom ?? (centerLat != nil ? 11 : 4)))
         mapView.setRegion(
             MKCoordinateRegion(
                 center: CLLocationCoordinate2D(latitude: lat, longitude: lng),

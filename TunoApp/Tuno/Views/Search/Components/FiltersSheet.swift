@@ -86,7 +86,8 @@ struct FiltersSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 28) {
-                    typeSection
+                    // parkingOnly (Asker-pivoten): Camping/Parkering-velgeren skjules.
+                    if !AppConfig.parkingOnly { typeSection }
                     vehicleSection
                     bookingPrefSection
                     priceSection
@@ -155,7 +156,7 @@ struct FiltersSheet: View {
                 .font(.system(size: 18, weight: .bold))
                 .foregroundStyle(.neutral900)
             FlowLayout(spacing: 8) {
-                ForEach(VehicleType.allCases, id: \.self) { type in
+                ForEach(AppConfig.parkingOnly ? [VehicleType.car, .van, .motorcycle] : VehicleType.allCases, id: \.self) { type in
                     chip(
                         label: type.displayName,
                         icon: type.icon,

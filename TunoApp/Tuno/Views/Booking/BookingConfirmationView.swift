@@ -2,6 +2,8 @@ import SwiftUI
 
 enum BookingConfirmationMode {
     case confirmed
+    /// Betalingen er reservert (manual capture): verten må godkjenne før trekk.
+    case reserved
     case requested(conversationId: String?)
 }
 
@@ -130,6 +132,7 @@ struct BookingConfirmationView: View {
     private var titleText: String {
         switch mode {
         case .confirmed: return "Bestilling bekreftet!"
+        case .reserved: return "Betalingen er reservert"
         case .requested: return "Forespørsel sendt!"
         }
     }
@@ -137,6 +140,7 @@ struct BookingConfirmationView: View {
     private var subtitleText: String {
         switch mode {
         case .confirmed: return "Du vil motta en bekreftelse snart."
+        case .reserved: return "Utleier svarer innen 24 timer. Beløpet trekkes først når bestillingen bekreftes."
         case .requested: return "Utleier får 24 timer på å svare. Du blir varslet når det skjer."
         }
     }
@@ -144,20 +148,21 @@ struct BookingConfirmationView: View {
     private var totalLabel: String {
         switch mode {
         case .confirmed: return "Totalt betalt"
+        case .reserved: return "Reservert beløp"
         case .requested: return "Foreslått pris"
         }
     }
 
     private var ctaText: String {
         switch mode {
-        case .confirmed: return "Se mine bestillinger"
+        case .confirmed, .reserved: return "Se mine bestillinger"
         case .requested: return "Se i meldinger"
         }
     }
 
     private func handleCTA() {
         switch mode {
-        case .confirmed:
+        case .confirmed, .reserved:
             NotificationCenter.default.post(name: .switchToBookingsTab, object: nil)
         case .requested(let conversationId):
             if let id = conversationId {

@@ -1094,7 +1094,7 @@ struct MyListingsView: View {
                 .value
             var totals: [String: Int] = [:]
             for booking in bookings {
-                let hostShare = Int(Double(booking.totalPrice) * (1 - Self.serviceFee))
+                let hostShare = PricingService.splitHostAndFee(totalPriceNok: booking.totalPrice).hostShare
                 totals[booking.listingId, default: 0] += hostShare
             }
             monthlyEarnings = totals
