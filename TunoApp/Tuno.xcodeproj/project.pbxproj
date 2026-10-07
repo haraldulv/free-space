@@ -43,6 +43,7 @@
 		37A2317282EF5728BC73D64F /* ReviewCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = F8B062DEA5D924A40BC340AB /* ReviewCard.swift */; };
 		381AAE084900CF7A03BFC4E6 /* ProfileReviewsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF1DE4FBF1F0165BACF58103 /* ProfileReviewsView.swift */; };
 		3AB87FE9CF0DAE2029093E5C /* BandOverlap.swift in Sources */ = {isa = PBXBuildFile; fileRef = DF1A051046E94B7F1B495563 /* BandOverlap.swift */; };
+		3DC72601B41AE77E997D07DD /* ParkingPublishStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = E513B2604BDD3C0A599431DC /* ParkingPublishStep.swift */; };
 		3F2C71CB33819E76B0A47700 /* MessagesListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73BB47DB7ED9FBB036BC353A /* MessagesListView.swift */; };
 		3F9B2D62042A08F8EAD36159 /* WizardNavBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FF267768B92B52734B7568A /* WizardNavBar.swift */; };
 		400CCE6F1D6B0AF5A1699287 /* TunoCalendar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 308BCB9A59C6E33399015B98 /* TunoCalendar.swift */; };
@@ -136,6 +137,7 @@
 		D419BBEA241B1C886CA82778 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = 177959CBC6EFAB9035701BA2 /* Supabase */; };
 		D66A3C676F36A7AC0C7FA620 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BF829CF95A92CC9F95F9C3E /* ProfileView.swift */; };
 		D810CB11774F2D2C919200B8 /* SpotDetailsStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = E168ECC061FD115C52320C1F /* SpotDetailsStep.swift */; };
+		DA2AD1D27B0576BB88B5574A /* ParkingWizardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 85BAC76AB0FB8071477F8CBD /* ParkingWizardView.swift */; };
 		DD5F9A568DB0596D6BB597CE /* DraftStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = A4BE8903623B90ED0A8174BC /* DraftStorage.swift */; };
 		DE57C044FE9D25732D8DD87B /* ReportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8759EABE9447A2E1E46D4BC5 /* ReportSheet.swift */; };
 		DF4CB397EEC21B6155822A74 /* PersonnummerHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8912249569F172B1FAC73845 /* PersonnummerHelper.swift */; };
@@ -154,6 +156,7 @@
 		EA6ED6282BB3420E464B2A4D /* LaunchScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E87B8810AD3DEB96DEDF5A94 /* LaunchScreen.swift */; };
 		EB7B66E8A8376F8B8FF74300 /* ForgotPasswordView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0F76B3BFE9867FFEFA9DFEAB /* ForgotPasswordView.swift */; };
 		EEFFD98DE702F84FED64B4AE /* OfferMessageBubble.swift in Sources */ = {isa = PBXBuildFile; fileRef = FB0383AE428114B0D4D9DC7B /* OfferMessageBubble.swift */; };
+		F22672C60C83901831A6F70F /* ParkingPriceStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFEB0A44EFC4A3B5ADA3BAAB /* ParkingPriceStep.swift */; };
 		F2C3506F8EBAA789639423AA /* SchibstedGrotesk-SemiBold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 814164FE837C6700B1723CFC /* SchibstedGrotesk-SemiBold.ttf */; };
 		F5C607CAFB1A650AC022C486 /* MotorhomeIcon.swift in Sources */ = {isa = PBXBuildFile; fileRef = 820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */; };
 		F633782D650F9CAF614C16E2 /* HostOnboardingViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */; };
@@ -243,6 +246,7 @@
 		820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MotorhomeIcon.swift; sourceTree = "<group>"; };
 		8372F9628ACCC2AB21993B03 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		83B043C9DBACDB46B61E6148 /* ListingCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListingCard.swift; sourceTree = "<group>"; };
+		85BAC76AB0FB8071477F8CBD /* ParkingWizardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParkingWizardView.swift; sourceTree = "<group>"; };
 		867091F53CF483B9DC6E3E33 /* WelcomeStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeStep.swift; sourceTree = "<group>"; };
 		86D6665556989227BEA372A6 /* PayoutsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PayoutsService.swift; sourceTree = "<group>"; };
 		8746DF8F3A21DF295C59341A /* SpotPlacementSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotPlacementSheet.swift; sourceTree = "<group>"; };
@@ -275,6 +279,7 @@
 		BD05EFAAFF75CA5314B3B4EE /* SpotExtrasContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotExtrasContent.swift; sourceTree = "<group>"; };
 		BE401FA37FDD4B606814F30C /* Localizable.xcstrings */ = {isa = PBXFileReference; lastKnownFileType = text.json.xcstrings; path = Localizable.xcstrings; sourceTree = "<group>"; };
 		BFDEEECFA35CB2F4651AEEF7 /* TurnstileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TurnstileView.swift; sourceTree = "<group>"; };
+		BFEB0A44EFC4A3B5ADA3BAAB /* ParkingPriceStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParkingPriceStep.swift; sourceTree = "<group>"; };
 		C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		C60A79D4D54F1069BB4CA915 /* complete-phone.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "complete-phone.png"; sourceTree = "<group>"; };
 		CB03B6FF2B6DA8FCAC15788C /* Globe.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = Globe.json; sourceTree = "<group>"; };
@@ -299,6 +304,7 @@
 		E168ECC061FD115C52320C1F /* SpotDetailsStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotDetailsStep.swift; sourceTree = "<group>"; };
 		E23C09D01ADF5D05EB1EEFBB /* CopyFromPreviousSpotButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CopyFromPreviousSpotButton.swift; sourceTree = "<group>"; };
 		E2C215EEFA3B9EF4585A8AE8 /* Tuno.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Tuno.entitlements; sourceTree = "<group>"; };
+		E513B2604BDD3C0A599431DC /* ParkingPublishStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParkingPublishStep.swift; sourceTree = "<group>"; };
 		E526C4504EA007084624767F /* SpotExtrasStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotExtrasStep.swift; sourceTree = "<group>"; };
 		E74EF9C220CA27255CA61D16 /* SpotCalendarStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotCalendarStep.swift; sourceTree = "<group>"; };
 		E87B8810AD3DEB96DEDF5A94 /* LaunchScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchScreen.swift; sourceTree = "<group>"; };
@@ -578,6 +584,7 @@
 				905014F6D3B1C983862933A1 /* QRCodeView.swift */,
 				6587010B912F3F5B5BE19D5C /* Components */,
 				96640885E0FBAAFEA93212EF /* HostOnboarding */,
+				9925D36FFC4B2121339D739D /* Parking */,
 				D7B4BF06289E608C298B1EC7 /* Steps */,
 			);
 			path = CreateListing;
@@ -590,6 +597,16 @@
 				64639612B0BAFA573DDE489B /* HostOnboardingViewModel.swift */,
 			);
 			path = HostOnboarding;
+			sourceTree = "<group>";
+		};
+		9925D36FFC4B2121339D739D /* Parking */ = {
+			isa = PBXGroup;
+			children = (
+				BFEB0A44EFC4A3B5ADA3BAAB /* ParkingPriceStep.swift */,
+				E513B2604BDD3C0A599431DC /* ParkingPublishStep.swift */,
+				85BAC76AB0FB8071477F8CBD /* ParkingWizardView.swift */,
+			);
+			path = Parking;
 			sourceTree = "<group>";
 		};
 		AF58A5E3DABA682FCB1DF888 /* CategoryIcons */ = {
@@ -876,6 +893,9 @@
 				98B32B463DB40DC1874532A3 /* OpeningHoursEditorView.swift in Sources */,
 				402B7759282C565BD0F02A60 /* OpeningHoursService.swift in Sources */,
 				427C0F0D1B37C5AF58AFAD58 /* OpeningHoursStep.swift in Sources */,
+				F22672C60C83901831A6F70F /* ParkingPriceStep.swift in Sources */,
+				3DC72601B41AE77E997D07DD /* ParkingPublishStep.swift in Sources */,
+				DA2AD1D27B0576BB88B5574A /* ParkingWizardView.swift in Sources */,
 				8225D7A59A196A15D1387988 /* PayoutsService.swift in Sources */,
 				DF4CB397EEC21B6155822A74 /* PersonnummerHelper.swift in Sources */,
 				481B700D9FEB3AFB038F6A9E /* PhotosStep.swift in Sources */,

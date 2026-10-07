@@ -108,6 +108,14 @@ final class ListingFormModel: ObservableObject {
     /// Type parkering. nil = ikke oppgitt. Kun relevant for parkering-kategori.
     @Published var parkingType: ParkingType? = nil
 
+    // MARK: - Parkering-wizard (Asker-pivoten 2026-10-07)
+    /// Dagspris i kr for parkering-wizarden (modell A: havner som listing.price).
+    @Published var parkingDailyPrice: Int? = nil
+    /// Månedspris i kr (30 dager) — blir MONTH-pakke på plassene.
+    @Published var parkingMonthlyPrice: Int? = nil
+    /// Obligatorisk bekreftelse: «Jeg har rett til å leie ut denne plassen».
+    @Published var hasConfirmedOwnership = false
+
     // MARK: - Edit mode (TU-61)
     /// True når formen brukes til å redigere en eksisterende annonse.
     /// EditListingHub setter denne ved opprettelse, så CategoryStep skjules.
@@ -535,6 +543,90 @@ final class ListingFormModel: ObservableObject {
     }
 
     // MARK: - Build listing input for Supabase
+
+    /// Parkering-wizardens insert (modell A, verifisert prisarkitektur):
+    /// `listing.price` = dagspris, plasser med `price: nil` + DAY/MONTH-pakker.
+    /// price:nil tvinger serverens listing-pris-gren (lib/pricing.ts), som er
+    /// den eneste som fakturerer månedspakken korrekt. DAY-pakken gir
+    /// «1 dag»-chip i appen og beskytter mot price=0 ved senere lagring.
+    func buildParkingInput(hostId: String, profile: Profile?) -> CreateListingInput {
+        let dayPrice = parkingDailyPrice ?? 0
+        let monthPrice = parkingMonthlyPrice
+
+        var packages: [PricePackage] = [PricePackage(periodType: .day, periodValue: 1, priceNok: dayPrice)]
+        if let monthPrice, monthPrice > 0 {
+            packages.append(PricePackage(periodType: .month, periodValue: 1, priceNok: monthPrice))
+        }
+
+        let markers: [SpotMarker] = (0..<max(1, spots)).map { i in
+            var m = SpotMarker(lat: lat, lng: lng)
+            m.id = UUID().uuidString.lowercased()
+            m.label = "Plass \(i + 1)"
+            m.price = nil
+            m.vehicleTypes = [.car]
+            m.pricePackages = packages
+            return m
+        }
+
+        let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
+        let resolvedTitle: String = {
+            if !trimmedTitle.isEmpty { return trimmedTitle }
+            let typeName: String = {
+                switch parkingType {
+                case .garage: return "Garasjeplass"
+                case .parkingHouse: return "P-husplass"
+                default: return "Parkeringsplass"
+                }
+            }()
+            let place = !city.isEmpty ? city : "Asker"
+            return "\(typeName) i \(place)"
+        }()
+
+        var periods = ["DAY"]
+        if monthPrice ?? 0 > 0 { periods.append("MONTH") }
+
+        return CreateListingInput(
+            id: UUID().uuidString.lowercased(),
+            hostId: hostId,
+            title: resolvedTitle,
+            internalName: nil,
+            description: description.trimmingCharacters(in: .whitespaces),
+            category: "parking",
+            vehicleType: VehicleType.car.rawValue,
+            city: city,
+            region: region,
+            address: address,
+            lat: lat,
+            lng: lng,
+            price: dayPrice,
+            priceUnit: PriceUnit.time.rawValue,
+            pricePerNight: nil,
+            openingHours: nil,
+            spots: markers.count,
+            images: imageURLs,
+            amenities: Array(selectedAmenities),
+            instantBooking: true,
+            hideExactLocation: hideExactLocation,
+            spotMarkers: markers,
+            blockedDates: [],
+            maxVehicleLength: nil,
+            checkInTime: checkInTime,
+            checkOutTime: checkOutTime,
+            checkinMessage: nil,
+            checkoutMessage: nil,
+            checkoutMessageSendHoursBefore: checkoutMessageSendHoursBefore,
+            extras: [],
+            hostName: profile?.fullName ?? "",
+            hostAvatar: profile?.avatarUrl ?? "",
+            isActive: true,
+            minStayDays: 1,
+            maxStayDays: nil,
+            parkingType: parkingType?.rawValue,
+            rentalPeriodTypes: periods.sorted(),
+            displayPrice: dayPrice,
+            displayPriceSuffix: ""
+        )
+    }
 
     func buildInput(hostId: String, profile: Profile?) -> CreateListingInput {
         // Auto-derive listing-nivå pris og maxVehicleLength fra plasser så

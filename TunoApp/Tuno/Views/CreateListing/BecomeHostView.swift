@@ -9,7 +9,13 @@ struct BecomeHostView: View {
 
     var body: some View {
         Group {
-            if authManager.profile?.stripeOnboardingComplete == true || onboardingCompleted {
+            if AppConfig.parkingOnly {
+                // Asker-pivoten: annonsen lages FØRST, Stripe-verifiseringen
+                // kommer etterpå (ParkingStripePrompt). Nedstrøms-systemet
+                // (RLS, host_stripe_ready-trigger, «Venter»-badge) håndterer
+                // annonser uten Stripe komplett.
+                ParkingWizardView()
+            } else if authManager.profile?.stripeOnboardingComplete == true || onboardingCompleted {
                 CreateListingView()
             } else {
                 HostOnboardingFlowView {
