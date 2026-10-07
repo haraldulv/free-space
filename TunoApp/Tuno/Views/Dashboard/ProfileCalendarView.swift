@@ -113,7 +113,8 @@ struct ProfileCalendarView: View {
             Button("Avbryt", role: .cancel) {}
         }
         .fullScreenCover(isPresented: $showEditListing) {
-            EditListingHub(listing: listing)
+            // Parkering → ny enkel editor; camping → hub (se EditListingRootView).
+            EditListingRootView(listing: listing)
         }
         .fullScreenCover(isPresented: $showListingDetail) {
             NavigationStack {

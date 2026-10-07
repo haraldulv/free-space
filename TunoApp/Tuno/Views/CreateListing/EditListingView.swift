@@ -10,6 +10,13 @@ struct EditListingRootView: View {
     var onDeleted: (() -> Void)? = nil
 
     var body: some View {
-        EditListingHub(listing: listing, onSaved: onSaved, onDeleted: onDeleted)
+        // Parkering rutes til den nye, enkle editoren (Asker-pivoten).
+        // EditListingHub forbeholdes camping: dens buildUpdateInput ville
+        // skrevet price=0 for parkering-annonser uten per-plass-pris.
+        if listing.category == .parking {
+            EditParkingView(listing: listing, onSaved: onSaved, onDeleted: onDeleted)
+        } else {
+            EditListingHub(listing: listing, onSaved: onSaved, onDeleted: onDeleted)
+        }
     }
 }
