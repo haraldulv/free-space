@@ -55,7 +55,7 @@ export default function EarnCalculator() {
   );
 
   return (
-    <div className="rounded-3xl bg-white p-6 shadow-[0_18px_50px_rgba(23,23,23,0.12)] sm:p-8">
+    <div className="rounded-3xl bg-[#fdfcf9] p-6 shadow-[0_18px_50px_rgba(18,20,18,0.18)] sm:p-8">
       <h2 className="text-xl font-bold text-neutral-900 sm:text-2xl">{t("calcTitle")}</h2>
 
       <div className="mt-5 space-y-5">
@@ -67,7 +67,7 @@ export default function EarnCalculator() {
             id="earn-area"
             value={areaId}
             onChange={(e) => setAreaId(e.target.value)}
-            className="w-full appearance-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-[15px] font-medium text-neutral-900 focus:border-[#46C185] focus:outline-none"
+            className="w-full appearance-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-[15px] font-medium text-neutral-900 focus:border-[#37caa4] focus:outline-none"
           >
             {PARKING_AREAS.map((area) => (
               <option key={area.id} value={area.id}>
@@ -104,14 +104,14 @@ export default function EarnCalculator() {
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-[#2d7f55] px-6 py-5 text-white">
-        <p className="text-xs font-bold uppercase tracking-wide text-white/75">
+      <div className="mt-6 rounded-2xl bg-[#121412] px-6 py-5 text-[#f5f6f4]">
+        <p className="text-xs font-bold uppercase tracking-wide text-[#a8afaa]">
           {t("estimateTitle")}
         </p>
-        <p className="mt-1 text-3xl font-bold sm:text-4xl">
+        <p className="mt-1 text-3xl font-bold text-[#37caa4] sm:text-4xl">
           {t("estimateRange", { low: nok.format(estimate.monthLow), high: nok.format(estimate.monthHigh) })}
         </p>
-        <p className="mt-2 text-sm font-medium text-white/85">
+        <p className="mt-2 text-sm font-medium text-[#cfd4d0]">
           {t("estimateDay", { low: nok.format(estimate.dayLow), high: nok.format(estimate.dayHigh) })}
         </p>
       </div>

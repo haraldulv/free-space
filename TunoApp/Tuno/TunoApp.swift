@@ -153,6 +153,9 @@ struct TunoApp: App {
     @StateObject private var pushRouter = PushRouter.shared
 
     init() {
+        #if DEBUG
+        assertTunoFontsLoaded()
+        #endif
         initializeMapServices()
         configureImageCache()
     }

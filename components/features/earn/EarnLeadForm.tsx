@@ -21,14 +21,14 @@ export default function EarnLeadForm() {
 
   if (state === "done") {
     return (
-      <div className="rounded-3xl border border-[#46C185]/40 bg-[#46C185]/10 p-7 text-center">
-        <p className="text-lg font-bold text-[#2d7f55]">{t("leadThanks")}</p>
+      <div className="rounded-3xl border border-[#37caa4]/40 bg-[#37caa4]/10 p-7 text-center">
+        <p className="text-lg font-bold text-[#0f7a5f]">{t("leadThanks")}</p>
       </div>
     );
   }
 
   return (
-    <form onSubmit={submit} className="rounded-3xl border border-neutral-200 bg-white p-7">
+    <form onSubmit={submit} className="rounded-3xl border border-[#e8e5dc] bg-[#fdfcf9] p-7">
       <h2 className="text-2xl font-bold text-neutral-900">{t("leadTitle")}</h2>
       <p className="mt-2 text-[15px] text-neutral-600">{t("leadBody")}</p>
 
@@ -42,7 +42,7 @@ export default function EarnLeadForm() {
           required
           minLength={2}
           maxLength={80}
-          className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-[15px] focus:border-[#46C185] focus:outline-none"
+          className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-[15px] focus:border-[#37caa4] focus:outline-none"
         />
         <input
           type="tel"
@@ -53,7 +53,7 @@ export default function EarnLeadForm() {
           required
           minLength={8}
           maxLength={16}
-          className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-[15px] focus:border-[#46C185] focus:outline-none"
+          className="w-full rounded-2xl border border-neutral-200 px-4 py-3 text-[15px] focus:border-[#37caa4] focus:outline-none"
         />
         {/* Honeypot: skjult for mennesker, bots fyller den ut */}
         <input
@@ -75,7 +75,7 @@ export default function EarnLeadForm() {
       <button
         type="submit"
         disabled={state === "sending"}
-        className="mt-5 w-full rounded-full bg-[#37caa4] px-6 py-4 text-base font-bold text-neutral-900 transition-transform hover:scale-[1.01] disabled:opacity-60 sm:w-auto sm:px-10"
+        className="mt-5 w-full rounded-full bg-[#121412] px-6 py-4 text-base font-bold text-white transition-transform hover:scale-[1.01] disabled:opacity-60 sm:w-auto sm:px-10"
       >
         {state === "sending" ? t("leadSending") : t("leadSend")}
       </button>

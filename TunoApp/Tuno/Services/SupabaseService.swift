@@ -44,6 +44,11 @@ enum AppConfig {
 
     // Turnstile-captcha styres fra app_settings.turnstile_enabled i databasen
     // (se AuthManager.isTurnstileRequired), ikke fra en kompilert konstant.
+
+    /// Asker-pivoten (2026-10-07): Tuno er en ren parkeringsapp for brukerne.
+    /// Bryteren er KUN for oss, finnes ikke i noe UI, og lar camping-koden
+    /// ligge i dvale til vi eventuelt gjenåpner den (da settes false her).
+    static let parkingOnly = true
 }
 
 let supabase = SupabaseClient(

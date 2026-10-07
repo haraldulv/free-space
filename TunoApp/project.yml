@@ -127,7 +127,12 @@ targets:
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
         ITSAppUsesNonExemptEncryption: false
-        NSLocationWhenInUseUsageDescription: "Tuno trenger tilgang til posisjonen din for å vise parkerings- og campingplasser i nærheten."
+        UIAppFonts:
+          - SchibstedGrotesk-Regular.ttf
+          - SchibstedGrotesk-Medium.ttf
+          - SchibstedGrotesk-SemiBold.ttf
+          - SchibstedGrotesk-Bold.ttf
+        NSLocationWhenInUseUsageDescription: "Tuno trenger tilgang til posisjonen din for å vise parkeringsplasser i nærheten."
         NSCameraUsageDescription: "Tuno trenger tilgang til kameraet for å ta profilbilde og bilder av plassene du leier ut."
         NSPhotoLibraryUsageDescription: "Tuno trenger tilgang til bildebiblioteket ditt for å laste opp profilbilde og bilder av plassene dine."
         CFBundleURLTypes:
