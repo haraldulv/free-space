@@ -105,6 +105,8 @@ struct BookingView: View {
 
     @State private var checkIn: Date? = nil
     @State private var checkOut: Date? = nil
+    /// Parkering: true = «Fast månedsplass» (30 dager fra valgt startdato).
+    @State private var monthPlan = false
     @State private var showCalendar = false
     /// Hvilken dato (innsjekk vs utsjekk) som redigeres når calendarSheet
     /// åpnes for hourly-modus. true = innsjekk, false = utsjekk.
@@ -851,39 +853,163 @@ struct BookingView: View {
             Text("Hvor lenge?")
                 .font(.system(size: 18, weight: .semibold))
 
-            // Periode-toggle — kun de periodene annonsen tilbyr.
-            // Setter checkOut = checkIn + N dager (samme som søket).
-            availablePeriodToggle
-
-            // Innsjekk/Utsjekk-pillar — tap åpner wheel-picker for direkte dato-valg
-            HStack(spacing: 8) {
-                bookingDatePill(label: "Innsjekk", date: checkIn, isActive: editingCheckIn) {
-                    editingCheckIn = true
-                    wheelPickerField = .checkIn
-                }
-                bookingDatePill(label: "Utsjekk", date: checkOut, isActive: !editingCheckIn) {
-                    editingCheckIn = false
-                    wheelPickerField = .checkOut
-                }
+            if isParkingDayMonthChoice {
+                // Parkering: to store valg (Dagsleie / Fast månedsplass) i
+                // stedet for chip-rekken. Måned = 30 dager fra startdato.
+                parkingPlanCards
+            } else {
+                // Periode-toggle — kun de periodene annonsen tilbyr.
+                // Setter checkOut = checkIn + N dager (samme som søket).
+                availablePeriodToggle
             }
 
-            // Inline-kalender (samme komponent som i søket). Bruker en fast
-            // høyde som rommer ~3 måneder. For å hoppe lenger frem i tid kan
-            // bruker tappe Innsjekk/Utsjekk-pillene → wheel-picker.
-            SearchDateRangePicker(
-                checkIn: $checkIn,
-                checkOut: $checkOut,
-                blockedDates: availabilityBlockedDates
-            )
-            .frame(height: 540)
-            .scrollDisabled(true)
-
-            if hasDates {
-                Text("\(nights) \(effectiveBookingPriceUnit.pluralized(count: nights))")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.neutral500)
+            if isParkingDayMonthChoice && monthPlan {
+                monthStartDateSection
+            } else {
+                rangeDateSection
             }
         }
+        .onChange(of: checkIn) { _, newValue in
+            // Månedsplass: sluttdato følger alltid startdato (30 dager inklusivt).
+            guard isParkingDayMonthChoice, monthPlan, let start = newValue else { return }
+            let cal = Calendar(identifier: .gregorian)
+            checkOut = cal.date(byAdding: .day, value: 29, to: cal.startOfDay(for: start))
+        }
+    }
+
+    /// Månedsplass: kun startdato velges; sluttdato beregnes automatisk.
+    @ViewBuilder
+    private var monthStartDateSection: some View {
+        bookingDatePill(label: "Fra dato", date: checkIn, isActive: true) {
+            editingCheckIn = true
+            wheelPickerField = .checkIn
+        }
+        if let co = checkOut {
+            Text("Til og med \(formatShort(co)) · 30 dager")
+                .font(.tuno(.caption))
+                .foregroundStyle(.neutral500)
+        }
+    }
+
+    /// Standard datovalg: fra/til-pillar + inline-kalender.
+    @ViewBuilder
+    private var rangeDateSection: some View {
+        let fromLabel: String = listing.category == .parking ? "Fra dato" : "Innsjekk"
+        let toLabel: String = listing.category == .parking ? "Til dato" : "Utsjekk"
+
+        // Dato-pillar — tap åpner wheel-picker for direkte dato-valg
+        HStack(spacing: 8) {
+            bookingDatePill(label: fromLabel, date: checkIn, isActive: editingCheckIn) {
+                editingCheckIn = true
+                wheelPickerField = .checkIn
+            }
+            bookingDatePill(label: toLabel, date: checkOut, isActive: !editingCheckIn) {
+                editingCheckIn = false
+                wheelPickerField = .checkOut
+            }
+        }
+
+        // Inline-kalender (samme komponent som i søket). Bruker en fast
+        // høyde som rommer ~3 måneder. For å hoppe lenger frem i tid kan
+        // bruker tappe dato-pillene → wheel-picker.
+        SearchDateRangePicker(
+            checkIn: $checkIn,
+            checkOut: $checkOut,
+            blockedDates: availabilityBlockedDates
+        )
+        .frame(height: 540)
+        .scrollDisabled(true)
+
+        if hasDates {
+            Text("\(nights) \(effectiveBookingPriceUnit.pluralized(count: nights))")
+                .font(.system(size: 13))
+                .foregroundStyle(.neutral500)
+        }
+    }
+
+    // MARK: - Parkering: dag/måned-valg
+
+    /// Laveste pakkepris av gitt type (periodValue 1) på tvers av plassene.
+    private func lowestPackagePrice(_ type: PricePackagePeriodType) -> Int? {
+        let spots: [SpotMarker] = listing.spotMarkers ?? []
+        var lowest: Int? = nil
+        for spot in spots {
+            let packages: [PricePackage] = spot.pricePackages ?? []
+            for pkg in packages where pkg.periodType == type && pkg.periodValue == 1 {
+                if lowest == nil || pkg.priceNok < lowest! { lowest = pkg.priceNok }
+            }
+        }
+        return lowest
+    }
+
+    /// Laveste månedspris (MONTH×1) på tvers av plassene, om tilbudt.
+    private var monthPackagePrice: Int? { lowestPackagePrice(.month) }
+
+    /// Dagspris for parkering: annonseprisen, ellers laveste DAY-pakke/plasspris.
+    private var dayUnitPrice: Int? {
+        if let p = listing.price, p > 0 { return p }
+        if let pkgDay = lowestPackagePrice(.day) { return pkgDay }
+        let spots: [SpotMarker] = listing.spotMarkers ?? []
+        var lowest: Int? = nil
+        for spot in spots {
+            if let p = spot.price, p > 0, lowest == nil || p < lowest! { lowest = p }
+        }
+        return lowest
+    }
+
+    /// Parkering med månedspris → vis to-valget (Dagsleie / Fast månedsplass).
+    private var isParkingDayMonthChoice: Bool {
+        listing.category == .parking && monthPackagePrice != nil
+    }
+
+    private var parkingPlanCards: some View {
+        HStack(spacing: 10) {
+            parkingPlanCard(
+                title: "Dagsleie",
+                price: dayUnitPrice.map { "\($0) kr/dag" } ?? "",
+                caption: "Velg dagene du trenger",
+                isSelected: !monthPlan
+            ) {
+                guard monthPlan else { return }
+                monthPlan = false
+                checkOut = nil
+            }
+            parkingPlanCard(
+                title: "Fast månedsplass",
+                price: monthPackagePrice.map { "\($0) kr/mnd" } ?? "",
+                caption: "30 dager fra startdato",
+                isSelected: monthPlan
+            ) {
+                guard !monthPlan else { return }
+                monthPlan = true
+                applyBookingPeriodPreset(days: 30)
+            }
+        }
+    }
+
+    private func parkingPlanCard(title: String, price: String, caption: String, isSelected: Bool, onTap: @escaping () -> Void) -> some View {
+        Button(action: onTap) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.tuno(.body))
+                    .foregroundStyle(.neutral900)
+                Text(price)
+                    .font(.tuno(.heading))
+                    .foregroundStyle(.neutral900)
+                Text(caption)
+                    .font(.tuno(.caption))
+                    .foregroundStyle(.neutral500)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .background(isSelected ? Color.mint.opacity(0.12) : Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
+                    .stroke(isSelected ? Color.ink : Color.neutral200, lineWidth: isSelected ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Periode-toggle (booking-flyten)

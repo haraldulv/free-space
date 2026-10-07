@@ -151,7 +151,12 @@ struct ListingDetailView: View {
 
                         combinedSpotsSection(listing: listing)
 
-                        pricePackagesCard(listing: listing)
+                        if listing.category == .parking {
+                            parkingPriceCard(listing: listing)
+                            transitCard(listing: listing)
+                        } else {
+                            pricePackagesCard(listing: listing)
+                        }
 
                         // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
                         // if let oh = listing.openingHours {
@@ -1345,6 +1350,81 @@ struct ListingDetailView: View {
 
     /// Vises hvis annonsen har minst én pris-pakke (DAY/WEEK/MONTH/YEAR) på en av spotene.
     /// Speiler designet "PRISER FOR ALLE PERIODER" (1 dag, 3 dager, 7 dager osv. som chips).
+    /// Parkering: to store pris-kort (dag + måned) i stedet for chip-floden.
+    @ViewBuilder
+    private func parkingPriceCard(listing: Listing) -> some View {
+        let packages = aggregatedPackages(listing: listing)
+        let dayPrice = packages.first(where: { $0.periodType == .day && $0.periodValue == 1 })?.priceNok ?? listing.price ?? 0
+        let monthPrice = packages.first(where: { $0.periodType == .month && $0.periodValue == 1 })?.priceNok
+        if dayPrice > 0 || monthPrice != nil {
+            sectionCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Priser")
+                        .font(.tuno(.heading))
+                        .foregroundStyle(.neutral900)
+                    HStack(spacing: 10) {
+                        if dayPrice > 0 {
+                            parkingPriceTile(price: dayPrice, unit: "per dag", caption: "Velg datoene du trenger")
+                        }
+                        if let monthPrice {
+                            parkingPriceTile(price: monthPrice, unit: "per måned", caption: "Fast plass i 30 dager")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func parkingPriceTile(price: Int, unit: String, caption: String) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("\(price) kr")
+                .font(.tuno(.title))
+                .foregroundStyle(.neutral900)
+            Text(unit)
+                .font(.tuno(.label))
+                .foregroundStyle(.neutral500)
+            Text(caption)
+                .font(.tuno(.caption))
+                .foregroundStyle(.neutral500)
+                .padding(.top, 6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(14)
+        .background(Color.paperCard)
+        .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
+        .overlay(
+            RoundedRectangle(cornerRadius: TunoRadius.control)
+                .stroke(Color.paperLine, lineWidth: 1)
+        )
+    }
+
+    /// «Kollektiv i nærheten»: nærmeste togstasjon innen 2 km med gangtid.
+    @ViewBuilder
+    private func transitCard(listing: Listing) -> some View {
+        if let lat = listing.lat, let lng = listing.lng,
+           let station = AskerDefaults.nearestStation(lat: lat, lng: lng) {
+            sectionCard {
+                HStack(spacing: 12) {
+                    Image(systemName: "tram.fill")
+                        .font(.system(size: 20))
+                        .foregroundStyle(.neutral900)
+                        .frame(width: 44, height: 44)
+                        .background(Color.mint.opacity(0.15))
+                        .clipShape(Circle())
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(station.name)
+                            .font(.tuno(.body))
+                            .foregroundStyle(.neutral900)
+                        Text("Ca. \(station.walkMinutes) min å gå")
+                            .font(.tuno(.caption))
+                            .foregroundStyle(.neutral500)
+                    }
+                    Spacer()
+                }
+            }
+        }
+    }
+
     @ViewBuilder
     private func pricePackagesCard(listing: Listing) -> some View {
         let allPackages = aggregatedPackages(listing: listing)
