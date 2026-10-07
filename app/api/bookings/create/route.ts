@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { stripe } from "@/lib/stripe";
-import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS } from "@/lib/config";
+import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS, PARKING_MAX_INSTANT_DAYS } from "@/lib/config";
 import {
   getNightlyPricesWithServiceClient,
   applyPriceBreakdown,
@@ -161,7 +161,7 @@ export async function POST(request: NextRequest) {
     // Check availability
     const { data: listing } = await supabase
       .from("listings")
-      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, category, min_stay_days, max_stay_days, moderation_status, host_stripe_ready, is_active")
+      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, category, min_stay_days, max_stay_days, moderation_status, host_stripe_ready, is_active, blocked_dates")
       .eq("id", listingId)
       .single();
 
@@ -271,6 +271,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Manuelt blokkerte datoer på annonsenivå gjelder ALLE bookinger, også
+    // uten plass-valg (EditParkingView pauser via listing.blocked_dates).
+    {
+      const listingBlocked = (listing.blocked_dates as string[] | null) || [];
+      if (listingBlocked.length > 0) {
+        const cursor = new Date(checkIn);
+        const end = new Date(checkOut);
+        while (cursor <= end) {
+          const y = cursor.getFullYear();
+          const m = String(cursor.getMonth() + 1).padStart(2, "0");
+          const d = String(cursor.getDate()).padStart(2, "0");
+          if (listingBlocked.includes(`${y}-${m}-${d}`)) {
+            return NextResponse.json({ error: "Plassen er ikke tilgjengelig for valgte datoer." });
+          }
+          cursor.setDate(cursor.getDate() + 1);
+        }
+      }
+    }
+
     // Verify host has Stripe Connect
     const { data: hostProfile } = await supabase
       .from("profiles")
@@ -282,12 +301,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Utleier har ikke satt opp utbetalinger ennå. Prøv igjen senere." });
     }
 
-    // Max-dager-regelen: opphold over MAX_INSTANT_NIGHTS krever godkjenning uansett.
+    // Max-lengde-regelen: lange opphold krever godkjenning uansett.
+    // Parkering måles i inklusive dager (stayDays, beregnet over) med grense
+    // PARKING_MAX_INSTANT_DAYS så «Fast månedsplass» (30 dager) går som
+    // direktebooking. Camping beholder eksklusive netter mot MAX_INSTANT_NIGHTS.
     const nights = Math.max(
       1,
       Math.round((new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000),
     );
-    const exceedsInstantLimit = nights > MAX_INSTANT_NIGHTS;
+    const exceedsInstantLimit =
+      listing.category === "parking"
+        ? stayDays > PARKING_MAX_INSTANT_DAYS
+        : nights > MAX_INSTANT_NIGHTS;
     const requiresApproval = listing.instant_booking === false || exceedsInstantLimit;
     const approvalDeadline = requiresApproval
       ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()

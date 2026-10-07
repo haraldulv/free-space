@@ -45,6 +45,14 @@ export const HOST_PAYOUT_DELAY_HOURS = 24;
 export const MAX_INSTANT_NIGHTS = 7;
 
 /**
+ * Parkering: direktebooking tillates opp til en hel månedsplass (30 dager)
+ * med litt margin. Camping beholder 7-netters-grensen over. Uten denne ville
+ * «Fast månedsplass» på en direkteannonse havnet i manual capture, som
+ * appen ikke håndterer som vanlig betaling.
+ */
+export const PARKING_MAX_INSTANT_DAYS = 31;
+
+/**
  * Split av `total_price` (det gjesten betaler) til (host-andel, Tunos gebyr).
  * Host-andelen er listing-prisen de selv har satt; gebyret er lagt på toppen.
  *
