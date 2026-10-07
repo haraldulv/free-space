@@ -787,6 +787,9 @@ struct MyListingsView: View {
     /// True når bruker tappet "+" mens et utkast var aktivt — vis dialog
     /// som tvinger valg mellom Fortsett, Forkast eller Avbryt.
     @State private var showDraftConflictAlert = false
+    /// Driver fullScreenCover for Stripe-onboardingen fra verifiserings-banneret
+    /// (eneste vei tilbake etter «Gjør det senere» i parkering-wizarden).
+    @State private var showStripeOnboarding = false
 
     private static let serviceFee = 0.10
 
@@ -811,6 +814,14 @@ struct MyListingsView: View {
                     }
                 } label: {
                     Image(systemName: "plus")
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $showStripeOnboarding) {
+            NavigationStack {
+                HostOnboardingFlowView {
+                    showStripeOnboarding = false
+                    Task { await authManager.loadProfile() }
                 }
             }
         }
@@ -927,6 +938,11 @@ struct MyListingsView: View {
         // long-press popup'er listing-cellens contextMenu i stedet for
         // utkastets). Eget gesture-context utenfor scroll fikser begge.
         VStack(spacing: 0) {
+            if needsStripeVerification {
+                stripeVerificationBanner
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+            }
             if let draft {
                 draftCard(draft: draft)
                     .padding(.horizontal, 16)
@@ -961,6 +977,41 @@ struct MyListingsView: View {
                 .padding(.vertical, 12)
             }
         }
+    }
+
+    /// True når verten har annonser men ikke fullført Stripe-verifiseringen.
+    private var needsStripeVerification: Bool {
+        !listings.isEmpty && authManager.profile?.stripeOnboardingComplete != true
+    }
+
+    /// Banner øverst i Mine annonser: eneste vei tilbake til Stripe-onboarding
+    /// etter at verten valgte «Gjør det senere» i parkering-wizarden.
+    private var stripeVerificationBanner: some View {
+        Button {
+            showStripeOnboarding = true
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "exclamationmark.shield.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.mint)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Fullfør verifiseringen")
+                        .font(.tuno(.body))
+                        .foregroundStyle(Color.inkText)
+                    Text("Trengs for utbetalinger. Annonsen blir synlig etterpå.")
+                        .font(.tuno(.caption))
+                        .foregroundStyle(Color.inkMuted)
+                }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.inkMuted)
+            }
+            .padding(14)
+            .background(Color.ink)
+            .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
+        }
+        .buttonStyle(.plain)
     }
 
     /// Kort som vises øverst i Mine annonser når et utkast finnes.

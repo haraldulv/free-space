@@ -124,7 +124,7 @@ extension Listing {
         switch moderationStatus {
         case "pending", "flagged": return "Under vurdering"
         case "rejected": return "Avvist"
-        case "approved" where hostStripeReady == false: return "Venter på Stripe"
+        case "approved" where hostStripeReady == false: return "Fullfør verifisering"
         default: return nil
         }
     }
