@@ -16,6 +16,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { path: "", priority: 1.0 },
     { path: "/search", priority: 0.9 },
     { path: "/utleier", priority: 0.8 },
+    { path: "/tjen", priority: 0.8 },
     { path: "/bli-utleier", priority: 0.7 },
     { path: "/vilkar", priority: 0.3 },
     { path: "/personvern", priority: 0.3 },

@@ -1,12 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 
 const PASS = "kimharald";
 const STORAGE_KEY = "fs_auth";
 const GATE_DISABLED = process.env.NEXT_PUBLIC_DISABLE_PASSWORD_GATE === "true";
 
+// Sider som alltid er åpne uavhengig av porten. /tjen er målet for trykte
+// plakater med QR-kode; den må aldri møte et passordfelt.
+const OPEN_PATHS = /^\/(?:(?:nb|en|de)\/)?(?:tjen|captcha)(?:\/|$)/;
+
 export default function PasswordGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isOpenPath = OPEN_PATHS.test(pathname ?? "");
   const [authorized, setAuthorized] = useState(GATE_DISABLED);
   const [input, setInput] = useState("");
   const [error, setError] = useState(false);
@@ -28,7 +35,7 @@ export default function PasswordGate({ children }: { children: React.ReactNode }
     }
   };
 
-  if (authorized) return <>{children}</>;
+  if (isOpenPath || authorized) return <>{children}</>;
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-neutral-50">

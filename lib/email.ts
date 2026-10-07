@@ -659,3 +659,23 @@ export async function sendAdminAlertEmail(subject: string, bodyHtml: string, url
     html: wrap(subject, `${bodyHtml}${btn("Åpne i admin", url)}`),
   });
 }
+
+/** Lead fra kalkulatorsiden /tjen: navn + telefon som vil bli ringt. */
+export async function sendCalculatorLeadEmail(data: { name: string; phone: string }) {
+  const { ADMIN_EMAILS, SITE_URL } = await import("@/lib/config");
+  await resend.emails.send({
+    from: FROM,
+    to: ADMIN_EMAILS,
+    subject: `Ny lead fra kalkulatoren: ${data.name}`,
+    html: wrap("Ny lead fra tuno.no/tjen", `
+      <p style="color:#525252;font-size:14px;line-height:1.6;">
+        <b>${data.name.replace(/[&<>"']/g, "")}</b> har bedt om å bli ringt om utleie av parkeringsplass i Asker.
+      </p>
+      <p style="margin:12px 0;padding:12px 16px;background:#fafafa;border:1px solid #e5e5e5;border-radius:8px;font-size:18px;font-weight:700;color:#171717;">
+        <a href="tel:${data.phone}" style="color:#171717;text-decoration:none;">${data.phone}</a>
+      </p>
+      <p style="color:#737373;font-size:13px;">Leaden ligger i outreach-lista med oppfølging i morgen.</p>
+      ${btn("Åpne outreach", `${SITE_URL}/admin/outreach`)}
+    `),
+  });
+}

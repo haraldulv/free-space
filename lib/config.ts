@@ -4,6 +4,9 @@ export const BRAND_NAME = "Tuno";
 /** Site URL — used for QR codes, Stripe callbacks, etc. */
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://tuno.no";
 
+/** App Store-lenke (id-formen tåler navnebytte i App Store). */
+export const APP_STORE_URL = "https://apps.apple.com/no/app/id6761529990";
+
 /** Platform service fee rate (10% = 0.10). Charged on top of listing price. */
 export const SERVICE_FEE_RATE = 0.10;
 
