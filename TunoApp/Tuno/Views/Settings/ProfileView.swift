@@ -362,11 +362,11 @@ struct ProfileView: View {
                         .foregroundStyle(Color.appAccent)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("Bli utleier")
-                        .font(.system(size: 15, weight: .semibold))
+                    Text(AppConfig.parkingOnly ? "Lei ut plassen din" : "Bli utleier")
+                        .font(.app(size: 15, weight: .semibold))
                         .foregroundStyle(.neutral900)
                     Text("Det er lett å komme i gang og tjene ekstra penger.")
-                        .font(.system(size: 12))
+                        .font(.app(size: 12))
                         .foregroundStyle(.neutral500)
                         .lineLimit(2)
                 }
@@ -401,10 +401,10 @@ struct ProfileView: View {
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.app(size: 15, weight: .semibold))
                         .foregroundStyle(.neutral900)
                     Text(subtitle)
-                        .font(.system(size: 12))
+                        .font(.app(size: 12))
                         .foregroundStyle(.neutral500)
                         .lineLimit(2)
                 }
@@ -431,15 +431,15 @@ struct ProfileView: View {
                     .foregroundStyle(.red)
                     .frame(width: 28)
                 Text("Logg ut")
-                    .font(.system(size: 17))
+                    .font(.app(size: 17))
                     .foregroundStyle(.red)
                 Spacer()
             }
             .padding(.horizontal, 18)
             .padding(.vertical, 18)
-            .background(Color.white)
+            .background(Color.appCard)
             .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.appLine, lineWidth: 1))
         }
         .buttonStyle(PressableCardStyle())
     }
@@ -448,7 +448,7 @@ struct ProfileView: View {
     private func sectionHeader(_ title: String) -> some View {
         HStack {
             Text(title)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.app(size: 20, weight: .semibold))
                 .foregroundStyle(.neutral800)
             Spacer()
         }
@@ -467,12 +467,12 @@ struct ProfileView: View {
                 .foregroundStyle(.neutral600)
                 .frame(width: 28)
             Text(row.label)
-                .font(.system(size: 16, weight: .regular))
+                .font(.app(size: 16, weight: .regular))
                 .foregroundStyle(.neutral800)
             Spacer()
             if let badge = row.badge {
                 Text(badge)
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.app(size: 12, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 3)
@@ -586,6 +586,12 @@ struct EditProfileView: View {
                 .disabled(isSaving)
             }
         }
+        .scrollContentBackground(AppConfig.parkingOnly ? .hidden : .automatic)
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
+            }
+        }
         .navigationTitle("Rediger profil")
         .overlay(alignment: .top) {
             if showSavedBanner {
@@ -598,7 +604,7 @@ struct EditProfileView: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 18)
                 .padding(.vertical, 10)
-                .background(Color(hex: "#10b981"))
+                .background(AppConfig.parkingOnly ? Color(hex: "#1f9177") : Color(hex: "#10b981"))
                 .clipShape(Capsule())
                 .shadow(color: .black.opacity(0.15), radius: 8, y: 2)
                 .padding(.top, 10)
@@ -820,6 +826,12 @@ struct MyListingsView: View {
                 listingsScrollView
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
+            }
+        }
         .navigationTitle("Mine annonser")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -933,12 +945,13 @@ struct MyListingsView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(.neutral300)
             Text("Du har ingen annonser ennå")
+                .font(.app(size: 16))
                 .foregroundStyle(.neutral500)
             Button {
                 wizardSheet = .new
             } label: {
                 Text("Opprett annonse")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.app(size: 15, weight: .semibold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
@@ -1052,7 +1065,7 @@ struct MyListingsView: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text("Fortsett utkast")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.app(size: 11, weight: .semibold))
                         .foregroundStyle(Color.appAccentDeep)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
@@ -1060,11 +1073,11 @@ struct MyListingsView: View {
                         .clipShape(Capsule())
                 }
                 Text(draft.displayTitle)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.app(size: 16, weight: .semibold))
                     .foregroundStyle(.neutral900)
                     .lineLimit(1)
                 Text(draft.displaySubtitle)
-                    .font(.system(size: 12))
+                    .font(.app(size: 12))
                     .foregroundStyle(.neutral500)
             }
             Spacer()

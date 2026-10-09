@@ -45,7 +45,7 @@ struct QRCodeModal: View {
                                     .scaledToFit()
                                     .frame(width: 200, height: 200)
                                     .padding(16)
-                                    .background(Color.white)
+                                    .background(Color.appCard)
                                     .clipShape(RoundedRectangle(cornerRadius: 8))
                                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.neutral200))
                             }
@@ -76,7 +76,7 @@ struct QRCodeModal: View {
                             }
                         }
                         .padding()
-                        .background(Color.white)
+                        .background(Color.appCard)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200))
                     }
@@ -110,6 +110,12 @@ struct QRCodeModal: View {
                     }
                 }
                 .padding()
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                if AppConfig.parkingOnly {
+                    Color.paper.ignoresSafeArea()
+                }
             }
             .navigationTitle("QR-koder")
             .navigationBarTitleDisplayMode(.inline)

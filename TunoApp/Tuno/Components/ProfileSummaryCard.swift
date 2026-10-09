@@ -65,12 +65,12 @@ struct ProfileSummaryCard: View {
 
                 VStack(spacing: 2) {
                     Text(firstName)
-                        .font(.system(size: 24, weight: .bold))
+                        .font(.app(size: 24, weight: .bold))
                         .foregroundStyle(.neutral900)
                         .lineLimit(1)
                     if let location, !location.isEmpty {
                         Text(location)
-                            .font(.system(size: 14))
+                            .font(.app(size: 14))
                             .foregroundStyle(.neutral500)
                             .lineLimit(1)
                     }
@@ -93,10 +93,10 @@ struct ProfileSummaryCard: View {
             .frame(maxWidth: .infinity)
         }
         .padding(20)
-        .background(Color.white)
+        .background(Color.appCard)
         .clipShape(RoundedRectangle(cornerRadius: 20))
         .overlay(
-            RoundedRectangle(cornerRadius: 20).stroke(Color.neutral200.opacity(0.6), lineWidth: 0.5)
+            RoundedRectangle(cornerRadius: 20).stroke(AppConfig.parkingOnly ? Color.paperLine : Color.neutral200.opacity(0.6), lineWidth: AppConfig.parkingOnly ? 1 : 0.5)
         )
         .shadow(color: .black.opacity(0.06), radius: 10, y: 3)
     }
@@ -111,7 +111,7 @@ struct ProfileSummaryCard: View {
                 .foregroundStyle(.white)
             Image(systemName: "seal.fill")
                 .font(.system(size: 28))
-                .foregroundStyle(Color(hex: "#1d9bf0"))
+                .foregroundStyle(AppConfig.parkingOnly ? Color.ink : Color(hex: "#1d9bf0"))
             Image(systemName: "checkmark")
                 .font(.system(size: 12, weight: .heavy))
                 .foregroundStyle(.white)
@@ -138,11 +138,11 @@ struct ProfileSummaryCard: View {
                         .foregroundStyle(.neutral900)
                 }
                 Text(value)
-                    .font(.system(size: 22, weight: .bold))
+                    .font(.app(size: 22, weight: .bold))
                     .foregroundStyle(.neutral900)
             }
             Text(label)
-                .font(.system(size: 14))
+                .font(.app(size: 14))
                 .foregroundStyle(.neutral600)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

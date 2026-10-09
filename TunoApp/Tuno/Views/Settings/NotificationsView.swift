@@ -19,6 +19,12 @@ struct NotificationsView: View {
                 list
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
+            }
+        }
         .navigationTitle("Varsler")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

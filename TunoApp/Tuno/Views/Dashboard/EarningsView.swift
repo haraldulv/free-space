@@ -72,6 +72,12 @@ struct EarningsView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
+            }
+        }
         .navigationTitle("Inntekter")
         .task {
             await loadData()
@@ -183,7 +189,7 @@ struct EarningsView: View {
                 }
             }
             .padding(16)
-            .background(.white)
+            .background(Color.appCard)
             .clipShape(RoundedRectangle(cornerRadius: 14))
             .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
         } else if payoutsService.isLoading {
@@ -402,7 +408,7 @@ struct EarningsView: View {
             .frame(maxWidth: .infinity)
         }
         .padding(16)
-        .background(.white)
+        .background(Color.appCard)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
     }
@@ -490,7 +496,7 @@ struct EarningsView: View {
             }
         }
         .padding(16)
-        .background(.white)
+        .background(Color.appCard)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
     }
@@ -544,7 +550,7 @@ struct EarningsView: View {
             }
         }
         .padding(16)
-        .background(.white)
+        .background(Color.appCard)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
     }
@@ -645,7 +651,7 @@ private struct StatCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(14)
-        .background(.white)
+        .background(Color.appCard)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
     }

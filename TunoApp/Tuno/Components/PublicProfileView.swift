@@ -56,6 +56,12 @@ struct PublicProfileView: View {
                 }
                 .frame(maxWidth: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                if AppConfig.parkingOnly {
+                    Color.paper.ignoresSafeArea()
+                }
+            }
             .navigationTitle("Profil")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

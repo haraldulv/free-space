@@ -110,7 +110,7 @@ struct HostReviewView: View {
                 .lineLimit(3...6)
                 .textFieldStyle(.plain)
                 .padding(12)
-                .background(Color.neutral50)
+                .background(AppConfig.parkingOnly ? Color.paperCard : Color.neutral50)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             if let err = reviewError {

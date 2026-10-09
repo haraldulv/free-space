@@ -23,7 +23,7 @@ struct ProfileReviewsView: View {
             }
             .padding(20)
         }
-        .background(Color.neutral50)
+        .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
         .navigationTitle(navigationTitleText)
         .navigationBarTitleDisplayMode(.inline)
     }

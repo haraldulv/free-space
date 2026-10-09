@@ -23,20 +23,20 @@ struct HostInntektCard: View {
                     Image(systemName: "chart.line.uptrend.xyaxis")
                         .font(.system(size: 14, weight: .semibold))
                     Text("Inntekt")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.app(size: 15, weight: .semibold))
                 }
                 .foregroundStyle(.appAccentDeep)
                 Text(monthName)
-                    .font(.system(size: 13))
+                    .font(.app(size: 13))
                     .foregroundStyle(.neutral600)
                 if let trend = trendLabel {
                     HStack(spacing: 3) {
                         Image(systemName: trend.isPositive ? "arrow.up.right" : "arrow.down.right")
                             .font(.system(size: 10, weight: .bold))
                         Text(trend.text)
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.app(size: 11, weight: .semibold))
                     }
-                    .foregroundStyle(trend.isPositive ? .green : .red)
+                    .foregroundStyle(trend.isPositive ? (AppConfig.parkingOnly ? Color(hex: "#1f9177") : .green) : .red)
                     .padding(.top, 2)
                 }
             }
@@ -52,10 +52,10 @@ struct HostInntektCard: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 Text(formatKr(netIncome))
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.app(size: 28, weight: .bold))
                     .foregroundStyle(.neutral900)
                 Text(bookingText)
-                    .font(.system(size: 12))
+                    .font(.app(size: 12))
                     .foregroundStyle(.neutral500)
             }
             .fixedSize()
@@ -64,7 +64,7 @@ struct HostInntektCard: View {
         .padding(.vertical, 22)
         .background(
             LinearGradient(
-                colors: [Color.appTintSoft, Color.white],
+                colors: [Color.appTintSoft, Color.appCard],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )

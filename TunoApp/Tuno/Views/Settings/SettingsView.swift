@@ -152,6 +152,7 @@ struct SettingsView: View {
                         .foregroundStyle(.neutral500)
                 }
             }
+            .scrollContentBackground(AppConfig.parkingOnly ? .hidden : .automatic)
             .disabled(localizationManager.isChangingLanguage)
 
             if localizationManager.isChangingLanguage {
@@ -166,9 +167,15 @@ struct SettingsView: View {
                         .foregroundStyle(.neutral700)
                 }
                 .padding(24)
-                .background(.white)
+                .background(Color.appCard)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
             }
         }
         .navigationTitle("Innstillinger")

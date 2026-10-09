@@ -60,7 +60,7 @@ struct GroupedCardButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .background(Color(.secondarySystemGroupedBackground))
+            .background(AppConfig.parkingOnly ? Color.paperCard : Color(.secondarySystemGroupedBackground))
             .clipShape(position.shape)
             .scaleEffect(configuration.isPressed ? 0.92 : 1.0)
             .animation(

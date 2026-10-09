@@ -92,6 +92,12 @@ struct ReportSheet: View {
                     }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background {
+                if AppConfig.parkingOnly {
+                    Color.paper.ignoresSafeArea()
+                }
+            }
             .navigationTitle("Rapporter")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

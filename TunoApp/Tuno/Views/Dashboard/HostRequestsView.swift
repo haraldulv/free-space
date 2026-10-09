@@ -44,6 +44,12 @@ struct HostRequestsView: View {
                 .refreshable { await load() }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
+            }
+        }
         .navigationTitle("Forespørsler")
         .task { await load() }
         .sheet(item: $selectedBooking) { booking in
@@ -138,7 +144,7 @@ struct HostRequestsView: View {
             )
         }
         .padding(16)
-        .background(.white)
+        .background(Color.appCard)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .shadow(color: .black.opacity(0.04), radius: 8, y: 2)
     }
@@ -162,7 +168,7 @@ struct HostRequestsView: View {
                     .foregroundStyle(.neutral600)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
-                    .background(Color.neutral100)
+                    .background(AppConfig.parkingOnly ? Color.paper : Color.neutral100)
                     .clipShape(Capsule())
             }
 
@@ -307,6 +313,12 @@ private struct HostRequestDetailSheet: View {
                 .padding(20)
                 .padding(.bottom, 120)
             }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
+            }
+        }
             .navigationTitle("Forespørsel")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -361,7 +373,7 @@ private struct HostRequestDetailSheet: View {
                         .foregroundStyle(.neutral600)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 4)
-                        .background(Color.neutral100)
+                        .background(AppConfig.parkingOnly ? Color.paper : Color.neutral100)
                         .clipShape(Capsule())
                 }
 
@@ -479,7 +491,7 @@ private struct HostRequestDetailSheet: View {
                 }
                 .padding(.vertical, 6)
                 .padding(.horizontal, 10)
-                .background(Color.neutral50)
+                .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
@@ -558,7 +570,7 @@ private struct HostRequestDetailSheet: View {
             .padding(.horizontal, 16)
             .padding(.top, 10)
             .padding(.bottom, 8)
-            .background(.white)
+            .background(Color.appCard)
         }
     }
 
