@@ -79,6 +79,7 @@ struct MessagesListView: View {
         .background {
             if AppConfig.parkingOnly {
                 Color.paper.ignoresSafeArea()
+                SwipeBackEnabler()
             }
         }
         .navigationTitle(searchActive ? "" : "Meldinger")

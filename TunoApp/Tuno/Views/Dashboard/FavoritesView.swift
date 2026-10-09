@@ -71,6 +71,7 @@ struct FavoritesView: View {
         .background {
             if AppConfig.parkingOnly {
                 Color.paper.ignoresSafeArea()
+                SwipeBackEnabler()
             }
         }
         .navigationTitle("Favoritter")

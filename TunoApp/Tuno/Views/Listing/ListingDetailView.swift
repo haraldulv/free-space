@@ -618,15 +618,23 @@ struct ListingDetailView: View {
                     Text("\(day.nokFormatted) kr/dag")
                         .font(.tuno(.heading))
                         .foregroundStyle(Color.inkText)
+                    if let month = listing.parkingMonthPrice {
+                        Text("\(month.nokFormatted) kr/mnd")
+                            .font(.tuno(.caption))
+                            .foregroundStyle(Color.inkMuted)
+                    }
+                } else if let month = listing.parkingMonthPrice {
+                    // Måned-only: månedsprisen ER hovedprisen, ikke en bilinje.
+                    Text("\(month.nokFormatted) kr/mnd")
+                        .font(.tuno(.heading))
+                        .foregroundStyle(Color.inkText)
+                    Text("Fast månedsplass")
+                        .font(.tuno(.caption))
+                        .foregroundStyle(Color.inkMuted)
                 } else {
                     Text(listing.headlinePriceText)
                         .font(.tuno(.heading))
                         .foregroundStyle(Color.inkText)
-                }
-                if let month = listing.parkingMonthPrice {
-                    Text("\(month.nokFormatted) kr/mnd")
-                        .font(.tuno(.caption))
-                        .foregroundStyle(Color.inkMuted)
                 }
             }
 

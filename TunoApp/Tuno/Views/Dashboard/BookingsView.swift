@@ -25,6 +25,7 @@ struct BookingsView: View {
         .background {
             if AppConfig.parkingOnly {
                 Color.paper.ignoresSafeArea()
+                SwipeBackEnabler()
             }
         }
         .navigationTitle("Bestillinger")

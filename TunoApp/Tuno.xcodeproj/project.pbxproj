@@ -110,6 +110,7 @@
 		99B9B0BC00ECC0126A3CF885 /* ProfileCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76509C97338D49F5D4C1B30B /* ProfileCalendarView.swift */; };
 		9AE9EF8B07B0FB00DF4149AF /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D0ADDAE2EA91F5F458E3E5A /* SupabaseService.swift */; };
 		9D96F4F3063C446B43FF6E99 /* complete-phone.png in Resources */ = {isa = PBXBuildFile; fileRef = C60A79D4D54F1069BB4CA915 /* complete-phone.png */; };
+		A700430E9637D546814DEDEA /* SwipeBackEnabler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4D40B91AC4F01726AD1D17A2 /* SwipeBackEnabler.swift */; };
 		A8470E43E8EF688AF0A4112C /* welcome-tent.json in Resources */ = {isa = PBXBuildFile; fileRef = 0B723EAA2CB71B866808AE9D /* welcome-tent.json */; };
 		A9EC7CD44AC87BE9C3F4BCB2 /* HostReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB17BD79D8E54E68A77464A8 /* HostReviewView.swift */; };
 		AA7B4CA530ABE701BE17F593 /* CategoryStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BA98D1AD8A6E41FE60C2C91 /* CategoryStep.swift */; };
@@ -211,6 +212,7 @@
 		431F9F309F86B122C4BBF171 /* AskerDefaults.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AskerDefaults.swift; sourceTree = "<group>"; };
 		4706792C26101B180693BACF /* InputField.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputField.swift; sourceTree = "<group>"; };
 		49328B9F033AAE32F12579CD /* Tuno.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Tuno.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		4D40B91AC4F01726AD1D17A2 /* SwipeBackEnabler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SwipeBackEnabler.swift; sourceTree = "<group>"; };
 		4D9B33BBC5E75BE977852EBE /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		4FF267768B92B52734B7568A /* WizardNavBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WizardNavBar.swift; sourceTree = "<group>"; };
 		503D4E39A3B4AE369206B712 /* complete.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = complete.json; sourceTree = "<group>"; };
@@ -579,6 +581,7 @@
 				B162D379B5ED1C064880C2ED /* ReceiptBuilder.swift */,
 				99D6E2878D5F6CA4C992D5FB /* RecentSearchesStore.swift */,
 				40D0D12BC80A797DF8A6DEED /* SearchContextStore.swift */,
+				4D40B91AC4F01726AD1D17A2 /* SwipeBackEnabler.swift */,
 				ABC8284C8DB15BB1AECA34F0 /* VisitedListingsStore.swift */,
 			);
 			path = Utils;
@@ -952,6 +955,7 @@
 				D1350E52B346514BBFB120CA /* SpotPriceStep.swift in Sources */,
 				162F39FEDA5DF91D6C8B7864 /* StayLengthStep.swift in Sources */,
 				9AE9EF8B07B0FB00DF4149AF /* SupabaseService.swift in Sources */,
+				A700430E9637D546814DEDEA /* SwipeBackEnabler.swift in Sources */,
 				5C7300A33EB8C96B0DE21844 /* TextEditorWithCounter.swift in Sources */,
 				C76237D5837392B271673FB3 /* Theme.swift in Sources */,
 				3205E24587B15BBF7B75324D /* TimePickerField.swift in Sources */,

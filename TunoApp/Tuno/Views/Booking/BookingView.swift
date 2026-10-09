@@ -734,8 +734,10 @@ struct BookingView: View {
                 syncHourlyToCheckInOut()
             }
             // Forvalg fra annonsesidens pris-tiles: «Fast månedsplass».
+            // Måned-only-annonser forvelges alltid — det finnes ikke noe
+            // dagsvalg, så brukeren skal aldri kunne velge for korte datoer.
             // Etter context-pre-fyllet, så presetet ankres på evt. lagret startdato.
-            if preselectMonthPlan && isParkingDayMonthChoice && !monthPlan {
+            if (preselectMonthPlan || isMonthOnlyParking) && isParkingDayMonthChoice && !monthPlan {
                 monthPlan = true
                 applyBookingPeriodPreset(days: 30)
             }
@@ -955,22 +957,32 @@ struct BookingView: View {
         listing.category == .parking && monthPackagePrice != nil
     }
 
+    /// Plassen leies KUN ut per måned (ingen dagspris). Da finnes det ikke
+    /// noe dagsvalg å tilby — månedsplanen forvelges og dagskortet skjules.
+    private var isMonthOnlyParking: Bool {
+        isParkingDayMonthChoice && dayUnitPrice == nil
+    }
+
     private var parkingPlanCards: some View {
         HStack(spacing: 10) {
-            parkingPlanCard(
-                title: "Dagsleie",
-                price: dayUnitPrice.map { "\($0) kr/dag" } ?? "",
-                caption: "Velg dagene du trenger",
-                isSelected: !monthPlan
-            ) {
-                guard monthPlan else { return }
-                monthPlan = false
-                checkOut = nil
+            if !isMonthOnlyParking {
+                parkingPlanCard(
+                    title: "Dagsleie",
+                    price: dayUnitPrice.map { "\($0) kr/dag" } ?? "",
+                    caption: "Velg dagene du trenger",
+                    isSelected: !monthPlan
+                ) {
+                    guard monthPlan else { return }
+                    monthPlan = false
+                    checkOut = nil
+                }
             }
             parkingPlanCard(
                 title: "Fast månedsplass",
                 price: monthPackagePrice.map { "\($0) kr/mnd" } ?? "",
-                caption: "30 dager fra startdato",
+                caption: isMonthOnlyParking
+                    ? "Plassen leies ut per måned. 30 dager fra startdato."
+                    : "30 dager fra startdato",
                 isSelected: monthPlan
             ) {
                 guard !monthPlan else { return }

@@ -300,6 +300,14 @@ struct SearchView: View {
                     .zIndex(2)
             }
             .background(Color.neutral50)
+            .background {
+                // Parkering: sidene i denne stacken skjuler system-navbaren,
+                // som normalt dreper kant-sveip-tilbake. Enableren gjenåpner
+                // gesturen for hele stacken (annonse, booking, chat).
+                if AppConfig.parkingOnly {
+                    SwipeBackEnabler()
+                }
+            }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: Listing.self) { listing in
                 ListingDetailView(listingId: listing.id)

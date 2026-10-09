@@ -222,22 +222,22 @@
         }
       }
     },
+    "%@ kr × %@ %@ (%@)" : {
+      "localizations" : {
+        "nb" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "%1$@ kr × %2$@ %3$@ (%4$@)"
+          }
+        }
+      }
+    },
     "%@ kr × %@ døgn" : {
       "localizations" : {
         "nb" : {
           "stringUnit" : {
             "state" : "new",
             "value" : "%1$@ kr × %2$@ døgn"
-          }
-        }
-      }
-    },
-    "%@ kr × %@ døgn (%@)" : {
-      "localizations" : {
-        "nb" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "%1$@ kr × %2$@ døgn (%3$@)"
           }
         }
       }
@@ -5176,9 +5176,6 @@
 
     },
     "Opplysninger" : {
-
-    },
-    "Opplysninger om turen" : {
 
     },
     "Opprett annonse" : {
