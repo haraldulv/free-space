@@ -33,9 +33,9 @@ struct OfferMessageBubble: View {
             HStack {
                 Image(systemName: "tag.fill")
                     .font(.system(size: 12))
-                    .foregroundStyle(.primary600)
+                    .foregroundStyle(AppConfig.parkingOnly ? .neutral700 : .primary600)
                 Text(roleLabel)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.app(size: 12, weight: .semibold))
                     .foregroundStyle(.neutral700)
                 Spacer()
                 if isConfirmed {
@@ -43,22 +43,22 @@ struct OfferMessageBubble: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 11))
                         Text("Bekreftet")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.app(size: 11, weight: .semibold))
                     }
-                    .foregroundStyle(.primary600)
+                    .foregroundStyle(AppConfig.parkingOnly ? Color(hex: "#1f9177") : .primary600)
                 } else if let countdownText {
                     Text(countdownText)
-                        .font(.system(size: 11))
+                        .font(.app(size: 11))
                         .foregroundStyle(.neutral500)
                 }
             }
 
             HStack(alignment: .firstTextBaseline, spacing: 4) {
                 Text("\((metadata.totalPrice ?? 0).formatted(.number.locale(Locale(identifier: "nb_NO"))))")
-                    .font(.system(size: 28, weight: .bold))
+                    .font(.app(size: 28, weight: .bold))
                     .foregroundStyle(.neutral900)
                 Text("kr")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.app(size: 14, weight: .semibold))
                     .foregroundStyle(.neutral500)
             }
 
@@ -67,7 +67,7 @@ struct OfferMessageBubble: View {
                     Image(systemName: "calendar")
                         .font(.system(size: 11))
                     Text(dates)
-                        .font(.system(size: 13))
+                        .font(.app(size: 13))
                 }
                 .foregroundStyle(.neutral600)
             }
@@ -76,7 +76,7 @@ struct OfferMessageBubble: View {
                 statusBadge
             } else if isFromMe {
                 Text("Venter på svar fra \(opposingPartyLabel)")
-                    .font(.system(size: 12))
+                    .font(.app(size: 12))
                     .foregroundStyle(.neutral500)
             } else if hideActions {
                 // Booking er enten i awaiting_payment (banner viser videre vei)
@@ -88,11 +88,16 @@ struct OfferMessageBubble: View {
             }
         }
         .padding(14)
-        .background(Color.white)
+        .background(Color.appCard)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(isActive ? Color.primary300 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
+                .stroke(
+                    isActive
+                        ? (AppConfig.parkingOnly ? Color.ink.opacity(0.35) : Color.primary300)
+                        : Color.appLine,
+                    lineWidth: isActive ? 1.5 : 1
+                )
         )
         .frame(maxWidth: 280, alignment: .leading)
     }
@@ -110,13 +115,13 @@ struct OfferMessageBubble: View {
                             .tint(.white)
                     } else {
                         Text(acceptLabel)
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.app(size: 14, weight: .semibold))
                             .foregroundStyle(.white)
                     }
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(Color.primary600)
+                .background(Color.appAccent)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .disabled(accepting)
@@ -124,7 +129,7 @@ struct OfferMessageBubble: View {
             HStack(spacing: 8) {
                 Button(action: { onCounter?() }) {
                     Text("Endre pris")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.app(size: 13, weight: .semibold))
                         .foregroundStyle(.neutral900)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
@@ -136,7 +141,7 @@ struct OfferMessageBubble: View {
                 .disabled(accepting)
                 Button(action: { onDecline?() }) {
                     Text("Avslå")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.app(size: 13, weight: .semibold))
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
@@ -158,11 +163,11 @@ struct OfferMessageBubble: View {
 
     private var statusBadge: some View {
         Text("Erstattet av nyere tilbud")
-            .font(.system(size: 11, weight: .medium))
+            .font(.app(size: 11, weight: .medium))
             .foregroundStyle(.neutral500)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
-            .background(Color.neutral100)
+            .background(AppConfig.parkingOnly ? Color.paper : Color.neutral100)
             .clipShape(Capsule())
     }
 

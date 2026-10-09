@@ -103,7 +103,10 @@ struct ChatView: View {
             if isAwaitingPayment {
                 return Color(hex: "#f59e0b")  // oransje
             }
-            return isMyTurn ? Color.primary600 : Color(hex: "#6b7280")
+            // Parkering (palett C): mørk mint som aksent, grønn i camping.
+            return isMyTurn
+                ? (AppConfig.parkingOnly ? Color(hex: "#1f9177") : Color.primary600)
+                : Color(hex: "#6b7280")
         }
     }
 
@@ -240,11 +243,11 @@ struct ChatView: View {
                         } label: {
                             Image(systemName: "chevron.down")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color.primary600)
+                                .foregroundStyle(Color.appAccent)
                                 .frame(width: 44, height: 44)
-                                .background(Color.white)
+                                .background(Color.appCard)
                                 .clipShape(Circle())
-                                .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+                                .overlay(Circle().stroke(Color.appLine, lineWidth: 1))
                                 .shadow(color: .black.opacity(0.12), radius: 8, x: 0, y: 2)
                         }
                         .padding(.trailing, 14)
@@ -268,7 +271,7 @@ struct ChatView: View {
                                 .font(.system(size: 18, weight: .semibold))
                                 .foregroundStyle(.neutral700)
                                 .frame(width: 36, height: 36)
-                                .background(Color.neutral100)
+                                .background(AppConfig.parkingOnly ? Color.paper : Color.neutral100)
                                 .clipShape(Circle())
                         }
                     }
@@ -279,11 +282,11 @@ struct ChatView: View {
                         .focused($isInputFocused)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 10)
-                        .background(Color.neutral50)
+                        .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
                         .clipShape(RoundedRectangle(cornerRadius: 20))
                         .overlay(
                             RoundedRectangle(cornerRadius: 20)
-                                .stroke(Color.neutral200, lineWidth: 1)
+                                .stroke(Color.appLine, lineWidth: 1)
                         )
 
                     Button {
@@ -303,7 +306,12 @@ struct ChatView: View {
                 }
                 .padding(.horizontal, 12)
                 .padding(.vertical, 10)
-                .background(.white)
+                .background(AppConfig.parkingOnly ? Color.paperCard : Color.white)
+            }
+        }
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
             }
         }
         .overlay(alignment: .top) {
@@ -525,11 +533,11 @@ struct ChatView: View {
             Text(accepting && state.isAwaitingPayment && isMyTurn
                  ? "Forbereder betaling…"
                  : state.bannerText(isMyTurn: isMyTurn))
-                .font(.system(size: 13, weight: .semibold))
+                .font(.app(size: 13, weight: .semibold))
                 .foregroundStyle(.neutral900)
             Spacer()
             Text("\(state.totalPrice.formatted(.number.locale(Locale(identifier: "nb_NO")))) kr")
-                .font(.system(size: 13, weight: .bold))
+                .font(.app(size: 13, weight: .bold))
                 .foregroundStyle(.neutral900)
         }
         .padding(.horizontal, 14)
@@ -585,12 +593,12 @@ struct ChatView: View {
         HStack {
             Spacer()
             Text(message.content)
-                .font(.system(size: 12))
+                .font(.app(size: 12))
                 .foregroundStyle(.neutral500)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
-                .background(Color.neutral100)
+                .background(AppConfig.parkingOnly ? Color.paperCard : Color.neutral100)
                 .clipShape(Capsule())
             Spacer()
         }
@@ -737,15 +745,15 @@ struct ChatView: View {
 
                     HStack(spacing: 4) {
                         Text("Tuno support")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.app(size: 14, weight: .semibold))
                             .foregroundStyle(.neutral900)
                         Image(systemName: "checkmark.seal.fill")
                             .font(.system(size: 11))
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(AppConfig.parkingOnly ? .mint : .primary600)
                     }
 
                     Text("Vi svarer fortløpende")
-                        .font(.system(size: 11))
+                        .font(.app(size: 11))
                         .foregroundStyle(.neutral500)
                         .lineLimit(1)
                 } else {
@@ -768,17 +776,17 @@ struct ChatView: View {
                             }
 
                             Text(otherUserName)
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.app(size: 14, weight: .semibold))
                                 .foregroundStyle(.neutral900)
 
                             if let details = conversationDetails, let dates = details.bookingDates {
                                 Text("\(dates) · \(listingTitle)")
-                                    .font(.system(size: 11))
+                                    .font(.app(size: 11))
                                     .foregroundStyle(.neutral500)
                                     .lineLimit(1)
                             } else if !listingTitle.isEmpty {
                                 Text(listingTitle)
-                                    .font(.system(size: 11))
+                                    .font(.app(size: 11))
                                     .foregroundStyle(.neutral500)
                                     .lineLimit(1)
                             }
@@ -795,7 +803,7 @@ struct ChatView: View {
                     showOpplysninger = true
                 } label: {
                     Text("Opplysninger")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.app(size: 13, weight: .semibold))
                         .foregroundStyle(.neutral900)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 7)
@@ -810,16 +818,16 @@ struct ChatView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.white)
+        .background(AppConfig.parkingOnly ? Color.paperCard : Color.white)
     }
 
     private var avatarPlaceholder: some View {
         Circle()
-            .fill(Color.primary100)
+            .fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.primary100)
             .overlay(
                 Text(String(otherUserName.prefix(1)).uppercased())
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.primary600)
+                    .font(.app(size: 12, weight: .semibold))
+                    .foregroundStyle(AppConfig.parkingOnly ? Color.neutral900 : Color.primary600)
             )
     }
 
@@ -964,15 +972,15 @@ struct MessageHeader: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(name)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.app(size: 12, weight: .semibold))
                 .foregroundStyle(.neutral700)
             if isHost {
                 Text("· Vert")
-                    .font(.system(size: 12))
+                    .font(.app(size: 12))
                     .foregroundStyle(.neutral500)
             }
             Text(timestamp)
-                .font(.system(size: 12))
+                .font(.app(size: 12))
                 .foregroundStyle(.neutral400)
                 .padding(.leading, 4)
         }
@@ -1011,12 +1019,20 @@ struct MessageBubble: View {
             if isMe { Spacer(minLength: 40) }
 
             Text(message.content)
-                .font(.system(size: 15))
-                .foregroundStyle(isMe ? .white : .neutral900)
+                .font(.app(size: 15))
+                .foregroundStyle(isMe ? (AppConfig.parkingOnly ? Color.inkText : Color.white) : Color.neutral900)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
-                .background(isMe ? Color.neutral900 : Color.neutral100)
+                .background(
+                    isMe
+                        ? (AppConfig.parkingOnly ? Color.ink : Color.neutral900)
+                        : (AppConfig.parkingOnly ? Color.paperCard : Color.neutral100)
+                )
                 .clipShape(RoundedRectangle(cornerRadius: 20))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 20)
+                        .stroke(!isMe && AppConfig.parkingOnly ? Color.paperLine : Color.clear, lineWidth: 1)
+                )
 
             if !isMe { Spacer(minLength: 40) }
         }
@@ -1024,11 +1040,11 @@ struct MessageBubble: View {
 
     private var avatarInitial: some View {
         Circle()
-            .fill(Color.primary100)
+            .fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.primary100)
             .overlay(
                 Text(otherUserInitial.uppercased())
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.primary600)
+                    .font(.app(size: 12, weight: .semibold))
+                    .foregroundStyle(AppConfig.parkingOnly ? Color.neutral900 : Color.primary600)
             )
     }
 }
@@ -1098,8 +1114,8 @@ struct OpplysningerSheet: View {
                 VStack(alignment: .leading, spacing: 24) {
                     // Turen
                     VStack(alignment: .leading, spacing: 12) {
-                        Text("Opplysninger om turen")
-                            .font(.system(size: 18, weight: .bold))
+                        Text(AppConfig.parkingOnly ? "Opplysninger om bestillingen" : "Opplysninger om turen")
+                            .font(.app(size: 18, weight: .bold))
 
                         Button(action: onShowListing) {
                             HStack(spacing: 12) {
@@ -1113,19 +1129,19 @@ struct OpplysningerSheet: View {
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(details?.listing?.city ?? listingTitle)
-                                        .font(.system(size: 15, weight: .semibold))
+                                        .font(.app(size: 15, weight: .semibold))
                                         .foregroundStyle(.neutral900)
                                     if let dates = details?.bookingDates, let status = details?.bookingStatus {
                                         Text("\(statusLabel(status)) · \(dates)")
-                                            .font(.system(size: 12))
+                                            .font(.app(size: 12))
                                             .foregroundStyle(.neutral500)
                                     } else if details?.bookingStatus != nil {
                                         Text(statusLabel(details?.bookingStatus ?? "") )
-                                            .font(.system(size: 12))
+                                            .font(.app(size: 12))
                                             .foregroundStyle(.neutral500)
                                     }
                                     Text(listingTitle)
-                                        .font(.system(size: 12))
+                                        .font(.app(size: 12))
                                         .foregroundStyle(.neutral400)
                                         .lineLimit(1)
                                 }
@@ -1137,7 +1153,7 @@ struct OpplysningerSheet: View {
                                     .foregroundStyle(.neutral400)
                             }
                             .padding(12)
-                            .background(Color.neutral50)
+                            .background(AppConfig.parkingOnly ? Color.paperCard : Color.neutral50)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         .buttonStyle(.plain)
@@ -1147,7 +1163,7 @@ struct OpplysningerSheet: View {
                     if let details {
                         VStack(alignment: .leading, spacing: 12) {
                             Text("I denne samtalen")
-                                .font(.system(size: 18, weight: .bold))
+                                .font(.app(size: 18, weight: .bold))
 
                             Button(action: onShowHostProfile) {
                                 HStack(spacing: 12) {
@@ -1156,10 +1172,10 @@ struct OpplysningerSheet: View {
                                             CachedAsyncImage(url: url) { image in
                                                 image.resizable().aspectRatio(contentMode: .fill)
                                             } placeholder: {
-                                                Circle().fill(Color.primary100)
+                                                Circle().fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.primary100)
                                             }
                                         } else {
-                                            Circle().fill(Color.primary100)
+                                            Circle().fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.primary100)
                                         }
                                     }
                                     .frame(width: 40, height: 40)
@@ -1167,10 +1183,10 @@ struct OpplysningerSheet: View {
 
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(partnerName)
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .font(.app(size: 14, weight: .semibold))
                                             .foregroundStyle(.neutral900)
                                         Text(partnerRoleLabel)
-                                            .font(.system(size: 12))
+                                            .font(.app(size: 12))
                                             .foregroundStyle(.neutral500)
                                     }
 
@@ -1189,7 +1205,7 @@ struct OpplysningerSheet: View {
                     // Samtalehandlinger
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Samtalehandlinger")
-                            .font(.system(size: 18, weight: .bold))
+                            .font(.app(size: 18, weight: .bold))
                             .padding(.bottom, 8)
 
                         actionRow(icon: "envelope.open", label: "Merk som ulest") { onMarkUnread() }
@@ -1213,6 +1229,11 @@ struct OpplysningerSheet: View {
                     }
                 }
                 .padding(20)
+            }
+            .background {
+                if AppConfig.parkingOnly {
+                    Color.paper.ignoresSafeArea()
+                }
             }
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
@@ -1239,7 +1260,7 @@ struct OpplysningerSheet: View {
                     .foregroundStyle(.neutral700)
                     .frame(width: 24)
                 Text(label)
-                    .font(.system(size: 14))
+                    .font(.app(size: 14))
                     .foregroundStyle(.neutral900)
                 Spacer()
             }
