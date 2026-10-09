@@ -75,18 +75,18 @@ struct SpotVehicleContent: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(width: 28, height: 28)
-                                    .foregroundStyle(selected ? Color.primary700 : Color.neutral600)
+                                    .foregroundStyle(selected ? Color.appAccentDeep : Color.neutral600)
                                 Text(type.displayName)
                                     .font(.system(size: 12, weight: .semibold))
-                                    .foregroundStyle(selected ? Color.primary700 : Color.neutral700)
+                                    .foregroundStyle(selected ? Color.appAccentDeep : Color.neutral700)
                             }
                             .frame(width: 96)
                             .padding(.vertical, 12)
-                            .background(selected ? Color.primary50 : Color.white)
+                            .background(selected ? Color.appTintSoft : Color.white)
                             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(selected ? Color.primary600 : Color.neutral200, lineWidth: selected ? 1.5 : 1)
+                                    .stroke(selected ? Color.appAccent : Color.neutral200, lineWidth: selected ? 1.5 : 1)
                             )
                         }
                         .buttonStyle(.plain)
@@ -270,7 +270,7 @@ struct FeeBreakdownCard: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 14)
-            .background(Color.primary50.opacity(0.5))
+            .background(Color.appTintSoft.opacity(0.5))
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
@@ -338,7 +338,7 @@ struct BigPriceInput: View {
                             .focused($isFocused)
                             .multilineTextAlignment(.center)
                             .font(.system(size: 56, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(.appAccent)
                             .frame(minWidth: 80)
                             .fixedSize()
                             .contentTransition(.numericText())
@@ -359,7 +359,7 @@ struct BigPriceInput: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
-            .background(Color.primary50)
+            .background(Color.appTintSoft)
             .clipShape(RoundedRectangle(cornerRadius: 18))
         }
         .onAppear {
@@ -407,11 +407,11 @@ struct BigPriceInput: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(enabled ? .primary700 : .neutral300)
+                .foregroundStyle(enabled ? .appAccentDeep : .neutral300)
                 .frame(width: 44, height: 44)
                 .background(Color.white)
                 .clipShape(Circle())
-                .overlay(Circle().stroke(enabled ? Color.primary200 : Color.neutral200, lineWidth: 1.5))
+                .overlay(Circle().stroke(enabled ? Color.appTintLine : Color.neutral200, lineWidth: 1.5))
                 .shadow(color: enabled ? .black.opacity(0.06) : .clear, radius: 4, y: 2)
         }
         .buttonStyle(.plain)
@@ -455,7 +455,7 @@ struct BigLengthInput: View {
                             .focused($isFocused)
                             .multilineTextAlignment(.center)
                             .font(.system(size: 56, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(.appAccent)
                             .frame(minWidth: 60)
                             .fixedSize()
                             .contentTransition(.numericText())
@@ -476,7 +476,7 @@ struct BigLengthInput: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 18)
-            .background(Color.primary50)
+            .background(Color.appTintSoft)
             .clipShape(RoundedRectangle(cornerRadius: 18))
         }
         .onAppear {
@@ -517,11 +517,11 @@ struct BigLengthInput: View {
         Button(action: action) {
             Image(systemName: systemName)
                 .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(enabled ? .primary700 : .neutral300)
+                .foregroundStyle(enabled ? .appAccentDeep : .neutral300)
                 .frame(width: 44, height: 44)
                 .background(Color.white)
                 .clipShape(Circle())
-                .overlay(Circle().stroke(enabled ? Color.primary200 : Color.neutral200, lineWidth: 1.5))
+                .overlay(Circle().stroke(enabled ? Color.appTintLine : Color.neutral200, lineWidth: 1.5))
                 .shadow(color: enabled ? .black.opacity(0.06) : .clear, radius: 4, y: 2)
         }
         .buttonStyle(.plain)

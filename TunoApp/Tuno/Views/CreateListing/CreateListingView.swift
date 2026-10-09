@@ -144,7 +144,7 @@ struct CreateListingView: View {
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundStyle(.white)
                 .frame(width: 44, height: 44)
-                .background(Color.primary600)
+                .background(Color.appAccent)
                 .clipShape(Circle())
                 .shadow(color: .black.opacity(0.18), radius: 8, y: 3)
         }
@@ -233,7 +233,7 @@ struct CreateListingView: View {
                 HStack(spacing: 5) {
                     Text("Plass \(form.currentSpotIndex + 1)")
                         .font(.system(size: 17, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary600)
+                        .foregroundStyle(.appAccent)
                         .contentTransition(.numericText())
                     Text("av \(form.spotMarkers.count)")
                         .font(.system(size: 15, weight: .medium, design: .rounded))
@@ -376,18 +376,18 @@ private struct WizardLoadingOverlay: View {
 
     var body: some View {
         ZStack {
-            Color.primary50
+            Color.appTintSoft
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {
                 LottieOrFallback(name: "loading-utleier") {
                     ZStack {
                         Circle()
-                            .fill(Color.primary100)
+                            .fill(Color.appTint)
                             .frame(width: 180, height: 180)
                         ProgressView()
                             .scaleEffect(2.2)
-                            .tint(.primary600)
+                            .tint(.appAccent)
                     }
                 }
                 .frame(width: 220, height: 220)

@@ -71,7 +71,7 @@ struct OpeningHoursEditorView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Image(systemName: icon)
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(selected ? .primary600 : .neutral500)
+                    .foregroundStyle(selected ? .appAccent : .neutral500)
                 Text(title)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(.neutral900)
@@ -84,11 +84,11 @@ struct OpeningHoursEditorView: View {
             }
             .padding(14)
             .frame(maxWidth: .infinity, minHeight: 120, alignment: .topLeading)
-            .background(selected ? Color.primary50 : Color.white)
+            .background(selected ? Color.appTintSoft : Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(selected ? Color.primary600 : Color.neutral200, lineWidth: selected ? 2 : 1)
+                    .stroke(selected ? Color.appAccent : Color.neutral200, lineWidth: selected ? 2 : 1)
             )
         }
         .buttonStyle(.plain)
@@ -122,12 +122,12 @@ struct OpeningHoursEditorView: View {
             } label: {
                 Text(closed ? "Stengt" : "Åpen")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(closed ? .neutral500 : .primary700)
+                    .foregroundStyle(closed ? .neutral500 : .appAccentDeep)
                     .lineLimit(1)
                     .fixedSize()
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(closed ? Color.neutral100 : Color.primary50)
+                    .background(closed ? Color.neutral100 : Color.appTintSoft)
                     .clipShape(Capsule())
             }
             .buttonStyle(.plain)
@@ -284,7 +284,7 @@ private struct DayHoursPickerSheet: View {
                     onSave(startMinutes, safeEnd)
                 }
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(isValid ? .primary700 : .neutral400)
+                .foregroundStyle(isValid ? .appAccentDeep : .neutral400)
                 .disabled(!isValid)
             }
             .padding(.horizontal, 20)

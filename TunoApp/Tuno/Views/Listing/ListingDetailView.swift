@@ -915,7 +915,7 @@ struct ListingDetailView: View {
             VStack(spacing: 4) {
                 Image(systemName: isInstant ? "bolt.fill" : "clock")
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(isInstant ? Color.primary600 : .neutral900)
+                    .foregroundStyle(isInstant ? Color.appAccent : .neutral900)
                 Text(isInstant ? "Direkte" : "Forespør")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.neutral700)
@@ -1013,17 +1013,17 @@ struct ListingDetailView: View {
                             CachedAsyncImage(url: url) { image in
                                 image.resizable().aspectRatio(contentMode: .fill)
                             } placeholder: {
-                                Circle().fill(Color.primary100).overlay(
+                                Circle().fill(Color.appTint).overlay(
                                     Text(String(firstName(of: listing.hostName ?? "?").prefix(1)).uppercased())
                                         .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(.primary600)
+                                        .foregroundStyle(.appAccent)
                                 )
                             }
                         } else {
-                            Circle().fill(Color.primary100).overlay(
+                            Circle().fill(Color.appTint).overlay(
                                 Text(String(firstName(of: listing.hostName ?? "?").prefix(1)).uppercased())
                                     .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(.primary600)
+                                    .foregroundStyle(.appAccent)
                             )
                         }
                     }
@@ -1272,14 +1272,14 @@ struct ListingDetailView: View {
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 11, weight: .semibold))
                         }
-                        .foregroundStyle(Color.primary600)
+                        .foregroundStyle(Color.appAccent)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 9)
                         .background(Color.white)
                         .clipShape(RoundedRectangle(cornerRadius: 9))
                         .overlay(
                             RoundedRectangle(cornerRadius: 9)
-                                .stroke(Color.primary600.opacity(0.5), lineWidth: 1)
+                                .stroke(Color.appAccent.opacity(0.5), lineWidth: 1)
                         )
                     }
                     .padding(.top, 4)
@@ -1318,9 +1318,9 @@ struct ListingDetailView: View {
                                     .resizable()
                                     .aspectRatio(contentMode: .fit)
                                     .frame(width: 22, height: 22)
-                                    .foregroundStyle(.primary600)
+                                    .foregroundStyle(.appAccent)
                                     .frame(width: 36, height: 36)
-                                    .background(Circle().fill(Color.primary50))
+                                    .background(Circle().fill(Color.appTintSoft))
 
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(vt.displayName)
@@ -1350,7 +1350,7 @@ struct ListingDetailView: View {
             HStack(spacing: 8) {
                 Image(systemName: "clock.fill")
                     .font(.system(size: 16))
-                    .foregroundStyle(.primary600)
+                    .foregroundStyle(.appAccent)
                 Text("Åpningstid")
                     .font(.system(size: 18, weight: .bold))
                     .foregroundStyle(.neutral900)
@@ -1479,17 +1479,17 @@ struct ListingDetailView: View {
                                         CachedAsyncImage(url: url) { image in
                                             image.resizable().aspectRatio(contentMode: .fill)
                                         } placeholder: {
-                                            Circle().fill(Color.primary100).overlay(
+                                            Circle().fill(Color.appTint).overlay(
                                                 Text(String(firstName(of: listing.hostName ?? "?").prefix(1)).uppercased())
                                                     .font(.system(size: 28, weight: .semibold))
-                                                    .foregroundStyle(.primary600)
+                                                    .foregroundStyle(.appAccent)
                                             )
                                         }
                                     } else {
-                                        Circle().fill(Color.primary100).overlay(
+                                        Circle().fill(Color.appTint).overlay(
                                             Text(String(firstName(of: listing.hostName ?? "?").prefix(1)).uppercased())
                                                 .font(.system(size: 28, weight: .semibold))
-                                                .foregroundStyle(.primary600)
+                                                .foregroundStyle(.appAccent)
                                         )
                                     }
                                 }
@@ -1709,7 +1709,7 @@ struct ListingDetailView: View {
                         Text("Direktebestilling")
                             .font(.system(size: 12, weight: .medium))
                     }
-                    .foregroundStyle(Color.primary600)
+                    .foregroundStyle(Color.appAccent)
                 } else if let rating = listing.rating, (listing.reviewCount ?? 0) > 0 {
                     HStack(spacing: 3) {
                         Image(systemName: "star.fill")
@@ -1743,7 +1743,7 @@ struct ListingDetailView: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 36)
                             .padding(.vertical, 14)
-                            .background(Color.primary600)
+                            .background(Color.appAccent)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                 }
@@ -1756,7 +1756,7 @@ struct ListingDetailView: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 36)
                         .padding(.vertical, 14)
-                        .background(Color.primary600)
+                        .background(Color.appAccent)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
             }
@@ -1973,7 +1973,7 @@ struct ListingDetailView: View {
                 HStack(spacing: 10) {
                     Image(systemName: ExtraType(rawValue: ex.id)?.icon ?? "sparkles")
                         .font(.system(size: 14))
-                        .foregroundStyle(.primary600)
+                        .foregroundStyle(.appAccent)
                         .frame(width: 20)
                     Text(ex.name)
                         .font(.system(size: 14, weight: .medium))

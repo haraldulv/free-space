@@ -62,7 +62,7 @@ struct AddressStep: View {
                                     HStack(spacing: 12) {
                                         Image(systemName: "mappin.circle.fill")
                                             .font(.system(size: 20))
-                                            .foregroundStyle(.primary600)
+                                            .foregroundStyle(.appAccent)
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(prediction.mainText)
                                                 .font(.system(size: 15, weight: .medium))
@@ -133,16 +133,16 @@ struct AddressStep: View {
                                 } label: {
                                     Text("Bytt adresse")
                                         .font(.system(size: 13, weight: .semibold))
-                                        .foregroundStyle(.primary600)
+                                        .foregroundStyle(.appAccent)
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
                     }
                     .padding(14)
-                    .background(Color.primary50)
+                    .background(Color.appTintSoft)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary200, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.appTintLine, lineWidth: 1))
                     .transition(.opacity)
                     .onChange(of: streetName) { _, _ in syncSplitToForm() }
                     .onChange(of: houseNumber) { _, _ in syncSplitToForm() }
@@ -165,7 +165,7 @@ struct AddressStep: View {
                             .lineSpacing(2)
                     }
                 }
-                .tint(.primary600)
+                .tint(.appAccent)
                 .padding(14)
                 .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -285,7 +285,7 @@ struct AddressStep: View {
                 .padding(12)
                 .background(Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 10))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary200, lineWidth: 1))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appTintLine, lineWidth: 1))
         }
     }
 }

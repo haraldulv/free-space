@@ -64,7 +64,7 @@ struct ParkingPublishStep: View {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: form.hasConfirmedOwnership ? "checkmark.square.fill" : "square")
                             .font(.system(size: 22))
-                            .foregroundStyle(form.hasConfirmedOwnership ? Color.primary600 : .neutral400)
+                            .foregroundStyle(form.hasConfirmedOwnership ? Color.appAccent : .neutral400)
                         Text("Jeg har rett til å leie ut denne plassen")
                             .font(.tuno(.body))
                             .foregroundStyle(.neutral900)
@@ -76,7 +76,7 @@ struct ParkingPublishStep: View {
                     .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
                     .overlay(
                         RoundedRectangle(cornerRadius: TunoRadius.control)
-                            .stroke(form.hasConfirmedOwnership ? Color.primary600 : Color.neutral200, lineWidth: 1)
+                            .stroke(form.hasConfirmedOwnership ? Color.appAccent : Color.neutral200, lineWidth: 1)
                     )
                 }
                 .buttonStyle(.plain)

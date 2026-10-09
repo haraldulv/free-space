@@ -271,10 +271,10 @@ struct ProfileCalendarView: View {
             .foregroundStyle(isSelected ? .white : Color.neutral900)
             .padding(.horizontal, 14)
             .padding(.vertical, 8)
-            .background(isSelected ? Color.primary600 : Color.white)
+            .background(isSelected ? Color.appAccent : Color.white)
             .clipShape(Capsule())
             .overlay(
-                Capsule().stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: 1)
+                Capsule().stroke(isSelected ? Color.appAccent : Color.neutral200, lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.05), radius: 3, y: 1)
         }
@@ -447,7 +447,7 @@ struct OpeningHoursOverridesSheet: View {
                                     HStack(spacing: 10) {
                                         Image(systemName: mode == m ? "checkmark.circle.fill" : "circle")
                                             .font(.system(size: 18))
-                                            .foregroundStyle(mode == m ? Color.primary600 : Color.neutral300)
+                                            .foregroundStyle(mode == m ? Color.appAccent : Color.neutral300)
                                         VStack(alignment: .leading, spacing: 2) {
                                             Text(m.rawValue)
                                                 .font(.system(size: 15, weight: .semibold))
@@ -460,11 +460,11 @@ struct OpeningHoursOverridesSheet: View {
                                     }
                                     .padding(.horizontal, 14)
                                     .padding(.vertical, 12)
-                                    .background(mode == m ? Color.primary50 : Color.white)
+                                    .background(mode == m ? Color.appTintSoft : Color.white)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 12)
-                                            .stroke(mode == m ? Color.primary600 : Color.neutral200, lineWidth: mode == m ? 1.5 : 1)
+                                            .stroke(mode == m ? Color.appAccent : Color.neutral200, lineWidth: mode == m ? 1.5 : 1)
                                     )
                                 }
                                 .buttonStyle(.plain)

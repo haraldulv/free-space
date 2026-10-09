@@ -16,13 +16,13 @@ struct QRCodeModal: View {
                     // Info
                     HStack(spacing: 8) {
                         Image(systemName: "info.circle")
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(.appAccent)
                         Text("Skriv ut og heng opp QR-kodene ved hver plass. Gjester scanner koden for å komme direkte til annonsen.")
                             .font(.system(size: 14))
                             .foregroundStyle(.neutral600)
                     }
                     .padding()
-                    .background(Color.primary50)
+                    .background(Color.appTintSoft)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     // QR codes per spot
@@ -61,17 +61,17 @@ struct QRCodeModal: View {
                             } label: {
                                 HStack(spacing: 6) {
                                     if savingSpot == spot {
-                                        ProgressView().tint(.primary600)
+                                        ProgressView().tint(.appAccent)
                                     } else {
                                         Image(systemName: "arrow.down.circle")
                                         Text("Last ned PNG")
                                     }
                                 }
                                 .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.primary600)
+                                .foregroundStyle(.appAccent)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 10)
-                                .background(Color.primary50)
+                                .background(Color.appTintSoft)
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
                             }
                         }
@@ -94,7 +94,7 @@ struct QRCodeModal: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(Color.primary600)
+                            .background(Color.appAccent)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }

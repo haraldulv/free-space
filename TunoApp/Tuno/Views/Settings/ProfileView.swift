@@ -71,17 +71,17 @@ struct ProfileView: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(Color.primary600)
+                            .background(Color.appAccent)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
 
                     Button { showRegister = true } label: {
                         Text("Registrer deg")
                             .font(.system(size: 17, weight: .semibold))
-                            .foregroundStyle(.primary700)
+                            .foregroundStyle(.appAccentDeep)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 16)
-                            .background(Color.primary50)
+                            .background(Color.appTintSoft)
                             .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                 }
@@ -356,10 +356,10 @@ struct ProfileView: View {
         } label: {
             HStack(spacing: 14) {
                 ZStack {
-                    Circle().fill(Color.primary100).frame(width: 44, height: 44)
+                    Circle().fill(Color.appTint).frame(width: 44, height: 44)
                     Image(systemName: "plus")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Color.primary600)
+                        .foregroundStyle(Color.appAccent)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Bli utleier")
@@ -376,7 +376,7 @@ struct ProfileView: View {
                     .foregroundStyle(.neutral400)
             }
             .padding(16)
-            .background(Color.primary50)
+            .background(Color.appTintSoft)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: .black.opacity(0.07), radius: 10, y: 3)
         }
@@ -394,10 +394,10 @@ struct ProfileView: View {
         } label: {
             HStack(spacing: 14) {
                 ZStack {
-                    Circle().fill(Color.primary100).frame(width: 44, height: 44)
+                    Circle().fill(Color.appTint).frame(width: 44, height: 44)
                     Image(systemName: "plus")
                         .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Color.primary600)
+                        .foregroundStyle(Color.appAccent)
                 }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -414,7 +414,7 @@ struct ProfileView: View {
                     .foregroundStyle(.neutral400)
             }
             .padding(16)
-            .background(Color.primary50)
+            .background(Color.appTintSoft)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .shadow(color: .black.opacity(0.07), radius: 10, y: 3)
         }
@@ -573,12 +573,12 @@ struct EditProfileView: View {
                 } label: {
                     HStack {
                         if isSaving {
-                            ProgressView().tint(.primary600)
+                            ProgressView().tint(.appAccent)
                             Text("Lagrer …").foregroundStyle(.neutral500)
                         } else {
                             Text("Lagre endringer")
                                 .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.primary600)
+                                .foregroundStyle(.appAccent)
                         }
                         Spacer()
                     }
@@ -648,11 +648,11 @@ struct EditProfileView: View {
                         }
                     } else {
                         Circle()
-                            .fill(Color.primary100)
+                            .fill(Color.appTint)
                             .overlay(
                                 Text(String((authManager.profile?.fullName ?? "?").prefix(1)).uppercased())
                                     .font(.system(size: 24, weight: .semibold))
-                                    .foregroundStyle(.primary600)
+                                    .foregroundStyle(.appAccent)
                             )
                     }
                 }
@@ -670,7 +670,7 @@ struct EditProfileView: View {
                         .font(.system(size: 11))
                         .foregroundStyle(.white)
                         .frame(width: 24, height: 24)
-                        .background(Color.primary600)
+                        .background(Color.appAccent)
                         .clipShape(Circle())
                         .overlay(Circle().stroke(Color.white, lineWidth: 2))
                 }
@@ -942,7 +942,7 @@ struct MyListingsView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
-                    .background(Color.primary600)
+                    .background(Color.appAccent)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
         }
@@ -1043,20 +1043,20 @@ struct MyListingsView: View {
         HStack(spacing: 14) {
             ZStack {
                 Circle()
-                    .fill(Color.primary100)
+                    .fill(Color.appTint)
                     .frame(width: 44, height: 44)
                 Image(systemName: "doc.text")
                     .font(.system(size: 18, weight: .semibold))
-                    .foregroundStyle(Color.primary600)
+                    .foregroundStyle(Color.appAccent)
             }
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text("Fortsett utkast")
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.primary700)
+                        .foregroundStyle(Color.appAccentDeep)
                         .padding(.horizontal, 8)
                         .padding(.vertical, 3)
-                        .background(Color.primary100)
+                        .background(Color.appTint)
                         .clipShape(Capsule())
                 }
                 Text(draft.displayTitle)
@@ -1074,11 +1074,11 @@ struct MyListingsView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.primary50)
+        .background(Color.appTintSoft)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .stroke(Color.primary200, lineWidth: 1)
+                .stroke(Color.appTintLine, lineWidth: 1)
         )
         .contentShape(Rectangle())
         .onTapGesture {

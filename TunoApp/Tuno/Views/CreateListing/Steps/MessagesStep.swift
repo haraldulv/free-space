@@ -14,7 +14,7 @@ struct MessagesStep: View {
                 // Velkomstmelding
                 messageCard(
                     icon: "hand.wave.fill",
-                    iconColor: .primary600,
+                    iconColor: .appAccent,
                     title: "Velkomstmelding",
                     subtitle: "Sendes automatisk på ankomstdagen",
                     text: $form.checkinMessage,
@@ -24,7 +24,7 @@ struct MessagesStep: View {
                 // Utsjekk-melding
                 messageCard(
                     icon: "moon.fill",
-                    iconColor: .primary500,
+                    iconColor: .appAccentBright,
                     title: "Utsjekk-melding",
                     subtitle: "Sendes \(form.checkoutMessageSendHoursBefore) time\(form.checkoutMessageSendHoursBefore == 1 ? "" : "r") før utsjekk",
                     text: $form.checkoutMessage,
@@ -48,9 +48,9 @@ struct MessagesStep: View {
                                             .foregroundStyle(form.checkoutMessageSendHoursBefore == h ? .white : .neutral700)
                                             .padding(.horizontal, 14)
                                             .padding(.vertical, 8)
-                                            .background(form.checkoutMessageSendHoursBefore == h ? Color.primary600 : Color.white)
+                                            .background(form.checkoutMessageSendHoursBefore == h ? Color.appAccent : Color.white)
                                             .clipShape(Capsule())
-                                            .overlay(Capsule().stroke(form.checkoutMessageSendHoursBefore == h ? Color.primary600 : Color.neutral200, lineWidth: 1))
+                                            .overlay(Capsule().stroke(form.checkoutMessageSendHoursBefore == h ? Color.appAccent : Color.neutral200, lineWidth: 1))
                                     }
                                 }
                             }
@@ -67,7 +67,7 @@ struct MessagesStep: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
                 ZStack {
-                    Circle().fill(Color.primary50).frame(width: 36, height: 36)
+                    Circle().fill(Color.appTintSoft).frame(width: 36, height: 36)
                     Image(systemName: icon)
                         .font(.system(size: 16))
                         .foregroundStyle(iconColor)

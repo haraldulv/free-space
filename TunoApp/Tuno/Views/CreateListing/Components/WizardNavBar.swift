@@ -44,7 +44,7 @@ struct WizardNavBar: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(nextEnabled ? Color.primary600 : Color.primary300)
+                    .background(nextEnabled ? Color.appAccent : Color.appAccentDisabled)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .disabled(!nextEnabled || nextLoading)

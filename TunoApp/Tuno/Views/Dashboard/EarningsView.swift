@@ -97,8 +97,8 @@ struct EarningsView: View {
             )
             StatCard(
                 icon: "chart.line.uptrend.xyaxis",
-                iconBg: Color.primary100,
-                iconColor: Color.primary600,
+                iconBg: Color.appTint,
+                iconColor: Color.appAccent,
                 label: "Denne måneden",
                 value: "\(formatKr(thisMonthEarnings)) kr"
             )
@@ -128,7 +128,7 @@ struct EarningsView: View {
                 HStack(spacing: 6) {
                     Image(systemName: "banknote.fill")
                         .font(.system(size: 14))
-                        .foregroundStyle(.primary600)
+                        .foregroundStyle(.appAccent)
                     Text("Utbetalinger")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.neutral700)
@@ -219,7 +219,7 @@ struct EarningsView: View {
             }
         }
         .padding(12)
-        .background(Color.primary50)
+        .background(Color.appTintSoft)
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -298,7 +298,7 @@ struct EarningsView: View {
 
     private func payoutTint(_ status: String) -> Color {
         switch status {
-        case "paid": return Color.primary600
+        case "paid": return Color.appAccent
         case "pending", "in_transit": return .orange
         case "failed", "canceled": return .red
         default: return .neutral500
@@ -358,7 +358,7 @@ struct EarningsView: View {
             HStack(spacing: 6) {
                 Image(systemName: "chart.line.uptrend.xyaxis")
                     .font(.system(size: 14))
-                    .foregroundStyle(.primary600)
+                    .foregroundStyle(.appAccent)
                 Text("Månedlig inntekt")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(.neutral700)
@@ -377,7 +377,7 @@ struct EarningsView: View {
                         }
 
                         RoundedRectangle(cornerRadius: 4)
-                            .fill(Color.primary600)
+                            .fill(Color.appAccent)
                             .frame(
                                 height: max(
                                     CGFloat(month.earnings) / CGFloat(maxEarnings) * 120,
@@ -472,7 +472,7 @@ struct EarningsView: View {
                                         .fill(Color.neutral100)
                                         .frame(height: 6)
                                     RoundedRectangle(cornerRadius: 2)
-                                        .fill(Color.primary600)
+                                        .fill(Color.appAccent)
                                         .frame(
                                             width: geo.size.width * CGFloat(item.earnings) / CGFloat(topEarnings),
                                             height: 6

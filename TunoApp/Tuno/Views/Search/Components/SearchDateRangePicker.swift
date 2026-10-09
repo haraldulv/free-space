@@ -144,12 +144,12 @@ struct SearchDateRangePicker: View {
                 // Range-fyll bak (til venstre/høyre for endepunkt-sirkel) — lett grønn
                 if inRange && !isStart && !isEnd && !isBlocked {
                     Rectangle()
-                        .fill(Color.primary50)
+                        .fill(Color.appTintSoft)
                 }
                 // Endepunkt-bakgrunn — Tuno-grønn sirkel
                 if (isStart || isEnd) && !isBlocked {
                     Circle()
-                        .fill(Color.primary600)
+                        .fill(Color.appAccent)
                         .padding(2)
                 }
                 Text("\(day)")
@@ -168,7 +168,7 @@ struct SearchDateRangePicker: View {
         if isPast { return Color.neutral300 }
         if isBlocked { return Color.neutral400 }
         if isEndpoint { return .white }
-        if inRange { return Color.primary700 }
+        if inRange { return Color.appAccentDeep }
         return Color.neutral900
     }
 

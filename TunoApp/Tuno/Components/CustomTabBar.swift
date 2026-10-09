@@ -72,7 +72,7 @@ struct CustomTabBar: View {
                 Text(tab.label)
                     .font(.system(size: 10))
             }
-            .foregroundStyle(selectedTab == tab.index ? Color.primary600 : Color.neutral400)
+            .foregroundStyle(selectedTab == tab.index ? Color.appAccent : Color.neutral400)
             .frame(maxWidth: .infinity)
         }
     }
@@ -157,7 +157,7 @@ struct CustomTabBar: View {
         .clipShape(Circle())
         .overlay(
             Circle()
-                .strokeBorder(isSelected ? Color.primary600 : Color.clear, lineWidth: 1.5),
+                .strokeBorder(isSelected ? Color.appAccent : Color.clear, lineWidth: 1.5),
         )
     }
 

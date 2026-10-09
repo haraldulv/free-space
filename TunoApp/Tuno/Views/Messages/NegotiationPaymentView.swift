@@ -75,7 +75,7 @@ struct NegotiationPaymentView: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(cardComplete && !processing ? Color.primary600 : Color.neutral300)
+                        .background(cardComplete && !processing ? Color.appAccent : Color.neutral300)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .disabled(!cardComplete || processing)

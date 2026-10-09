@@ -63,7 +63,7 @@ struct BookingsView: View {
 
     /// Palett C i parkering-modus (ink-chip), gammel grønn i camping.
     private var activeChipColor: Color {
-        AppConfig.parkingOnly ? .ink : .primary600
+        AppConfig.parkingOnly ? .ink : .appAccent
     }
 
     private var inactiveChipColor: Color {
@@ -829,7 +829,7 @@ struct StatusBadge: View {
         case .pending, .requested, .awaiting_host: return .orange
         case .awaiting_guest, .awaiting_payment: return .orange
         // Parkering (palett C): mint som suksess-aksent, grønn i camping.
-        case .confirmed: return AppConfig.parkingOnly ? .mint : .primary600
+        case .confirmed: return AppConfig.parkingOnly ? .mint : .appAccent
         case .declined, .expired, .cancelled: return .neutral500
         }
     }

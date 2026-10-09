@@ -48,7 +48,7 @@ struct DescriptionStep: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(titleFocused ? Color.primary600 : Color.neutral200,
+                        .stroke(titleFocused ? Color.appAccent : Color.neutral200,
                                 lineWidth: titleFocused ? 1.5 : 1)
                 )
 
@@ -66,10 +66,10 @@ struct DescriptionStep: View {
                             .font(.system(size: 13, weight: .medium))
                             .lineLimit(1)
                     }
-                    .foregroundStyle(.primary700)
+                    .foregroundStyle(.appAccentDeep)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
-                    .background(Color.primary50)
+                    .background(Color.appTintSoft)
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -108,7 +108,7 @@ struct DescriptionStep: View {
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(descriptionFocused ? Color.primary600 : Color.neutral200,
+                            .stroke(descriptionFocused ? Color.appAccent : Color.neutral200,
                                     lineWidth: descriptionFocused ? 1.5 : 1)
                     )
 

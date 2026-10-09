@@ -16,7 +16,7 @@ struct WizardProgressBar: View {
 
                 Capsule()
                     .fill(LinearGradient(
-                        colors: [.primary500, .primary600],
+                        colors: [.appAccentBright, .appAccent],
                         startPoint: .leading,
                         endPoint: .trailing))
                     .frame(width: max(4, geo.size.width * progress), height: 4)

@@ -48,16 +48,16 @@ private struct BookingModeCard: View {
                 HStack {
                     ZStack {
                         RoundedRectangle(cornerRadius: 18)
-                            .fill(isSelected ? Color.primary600 : Color.primary50)
+                            .fill(isSelected ? Color.appAccent : Color.appTintSoft)
                             .frame(width: 72, height: 72)
                         Image(systemName: iconName)
                             .font(.system(size: 32, weight: .medium))
-                            .foregroundStyle(isSelected ? .white : .primary700)
+                            .foregroundStyle(isSelected ? .white : .appAccentDeep)
                     }
                     Spacer()
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 24))
-                        .foregroundStyle(isSelected ? .primary600 : .neutral300)
+                        .foregroundStyle(isSelected ? .appAccent : .neutral300)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -74,13 +74,13 @@ private struct BookingModeCard: View {
             }
             .padding(22)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isSelected ? Color.primary50 : Color.white)
+            .background(isSelected ? Color.appTintSoft : Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 22))
             .overlay(
                 RoundedRectangle(cornerRadius: 22)
-                    .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 2 : 1)
+                    .stroke(isSelected ? Color.appAccent : Color.neutral200, lineWidth: isSelected ? 2 : 1)
             )
-            .shadow(color: isSelected ? Color.primary600.opacity(0.15) : .clear, radius: 10, y: 3)
+            .shadow(color: isSelected ? Color.appAccent.opacity(0.15) : .clear, radius: 10, y: 3)
         }
         .buttonStyle(.plain)
     }

@@ -68,7 +68,7 @@ struct FilterCircleButton: View {
                         .foregroundStyle(.white)
                         .frame(minWidth: 18, minHeight: 18)
                         .padding(.horizontal, 4)
-                        .background(Color.primary600)
+                        .background(Color.appAccent)
                         .clipShape(Capsule())
                         .offset(x: 2, y: -2)
                 }

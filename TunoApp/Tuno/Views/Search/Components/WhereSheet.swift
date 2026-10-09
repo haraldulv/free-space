@@ -417,11 +417,11 @@ struct WhereSheet: View {
                     HStack(spacing: 14) {
                         ZStack {
                             RoundedRectangle(cornerRadius: 10)
-                                .fill(Color.primary50)
+                                .fill(Color.appTintSoft)
                                 .frame(width: 40, height: 40)
                             Image(systemName: "mappin.circle.fill")
                                 .font(.system(size: 18))
-                                .foregroundStyle(.primary600)
+                                .foregroundStyle(.appAccent)
                         }
                         VStack(alignment: .leading, spacing: 2) {
                             Text(prediction.mainText)
@@ -459,11 +459,11 @@ struct WhereSheet: View {
             HStack(spacing: 14) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.primary50)
+                        .fill(Color.appTintSoft)
                         .frame(width: 40, height: 40)
                     Image(systemName: "location.fill")
                         .font(.system(size: 16))
-                        .foregroundStyle(.primary600)
+                        .foregroundStyle(.appAccent)
                 }
                 VStack(alignment: .leading, spacing: 1) {
                     Text("I nærheten")
@@ -580,7 +580,7 @@ struct WhereSheet: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(isActive ? Color.primary700 : Color.neutral500)
+                    .foregroundStyle(isActive ? Color.appAccentDeep : Color.neutral500)
                 Text(date.map(formatDate) ?? "Velg dato")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(date == nil ? .neutral400 : .neutral900)
@@ -588,11 +588,11 @@ struct WhereSheet: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(isActive ? Color.primary50 : Color.white)
+            .background(isActive ? Color.appTintSoft : Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isActive ? Color.primary600 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
+                    .stroke(isActive ? Color.appAccent : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
             )
         }
         .buttonStyle(.plain)
@@ -722,7 +722,7 @@ struct WhereSheet: View {
                     .resizable()
                     .aspectRatio(contentMode: .fit)
                     .frame(width: 24, height: 24)
-                    .foregroundStyle(isSelected ? Color.primary600 : .neutral500)
+                    .foregroundStyle(isSelected ? Color.appAccent : .neutral500)
                 Text(type.displayName)
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(isSelected ? .neutral900 : .neutral500)
@@ -731,11 +731,11 @@ struct WhereSheet: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(isSelected ? Color.primary50 : Color.neutral50)
+            .background(isSelected ? Color.appTintSoft : Color.neutral50)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 1.5 : 1)
+                    .stroke(isSelected ? Color.appAccent : Color.neutral200, lineWidth: isSelected ? 1.5 : 1)
             )
         }
         .buttonStyle(.plain)
@@ -799,7 +799,7 @@ struct WhereSheet: View {
                         .foregroundStyle(.white)
                         .padding(.horizontal, 32)
                         .padding(.vertical, 14)
-                        .background(Color.primary600)
+                        .background(Color.appAccent)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
                 }

@@ -50,30 +50,30 @@ struct PhotosStep: View {
                         VStack(spacing: 10) {
                             Image(systemName: "photo.badge.plus")
                                 .font(.system(size: 32, weight: .light))
-                                .foregroundStyle(.primary600)
+                                .foregroundStyle(.appAccent)
                             Text("Velg bilder")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.primary700)
+                                .foregroundStyle(.appAccentDeep)
                             Text("JPG eller PNG · maks 10 bilder")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.neutral500)
                         }
                         .frame(maxWidth: .infinity)
                         .frame(height: 140)
-                        .background(Color.primary50)
+                        .background(Color.appTintSoft)
                         .clipShape(RoundedRectangle(cornerRadius: 16))
                         .overlay(
                             RoundedRectangle(cornerRadius: 16)
-                                .strokeBorder(Color.primary300, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                                .strokeBorder(Color.appAccentDisabled, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                         )
                     } else {
                         HStack(spacing: 10) {
                             Image(systemName: "photo.badge.plus")
                                 .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(.primary600)
+                                .foregroundStyle(.appAccent)
                             Text("Legg til flere bilder")
                                 .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.primary700)
+                                .foregroundStyle(.appAccentDeep)
                             Spacer()
                             Text("\(form.imageURLs.count)/10")
                                 .font(.system(size: 12, weight: .medium))
@@ -82,11 +82,11 @@ struct PhotosStep: View {
                         .padding(.horizontal, 14)
                         .frame(maxWidth: .infinity)
                         .frame(height: 48)
-                        .background(Color.primary50)
+                        .background(Color.appTintSoft)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(Color.primary300, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                                .strokeBorder(Color.appAccentDisabled, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
                         )
                     }
                 }
@@ -153,7 +153,7 @@ struct PhotosStep: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "mappin.and.ellipse")
                 .font(.system(size: 16))
-                .foregroundStyle(.primary600)
+                .foregroundStyle(.appAccent)
                 .padding(.top, 1)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Tag bildene til riktig plass")
@@ -170,11 +170,11 @@ struct PhotosStep: View {
             Spacer()
         }
         .padding(12)
-        .background(Color.primary50)
+        .background(Color.appTintSoft)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.primary200, lineWidth: 1)
+                .stroke(Color.appTintLine, lineWidth: 1)
         )
     }
 
@@ -246,7 +246,7 @@ struct PhotosStep: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(isCover ? Color.primary600 : Color.clear, lineWidth: 2)
+                .strokeBorder(isCover ? Color.appAccent : Color.clear, lineWidth: 2)
         )
         .opacity(isDragging ? 0.4 : 1)
         .overlay(alignment: .topLeading) {
@@ -258,7 +258,7 @@ struct PhotosStep: View {
                 .foregroundStyle(.white)
                 .padding(.horizontal, 7)
                 .padding(.vertical, 4)
-                .background(Color.primary600)
+                .background(Color.appAccent)
                 .clipShape(Capsule())
                 .padding(6)
                 .allowsHitTesting(false)
@@ -305,15 +305,15 @@ struct PhotosStep: View {
                 Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
             }
             .font(.system(size: 12, weight: .semibold))
-            .foregroundStyle(tagged ? .white : .primary700)
+            .foregroundStyle(tagged ? .white : .appAccentDeep)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
-            .background(tagged ? Color.primary600 : Color.primary50)
+            .background(tagged ? Color.appAccent : Color.appTintSoft)
             .clipShape(RoundedRectangle(cornerRadius: 8))
             .overlay(
                 RoundedRectangle(cornerRadius: 8)
-                    .stroke(tagged ? Color.clear : Color.primary300, style: StrokeStyle(lineWidth: 1, dash: tagged ? [] : [4, 3]))
+                    .stroke(tagged ? Color.clear : Color.appAccentDisabled, style: StrokeStyle(lineWidth: 1, dash: tagged ? [] : [4, 3]))
             )
         }
         .buttonStyle(.plain)

@@ -88,7 +88,7 @@ struct SpotPlacementSheet: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 8)
-                            .background(Color.primary600)
+                            .background(Color.appAccent)
                             .clipShape(Capsule())
                             .shadow(color: .black.opacity(0.2), radius: 4)
                     }
@@ -161,7 +161,7 @@ struct SpotPlacementSheet: View {
             .shadow(color: .black.opacity(0.08), radius: 4)
         } else {
             HStack(spacing: 6) {
-                Image(systemName: "hand.tap.fill").foregroundStyle(.primary600)
+                Image(systemName: "hand.tap.fill").foregroundStyle(.appAccent)
                 Text("Tap for å plassere")
             }
             .font(.system(size: 12, weight: .medium))
@@ -183,7 +183,7 @@ struct SpotPlacementSheet: View {
                 HStack {
                     Image(systemName: "mappin.and.ellipse")
                         .font(.system(size: 24))
-                        .foregroundStyle(Color.primary600)
+                        .foregroundStyle(Color.appAccent)
                     Text("Plasser plassene dine")
                         .font(.system(size: 18, weight: .bold))
                     Spacer()
@@ -200,7 +200,7 @@ struct SpotPlacementSheet: View {
                     HStack(spacing: 10) {
                         Image(systemName: dontAskAgain ? "checkmark.square.fill" : "square")
                             .font(.system(size: 18))
-                            .foregroundStyle(dontAskAgain ? Color.primary600 : Color.neutral400)
+                            .foregroundStyle(dontAskAgain ? Color.appAccent : Color.neutral400)
                         Text("Ikke spør meg igjen")
                             .font(.system(size: 14))
                             .foregroundStyle(.neutral700)
@@ -220,7 +220,7 @@ struct SpotPlacementSheet: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(Color.primary600)
+                        .background(Color.appAccent)
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
             }
@@ -238,7 +238,7 @@ struct SpotPlacementSheet: View {
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(.white)
                 .frame(width: 22, height: 22)
-                .background(Color.primary600)
+                .background(Color.appAccent)
                 .clipShape(Circle())
             Text(text)
                 .font(.system(size: 14))

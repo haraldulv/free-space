@@ -96,10 +96,10 @@ struct ReviewCard: View {
 
     private var initialsCircle: some View {
         ZStack {
-            Circle().fill(Color.primary50)
+            Circle().fill(Color.appTintSoft)
             Text(initials)
                 .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(.primary700)
+                .foregroundStyle(.appAccentDeep)
         }
         .frame(width: 40, height: 40)
     }

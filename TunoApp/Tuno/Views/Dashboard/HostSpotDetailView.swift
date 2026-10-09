@@ -177,7 +177,7 @@ struct HostSpotDetailView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 10)
-                    .background(dirty && !saving ? Color.primary600 : Color.neutral300)
+                    .background(dirty && !saving ? Color.appAccent : Color.neutral300)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .disabled(!dirty || saving)

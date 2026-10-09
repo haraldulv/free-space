@@ -39,7 +39,7 @@ struct SettingsView: View {
                                 Spacer()
                                 if localizationManager.currentLanguageCode == lang.code {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(.primary600)
+                                        .foregroundStyle(.appAccent)
                                 }
                             }
                         }

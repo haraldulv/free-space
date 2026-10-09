@@ -186,7 +186,7 @@ private struct DimensionRow: View {
                     .focused(focused, equals: focusField)
                     .multilineTextAlignment(.trailing)
                     .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .foregroundStyle(.primary700)
+                    .foregroundStyle(.appAccentDeep)
                     .frame(width: 50)
                 Text("m")
                     .font(.system(size: 14, weight: .medium))
@@ -196,7 +196,7 @@ private struct DimensionRow: View {
             .padding(.vertical, 8)
             .background(Color.neutral50)
             .clipShape(RoundedRectangle(cornerRadius: 10))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused.wrappedValue == focusField ? Color.primary600 : Color.neutral200, lineWidth: focused.wrappedValue == focusField ? 1.5 : 1))
+            .overlay(RoundedRectangle(cornerRadius: 10).stroke(focused.wrappedValue == focusField ? Color.appAccent : Color.neutral200, lineWidth: focused.wrappedValue == focusField ? 1.5 : 1))
         }
         .onAppear { text = value > 0 ? "\(value)" : "" }
         .onChange(of: text) { _, newValue in
@@ -251,18 +251,18 @@ private struct ParkingTypeRow: View {
                 Image(systemName: icon)
                     .font(.system(size: 18, weight: .medium))
                     .frame(width: 28, height: 28)
-                    .foregroundStyle(isSelected ? Color.primary700 : Color.neutral600)
+                    .foregroundStyle(isSelected ? Color.appAccentDeep : Color.neutral600)
                 Text(label)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(isSelected ? Color.primary700 : Color.neutral700)
+                    .foregroundStyle(isSelected ? Color.appAccentDeep : Color.neutral700)
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(isSelected ? Color.primary50 : Color.white)
+            .background(isSelected ? Color.appTintSoft : Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 1.5 : 1)
+                    .stroke(isSelected ? Color.appAccent : Color.neutral200, lineWidth: isSelected ? 1.5 : 1)
             )
         }
         .buttonStyle(.plain)

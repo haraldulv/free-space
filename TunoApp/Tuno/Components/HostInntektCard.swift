@@ -25,7 +25,7 @@ struct HostInntektCard: View {
                     Text("Inntekt")
                         .font(.system(size: 15, weight: .semibold))
                 }
-                .foregroundStyle(.primary700)
+                .foregroundStyle(.appAccentDeep)
                 Text(monthName)
                     .font(.system(size: 13))
                     .foregroundStyle(.neutral600)
@@ -64,13 +64,13 @@ struct HostInntektCard: View {
         .padding(.vertical, 22)
         .background(
             LinearGradient(
-                colors: [Color.primary50, Color.white],
+                colors: [Color.appTintSoft, Color.white],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
             )
         )
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.primary200.opacity(0.6), lineWidth: 0.5))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.appTintLine.opacity(0.6), lineWidth: 0.5))
     }
 
     /// Beregner endring fra forrige måned. Returnerer nil hvis vi mangler
@@ -97,8 +97,8 @@ struct HostInntektCard: View {
                 )
                 .foregroundStyle(
                     month.id == currentMonthKey
-                        ? Color.primary600
-                        : Color.primary600.opacity(0.28)
+                        ? Color.appAccent
+                        : Color.appAccent.opacity(0.28)
                 )
                 .cornerRadius(3)
             }

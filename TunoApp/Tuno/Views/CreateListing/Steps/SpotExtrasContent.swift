@@ -73,14 +73,14 @@ struct SpotExtrasContent: View {
                         Text("Legg til eget tillegg")
                             .font(.system(size: 15, weight: .semibold))
                     }
-                    .foregroundStyle(.primary700)
+                    .foregroundStyle(.appAccentDeep)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.primary50)
+                    .background(Color.appTintSoft)
                     .clipShape(Capsule())
                     .overlay(
                         Capsule().strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                            .foregroundColor(.primary300)
+                            .foregroundColor(.appAccentDisabled)
                     )
                 }
                 .padding(.top, 4)
@@ -101,7 +101,7 @@ struct SpotExtrasContent: View {
                 HStack(spacing: 12) {
                     Image(systemName: preset.icon)
                         .font(.system(size: 16))
-                        .foregroundStyle(isSelected ? .primary700 : .neutral500)
+                        .foregroundStyle(isSelected ? .appAccentDeep : .neutral500)
                         .frame(width: 28)
                     VStack(alignment: .leading, spacing: 2) {
                         Text(preset.name)
@@ -114,7 +114,7 @@ struct SpotExtrasContent: View {
                     Spacer()
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 22))
-                        .foregroundStyle(isSelected ? .primary600 : .neutral300)
+                        .foregroundStyle(isSelected ? .appAccent : .neutral300)
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 12)
@@ -149,7 +149,7 @@ struct SpotExtrasContent: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isSelected ? Color.primary300 : Color.neutral200, lineWidth: 1)
+                .stroke(isSelected ? Color.appAccentDisabled : Color.neutral200, lineWidth: 1)
         )
     }
 
@@ -159,7 +159,7 @@ struct SpotExtrasContent: View {
         HStack(spacing: 12) {
             Image(systemName: "sparkles")
                 .font(.system(size: 16))
-                .foregroundStyle(.primary600)
+                .foregroundStyle(.appAccent)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 2) {
                 Text(extra.name)
@@ -297,7 +297,7 @@ struct SpotExtrasContent: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(canAddCustomExtra ? Color.primary600 : Color.neutral300)
+                        .background(canAddCustomExtra ? Color.appAccent : Color.neutral300)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.plain)
@@ -309,7 +309,7 @@ struct SpotExtrasContent: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(
             RoundedRectangle(cornerRadius: 14)
-                .stroke(Color.primary300, lineWidth: 1)
+                .stroke(Color.appAccentDisabled, lineWidth: 1)
         )
     }
 
@@ -326,7 +326,7 @@ struct SpotExtrasContent: View {
             .foregroundStyle(isSelected ? .white : .neutral700)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 12)
-            .background(isSelected ? Color.primary600 : Color.clear)
+            .background(isSelected ? Color.appAccent : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .buttonStyle(.plain)

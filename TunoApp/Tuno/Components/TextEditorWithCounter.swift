@@ -76,7 +76,7 @@ struct CopyPasteRow: View {
                     Text(justCopied ? "Kopiert" : "Kopier")
                 }
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(justCopied ? Color.primary600 : Color.neutral600)
+                .foregroundStyle(justCopied ? Color.appAccent : Color.neutral600)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(Color.neutral50)

@@ -91,7 +91,7 @@ struct MarkSpotsStep: View {
         HStack(alignment: .center, spacing: 12) {
             ZStack {
                 Circle()
-                    .fill(Color.primary600)
+                    .fill(Color.appAccent)
                     .frame(width: 38, height: 38)
                 Image(systemName: icon)
                     .font(.system(size: 17, weight: .semibold))

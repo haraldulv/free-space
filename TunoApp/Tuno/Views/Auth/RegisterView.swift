@@ -256,12 +256,12 @@ struct RegisterView: View {
                     if let url = URL(string: "https://tuno.no/vilkar") { openURL(url) }
                 }
                 .font(.app(size: 12, weight: .medium))
-                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .primary600)
+                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .appAccent)
                 Button("Les personvern") {
                     if let url = URL(string: "https://tuno.no/personvern") { openURL(url) }
                 }
                 .font(.app(size: 12, weight: .medium))
-                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .primary600)
+                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .appAccent)
             }
             .padding(.leading, 30)
 
@@ -303,7 +303,7 @@ struct RegisterView: View {
             .background(
                 canSubmit
                     ? Color.appAccent
-                    : (AppConfig.parkingOnly ? Color.neutral400 : Color.primary300)
+                    : (AppConfig.parkingOnly ? Color.neutral400 : Color.appAccentDisabled)
             )
             .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -332,7 +332,7 @@ struct RegisterView: View {
                 .foregroundStyle(.neutral500)
             Button("Logg inn") { dismiss() }
                 .font(.app(size: 14, weight: .semibold))
-                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .primary600)
+                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .appAccent)
         }
         .padding(.top, 4)
     }

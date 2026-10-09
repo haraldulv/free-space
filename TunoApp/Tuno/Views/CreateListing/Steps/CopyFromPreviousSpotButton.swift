@@ -19,12 +19,12 @@ struct CopyFromPreviousSpotButton: View {
                 Image(systemName: "arrow.right")
                     .font(.system(size: 12, weight: .bold))
             }
-            .foregroundStyle(.primary700)
+            .foregroundStyle(.appAccentDeep)
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(Color.primary50)
+            .background(Color.appTintSoft)
             .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.primary200, lineWidth: 1))
+            .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.appTintLine, lineWidth: 1))
         }
         .buttonStyle(.plain)
     }

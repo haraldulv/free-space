@@ -71,7 +71,7 @@ struct HostOnboardingFlowView: View {
                     focusedField = nil
                 }
                 .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(.primary600)
+                .foregroundStyle(.appAccent)
             }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
@@ -298,7 +298,7 @@ private struct ProgressHeader: View {
         HStack(spacing: 6) {
             ForEach(HostOnboardingStep.allCases, id: \.rawValue) { s in
                 Capsule()
-                    .fill(s.rawValue <= step.rawValue ? Color.primary600 : Color.neutral200)
+                    .fill(s.rawValue <= step.rawValue ? Color.appAccent : Color.neutral200)
                     .frame(height: 4)
             }
         }
@@ -333,7 +333,7 @@ private struct HostOnboardingWelcomeStep: View {
                 Text("Ved å fortsette godtar du [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer](https://tuno.no/retningslinjer). Tuno bruker Stripe som betalingsleverandør.")
                     .font(.system(size: 13))
                     .foregroundStyle(.neutral500)
-                    .tint(.primary600)
+                    .tint(.appAccent)
                     .padding(.top, 16)
             }
         }
@@ -349,7 +349,7 @@ private struct BulletRow: View {
         HStack(spacing: 14) {
             Image(systemName: iconName)
                 .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(.primary700)
+                .foregroundStyle(.appAccentDeep)
                 .frame(width: 28, alignment: .center)
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -583,7 +583,7 @@ private struct HostOnboardingAddressStep: View {
                                         HStack(spacing: 12) {
                                             Image(systemName: "mappin.circle.fill")
                                                 .font(.system(size: 20))
-                                                .foregroundStyle(.primary600)
+                                                .foregroundStyle(.appAccent)
                                             VStack(alignment: .leading, spacing: 2) {
                                                 Text(prediction.mainText)
                                                     .font(.system(size: 15, weight: .medium))
@@ -649,7 +649,7 @@ private struct HostOnboardingAddressStep: View {
 
                     HStack(spacing: 6) {
                         Image(systemName: "flag.fill")
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(.appAccent)
                         Text("Norge")
                             .foregroundStyle(.neutral600)
                     }
@@ -846,11 +846,11 @@ private struct StatusStep: View {
             LottieOrFallback(name: "loading-utleier") {
                 ZStack {
                     Circle()
-                        .fill(Color.primary50)
+                        .fill(Color.appTintSoft)
                         .frame(width: 120, height: 120)
                     ProgressView()
                         .scaleEffect(1.6)
-                        .tint(.primary600)
+                        .tint(.appAccent)
                 }
             }
             .frame(width: 160, height: 160)
@@ -872,7 +872,7 @@ private struct StatusStep: View {
             LottieOrFallback(name: "complete") {
                 ZStack {
                     Circle()
-                        .fill(Color.primary600)
+                        .fill(Color.appAccent)
                         .frame(width: 120, height: 120)
                     Image(systemName: "checkmark")
                         .font(.system(size: 56, weight: .bold))
@@ -1044,7 +1044,7 @@ private struct PhoneInputField: View {
                     .background(Color.white)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
-                            .stroke(error != nil ? Color.red : (focused.wrappedValue == focusValue ? Color.primary600 : Color.neutral200), lineWidth: focused.wrappedValue == focusValue || error != nil ? 2 : 1)
+                            .stroke(error != nil ? Color.red : (focused.wrappedValue == focusValue ? Color.appAccent : Color.neutral200), lineWidth: focused.wrappedValue == focusValue || error != nil ? 2 : 1)
                     )
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
@@ -1120,11 +1120,11 @@ private struct OnboardingTextField: View {
                     if helperIsSuccess {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 11))
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(.appAccent)
                     }
                     Text(helperText)
                         .font(.system(size: 12))
-                        .foregroundStyle(helperIsSuccess ? .primary700 : .neutral500)
+                        .foregroundStyle(helperIsSuccess ? .appAccentDeep : .neutral500)
                 }
             }
         }
@@ -1132,7 +1132,7 @@ private struct OnboardingTextField: View {
 
     private var borderColor: Color {
         if error != nil { return .red }
-        if isFocused { return .primary600 }
+        if isFocused { return .appAccent }
         return .neutral200
     }
 }
@@ -1147,18 +1147,18 @@ private struct OnboardingLoadingOverlay: View {
 
     var body: some View {
         ZStack {
-            Color.primary50
+            Color.appTintSoft
                 .ignoresSafeArea()
 
             VStack(spacing: 24) {
                 LottieOrFallback(name: "loading-utleier") {
                     ZStack {
                         Circle()
-                            .fill(Color.primary100)
+                            .fill(Color.appTint)
                             .frame(width: 180, height: 180)
                         ProgressView()
                             .scaleEffect(2.2)
-                            .tint(.primary600)
+                            .tint(.appAccent)
                     }
                 }
                 .frame(width: 220, height: 220)

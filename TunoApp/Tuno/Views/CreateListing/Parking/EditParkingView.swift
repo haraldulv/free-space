@@ -92,7 +92,7 @@ struct EditParkingView: View {
                                 .foregroundStyle(.neutral500)
                         }
                     }
-                    .tint(.primary600)
+                    .tint(.appAccent)
                     .padding(16)
                     .background(Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
@@ -137,7 +137,7 @@ struct EditParkingView: View {
                         } else {
                             Text("Lagre")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(canSave ? Color.primary600 : .neutral400)
+                                .foregroundStyle(canSave ? Color.appAccent : .neutral400)
                         }
                     }
                     .disabled(!canSave || isSaving)

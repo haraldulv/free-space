@@ -574,7 +574,7 @@ struct BookingView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(isFormValid && !(availableSpots == 0) && !requestSending ? Color.primary600 : Color.neutral300)
+                        .background(isFormValid && !(availableSpots == 0) && !requestSending ? Color.appAccent : Color.neutral300)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
@@ -609,7 +609,7 @@ struct BookingView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(cardIsComplete ? Color.primary600 : Color.neutral300)
+                        .background(cardIsComplete ? Color.appAccent : Color.neutral300)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
@@ -648,7 +648,7 @@ struct BookingView: View {
                     } label: {
                         Text("Betal med kort")
                             .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(.appAccent)
                     }
                     .disabled(!isFormValid || availableSpots == 0)
                     .padding(.bottom, 4)
@@ -777,7 +777,7 @@ struct BookingView: View {
     private func openingHoursBanner(_ oh: OpeningHours) -> some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "clock.fill")
-                .foregroundStyle(.primary600)
+                .foregroundStyle(.appAccent)
                 .font(.system(size: 16))
             VStack(alignment: .leading, spacing: 6) {
                 Text("Åpningstid")
@@ -798,9 +798,9 @@ struct BookingView: View {
             Spacer()
         }
         .padding(12)
-        .background(Color.primary50)
+        .background(Color.appTintSoft)
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.primary200, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appTintLine, lineWidth: 1))
     }
 
     private func weekdayLabel(_ day: Weekday) -> String {
@@ -1057,14 +1057,14 @@ struct BookingView: View {
         } label: {
             Text(label)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(isActive ? Color.primary700 : Color.neutral700)
+                .foregroundStyle(isActive ? Color.appAccentDeep : Color.neutral700)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(isActive ? Color.primary50 : Color.white)
+                .background(isActive ? Color.appTintSoft : Color.white)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(isActive ? Color.primary600 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
+                        .stroke(isActive ? Color.appAccent : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
                 )
         }
         .buttonStyle(.plain)
@@ -1099,7 +1099,7 @@ struct BookingView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
                     .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(isActive ? Color.primary700 : Color.neutral500)
+                    .foregroundStyle(isActive ? Color.appAccentDeep : Color.neutral500)
                 Text(date.map(formatShort) ?? "Velg dato")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(date == nil ? .neutral400 : .neutral900)
@@ -1107,11 +1107,11 @@ struct BookingView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(isActive ? Color.primary50 : Color.white)
+            .background(isActive ? Color.appTintSoft : Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isActive ? Color.primary600 : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
+                    .stroke(isActive ? Color.appAccent : Color.neutral200, lineWidth: isActive ? 1.5 : 1)
             )
         }
         .buttonStyle(.plain)
@@ -1305,7 +1305,7 @@ struct BookingView: View {
                             .foregroundStyle(.white)
                             .padding(.horizontal, 18)
                             .padding(.vertical, 10)
-                            .background((isHourly ? checkIn != nil : hasDates) ? Color.primary600 : Color.neutral400)
+                            .background((isHourly ? checkIn != nil : hasDates) ? Color.appAccent : Color.neutral400)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                 }
@@ -1358,7 +1358,7 @@ struct BookingView: View {
                 .font(.system(size: 18, weight: .semibold))
             Toggle("Leiebil (ingen registreringsnummer)", isOn: $isRentalCar)
                 .font(.system(size: 14))
-                .tint(.primary600)
+                .tint(.appAccent)
             if !isRentalCar {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Registreringsnummer")
@@ -1431,11 +1431,11 @@ struct BookingView: View {
                 HStack {
                     Text(durationDiscountLabel(d))
                         .font(.system(size: 13))
-                        .foregroundStyle(.primary700)
+                        .foregroundStyle(.appAccentDeep)
                     Spacer()
                     Text("−\(d.savings) kr")
                         .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.primary700)
+                        .foregroundStyle(.appAccentDeep)
                 }
             }
             if listingExtrasTotal + spotExtrasTotal > 0 {
@@ -1590,7 +1590,7 @@ struct BookingView: View {
             } label: {
                 HStack(spacing: 12) {
                     ZStack {
-                        Circle().fill(isBlocked ? Color.neutral100 : isSelected ? Color.primary600 : Color.neutral100).frame(width: 32, height: 32)
+                        Circle().fill(isBlocked ? Color.neutral100 : isSelected ? Color.appAccent : Color.neutral100).frame(width: 32, height: 32)
                         Image(systemName: "mappin.and.ellipse")
                             .foregroundStyle(isBlocked ? .neutral400 : isSelected ? .white : .neutral500)
                     }
@@ -1605,10 +1605,10 @@ struct BookingView: View {
                     if !isBlocked {
                         ZStack {
                             RoundedRectangle(cornerRadius: 4)
-                                .stroke(isSelected ? Color.primary600 : Color.neutral300, lineWidth: 2)
+                                .stroke(isSelected ? Color.appAccent : Color.neutral300, lineWidth: 2)
                                 .frame(width: 20, height: 20)
                             if isSelected {
-                                RoundedRectangle(cornerRadius: 4).fill(Color.primary600).frame(width: 20, height: 20)
+                                RoundedRectangle(cornerRadius: 4).fill(Color.appAccent).frame(width: 20, height: 20)
                                 Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(.white)
                             }
                         }
@@ -1644,9 +1644,9 @@ struct BookingView: View {
                 .padding(.vertical, 8)
             }
         }
-        .background(isSelected ? Color.primary50 : Color.white)
+        .background(isSelected ? Color.appTintSoft : Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 2 : 1))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isSelected ? Color.appAccent : Color.neutral200, lineWidth: isSelected ? 2 : 1))
     }
 
     private var listingExtrasSection: some View {

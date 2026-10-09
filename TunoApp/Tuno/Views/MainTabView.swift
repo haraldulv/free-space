@@ -113,7 +113,7 @@ struct MainTabView: View {
             .badge(pendingHostRequests)
             .tag(4)
         }
-        .tint(AppConfig.parkingOnly ? Color.ink : .primary600)
+        .tint(AppConfig.parkingOnly ? Color.ink : .appAccent)
         .environmentObject(chatService)
         .environmentObject(profileStats)
         .ignoresSafeArea(.keyboard)

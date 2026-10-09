@@ -24,7 +24,7 @@ struct SpotCountStep: View {
 
                     Text("\(form.spots)")
                         .font(.system(size: 64, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary600)
+                        .foregroundStyle(.appAccent)
                         .frame(minWidth: 100)
                         .contentTransition(.numericText())
                         .animation(.spring(response: 0.3, dampingFraction: 0.7), value: form.spots)
@@ -39,7 +39,7 @@ struct SpotCountStep: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 24)
-                .background(Color.primary50)
+                .background(Color.appTintSoft)
                 .clipShape(RoundedRectangle(cornerRadius: 20))
             }
         }
@@ -55,11 +55,11 @@ private struct StepperButton: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 22, weight: .bold))
-                .foregroundStyle(enabled ? .primary700 : .neutral300)
+                .foregroundStyle(enabled ? .appAccentDeep : .neutral300)
                 .frame(width: 56, height: 56)
                 .background(enabled ? Color.white : Color.neutral100)
                 .clipShape(Circle())
-                .overlay(Circle().stroke(enabled ? Color.primary200 : Color.neutral200, lineWidth: 1.5))
+                .overlay(Circle().stroke(enabled ? Color.appTintLine : Color.neutral200, lineWidth: 1.5))
                 .shadow(color: enabled ? .black.opacity(0.06) : .clear, radius: 4, y: 2)
         }
         .buttonStyle(.plain)

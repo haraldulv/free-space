@@ -107,6 +107,20 @@ extension Color {
     static var appAccentSoft: Color { AppConfig.parkingOnly ? Color.ink.opacity(0.08) : .primary50 }
     /// Tekst på appAccentSoft.
     static var appAccentSoftText: Color { AppConfig.parkingOnly ? .neutral900 : .primary700 }
+    /// Dyp aksent-tekst (lenker o.l.): neutral900 i parkering, primary700 i camping.
+    static var appAccentDeep: Color { AppConfig.parkingOnly ? .neutral900 : .primary700 }
+    /// Deaktivert CTA: neutral400 i parkering, primary300 i camping.
+    static var appAccentDisabled: Color { AppConfig.parkingOnly ? .neutral400 : .primary300 }
+    /// Aksent-tint (ikonsirkler, badges): ink-tint i parkering, primary100 i camping.
+    static var appTint: Color { AppConfig.parkingOnly ? Color.ink.opacity(0.08) : .primary100 }
+    /// Svakeste aksent-flate: ink-tint i parkering, primary50 i camping.
+    static var appTintSoft: Color { AppConfig.parkingOnly ? Color.ink.opacity(0.06) : .primary50 }
+    /// Suksess-aksent: mint i parkering, Tuno-grønn i camping.
+    static var appSuccess: Color { AppConfig.parkingOnly ? .mint : .primary600 }
+    /// Lys aksent-strek (hairline på tintede kort): ink-tint i parkering, primary200 i camping.
+    static var appTintLine: Color { AppConfig.parkingOnly ? Color.ink.opacity(0.15) : .primary200 }
+    /// Lysere aksent (grafer, selected states): ink i parkering, primary500 i camping.
+    static var appAccentBright: Color { AppConfig.parkingOnly ? .ink : .primary500 }
 }
 
 extension ShapeStyle where Self == Color {
@@ -116,6 +130,13 @@ extension ShapeStyle where Self == Color {
     static var appLine: Color { Color.appLine }
     static var appAccentSoft: Color { Color.appAccentSoft }
     static var appAccentSoftText: Color { Color.appAccentSoftText }
+    static var appAccentDeep: Color { Color.appAccentDeep }
+    static var appAccentDisabled: Color { Color.appAccentDisabled }
+    static var appTint: Color { Color.appTint }
+    static var appTintSoft: Color { Color.appTintSoft }
+    static var appSuccess: Color { Color.appSuccess }
+    static var appTintLine: Color { Color.appTintLine }
+    static var appAccentBright: Color { Color.appAccentBright }
 }
 
 extension Font {

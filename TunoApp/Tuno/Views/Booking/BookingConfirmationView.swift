@@ -119,7 +119,7 @@ struct BookingConfirmationView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.primary600)
+                    .background(Color.appAccent)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .padding(.bottom, 8)

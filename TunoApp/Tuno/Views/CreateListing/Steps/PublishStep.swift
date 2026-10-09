@@ -57,7 +57,7 @@ struct PublishStep: View {
                 HStack(spacing: 6) {
                     ForEach(0..<form.imageURLs.count, id: \.self) { i in
                         Circle()
-                            .fill(i == carouselIndex ? Color.primary600 : Color.neutral200)
+                            .fill(i == carouselIndex ? Color.appAccent : Color.neutral200)
                             .frame(width: i == carouselIndex ? 8 : 6, height: i == carouselIndex ? 8 : 6)
                             .animation(.easeInOut(duration: 0.2), value: carouselIndex)
                     }
@@ -76,7 +76,7 @@ struct PublishStep: View {
             HStack(spacing: 6) {
                 Image(systemName: "mappin.circle.fill")
                     .font(.system(size: 13))
-                    .foregroundStyle(.primary600)
+                    .foregroundStyle(.appAccent)
                 Text(form.address.isEmpty ? "Adresse mangler" : form.address)
                     .font(.system(size: 13))
                     .foregroundStyle(.neutral500)
@@ -243,10 +243,10 @@ struct PublishStep: View {
         } label: {
             HStack(spacing: 14) {
                 ZStack {
-                    Circle().fill(Color.primary50).frame(width: 32, height: 32)
+                    Circle().fill(Color.appTintSoft).frame(width: 32, height: 32)
                     Image(systemName: icon)
                         .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.primary700)
+                        .foregroundStyle(.appAccentDeep)
                 }
                 Text(label)
                     .font(.system(size: 14))
@@ -317,10 +317,10 @@ struct PublishStep: View {
         let extras = spot.extras ?? []
         return HStack(alignment: .top, spacing: 14) {
             ZStack {
-                Circle().fill(Color.primary50).frame(width: 32, height: 32)
+                Circle().fill(Color.appTintSoft).frame(width: 32, height: 32)
                 Text("\(index + 1)")
                     .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(.primary700)
+                    .foregroundStyle(.appAccentDeep)
             }
             VStack(alignment: .leading, spacing: 3) {
                 Text(label)
@@ -342,7 +342,7 @@ struct PublishStep: View {
             Spacer()
             Text(priceText)
                 .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.primary700)
+                .foregroundStyle(.appAccentDeep)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
@@ -357,13 +357,13 @@ struct PublishStep: View {
                 .foregroundStyle(.neutral700)
             Text("\(extra.price) kr\(suffix)")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(.primary700)
+                .foregroundStyle(.appAccentDeep)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        .background(Color.primary50)
+        .background(Color.appTintSoft)
         .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.primary200, lineWidth: 1))
+        .overlay(Capsule().stroke(Color.appTintLine, lineWidth: 1))
     }
 
     private var amenitiesSection: some View {
@@ -399,23 +399,23 @@ struct PublishStep: View {
         HStack(spacing: 6) {
             Image(systemName: amenity.icon)
                 .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.primary700)
+                .foregroundStyle(.appAccentDeep)
             Text(amenity.label)
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.neutral900)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background(Color.primary50)
+        .background(Color.appTintSoft)
         .clipShape(Capsule())
-        .overlay(Capsule().stroke(Color.primary200, lineWidth: 1))
+        .overlay(Capsule().stroke(Color.appTintLine, lineWidth: 1))
     }
 
     private var tipCard: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "sparkles")
                 .font(.system(size: 16))
-                .foregroundStyle(.primary600)
+                .foregroundStyle(.appAccent)
             VStack(alignment: .leading, spacing: 4) {
                 Text("Klar til å bli utleier")
                     .font(.system(size: 14, weight: .semibold))
@@ -428,9 +428,9 @@ struct PublishStep: View {
             Spacer()
         }
         .padding(14)
-        .background(Color.primary50)
+        .background(Color.appTintSoft)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.primary200, lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(Color.appTintLine, lineWidth: 1))
     }
 }
 
@@ -448,7 +448,7 @@ struct ListingPublishedCelebration: View {
             VStack(spacing: 24) {
                 ZStack {
                     Circle()
-                        .fill(Color.primary600)
+                        .fill(Color.appAccent)
                         .frame(width: 120, height: 120)
                     Image(systemName: "checkmark")
                         .font(.system(size: 56, weight: .bold))
@@ -472,7 +472,7 @@ struct ListingPublishedCelebration: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.primary600)
+                        .background(Color.appAccent)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .padding(.top, 8)

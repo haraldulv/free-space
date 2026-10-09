@@ -256,7 +256,7 @@ struct LoginView: View {
                     } label: {
                         Text("Glemt passord?")
                             .font(.app(size: 14, weight: .medium))
-                            .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .primary600)
+                            .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .appAccent)
                     }
 
                     Spacer()
@@ -276,12 +276,12 @@ struct LoginView: View {
                                 .font(.app(size: 16, weight: .semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
-                                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .primary600)
-                                .background(AppConfig.parkingOnly ? Color.paperCard : Color.primary50)
+                                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .appAccent)
+                                .background(AppConfig.parkingOnly ? Color.paperCard : Color.appTintSoft)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(AppConfig.parkingOnly ? Color.neutral900 : Color.primary600, lineWidth: 1.5)
+                                        .stroke(AppConfig.parkingOnly ? Color.neutral900 : Color.appAccent, lineWidth: 1.5)
                                 )
                         }
                     }

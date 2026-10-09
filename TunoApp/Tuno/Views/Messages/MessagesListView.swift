@@ -328,7 +328,7 @@ struct SupportConversationRow: View {
                         .foregroundStyle(.neutral900)
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 11))
-                        .foregroundStyle(AppConfig.parkingOnly ? .mint : .primary600)
+                        .foregroundStyle(AppConfig.parkingOnly ? .mint : .appAccent)
                     Spacer()
                     if let dateStr = conversation.lastMessageAt {
                         Text(formatSupportDate(dateStr))
@@ -352,7 +352,7 @@ struct SupportConversationRow: View {
 
             if conversation.unreadCount > 0 {
                 Circle()
-                    .fill(AppConfig.parkingOnly ? Color.mint : Color.primary600)
+                    .fill(AppConfig.parkingOnly ? Color.mint : Color.appAccent)
                     .frame(width: 8, height: 8)
                     .padding(.top, 6)
             }
@@ -466,7 +466,7 @@ struct AirbnbConversationRow: View {
 
             if conversation.unreadCount > 0 {
                 Circle()
-                    .fill(AppConfig.parkingOnly ? Color.mint : Color.primary600)
+                    .fill(AppConfig.parkingOnly ? Color.mint : Color.appAccent)
                     .frame(width: 8, height: 8)
                     .padding(.top, 6)
             }
@@ -550,11 +550,11 @@ struct AirbnbConversationRow: View {
 
     private var avatarInitial: some View {
         Circle()
-            .fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.primary100)
+            .fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.appTint)
             .overlay(
                 Text(String(conversation.otherUserName.prefix(1)).uppercased())
                     .font(.app(size: 11, weight: .semibold))
-                    .foregroundStyle(AppConfig.parkingOnly ? Color.neutral900 : Color.primary600)
+                    .foregroundStyle(AppConfig.parkingOnly ? Color.neutral900 : Color.appAccent)
             )
     }
 
@@ -607,7 +607,7 @@ struct MessagesSettingsSheet: View {
                             Task { await savePushEnabled(newValue) }
                         }
                     ))
-                    .tint(AppConfig.parkingOnly ? .mint : .primary600)
+                    .tint(AppConfig.parkingOnly ? .mint : .appAccent)
                     .disabled(isSaving)
                 }
 

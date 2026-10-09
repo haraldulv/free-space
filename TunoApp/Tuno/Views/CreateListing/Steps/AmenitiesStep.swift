@@ -29,9 +29,9 @@ struct AmenitiesStep: View {
                         VStack(spacing: 6) {
                             Image(systemName: amenity.icon)
                                 .font(.system(size: 20, weight: .light))
-                                .foregroundStyle(selected ? .white : .primary700)
+                                .foregroundStyle(selected ? .white : .appAccentDeep)
                                 .frame(width: 36, height: 36)
-                                .background(selected ? Color.primary600 : Color.primary50)
+                                .background(selected ? Color.appAccent : Color.appTintSoft)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
 
                             Text(amenity.label)
@@ -45,11 +45,11 @@ struct AmenitiesStep: View {
                         .padding(.vertical, 10)
                         .padding(.horizontal, 6)
                         .frame(maxWidth: .infinity, minHeight: 86)
-                        .background(selected ? Color.primary50 : Color.white)
+                        .background(selected ? Color.appTintSoft : Color.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .stroke(selected ? Color.primary600 : Color.neutral200, lineWidth: selected ? 2 : 1)
+                                .stroke(selected ? Color.appAccent : Color.neutral200, lineWidth: selected ? 2 : 1)
                         )
                     }
                     .buttonStyle(.plain)

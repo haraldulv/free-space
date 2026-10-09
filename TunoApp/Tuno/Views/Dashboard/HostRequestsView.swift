@@ -124,17 +124,17 @@ struct HostRequestsView: View {
             HStack {
                 Text("Se gjennom")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.primary600)
+                    .foregroundStyle(.appAccent)
                 Spacer()
                 Image(systemName: "chevron.right")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.primary600)
+                    .foregroundStyle(.appAccent)
             }
             .padding(.vertical, 10)
             .padding(.horizontal, 12)
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.primary600.opacity(0.3), lineWidth: 1)
+                    .stroke(Color.appAccent.opacity(0.3), lineWidth: 1)
             )
         }
         .padding(16)
@@ -264,11 +264,11 @@ private struct GuestAvatar: View {
 
     private var fallback: some View {
         Circle()
-            .fill(Color.primary100)
+            .fill(Color.appTint)
             .overlay(
                 Text(String((name ?? "?").prefix(1)).uppercased())
                     .font(.system(size: size * 0.4, weight: .semibold))
-                    .foregroundStyle(.primary600)
+                    .foregroundStyle(.appAccent)
             )
     }
 }
@@ -448,7 +448,7 @@ private struct HostRequestDetailSheet: View {
                 Spacer()
                 Text("\(hostPayout) kr")
                     .font(.system(size: 20, weight: .bold))
-                    .foregroundStyle(.primary600)
+                    .foregroundStyle(.appAccent)
             }
             Text("Du får utbetalt din pris. Tunos servicegebyr betales av gjesten på toppen.")
                 .font(.system(size: 12))
@@ -550,7 +550,7 @@ private struct HostRequestDetailSheet: View {
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.primary600)
+                        .background(Color.appAccent)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .disabled(responding != nil)
@@ -584,7 +584,7 @@ private struct HostRequestDetailSheet: View {
     private func policyBullet(_ text: String) -> some View {
         HStack(alignment: .top, spacing: 8) {
             Circle()
-                .fill(Color.primary600)
+                .fill(Color.appAccent)
                 .frame(width: 4, height: 4)
                 .padding(.top, 7)
             Text(text)

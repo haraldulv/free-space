@@ -48,7 +48,7 @@ private struct CategoryCard: View {
                 HStack {
                     ZStack {
                         RoundedRectangle(cornerRadius: 18)
-                            .fill(isSelected ? Color.primary50 : Color.neutral50)
+                            .fill(isSelected ? Color.appTintSoft : Color.neutral50)
                             .frame(width: 72, height: 72)
                         Image(assetName)
                             .resizable()
@@ -58,7 +58,7 @@ private struct CategoryCard: View {
                     Spacer()
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 24))
-                        .foregroundStyle(isSelected ? .primary600 : .neutral300)
+                        .foregroundStyle(isSelected ? .appAccent : .neutral300)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -75,13 +75,13 @@ private struct CategoryCard: View {
             }
             .padding(22)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(isSelected ? Color.primary50 : Color.white)
+            .background(isSelected ? Color.appTintSoft : Color.white)
             .clipShape(RoundedRectangle(cornerRadius: 22))
             .overlay(
                 RoundedRectangle(cornerRadius: 22)
-                    .stroke(isSelected ? Color.primary600 : Color.neutral200, lineWidth: isSelected ? 2 : 1)
+                    .stroke(isSelected ? Color.appAccent : Color.neutral200, lineWidth: isSelected ? 2 : 1)
             )
-            .shadow(color: isSelected ? Color.primary600.opacity(0.15) : .clear, radius: 10, y: 3)
+            .shadow(color: isSelected ? Color.appAccent.opacity(0.15) : .clear, radius: 10, y: 3)
         }
         .buttonStyle(.plain)
     }

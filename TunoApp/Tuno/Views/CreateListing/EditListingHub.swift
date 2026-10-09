@@ -240,7 +240,7 @@ struct EditListingHub: View {
                     Task { await saveChanges() }
                 }
                 .fontWeight(.semibold)
-                .tint(.primary600)
+                .tint(.appAccent)
                 .disabled(!canSave)
             }
         }
@@ -259,13 +259,13 @@ struct EditListingHub: View {
                     path.append(.markSpots)
                 }
                 .fontWeight(.semibold)
-                .tint(.primary600)
+                .tint(.appAccent)
             } else {
                 Button("Lagre") {
                     Task { await saveChanges() }
                 }
                 .fontWeight(.semibold)
-                .tint(.primary600)
+                .tint(.appAccent)
                 .disabled(!canSave)
             }
         }
@@ -287,7 +287,7 @@ struct EditListingHub: View {
                     }
                 }
                 .fontWeight(.semibold)
-                .tint(.primary600)
+                .tint(.appAccent)
                 .disabled(form.spotMarkers.count < form.spots)
             }
         }
@@ -484,18 +484,18 @@ struct EditListingHub: View {
                         VStack(spacing: 6) {
                             Image(systemName: "plus")
                                 .font(.system(size: 22, weight: .semibold))
-                                .foregroundStyle(.primary600)
+                                .foregroundStyle(.appAccent)
                             Text("Endre")
                                 .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(.primary600)
+                                .foregroundStyle(.appAccent)
                         }
                         .frame(width: 120, height: 120)
-                        .background(Color.primary50)
+                        .background(Color.appTintSoft)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
                                 .strokeBorder(style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
-                                .foregroundColor(.primary300)
+                                .foregroundColor(.appAccentDisabled)
                         )
                     }
                     .buttonStyle(.plain)
@@ -668,18 +668,18 @@ struct EditListingHub: View {
             ForEach(selected.prefix(maxIcons), id: \.rawValue) { amenity in
                 Image(systemName: amenity.icon)
                     .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.primary700)
+                    .foregroundStyle(.appAccentDeep)
                     .frame(width: 30, height: 30)
-                    .background(Color.primary50)
+                    .background(Color.appTintSoft)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             if selected.count > maxIcons {
                 Text("+\(selected.count - maxIcons)")
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(.primary700)
+                    .foregroundStyle(.appAccentDeep)
                     .padding(.horizontal, 10)
                     .frame(height: 30)
-                    .background(Color.primary50)
+                    .background(Color.appTintSoft)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
             }
             Spacer(minLength: 0)
@@ -719,7 +719,7 @@ struct EditListingHub: View {
                         HStack(spacing: 8) {
                             Image(systemName: icon)
                                 .font(.system(size: 15, weight: .semibold))
-                                .foregroundStyle(.primary600)
+                                .foregroundStyle(.appAccent)
                             Text(valueText)
                                 .font(.system(size: 17, weight: .semibold))
                                 .foregroundStyle(.neutral900)
@@ -997,7 +997,7 @@ struct EditListingHub: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(isExpanded ? Color.primary300 : Color.neutral200.opacity(0.7), lineWidth: 1)
+                    .stroke(isExpanded ? Color.appAccentDisabled : Color.neutral200.opacity(0.7), lineWidth: 1)
             )
     }
 
@@ -1100,7 +1100,7 @@ struct EditListingHub: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(canSave ? Color.primary600 : Color.neutral300)
+                    .background(canSave ? Color.appAccent : Color.neutral300)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
@@ -1229,9 +1229,9 @@ struct EditListingHub: View {
                     VStack(spacing: 6) {
                         Image(systemName: amenity.icon)
                             .font(.system(size: 18, weight: .light))
-                            .foregroundStyle(selected ? .white : .primary700)
+                            .foregroundStyle(selected ? .white : .appAccentDeep)
                             .frame(width: 32, height: 32)
-                            .background(selected ? Color.primary600 : Color.primary50)
+                            .background(selected ? Color.appAccent : Color.appTintSoft)
                             .clipShape(RoundedRectangle(cornerRadius: 9))
 
                         Text(amenity.label)
@@ -1245,11 +1245,11 @@ struct EditListingHub: View {
                     .padding(.vertical, 10)
                     .padding(.horizontal, 6)
                     .frame(maxWidth: .infinity, minHeight: 80)
-                    .background(selected ? Color.primary50 : Color.white)
+                    .background(selected ? Color.appTintSoft : Color.white)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .stroke(selected ? Color.primary600 : Color.neutral200, lineWidth: selected ? 1.5 : 1)
+                            .stroke(selected ? Color.appAccent : Color.neutral200, lineWidth: selected ? 1.5 : 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -1291,7 +1291,7 @@ struct EditListingHub: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.system(size: 18))
-                    .foregroundStyle(isSelected ? .primary700 : .neutral500)
+                    .foregroundStyle(isSelected ? .appAccentDeep : .neutral500)
                     .frame(width: 28)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
@@ -1305,7 +1305,7 @@ struct EditListingHub: View {
                 Spacer()
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 22))
-                    .foregroundStyle(isSelected ? .primary600 : .neutral300)
+                    .foregroundStyle(isSelected ? .appAccent : .neutral300)
             }
             .padding(12)
             .frame(maxWidth: .infinity, minHeight: 72, alignment: .leading)
@@ -1313,7 +1313,7 @@ struct EditListingHub: View {
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.primary300 : Color.neutral200, lineWidth: 1)
+                    .stroke(isSelected ? Color.appAccentDisabled : Color.neutral200, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -1419,7 +1419,7 @@ struct EditListingHub: View {
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 10)
-            .background(Color.primary600)
+            .background(Color.appAccent)
             .clipShape(Capsule())
             .shadow(color: .black.opacity(0.18), radius: 10, y: 4)
             .padding(.top, 8)
@@ -1574,7 +1574,7 @@ struct SpotMiniHub: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .stroke(isExpanded ? Color.primary300 : Color.neutral200.opacity(0.7), lineWidth: 1)
+                    .stroke(isExpanded ? Color.appAccentDisabled : Color.neutral200.opacity(0.7), lineWidth: 1)
             )
     }
 
@@ -1668,7 +1668,7 @@ struct SpotMiniHub: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 12)
-                    .background(Color.primary600)
+                    .background(Color.appAccent)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)

@@ -15,11 +15,11 @@ struct AuthSuccessOverlay: View {
             VStack(spacing: 16) {
                 ZStack {
                     Circle()
-                        .fill(AppConfig.parkingOnly ? Color.mint.opacity(0.18) : Color.primary50)
+                        .fill(AppConfig.parkingOnly ? Color.mint.opacity(0.18) : Color.appTintSoft)
                         .frame(width: 96, height: 96)
                     Image(systemName: "checkmark")
                         .font(.system(size: 44, weight: .bold))
-                        .foregroundStyle(AppConfig.parkingOnly ? Color.mint : Color.primary600)
+                        .foregroundStyle(AppConfig.parkingOnly ? Color.mint : Color.appAccent)
                 }
 
                 VStack(spacing: 6) {

@@ -812,8 +812,8 @@ struct WizardPricingCalendarView: View {
     // MARK: - Cell styling
 
     private func cellBackground(isPast: Bool, isSelected: Bool, isAnchor: Bool, isBlocked: Bool, isClosedByHours: Bool, hasOverride: Bool) -> Color {
-        if isAnchor { return Color.primary600.opacity(0.18) }
-        if isSelected { return Color.primary600.opacity(0.10) }
+        if isAnchor { return Color.appAccent.opacity(0.18) }
+        if isSelected { return Color.appAccent.opacity(0.10) }
         // Stengt = stengt: både manuelt blokkert OG av åpningstid har samme
         // visuelle stil — svak rødtone. Bruker skal ikke trenge å huske
         // hvilken kilde stengningen kommer fra.
@@ -824,8 +824,8 @@ struct WizardPricingCalendarView: View {
     }
 
     private func cellBorder(isSelected: Bool, isAnchor: Bool, isPast: Bool, isBlocked: Bool, isClosedByHours: Bool) -> Color {
-        if isAnchor { return Color.primary600 }
-        if isSelected { return Color.primary500 }
+        if isAnchor { return Color.appAccent }
+        if isSelected { return Color.appAccentBright }
         if isBlocked || isClosedByHours {
             return Color(red: 252/255, green: 165/255, blue: 165/255)
         }
@@ -841,8 +841,8 @@ struct WizardPricingCalendarView: View {
     }
 
     private func priceTextColor(isSelected: Bool, isAnchor: Bool, isOverride: Bool) -> Color {
-        if isOverride { return Color.primary700 }
-        if isSelected || isAnchor { return Color.primary700 }
+        if isOverride { return Color.appAccentDeep }
+        if isSelected || isAnchor { return Color.appAccentDeep }
         return Color.neutral500
     }
 

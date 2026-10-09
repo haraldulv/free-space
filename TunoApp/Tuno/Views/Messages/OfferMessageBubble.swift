@@ -33,7 +33,7 @@ struct OfferMessageBubble: View {
             HStack {
                 Image(systemName: "tag.fill")
                     .font(.system(size: 12))
-                    .foregroundStyle(AppConfig.parkingOnly ? .neutral700 : .primary600)
+                    .foregroundStyle(AppConfig.parkingOnly ? .neutral700 : .appAccent)
                 Text(roleLabel)
                     .font(.app(size: 12, weight: .semibold))
                     .foregroundStyle(.neutral700)
@@ -45,7 +45,7 @@ struct OfferMessageBubble: View {
                         Text("Bekreftet")
                             .font(.app(size: 11, weight: .semibold))
                     }
-                    .foregroundStyle(AppConfig.parkingOnly ? Color(hex: "#1f9177") : .primary600)
+                    .foregroundStyle(AppConfig.parkingOnly ? Color(hex: "#1f9177") : .appAccent)
                 } else if let countdownText {
                     Text(countdownText)
                         .font(.app(size: 11))
@@ -94,7 +94,7 @@ struct OfferMessageBubble: View {
             RoundedRectangle(cornerRadius: 14)
                 .stroke(
                     isActive
-                        ? (AppConfig.parkingOnly ? Color.ink.opacity(0.35) : Color.primary300)
+                        ? (AppConfig.parkingOnly ? Color.ink.opacity(0.35) : Color.appAccentDisabled)
                         : Color.appLine,
                     lineWidth: isActive ? 1.5 : 1
                 )

@@ -217,10 +217,10 @@ struct MapListingBigCard: View {
                     HStack(spacing: 3) {
                         Image(systemName: "circle.fill")
                             .font(.system(size: 7))
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(.appAccent)
                         Text("Direktebooking")
                             .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(.appAccent)
                     }
                 }
             }

@@ -47,7 +47,7 @@ struct KrStepper: View {
         .frame(maxWidth: .infinity)
         .background(Color.neutral50)
         .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isFocused ? Color.primary600 : Color.neutral200, lineWidth: isFocused ? 2 : 1))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(isFocused ? Color.appAccent : Color.neutral200, lineWidth: isFocused ? 2 : 1))
     }
 
     private var textInput: some View {
@@ -90,9 +90,9 @@ struct KrStepper: View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(disabled ? Color.neutral300 : Color.primary700)
+                .foregroundStyle(disabled ? Color.neutral300 : Color.appAccentDeep)
                 .frame(width: 36, height: 36)
-                .background(disabled ? Color.neutral50 : Color.primary50)
+                .background(disabled ? Color.neutral50 : Color.appTintSoft)
                 .clipShape(Circle())
         }
         .buttonStyle(.plain)

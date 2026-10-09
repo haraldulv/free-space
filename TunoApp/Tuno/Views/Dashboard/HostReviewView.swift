@@ -62,12 +62,12 @@ struct HostReviewView: View {
                     CachedAsyncImage(url: url) { image in
                         image.resizable().aspectRatio(contentMode: .fill)
                     } placeholder: {
-                        Circle().fill(Color.primary50)
+                        Circle().fill(Color.appTintSoft)
                     }
                     .frame(width: 56, height: 56)
                     .clipShape(Circle())
                 } else {
-                    Circle().fill(Color.primary50).frame(width: 56, height: 56)
+                    Circle().fill(Color.appTintSoft).frame(width: 56, height: 56)
                 }
                 VStack(alignment: .leading, spacing: 4) {
                     Text(booking.guest?.fullName ?? "Gjest")
@@ -125,7 +125,7 @@ struct HostReviewView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(reviewRating > 0 ? Color.primary600 : Color.neutral300)
+                    .background(reviewRating > 0 ? Color.appAccent : Color.neutral300)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .buttonStyle(.plain)
@@ -137,7 +137,7 @@ struct HostReviewView: View {
         VStack(spacing: 16) {
             Image(systemName: "checkmark.seal.fill")
                 .font(.system(size: 56))
-                .foregroundStyle(.primary600)
+                .foregroundStyle(.appAccent)
             Text("Takk for anmeldelsen!")
                 .font(.system(size: 20, weight: .bold))
                 .foregroundStyle(.neutral900)
@@ -154,7 +154,7 @@ struct HostReviewView: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color.primary600)
+                    .background(Color.appAccent)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             }
             .buttonStyle(.plain)

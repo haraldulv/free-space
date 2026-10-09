@@ -114,7 +114,7 @@ struct PublicProfileView: View {
             }
             .frame(width: 120, height: 120)
             .clipShape(Circle())
-            .overlay(Circle().stroke(Color.primary600, lineWidth: 3))
+            .overlay(Circle().stroke(Color.appAccent, lineWidth: 3))
 
             if isVerified {
                 ZStack {
@@ -194,7 +194,7 @@ struct PublicProfileView: View {
         } label: {
             HStack(spacing: 8) {
                 if isContacting {
-                    ProgressView().tint(.primary600)
+                    ProgressView().tint(.appAccent)
                 } else {
                     Image(systemName: "bubble.left.fill")
                         .font(.system(size: 14))
@@ -202,10 +202,10 @@ struct PublicProfileView: View {
                 Text(isContacting ? "Åpner samtale …" : "Kontakt \(profile?.fullName?.components(separatedBy: " ").first ?? "utleier")")
                     .font(.system(size: 15, weight: .semibold))
             }
-            .foregroundStyle(.primary600)
+            .foregroundStyle(.appAccent)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
-            .background(Color.primary50)
+            .background(Color.appTintSoft)
             .clipShape(RoundedRectangle(cornerRadius: 12))
         }
         .disabled(isContacting || hostListings.isEmpty)

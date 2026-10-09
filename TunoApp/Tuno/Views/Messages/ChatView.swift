@@ -105,7 +105,7 @@ struct ChatView: View {
             }
             // Parkering (palett C): mørk mint som aksent, grønn i camping.
             return isMyTurn
-                ? (AppConfig.parkingOnly ? Color(hex: "#1f9177") : Color.primary600)
+                ? (AppConfig.parkingOnly ? Color(hex: "#1f9177") : Color.appAccent)
                 : Color(hex: "#6b7280")
         }
     }
@@ -749,7 +749,7 @@ struct ChatView: View {
                             .foregroundStyle(.neutral900)
                         Image(systemName: "checkmark.seal.fill")
                             .font(.system(size: 11))
-                            .foregroundStyle(AppConfig.parkingOnly ? .mint : .primary600)
+                            .foregroundStyle(AppConfig.parkingOnly ? .mint : .appAccent)
                     }
 
                     Text("Vi svarer fortløpende")
@@ -823,11 +823,11 @@ struct ChatView: View {
 
     private var avatarPlaceholder: some View {
         Circle()
-            .fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.primary100)
+            .fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.appTint)
             .overlay(
                 Text(String(otherUserName.prefix(1)).uppercased())
                     .font(.app(size: 12, weight: .semibold))
-                    .foregroundStyle(AppConfig.parkingOnly ? Color.neutral900 : Color.primary600)
+                    .foregroundStyle(AppConfig.parkingOnly ? Color.neutral900 : Color.appAccent)
             )
     }
 
@@ -1040,11 +1040,11 @@ struct MessageBubble: View {
 
     private var avatarInitial: some View {
         Circle()
-            .fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.primary100)
+            .fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.appTint)
             .overlay(
                 Text(otherUserInitial.uppercased())
                     .font(.app(size: 12, weight: .semibold))
-                    .foregroundStyle(AppConfig.parkingOnly ? Color.neutral900 : Color.primary600)
+                    .foregroundStyle(AppConfig.parkingOnly ? Color.neutral900 : Color.appAccent)
             )
     }
 }
@@ -1172,10 +1172,10 @@ struct OpplysningerSheet: View {
                                             CachedAsyncImage(url: url) { image in
                                                 image.resizable().aspectRatio(contentMode: .fill)
                                             } placeholder: {
-                                                Circle().fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.primary100)
+                                                Circle().fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.appTint)
                                             }
                                         } else {
-                                            Circle().fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.primary100)
+                                            Circle().fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.appTint)
                                         }
                                     }
                                     .frame(width: 40, height: 40)

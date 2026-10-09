@@ -31,7 +31,7 @@ struct ReportSheet: View {
                     VStack(spacing: 12) {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.system(size: 44))
-                            .foregroundStyle(Color.primary600)
+                            .foregroundStyle(Color.appAccent)
                         Text("Takk. Vi ser på det så fort vi kan.")
                             .font(.system(size: 15))
                             .foregroundStyle(.neutral700)
@@ -52,15 +52,15 @@ struct ReportSheet: View {
                                 } label: {
                                     HStack {
                                         Image(systemName: reason == r.key ? "largecircle.fill.circle" : "circle")
-                                            .foregroundStyle(reason == r.key ? Color.primary600 : .neutral400)
+                                            .foregroundStyle(reason == r.key ? Color.appAccent : .neutral400)
                                         Text(r.label)
                                             .font(.system(size: 15))
                                             .foregroundStyle(.neutral900)
                                         Spacer()
                                     }
                                     .padding(12)
-                                    .background(reason == r.key ? Color.primary50 : Color.white)
-                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(reason == r.key ? Color.primary500 : Color.neutral200, lineWidth: 1))
+                                    .background(reason == r.key ? Color.appTintSoft : Color.white)
+                                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(reason == r.key ? Color.appAccentBright : Color.neutral200, lineWidth: 1))
                                     .clipShape(RoundedRectangle(cornerRadius: 10))
                                 }
                                 .buttonStyle(.plain)

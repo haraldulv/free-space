@@ -18,7 +18,7 @@ struct OpeningHoursStep: View {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: "info.circle.fill")
                         .font(.system(size: 14))
-                        .foregroundStyle(.primary600)
+                        .foregroundStyle(.appAccent)
                     Text("Gjester ser åpningstidene på annonsen og blir varslet før booking. Du kan endre dette senere.")
                         .font(.system(size: 12))
                         .foregroundStyle(.neutral600)
@@ -26,7 +26,7 @@ struct OpeningHoursStep: View {
                 }
                 .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.primary50)
+                .background(Color.appTintSoft)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }

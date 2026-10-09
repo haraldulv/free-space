@@ -60,7 +60,7 @@ struct SpotCalendarStep: View {
                     icon: "calendar",
                     title: "Sett opp kalender",
                     subtitle: "Blokker datoer eller sett egne priser",
-                    accent: Color.primary600
+                    accent: Color.appAccent
                 ) {
                     if let id = currentSpotId {
                         phasePerSpot[id] = .editing

@@ -10,7 +10,7 @@ struct PriceHistogram: View {
     @Binding var upperBound: Int
 
     private let bucketCount = 32
-    private let barColor = Color.primary500
+    private let barColor = Color.appAccentBright
     private let barInactiveColor = Color.neutral200
 
     var body: some View {

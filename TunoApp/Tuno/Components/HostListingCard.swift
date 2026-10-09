@@ -211,10 +211,10 @@ struct HostListingCard: View {
             Text("Tjent \(amount) kr siste 30 dager")
                 .font(.system(size: 13, weight: .semibold))
         }
-        .foregroundStyle(.primary700)
+        .foregroundStyle(.appAccentDeep)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(Color.primary50)
+        .background(Color.appTintSoft)
         .clipShape(Capsule())
     }
 }

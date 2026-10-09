@@ -17,24 +17,24 @@ struct WizardTooltip: View {
                 HStack(spacing: 8) {
                     ZStack {
                         Circle()
-                            .fill(Color.primary100)
+                            .fill(Color.appTint)
                             .frame(width: 26, height: 26)
                         Image(systemName: expanded ? "chevron.up" : "lightbulb.fill")
                             .font(.system(size: 12, weight: .bold))
-                            .foregroundStyle(.primary700)
+                            .foregroundStyle(.appAccentDeep)
                     }
                     Text(title)
                         .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary700)
+                        .foregroundStyle(.appAccentDeep)
                     Spacer(minLength: 0)
                 }
                 .padding(.vertical, 10)
                 .padding(.horizontal, 14)
-                .background(Color.primary50)
+                .background(Color.appTintSoft)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.primary200, lineWidth: 1)
+                        .stroke(Color.appTintLine, lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
@@ -48,7 +48,7 @@ struct WizardTooltip: View {
                     .padding(.horizontal, 14)
                     .padding(.vertical, 12)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.primary50.opacity(0.5))
+                    .background(Color.appTintSoft.opacity(0.5))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                     .padding(.top, 6)
                     .transition(.opacity.combined(with: .move(edge: .top)))

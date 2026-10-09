@@ -40,17 +40,17 @@ struct ProfileSummaryCard: View {
                         CachedAsyncImage(url: url) { image in
                             image.resizable().aspectRatio(contentMode: .fill)
                         } placeholder: {
-                            Circle().fill(Color.primary100).overlay(
+                            Circle().fill(Color.appTint).overlay(
                                 Text(String(firstName.prefix(1)).uppercased())
                                     .font(.system(size: 36, weight: .semibold))
-                                    .foregroundStyle(.primary600)
+                                    .foregroundStyle(.appAccent)
                             )
                         }
                     } else {
-                        Circle().fill(Color.primary100).overlay(
+                        Circle().fill(Color.appTint).overlay(
                             Text(String(firstName.prefix(1)).uppercased())
                                 .font(.system(size: 36, weight: .semibold))
-                                .foregroundStyle(.primary600)
+                                .foregroundStyle(.appAccent)
                         )
                     }
                 }

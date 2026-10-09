@@ -300,16 +300,16 @@ struct ParkingStripePrompt: View {
 private struct WizardSubmitOverlay: View {
     var body: some View {
         ZStack {
-            Color.primary50.ignoresSafeArea()
+            Color.appTintSoft.ignoresSafeArea()
             VStack(spacing: 24) {
                 LottieOrFallback(name: "loading-utleier") {
                     ZStack {
                         Circle()
-                            .fill(Color.primary100)
+                            .fill(Color.appTint)
                             .frame(width: 180, height: 180)
                         ProgressView()
                             .scaleEffect(2.2)
-                            .tint(.primary600)
+                            .tint(.appAccent)
                     }
                 }
                 .frame(width: 220, height: 220)

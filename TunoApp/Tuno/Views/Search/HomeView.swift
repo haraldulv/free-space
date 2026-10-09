@@ -81,7 +81,7 @@ struct HomeView: View {
                                         .animation(.spring(response: 0.35, dampingFraction: 0.65), value: selectedCategory)
                                     Text(category.tabLabel)
                                         .font(.system(size: 12, weight: selectedCategory == category ? .semibold : .medium))
-                                        .foregroundStyle(selectedCategory == category ? Color.primary600 : .neutral400)
+                                        .foregroundStyle(selectedCategory == category ? Color.appAccent : .neutral400)
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 6)
@@ -91,7 +91,7 @@ struct HomeView: View {
                     .overlay(alignment: .bottom) {
                         GeometryReader { geo in
                             Rectangle()
-                                .fill(Color.primary600)
+                                .fill(Color.appAccent)
                                 .frame(width: geo.size.width / 2 - 40, height: 2)
                                 .offset(
                                     x: selectedCategory == .camping ? 20 : geo.size.width / 2 + 20,

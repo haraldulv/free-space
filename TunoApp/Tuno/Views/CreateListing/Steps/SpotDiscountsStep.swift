@@ -80,7 +80,7 @@ struct SpotDiscountsStep: View {
             Spacer()
             Toggle("", isOn: $sharedAcrossSpots)
                 .labelsHidden()
-                .tint(Color.primary600)
+                .tint(Color.appAccent)
                 .onChange(of: sharedAcrossSpots) { _, newValue in
                     if newValue {
                         applyFirstSpotPackagesToAll()
@@ -121,10 +121,10 @@ struct SpotDiscountsStep: View {
                     Text("Legg til pakke")
                         .font(.system(size: 14, weight: .semibold))
                 }
-                .foregroundStyle(.primary600)
+                .foregroundStyle(.appAccent)
                 .padding(.vertical, 12)
                 .frame(maxWidth: .infinity)
-                .background(Color.primary50)
+                .background(Color.appTintSoft)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
@@ -163,7 +163,7 @@ struct SpotDiscountsStep: View {
                     HStack(spacing: 12) {
                         Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
                             .font(.system(size: 22))
-                            .foregroundStyle(isEnabled ? Color.primary600 : Color.neutral300)
+                            .foregroundStyle(isEnabled ? Color.appAccent : Color.neutral300)
                         Text(label)
                             .font(.system(size: 16, weight: .semibold))
                             .foregroundStyle(isEnabled ? .neutral900 : .neutral500)
@@ -191,10 +191,10 @@ struct SpotDiscountsStep: View {
                         Text("Foreslått: \(Self.formatKr(suggested))")
                             .font(.system(size: 12, weight: .semibold))
                     }
-                    .foregroundStyle(.primary700)
+                    .foregroundStyle(.appAccentDeep)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color.primary50)
+                    .background(Color.appTintSoft)
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -207,7 +207,7 @@ struct SpotDiscountsStep: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isEnabled ? Color.primary600 : Color.neutral200, lineWidth: isEnabled ? 1.5 : 1)
+                .stroke(isEnabled ? Color.appAccent : Color.neutral200, lineWidth: isEnabled ? 1.5 : 1)
         )
     }
 
@@ -274,7 +274,7 @@ struct SpotDiscountsStep: View {
                     .foregroundStyle(.neutral900)
                 Text("\(pkg.priceNok) kr")
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.primary600)
+                    .foregroundStyle(.appAccent)
             }
             Spacer()
             Button {
@@ -300,7 +300,7 @@ struct SpotDiscountsStep: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "info.circle.fill")
                 .font(.system(size: 14))
-                .foregroundStyle(.primary600)
+                .foregroundStyle(.appAccent)
             Text("Pakkene gjelder kun fulle perioder. Hvis bookingen er 35 dager, beregnes det som 1 måned + 5 dager til standardpris.")
                 .font(.system(size: 12))
                 .foregroundStyle(.neutral600)
@@ -308,7 +308,7 @@ struct SpotDiscountsStep: View {
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.primary50)
+        .background(Color.appTintSoft)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
@@ -454,7 +454,7 @@ struct InlineRentalPeriodsView: View {
                     HStack(spacing: 12) {
                         Image(systemName: isEnabled ? "checkmark.circle.fill" : "circle")
                             .font(.system(size: 22))
-                            .foregroundStyle(isEnabled ? Color.primary600 : Color.neutral300)
+                            .foregroundStyle(isEnabled ? Color.appAccent : Color.neutral300)
                         Text(label)
                             .font(.system(size: 15, weight: .semibold))
                             .foregroundStyle(isEnabled ? .neutral900 : .neutral500)
@@ -494,10 +494,10 @@ struct InlineRentalPeriodsView: View {
                         Text("Foreslått: \(SpotDiscountsStep.formatKr(suggested))")
                             .font(.system(size: 12, weight: .semibold))
                     }
-                    .foregroundStyle(.primary700)
+                    .foregroundStyle(.appAccentDeep)
                     .padding(.horizontal, 10)
                     .padding(.vertical, 5)
-                    .background(Color.primary50)
+                    .background(Color.appTintSoft)
                     .clipShape(Capsule())
                 }
                 .buttonStyle(.plain)
@@ -509,7 +509,7 @@ struct InlineRentalPeriodsView: View {
         .background(isEnabled ? Color.white : Color.neutral50)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12)
-            .stroke(isEnabled ? Color.primary600 : Color.neutral200, lineWidth: isEnabled ? 1.5 : 1))
+            .stroke(isEnabled ? Color.appAccent : Color.neutral200, lineWidth: isEnabled ? 1.5 : 1))
         .id(rowId)
     }
 
@@ -561,7 +561,7 @@ struct AddPricePackageSheet: View {
             HStack {
                 Button("Avbryt", action: onCancel)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.primary600)
+                    .foregroundStyle(Color.appAccent)
                 Spacer()
                 Text("Egen pakke")
                     .font(.system(size: 17, weight: .semibold))
@@ -607,7 +607,7 @@ struct AddPricePackageSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
-                        .stroke(priceFocused ? Color.primary600 : Color.neutral200, lineWidth: priceFocused ? 1.5 : 1)
+                        .stroke(priceFocused ? Color.appAccent : Color.neutral200, lineWidth: priceFocused ? 1.5 : 1)
                 )
                 if let err = validationError {
                     Text(err)
