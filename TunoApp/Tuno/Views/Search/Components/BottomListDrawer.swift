@@ -13,6 +13,9 @@ struct BottomListDrawer: View {
     let onSelect: (Listing) -> Void
     var referenceLat: Double? = nil
     var referenceLng: Double? = nil
+    /// true når skuffen lever på en tab-rot (kart som rot-flate): da skal den
+    /// stoppe over tab-baren i stedet for å gli under den.
+    var respectsBottomSafeArea: Bool = false
 
     @State private var isExpanded = false
     @State private var dragTranslation: CGFloat = 0
@@ -38,7 +41,7 @@ struct BottomListDrawer: View {
                             topTrailingRadius: 16,
                             style: .continuous
                         )
-                        .fill(Color.white)
+                        .fill(AppConfig.parkingOnly ? Color.paper : Color.white)
                         .shadow(color: .black.opacity(0.12), radius: 14, y: -2)
                     )
                     .gesture(dragGesture)
@@ -46,7 +49,7 @@ struct BottomListDrawer: View {
                     .animation(.interactiveSpring(), value: dragTranslation)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .ignoresSafeArea(edges: .bottom)
+            .ignoresSafeArea(edges: respectsBottomSafeArea ? [] : .bottom)
         }
         .allowsHitTesting(true)
     }
@@ -64,7 +67,7 @@ struct BottomListDrawer: View {
                 // Header med tittel og lukk-knapp
                 HStack {
                     Text(countLabel)
-                        .font(.system(size: 17, weight: .bold))
+                        .font(AppConfig.parkingOnly ? .tuno(.heading) : .system(size: 17, weight: .bold))
                         .foregroundStyle(.neutral900)
                     Spacer()
                     Button {
@@ -85,24 +88,11 @@ struct BottomListDrawer: View {
                 .padding(.bottom, 12)
 
                 ScrollView {
-                    LazyVStack(spacing: 14) {
-                        ForEach(listings) { listing in
-                            Button {
-                                onSelect(listing)
-                            } label: {
-                                ListingCard(
-                                    listing: listing,
-                                    isFavorited: isFavorited(listing.id),
-                                    onFavoriteToggle: { _ in onFavorite(listing.id) },
-                                    referenceLat: referenceLat,
-                                    referenceLng: referenceLng
-                                )
-                            }
-                            .buttonStyle(.plain)
-                        }
+                    if AppConfig.parkingOnly {
+                        parkingList
+                    } else {
+                        campingList
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.bottom, 80)
                 }
             } else {
                 Button {
@@ -113,7 +103,7 @@ struct BottomListDrawer: View {
                     HStack {
                         Spacer()
                         Text(countLabel)
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(AppConfig.parkingOnly ? .tuno(.body) : .system(size: 15, weight: .semibold))
                             .foregroundStyle(.neutral900)
                         Spacer()
                     }
@@ -125,6 +115,50 @@ struct BottomListDrawer: View {
                 Spacer(minLength: 0)
             }
         }
+    }
+
+    /// Parkering (Asker-pivoten): kompakte fakta-rader i stedet for bildekort.
+    private var parkingList: some View {
+        LazyVStack(spacing: 10) {
+            ForEach(listings) { listing in
+                Button {
+                    onSelect(listing)
+                } label: {
+                    ParkingListingRow(
+                        listing: listing,
+                        isFavorited: isFavorited(listing.id),
+                        onFavoriteToggle: { _ in onFavorite(listing.id) },
+                        referenceLat: referenceLat,
+                        referenceLng: referenceLng
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 80)
+    }
+
+    /// Camping: opprinnelig liste med store ListingCard-bildekort.
+    private var campingList: some View {
+        LazyVStack(spacing: 14) {
+            ForEach(listings) { listing in
+                Button {
+                    onSelect(listing)
+                } label: {
+                    ListingCard(
+                        listing: listing,
+                        isFavorited: isFavorited(listing.id),
+                        onFavoriteToggle: { _ in onFavorite(listing.id) },
+                        referenceLat: referenceLat,
+                        referenceLng: referenceLng
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.bottom, 80)
     }
 
     private var countLabel: String {

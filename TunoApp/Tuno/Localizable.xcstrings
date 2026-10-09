@@ -734,7 +734,7 @@
         }
       }
     },
-    "Annonsen er publisert!" : {
+    "Annonsen er sendt inn!" : {
 
     },
     "Annonsen mangler plass-data" : {
@@ -923,6 +923,9 @@
     "Begrunnelse (valgfritt)" : {
 
     },
+    "Bekreft at du ikke er en robot" : {
+
+    },
     "Bekreft datoer" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -1036,6 +1039,9 @@
           }
         }
       }
+    },
+    "Beskrivelse (valgfritt)" : {
+
     },
     "Beskrivelse for hele annonsen" : {
 
@@ -1352,6 +1358,12 @@
     "Bytter språk…" : {
 
     },
+    "ca. %@ kr" : {
+
+    },
+    "Ca. %@ min å gå" : {
+
+    },
     "Camping" : {
 
     },
@@ -1477,10 +1489,16 @@
         }
       }
     },
+    "Det du har fylt ut blir ikke lagret." : {
+
+    },
     "Det er lett å komme i gang og tjene ekstra penger." : {
 
     },
     "Dette gjenstår" : {
+
+    },
+    "Dette kan ikke angres. Eksisterende bestillinger påvirkes ikke." : {
 
     },
     "Dette stedet byr på" : {
@@ -1712,6 +1730,9 @@
       }
     },
     "Du mister fremdriften du har lagret. Dette kan ikke angres." : {
+
+    },
+    "Du setter prisen. Tuno-gebyret legges på toppen for leietaker, så du får hele prisen du setter." : {
 
     },
     "Du tjener" : {
@@ -1980,6 +2001,15 @@
       }
     },
     "Erstattet av nyere tilbud" : {
+
+    },
+    "Estimat, ikke en garanti. Avhenger av beliggenhet og etterspørsel." : {
+
+    },
+    "Estimert per måned" : {
+
+    },
+    "Ett steg igjen: fullfør verifiseringen, så kan du motta utbetalinger og annonsen blir synlig for leietakere." : {
 
     },
     "Etter publisering vises annonsen din i søk umiddelbart. Du kan deaktivere den når som helst fra \"Mine annonser\"." : {
@@ -2652,6 +2682,9 @@
         }
       }
     },
+    "Fullfør verifiseringen" : {
+
+    },
     "Fullt navn" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2749,9 +2782,6 @@
         }
       }
     },
-    "Gjester kan nå finne og bestille hos deg." : {
-
-    },
     "Gjester kan reservere uten å vente på bekreftelse fra deg." : {
       "extractionState" : "manual",
       "localizations" : {
@@ -2821,6 +2851,9 @@
           }
         }
       }
+    },
+    "Gjør det senere" : {
+
     },
     "Glemt passord?" : {
       "extractionState" : "manual",
@@ -3010,13 +3043,22 @@
     "Hurtigsvar vises i meldingsfeltet når du trykker +. Tap for å redigere, sveip for å slette." : {
 
     },
+    "Hva er galt? Rapporten går til Tuno-teamet, ikke til den du rapporterer." : {
+
+    },
     "Hva gjør plassen din spesiell? Utsikt, omgivelser, fasiliteter, tips til gjester …" : {
+
+    },
+    "Hva kan du tjene?" : {
 
     },
     "Hva passer her" : {
 
     },
     "Hva skjer denne dagen?" : {
+
+    },
+    "Hva slags plass er det?" : {
 
     },
     "Hva slags plass leier du ut?" : {
@@ -3085,6 +3127,9 @@
       }
     },
     "Hvor lenge?" : {
+
+    },
+    "Hvor mange plasser?" : {
 
     },
     "Hvor skal du?" : {
@@ -3566,6 +3611,9 @@
         }
       }
     },
+    "Jeg har rett til å leie ut denne plassen" : {
+
+    },
     "JPG eller PNG · maks 10 bilder" : {
 
     },
@@ -3715,6 +3763,9 @@
 
     },
     "Klar til å lage din første annonse. Utbetalinger skjer automatisk etter hvert opphold." : {
+
+    },
+    "Klar til å publisere?" : {
 
     },
     "Klar til å ta imot bookinger!" : {
@@ -3965,6 +4016,9 @@
           }
         }
       }
+    },
+    "Kunne ikke laste robotsjekken. Sjekk nettet og prøv igjen." : {
+
     },
     "Kunne ikke opprette annonse: %@" : {
       "extractionState" : "manual",
@@ -5445,6 +5499,9 @@
         }
       }
     },
+    "Plass og pris" : {
+
+    },
     "Plasser" : {
 
     },
@@ -5709,6 +5766,9 @@
         }
       }
     },
+    "Priser" : {
+
+    },
     "PRISER FOR ALLE PERIODER" : {
 
     },
@@ -5768,6 +5828,9 @@
           }
         }
       }
+    },
+    "Publiserer annonsen" : {
+
     },
     "QR-koder" : {
       "extractionState" : "manual",
@@ -6095,6 +6158,9 @@
         }
       }
     },
+    "Send rapport" : {
+
+    },
     "Send tilbakestillingslenke" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6210,6 +6276,9 @@
         }
       }
     },
+    "Sett en dagspris for å se estimatet." : {
+
+    },
     "Sett en pris du synes er rettferdig. Du kan endre den senere." : {
 
     },
@@ -6297,6 +6366,9 @@
           }
         }
       }
+    },
+    "Sjekk at alt stemmer. Du kan endre alt senere." : {
+
     },
     "Sjekk e-posten din" : {
       "extractionState" : "manual",
@@ -6457,6 +6529,9 @@
         }
       }
     },
+    "Slå av for å pause nye bestillinger." : {
+
+    },
     "Slett" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6490,6 +6565,9 @@
           }
         }
       }
+    },
+    "Slett annonsen" : {
+
     },
     "Slett bånd" : {
 
@@ -6707,6 +6785,9 @@
     "Takk for anmeldelsen!" : {
 
     },
+    "Takk. Vi ser på det så fort vi kan." : {
+
+    },
     "Tap for å plassere" : {
 
     },
@@ -6737,6 +6818,9 @@
 
     },
     "Til Mine annonser" : {
+
+    },
+    "Til og med %@ · 30 dager" : {
 
     },
     "Tilbake" : {
@@ -6893,6 +6977,9 @@
         }
       }
     },
+    "Tittel (valgfritt)" : {
+
+    },
     "Tittel må ha minst 3 tegn" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -6986,6 +7073,9 @@
           }
         }
       }
+    },
+    "Trengs for utbetalinger. Annonsen blir synlig etterpå." : {
+
     },
     "Trykk for å legge til" : {
 
@@ -7517,6 +7607,9 @@
 
     },
     "Vi sender deg et varsel så snart kontoen din er godkjent. Det tar vanligvis under en time." : {
+
+    },
+    "Vi sjekker bilder og tekst før den blir synlig. Det tar vanligvis bare noen minutter, og du får beskjed når den er godkjent." : {
 
     },
     "Vi sjekker med Stripe…" : {

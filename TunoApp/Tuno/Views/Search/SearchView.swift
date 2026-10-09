@@ -236,8 +236,8 @@ struct SearchView: View {
                         onSelect: { listing in
                             navigationPath.append(listing)
                         },
-                        referenceLat: locationManager.userLocation?.latitude,
-                        referenceLng: locationManager.userLocation?.longitude
+                        referenceLat: AppConfig.parkingOnly ? parkingRefLat : locationManager.userLocation?.latitude,
+                        referenceLng: AppConfig.parkingOnly ? parkingRefLng : locationManager.userLocation?.longitude
                     )
                     .zIndex(1)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -461,20 +461,33 @@ struct SearchView: View {
         let lngMin = region.center.longitude - region.span.longitudeDelta / 2
         let lngMax = region.center.longitude + region.span.longitudeDelta / 2
 
+        // Parkering: sorter fra søkesenteret, samme referanse som avstands-
+        // etikettene på radene (sort og label skal aldri sprike). Camping
+        // beholder kartsenteret som før.
+        let refLat: Double
+        let refLng: Double
+        if AppConfig.parkingOnly, let oLat = originLat, let oLng = originLng {
+            refLat = oLat
+            refLng = oLng
+        } else {
+            refLat = region.center.latitude
+            refLng = region.center.longitude
+        }
+
         let inRegion = filteredListings.compactMap { l -> (Listing, Double)? in
             guard let lat = l.lat, let lng = l.lng,
                   lat >= latMin, lat <= latMax,
                   lng >= lngMin, lng <= lngMax else { return nil }
-            let d = haversineDistanceKm(
-                lat1: region.center.latitude,
-                lng1: region.center.longitude,
-                lat2: lat,
-                lng2: lng
-            )
+            let d = haversineDistanceKm(lat1: refLat, lng1: refLng, lat2: lat, lng2: lng)
             return (l, d)
         }
         return inRegion.sorted { $0.1 < $1.1 }.map { $0.0 }
     }
+
+    /// Parkering: felles avstandsreferanse for rader/kort — søkesenteret,
+    /// med kartsenteret som fallback før første søk.
+    private var parkingRefLat: Double? { originLat ?? mapVisibleRegion?.center.latitude }
+    private var parkingRefLng: Double? { originLng ?? mapVisibleRegion?.center.longitude }
 
     /// Listings i kartets synlige bounding box (samme som visibleListings)
     /// men med fallback til alle filteredListings hvis ingen er i region
@@ -674,81 +687,5 @@ struct SearchView: View {
     private func toggleFavorite(_ listingId: String) {
         guard let userId = authManager.currentUser?.id else { return }
         Task { await favoritesService.toggle(listingId: listingId, userId: userId.uuidString) }
-    }
-}
-
-// MARK: - Map Listing Card
-
-struct MapListingCard: View {
-    let listing: Listing
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 12) {
-                if let imageUrl = listing.images?.first, let url = URL(string: imageUrl) {
-                    AsyncImage(url: url) { phase in
-                        switch phase {
-                        case .success(let image):
-                            image.resizable().aspectRatio(contentMode: .fill)
-                        default:
-                            Rectangle().fill(Color.neutral100)
-                        }
-                    }
-                    .frame(width: 88, height: 88)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                } else {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.neutral100)
-                        .frame(width: 88, height: 88)
-                }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(listing.title)
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                        .lineLimit(1)
-
-                    if let city = listing.city {
-                        HStack(spacing: 3) {
-                            Image(systemName: "mappin")
-                                .font(.system(size: 10))
-                            Text(city)
-                                .font(.system(size: 12))
-                        }
-                        .foregroundStyle(.neutral500)
-                    }
-
-                    HStack(spacing: 6) {
-                        Text("\(listing.displayPriceText) kr/\(listing.priceUnit?.displayName ?? "døgn")")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.neutral900)
-
-                        if let spots = listing.spots, spots > 1 {
-                            Text("\(spots)p")
-                                .font(.system(size: 11))
-                                .foregroundStyle(.neutral400)
-                        }
-
-                        if listing.instantBooking == true {
-                            HStack(spacing: 2) {
-                                Image(systemName: "bolt.fill")
-                                    .font(.system(size: 9))
-                                Text("Direkte")
-                                    .font(.system(size: 11, weight: .medium))
-                            }
-                            .foregroundStyle(.primary600)
-                        }
-                    }
-                }
-
-                Spacer()
-            }
-            .padding(10)
-            .background(.white)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
-            .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
-        }
-        .buttonStyle(.plain)
     }
 }

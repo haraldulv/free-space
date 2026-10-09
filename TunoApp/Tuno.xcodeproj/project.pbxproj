@@ -13,6 +13,7 @@
 		0B771074E8ABC573EB77837C /* StripeApplePay in Frameworks */ = {isa = PBXBuildFile; productRef = EFD6004772316F38FF89D02C /* StripeApplePay */; };
 		0DB672FC78BC310C5EDA3B89 /* SearchDateRangePicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = F92A4E3ED44C52BBEC76E34D /* SearchDateRangePicker.swift */; };
 		0FD3445EB4FD7DC8AE465DC3 /* SpotBlockedDatesSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 633F2046F5DC659D1D443A25 /* SpotBlockedDatesSection.swift */; };
+		1025D24E9A02E24F682DEE78 /* ParkingListingRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A187B1742404356B1D270131 /* ParkingListingRow.swift */; };
 		12663C1EA3152BC7C6440902 /* CustomTabBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 92E48039F546D58654A8CF5E /* CustomTabBar.swift */; };
 		13B77DCEDB9056B38179BFAE /* IBANGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */; };
 		141569C7734367EBF9DFC34B /* CalendarRootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1324AFD48A9779860210FE4B /* CalendarRootView.swift */; };
@@ -264,6 +265,7 @@
 		9C112587BDFFBDB9C07037F0 /* loading-utleier.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "loading-utleier.json"; sourceTree = "<group>"; };
 		9DE80E0F57ED28043A953489 /* WhereSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WhereSheet.swift; sourceTree = "<group>"; };
 		9F37F3CD542B4B76200AE7AE /* ProfileStatsStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileStatsStore.swift; sourceTree = "<group>"; };
+		A187B1742404356B1D270131 /* ParkingListingRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParkingListingRow.swift; sourceTree = "<group>"; };
 		A4BE8903623B90ED0A8174BC /* DraftStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DraftStorage.swift; sourceTree = "<group>"; };
 		A54AF55D0728E58C694E0F3B /* OpeningHoursEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpeningHoursEditorView.swift; sourceTree = "<group>"; };
 		A9A8155F44B5F1E01A1FE767 /* CreateListingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateListingView.swift; sourceTree = "<group>"; };
@@ -515,6 +517,7 @@
 				83B043C9DBACDB46B61E6148 /* ListingCard.swift */,
 				36D3B3DA24D1BC913844920D /* LocationPickerMapView.swift */,
 				820DA87FDA5C63B80CECAE95 /* MotorhomeIcon.swift */,
+				A187B1742404356B1D270131 /* ParkingListingRow.swift */,
 				F65149FFDD665E73DD3401C9 /* ProfileSummaryCard.swift */,
 				69D03627A981C3C64EF47F06 /* PublicProfileView.swift */,
 				8759EABE9447A2E1E46D4BC5 /* ReportSheet.swift */,
@@ -901,6 +904,7 @@
 				98B32B463DB40DC1874532A3 /* OpeningHoursEditorView.swift in Sources */,
 				402B7759282C565BD0F02A60 /* OpeningHoursService.swift in Sources */,
 				427C0F0D1B37C5AF58AFAD58 /* OpeningHoursStep.swift in Sources */,
+				1025D24E9A02E24F682DEE78 /* ParkingListingRow.swift in Sources */,
 				F22672C60C83901831A6F70F /* ParkingPriceStep.swift in Sources */,
 				3DC72601B41AE77E997D07DD /* ParkingPublishStep.swift in Sources */,
 				DA2AD1D27B0576BB88B5574A /* ParkingWizardView.swift in Sources */,
