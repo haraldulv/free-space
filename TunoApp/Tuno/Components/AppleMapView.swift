@@ -24,6 +24,9 @@ private enum TunoColors {
     static let darkGreen = UIColor(red: 0.18, green: 0.55, blue: 0.36, alpha: 1)
     static let textBlack = UIColor(red: 0.09, green: 0.09, blue: 0.09, alpha: 1)
     static let visited = UIColor(red: 0.94, green: 0.94, blue: 0.94, alpha: 1)
+    // Palett C (parkering): ink-flater, grønt kun som aksent.
+    static let ink = UIColor(red: 0.071, green: 0.078, blue: 0.071, alpha: 1)        // #121412
+    static let inkElevated = UIColor(red: 0.106, green: 0.118, blue: 0.106, alpha: 1) // #1b1e1b
 }
 
 // MARK: - Map type helper
@@ -564,18 +567,35 @@ struct SearchMapView: UIViewRepresentable {
             guard let annotation = view.annotation as? AnyObject else { return }
             let key = AnnotationKey(annotation)
 
-            // Cluster-tap: zoom inn
+            // Cluster-tap: zoom inn — men samlokaliserte annonser (samme
+            // adresse) sprekker aldri uansett zoom, og ved dyp zoom er det
+            // ikke mer å zoome på. Da åpner vi kortkarusellen på første
+            // medlem i stedet (medlemmene ligger side om side i karusellen
+            // siden den er avstandssortert).
             if let cluster = markerToCluster[key], cluster.listings.count > 1 {
                 let currentSpan = mapView.region.span.latitudeDelta
+                let lats = cluster.listings.compactMap(\.lat)
+                let lngs = cluster.listings.compactMap(\.lng)
+                let spread = max(
+                    (lats.max() ?? 0) - (lats.min() ?? 0),
+                    (lngs.max() ?? 0) - (lngs.min() ?? 0)
+                )
+                let isCoLocated = spread < 0.0005  // ~50 m
+                if let mkAnno = annotation as? MKAnnotation {
+                    mapView.deselectAnnotation(mkAnno, animated: false)
+                }
+                if isCoLocated || currentSpan <= 0.004 {
+                    if let firstId = cluster.listings.first?.id {
+                        onSelect?(firstId)
+                    }
+                    return
+                }
                 let newSpan = max(currentSpan / 4.0, 0.001)
                 let region = MKCoordinateRegion(
                     center: (annotation as! MKAnnotation).coordinate,
                     span: MKCoordinateSpan(latitudeDelta: newSpan, longitudeDelta: newSpan)
                 )
                 mapView.setRegion(region, animated: true)
-                if let mkAnno = annotation as? MKAnnotation {
-                    mapView.deselectAnnotation(mkAnno, animated: false)
-                }
                 return
             }
 
@@ -838,10 +858,14 @@ enum MapBubbleRenderer {
 
         let renderer = UIGraphicsImageRenderer(size: size)
         let image = renderer.image { ctx in
-            ctx.cgContext.setFillColor(TunoColors.darkGreen.cgColor)
+            // Parkering (palett C): ink-sirkel så boblen matcher resten av
+            // kartflaten; grønn beholdes for camping.
+            let stackColor = AppConfig.parkingOnly ? TunoColors.inkElevated : TunoColors.darkGreen
+            let mainColor = AppConfig.parkingOnly ? TunoColors.ink : TunoColors.green
+            ctx.cgContext.setFillColor(stackColor.cgColor)
             ctx.cgContext.fillEllipse(in: CGRect(x: 0, y: stackOffset, width: diameter, height: diameter))
             let mainRect = CGRect(x: 0, y: 0, width: diameter, height: diameter)
-            ctx.cgContext.setFillColor(TunoColors.green.cgColor)
+            ctx.cgContext.setFillColor(mainColor.cgColor)
             ctx.cgContext.fillEllipse(in: mainRect)
             ctx.cgContext.setStrokeColor(UIColor.white.cgColor)
             ctx.cgContext.setLineWidth(2.5)

@@ -158,6 +158,22 @@ struct TunoApp: App {
         #endif
         initializeMapServices()
         configureImageCache()
+        configureParkingNavTitles()
+    }
+
+    /// Parkering (palett C): navigasjonstitler i Schibsted Grotesk så hele
+    /// appen (Meldinger, Favoritter, Profil osv.) følger det nye designet,
+    /// ikke bare kjøpsflyten. Kun title-attributter settes — bakgrunns-
+    /// materialet i baren beholder systemoppførselen. Camping urørt.
+    private func configureParkingNavTitles() {
+        guard AppConfig.parkingOnly else { return }
+        let navBar = UINavigationBar.appearance()
+        if let large = UIFont(name: "SchibstedGrotesk-Bold", size: 32) {
+            navBar.largeTitleTextAttributes = [.font: large]
+        }
+        if let inline = UIFont(name: "SchibstedGrotesk-SemiBold", size: 17) {
+            navBar.titleTextAttributes = [.font: inline]
+        }
     }
 
     private func configureImageCache() {

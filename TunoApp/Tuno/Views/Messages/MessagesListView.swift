@@ -75,6 +75,12 @@ struct MessagesListView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
+            }
+        }
         .navigationTitle(searchActive ? "" : "Meldinger")
         .navigationBarTitleDisplayMode(.large)
         .toolbar(searchActive ? .hidden : .visible, for: .navigationBar)

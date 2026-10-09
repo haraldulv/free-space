@@ -13,8 +13,9 @@ struct BottomListDrawer: View {
     let onSelect: (Listing) -> Void
     var referenceLat: Double? = nil
     var referenceLng: Double? = nil
-    /// true når skuffen lever på en tab-rot (kart som rot-flate): da skal den
-    /// stoppe over tab-baren i stedet for å gli under den.
+    /// Beholdt for call-site-kompatibilitet. Parkering-varianten (kapsel +
+    /// flytende panel) respekterer alltid safe area; camping-båndet ignorerer
+    /// alltid bunnen som før.
     var respectsBottomSafeArea: Bool = false
 
     @State private var isExpanded = false
@@ -24,10 +25,15 @@ struct BottomListDrawer: View {
 
     var body: some View {
         GeometryReader { geo in
-            if AppConfig.parkingOnly && !isExpanded {
-                // Parkering: kollapset tilstand er en flytende kapsel, ikke et
-                // fullbredde-bånd (båndet så halvveis/buggy ut over tab-baren).
-                collapsedPill
+            if AppConfig.parkingOnly {
+                // Parkering: kollapset = flytende kapsel, ekspandert = flytende
+                // panel. Begge lever INNENFOR safe area (ingen ignoresSafeArea),
+                // så de stopper over tab-baren akkurat som kapselen gjør.
+                if isExpanded {
+                    expandedPanel(geoHeight: geo.size.height)
+                } else {
+                    collapsedPill
+                }
             } else {
                 let expandedHeight: CGFloat = max(420, geo.size.height * 0.78)
                 let baseHeight = isExpanded ? expandedHeight : collapsedHeight
@@ -46,7 +52,7 @@ struct BottomListDrawer: View {
                                 topTrailingRadius: 16,
                                 style: .continuous
                             )
-                            .fill(AppConfig.parkingOnly ? Color.paper : Color.white)
+                            .fill(Color.white)
                             .shadow(color: .black.opacity(0.12), radius: 14, y: -2)
                         )
                         .gesture(dragGesture)
@@ -54,10 +60,69 @@ struct BottomListDrawer: View {
                         .animation(.interactiveSpring(), value: dragTranslation)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                .ignoresSafeArea(edges: respectsBottomSafeArea ? [] : .bottom)
+                .ignoresSafeArea(edges: .bottom)
             }
         }
         .allowsHitTesting(true)
+    }
+
+    /// Parkering, ekspandert: flytende panel med runde hjørner som svever
+    /// over tab-baren (matcher kapselen og den flytende tab-baren). Listen
+    /// klippes til panelet så rader aldri kolliderer med navigasjonen.
+    private func expandedPanel(geoHeight: CGFloat) -> some View {
+        let expandedHeight: CGFloat = max(380, geoHeight * 0.76)
+        // Drar brukeren ned krymper panelet før det slipper til kapsel.
+        let height = max(collapsedHeight, min(expandedHeight, expandedHeight - max(0, dragTranslation)))
+
+        return VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            VStack(spacing: 0) {
+                Capsule()
+                    .fill(Color.neutral300)
+                    .frame(width: 40, height: 4)
+                    .padding(.top, 8)
+
+                HStack {
+                    Text(countLabel)
+                        .font(.tuno(.heading))
+                        .foregroundStyle(.neutral900)
+                    Spacer()
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            isExpanded = false
+                        }
+                    } label: {
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.neutral700)
+                            .frame(width: 32, height: 32)
+                            .background(Color.paperCard)
+                            .clipShape(Circle())
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 12)
+
+                ScrollView {
+                    parkingList
+                }
+            }
+            .frame(height: height)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: TunoRadius.card, style: .continuous)
+                    .fill(Color.paper)
+                    .shadow(color: .black.opacity(0.16), radius: 14, y: 4)
+            )
+            .clipShape(RoundedRectangle(cornerRadius: TunoRadius.card, style: .continuous))
+            .gesture(dragGesture)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isExpanded)
+            .animation(.interactiveSpring(), value: dragTranslation)
+        }
+        .padding(.horizontal, 8)
+        .padding(.bottom, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     }
 
     /// Flytende «X plasser»-kapsel (ink) over tab-baren. Tap eller dra opp
@@ -172,7 +237,7 @@ struct BottomListDrawer: View {
             }
         }
         .padding(.horizontal, 16)
-        .padding(.bottom, 80)
+        .padding(.bottom, 16)
     }
 
     /// Camping: opprinnelig liste med store ListingCard-bildekort.

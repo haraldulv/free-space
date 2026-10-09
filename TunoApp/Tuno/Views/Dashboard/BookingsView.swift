@@ -21,6 +21,12 @@ struct BookingsView: View {
                 contentWithTabs
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
+            }
+        }
         .navigationTitle("Bestillinger")
         .fullScreenCover(isPresented: $showLogin) {
             LoginView()
@@ -55,6 +61,15 @@ struct BookingsView: View {
         }
     }
 
+    /// Palett C i parkering-modus (ink-chip), gammel grønn i camping.
+    private var activeChipColor: Color {
+        AppConfig.parkingOnly ? .ink : .primary600
+    }
+
+    private var inactiveChipColor: Color {
+        AppConfig.parkingOnly ? .paperCard : .neutral50
+    }
+
     private var tabBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 6) {
@@ -78,9 +93,9 @@ struct BookingsView: View {
                         .foregroundStyle(activeTab == tab ? .white : .neutral800)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
-                        .background(activeTab == tab ? Color.primary600 : Color.neutral50)
+                        .background(activeTab == tab ? activeChipColor : inactiveChipColor)
                         .clipShape(Capsule())
-                        .overlay(Capsule().stroke(activeTab == tab ? Color.primary600 : Color.neutral200, lineWidth: 1))
+                        .overlay(Capsule().stroke(activeTab == tab ? activeChipColor : Color.neutral200, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                 }

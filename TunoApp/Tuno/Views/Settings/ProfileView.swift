@@ -42,11 +42,11 @@ struct ProfileView: View {
 
             VStack(spacing: 10) {
                 Text("Velkommen til Tuno")
-                    .font(.system(size: 30, weight: .bold))
+                    .font(AppConfig.parkingOnly ? .tuno(size: 28, weight: .bold) : .system(size: 30, weight: .bold))
                     .foregroundStyle(.neutral900)
 
                 Text("Logg inn for å bestille plasser eller leie ut din egen.")
-                    .font(.system(size: 16))
+                    .font(AppConfig.parkingOnly ? .tuno(.body) : .system(size: 16))
                     .foregroundStyle(.neutral500)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 32)
@@ -54,30 +54,47 @@ struct ProfileView: View {
             .padding(.bottom, 36)
 
             VStack(spacing: 12) {
-                Button { showLogin = true } label: {
-                    Text("Logg inn")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.primary600)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
-                }
+                if AppConfig.parkingOnly {
+                    Button { showLogin = true } label: {
+                        Text("Logg inn")
+                    }
+                    .buttonStyle(TunoPillButtonStyle(variant: .ink))
 
-                Button { showRegister = true } label: {
-                    Text("Registrer deg")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(.primary700)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 16)
-                        .background(Color.primary50)
-                        .clipShape(RoundedRectangle(cornerRadius: 14))
+                    Button { showRegister = true } label: {
+                        Text("Registrer deg")
+                    }
+                    .buttonStyle(TunoPillButtonStyle(variant: .outline))
+                } else {
+                    Button { showLogin = true } label: {
+                        Text("Logg inn")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.primary600)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+
+                    Button { showRegister = true } label: {
+                        Text("Registrer deg")
+                            .font(.system(size: 17, weight: .semibold))
+                            .foregroundStyle(.primary700)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 16)
+                            .background(Color.primary50)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
                 }
             }
             .padding(.horizontal, 32)
 
             Spacer()
             Spacer()
+        }
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
+            }
         }
         .navigationTitle("Profil")
         .fullScreenCover(isPresented: $showLogin) {
@@ -153,7 +170,7 @@ struct ProfileView: View {
                 Spacer(minLength: 40)
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .background(AppConfig.parkingOnly ? Color.paper : Color(.systemGroupedBackground))
         .navigationTitle("Profil")
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

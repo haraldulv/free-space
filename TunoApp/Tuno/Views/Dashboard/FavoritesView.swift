@@ -50,6 +50,12 @@ struct FavoritesView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background {
+            if AppConfig.parkingOnly {
+                Color.paper.ignoresSafeArea()
+            }
+        }
         .navigationTitle("Favoritter")
         .fullScreenCover(isPresented: $showLogin) {
             LoginView()
