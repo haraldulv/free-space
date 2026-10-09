@@ -25,6 +25,9 @@ struct ListingDetailView: View {
     @State private var spotFullscreenImages: [String]?
     @State private var spotFullscreenStartIndex: Int = 0
     @State private var bookingSpotId: String?
+    /// Parkering: navigasjon fra pris-tiles med forvalgt plan (dag/måned).
+    @State private var showBookingFromTiles = false
+    @State private var tilePreselectMonth = false
     @State private var scrollOffsetY: CGFloat = 0
     @StateObject private var chatService = ChatService()
     @StateObject private var locationManager = LocationManager()
@@ -98,8 +101,19 @@ struct ListingDetailView: View {
 
     // MARK: - Main content
 
+    /// Parkering (Asker-pivoten) får en fakta-først-layout uten hero;
+    /// camping beholder den opprinnelige Airbnb-layouten urørt.
     @ViewBuilder
     private func contentView(listing: Listing) -> some View {
+        if listing.category == .parking {
+            parkingContentView(listing: listing)
+        } else {
+            campingContentView(listing: listing)
+        }
+    }
+
+    @ViewBuilder
+    private func campingContentView(listing: Listing) -> some View {
         let images = listing.images ?? []
         let amenities = listing.amenities ?? []
         let hideExact = listing.hideExactLocation ?? false
@@ -244,6 +258,418 @@ struct ListingDetailView: View {
         .task(id: listing.id) {
             reviews = await reviewService.fetchListingReviews(listingId: listing.id)
         }
+    }
+
+    // MARK: - Parkering (Asker-pivoten): fakta først, bilder som dokumentasjon
+
+    @ViewBuilder
+    private func parkingContentView(listing: Listing) -> some View {
+        let amenities = listing.amenities ?? []
+        let hideExact = listing.hideExactLocation ?? false
+
+        VStack(spacing: 0) {
+            parkingTopBar
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    parkingTitleBlock(listing: listing)
+                    parkingPriceTilesCard(listing: listing)
+                    transitCard(listing: listing)
+                    photoThumbStrip(listing: listing)
+                    parkingDescriptionCard(listing: listing)
+                    if !amenities.isEmpty {
+                        parkingAmenitiesCard(amenities: amenities)
+                    }
+                    maxHeightCard(listing: listing)
+                    suitableForCard(listing: listing)
+                    locationCard(listing: listing, hideExact: hideExact)
+                    Divider()
+                    compactHostRow(listing: listing)
+                    Divider()
+                    reviewsSection(listing: listing)
+                    thingsToKnowCard(listing: listing)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+                .padding(.bottom, 24)
+            }
+            .scrollIndicators(.hidden)
+
+            parkingBookingBar(listing: listing)
+        }
+        .background(Color.paper)
+        .navigationDestination(isPresented: $showBookingFromTiles) {
+            BookingView(listing: listing, preselectMonthPlan: tilePreselectMonth)
+        }
+        .sheet(isPresented: $showHostProfile) {
+            if let hostId = listing.hostId {
+                PublicProfileView(
+                    hostId: hostId,
+                    initialName: listing.hostName,
+                    initialAvatar: listing.hostAvatar,
+                    initialJoinedYear: listing.hostJoinedYear,
+                    initialListingsCount: listing.hostListingsCount
+                )
+            }
+        }
+        .sheet(isPresented: $showAllAmenities) {
+            AllAmenitiesSheet(amenities: listing.amenities ?? [])
+        }
+        .fullScreenCover(isPresented: $showFullscreenGallery) {
+            FullscreenGalleryView(
+                images: listing.images ?? [],
+                startIndex: imageIndex
+            )
+        }
+        .fullScreenCover(isPresented: $showFullscreenMap) {
+            if let lat = listing.lat, let lng = listing.lng {
+                FullscreenMapView(
+                    lat: lat,
+                    lng: lng,
+                    spotMarkers: listing.spotMarkers ?? [],
+                    hideExactLocation: listing.hideExactLocation ?? false,
+                    isSatellite: $isSatellite
+                )
+            }
+        }
+        .sheet(isPresented: $showReportSheet) {
+            ReportSheet(targetType: .listing, targetId: listingId)
+        }
+        .sheet(isPresented: $showShareSheet) {
+            let url = URL(string: "https://tuno.no/listings/\(listing.id)")!
+            let text = "\(listing.title) · \(listing.parkingPriceLine) på Tuno"
+            ShareSheet(items: [text, url])
+                .presentationDetents([.medium, .large])
+        }
+        .sheet(isPresented: $showAllReviews) {
+            AllReviewsSheet(listing: listing, reviews: reviews)
+        }
+        .task(id: listing.id) {
+            reviews = await reviewService.fetchListingReviews(listingId: listing.id)
+        }
+    }
+
+    private var parkingTopBar: some View {
+        HStack(spacing: 10) {
+            paperIconButton("chevron.left") { dismiss() }
+            Spacer()
+            paperIconButton("square.and.arrow.up") { showShareSheet = true }
+            if authManager.isAuthenticated {
+                paperIconButton(
+                    favoritesService.favoriteIds.contains(listingId) ? "heart.fill" : "heart",
+                    tint: favoritesService.favoriteIds.contains(listingId) ? .red : .neutral900
+                ) {
+                    guard let userId = authManager.currentUser?.id else { return }
+                    Task { await favoritesService.toggle(listingId: listingId, userId: userId.uuidString) }
+                }
+                paperIconButton("flag") { showReportSheet = true }
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+    }
+
+    private func paperIconButton(_ systemName: String, tint: Color = .neutral900, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(tint)
+                .frame(width: 36, height: 36)
+                .background(Color.paperCard, in: Circle())
+                .overlay(Circle().stroke(Color.paperLine, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private func parkingTitleBlock(listing: Listing) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(listing.title)
+                .font(.tuno(.title))
+                .foregroundStyle(.neutral900)
+                .lineLimit(3)
+            Text(parkingSubtitle(for: listing))
+                .font(.tuno(.body))
+                .foregroundStyle(.neutral600)
+            parkingFactChips(listing: listing)
+                .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func parkingSubtitle(for listing: Listing) -> String {
+        var parts: [String] = []
+        if let pt = listing.parkingType { parts.append(pt.displayName) }
+        if let city = listing.city, !city.isEmpty { parts.append(city) }
+        return parts.joined(separator: " · ")
+    }
+
+    private func parkingFactChips(listing: Listing) -> some View {
+        HStack(spacing: 8) {
+            if let spots = listing.spots, spots > 1 {
+                factChip(icon: "car.2.fill", text: "\(spots) plasser")
+            }
+            if listing.instantBooking == true {
+                factChip(icon: "bolt.fill", text: "Direktebestilling", iconTint: .mint)
+            }
+            if let rating = listing.rating, (listing.reviewCount ?? 0) > 0 {
+                let ratingText = String(format: "%.1f", rating).replacingOccurrences(of: ".", with: ",")
+                factChip(icon: "star.fill", text: "\(ratingText) (\(listing.reviewCount ?? 0))")
+            }
+        }
+    }
+
+    private func factChip(icon: String, text: String, iconTint: Color = .neutral700) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(iconTint)
+            Text(text)
+                .font(.tuno(.caption))
+                .foregroundStyle(.neutral700)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .background(Color.paperCard)
+        .clipShape(Capsule())
+        .overlay(Capsule().stroke(Color.paperLine, lineWidth: 1))
+    }
+
+    /// Tappbare dag/måned-tiles: navigerer rett til booking med riktig
+    /// plan forvalgt. Logget ut → login; egen annonse → inaktiv.
+    @ViewBuilder
+    private func parkingPriceTilesCard(listing: Listing) -> some View {
+        let dayPrice = listing.parkingDayPrice ?? 0
+        let monthPrice = listing.parkingMonthPrice
+        if dayPrice > 0 || monthPrice != nil {
+            sectionCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    Text("Priser")
+                        .font(.tuno(.heading))
+                        .foregroundStyle(.neutral900)
+                    HStack(spacing: 10) {
+                        if dayPrice > 0 {
+                            Button {
+                                handlePriceTileTap(month: false, listing: listing)
+                            } label: {
+                                parkingPriceTile(price: dayPrice, unit: "per dag", caption: "Velg datoene du trenger")
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        if let monthPrice {
+                            Button {
+                                handlePriceTileTap(month: true, listing: listing)
+                            } label: {
+                                parkingPriceTile(price: monthPrice, unit: "per måned", caption: "Fast plass i 30 dager")
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func handlePriceTileTap(month: Bool, listing: Listing) {
+        guard authManager.isAuthenticated else {
+            showLogin = true
+            return
+        }
+        if let userId = authManager.currentUser?.id.uuidString.lowercased(),
+           let hostId = listing.hostId?.lowercased(),
+           userId == hostId {
+            return
+        }
+        tilePreselectMonth = month
+        showBookingFromTiles = true
+    }
+
+    @ViewBuilder
+    private func photoThumbStrip(listing: Listing) -> some View {
+        let images = listing.images ?? []
+        if !images.isEmpty {
+            sectionCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(images.count == 1 ? "1 bilde" : "\(images.count) bilder")
+                        .font(.tuno(.heading))
+                        .foregroundStyle(.neutral900)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Array(images.enumerated()), id: \.offset) { i, url in
+                                Button {
+                                    imageIndex = i
+                                    showFullscreenGallery = true
+                                } label: {
+                                    CachedAsyncImage(url: URL(string: url)) { image in
+                                        image.resizable().aspectRatio(contentMode: .fill)
+                                    } placeholder: {
+                                        Rectangle().fill(Color.neutral100)
+                                    }
+                                    .frame(width: 132, height: 100)
+                                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func parkingDescriptionCard(listing: Listing) -> some View {
+        if let desc = listing.description, !desc.isEmpty {
+            sectionCard {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Om plassen")
+                        .font(.tuno(.heading))
+                        .foregroundStyle(.neutral900)
+                    Text(desc)
+                        .font(.tuno(.body))
+                        .foregroundStyle(.neutral700)
+                        .lineSpacing(4)
+                }
+            }
+        }
+    }
+
+    /// Som amenitiesCard, men uten 6-raders cap og med de parkering-kritiske
+    /// fasilitetene (lading, tak) sortert først.
+    private func parkingAmenitiesCard(amenities: [String]) -> some View {
+        let priority = [AmenityType.evCharging.rawValue, AmenityType.covered.rawValue]
+        let sorted = amenities.sorted { a, b in
+            let ia = priority.firstIndex(of: a) ?? Int.max
+            let ib = priority.firstIndex(of: b) ?? Int.max
+            if ia != ib { return ia < ib }
+            return a < b
+        }
+        return sectionCard {
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Dette stedet byr på")
+                    .font(.tuno(.heading))
+                    .foregroundStyle(.neutral900)
+                VStack(spacing: 12) {
+                    ForEach(sorted, id: \.self) { amenity in
+                        let type = AmenityType(rawValue: amenity)
+                        HStack(spacing: 14) {
+                            Image(systemName: type?.icon ?? "checkmark.circle.fill")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.neutral900)
+                                .frame(width: 26)
+                            Text(type?.label ?? amenity)
+                                .font(.tuno(.body))
+                                .foregroundStyle(.neutral800)
+                            Spacer()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func parkingMaxHeight(listing: Listing) -> Int? {
+        var minHeight: Int? = nil
+        for spot in listing.spotMarkers ?? [] {
+            if let h = spot.vehicleMaxHeight, h > 0, minHeight == nil || h < minHeight! {
+                minHeight = h
+            }
+        }
+        return minHeight
+    }
+
+    /// «Maks høyde»-kort for garasje/p-hus når høydegrense er satt.
+    @ViewBuilder
+    private func maxHeightCard(listing: Listing) -> some View {
+        let needsHeight = listing.parkingType == .garage || listing.parkingType == .parkingHouse
+        if needsHeight, let maxHeight = parkingMaxHeight(listing: listing) {
+            sectionCard {
+                HStack(spacing: 12) {
+                    Image(systemName: "arrow.up.and.down")
+                        .font(.system(size: 18))
+                        .foregroundStyle(.neutral900)
+                        .frame(width: 44, height: 44)
+                        .background(Color.neutral100)
+                        .clipShape(Circle())
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Maks høyde: \(maxHeight) m")
+                            .font(.tuno(.body))
+                            .foregroundStyle(.neutral900)
+                        Text("Sjekk at bilen din går klar.")
+                            .font(.tuno(.caption))
+                            .foregroundStyle(.neutral500)
+                    }
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    /// Booking-bar på ink-flate (palett C: mørk markedsflate + mint-CTA).
+    private func parkingBookingBar(listing: Listing) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                if let day = listing.parkingDayPrice {
+                    Text("\(day.nokFormatted) kr/dag")
+                        .font(.tuno(.heading))
+                        .foregroundStyle(Color.inkText)
+                } else {
+                    Text(listing.headlinePriceText)
+                        .font(.tuno(.heading))
+                        .foregroundStyle(Color.inkText)
+                }
+                if let month = listing.parkingMonthPrice {
+                    Text("\(month.nokFormatted) kr/mnd")
+                        .font(.tuno(.caption))
+                        .foregroundStyle(Color.inkMuted)
+                }
+            }
+
+            Spacer()
+
+            if authManager.isAuthenticated {
+                if let userId = authManager.currentUser?.id.uuidString.lowercased(),
+                   let hostId = listing.hostId?.lowercased(),
+                   userId == hostId {
+                    Text("Din annonse")
+                        .font(.tuno(.body))
+                        .foregroundStyle(Color.inkMuted)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 13)
+                        .background(Color.inkElevated)
+                        .clipShape(Capsule())
+                } else {
+                    NavigationLink {
+                        BookingView(listing: listing)
+                    } label: {
+                        Text("Reserver")
+                            .font(.tuno(size: 16, weight: .bold))
+                            .foregroundStyle(Color.mintInk)
+                            .padding(.horizontal, 32)
+                            .padding(.vertical, 14)
+                            .background(Color.mint)
+                            .clipShape(Capsule())
+                    }
+                }
+            } else {
+                Button {
+                    showLogin = true
+                } label: {
+                    Text("Logg inn")
+                        .font(.tuno(size: 16, weight: .bold))
+                        .foregroundStyle(Color.mintInk)
+                        .padding(.horizontal, 32)
+                        .padding(.vertical, 14)
+                        .background(Color.mint)
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 14)
+        .frame(maxWidth: .infinity)
+        .background(Color.ink)
     }
 
     // MARK: - Reviews
