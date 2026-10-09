@@ -57,7 +57,7 @@ struct LoginView: View {
                             .frame(height: 44)
 
                         Text("Finn din plass")
-                            .font(.system(size: 16))
+                            .font(.app(size: 16))
                             .foregroundStyle(.neutral500)
                     }
                     .padding(.top, 60)
@@ -130,11 +130,11 @@ struct LoginView: View {
                                 Image(systemName: "g.circle.fill")
                                     .font(.title3)
                                 Text("Fortsett med Google")
-                                    .font(.system(size: 16, weight: .medium))
+                                    .font(.app(size: 16, weight: .medium))
                             }
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 14)
-                            .background(.white)
+                            .background(Color.appCard)
                             .foregroundStyle(.neutral700)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .overlay(
@@ -147,27 +147,27 @@ struct LoginView: View {
 
                     // Divider
                     HStack {
-                        Rectangle().frame(height: 1).foregroundStyle(.neutral200)
+                        Rectangle().frame(height: 1).foregroundStyle(.appLine)
                         Text("eller")
-                            .font(.system(size: 14))
+                            .font(.app(size: 14))
                             .foregroundStyle(.neutral400)
-                        Rectangle().frame(height: 1).foregroundStyle(.neutral200)
+                        Rectangle().frame(height: 1).foregroundStyle(.appLine)
                     }
 
                     // Email/Password
                     VStack(spacing: 16) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("E-post")
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.app(size: 14, weight: .medium))
                                 .foregroundStyle(.neutral700)
                             TextField("", text: $email)
                                 .textFieldStyle(.plain)
                                 .padding(14)
-                                .background(.neutral50)
+                                .background(AppConfig.parkingOnly ? Color.paperCard : Color.neutral50)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.neutral200, lineWidth: 1)
+                                        .stroke(Color.appLine, lineWidth: 1)
                                 )
                                 .textContentType(.emailAddress)
                                 .keyboardType(.emailAddress)
@@ -177,7 +177,7 @@ struct LoginView: View {
 
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Passord")
-                                .font(.system(size: 14, weight: .medium))
+                                .font(.app(size: 14, weight: .medium))
                                 .foregroundStyle(.neutral700)
                             HStack(spacing: 8) {
                                 Group {
@@ -203,11 +203,11 @@ struct LoginView: View {
                                 .accessibilityLabel(passwordRevealed ? "Skjul passord" : "Vis passord")
                             }
                             .padding(14)
-                            .background(.neutral50)
+                            .background(AppConfig.parkingOnly ? Color.paperCard : Color.neutral50)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .overlay(
                                 RoundedRectangle(cornerRadius: 12)
-                                    .stroke(Color.neutral200, lineWidth: 1)
+                                    .stroke(Color.appLine, lineWidth: 1)
                             )
                         }
                     }
@@ -235,12 +235,12 @@ struct LoginView: View {
                                     .tint(.white)
                             } else {
                                 Text("Logg inn")
-                                    .font(.system(size: 16, weight: .semibold))
+                                    .font(.app(size: 16, weight: .semibold))
                             }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.primary600)
+                        .background(Color.appAccent)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
@@ -255,8 +255,8 @@ struct LoginView: View {
                         showForgotPassword = true
                     } label: {
                         Text("Glemt passord?")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(.primary600)
+                            .font(.app(size: 14, weight: .medium))
+                            .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .primary600)
                     }
 
                     Spacer()
@@ -267,21 +267,21 @@ struct LoginView: View {
                     // beskrivende tekst over.
                     VStack(spacing: 10) {
                         Text("Har du ikke konto?")
-                            .font(.system(size: 14))
+                            .font(.app(size: 14))
                             .foregroundStyle(.neutral500)
                         Button {
                             showRegister = true
                         } label: {
                             Text("Registrer deg")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.app(size: 16, weight: .semibold))
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 14)
-                                .foregroundStyle(.primary600)
-                                .background(Color.primary50)
+                                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .primary600)
+                                .background(AppConfig.parkingOnly ? Color.paperCard : Color.primary50)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 12)
-                                        .stroke(Color.primary600, lineWidth: 1.5)
+                                        .stroke(AppConfig.parkingOnly ? Color.neutral900 : Color.primary600, lineWidth: 1.5)
                                 )
                         }
                     }
@@ -290,7 +290,7 @@ struct LoginView: View {
                 }
                 .padding(.horizontal, 24)
             }
-            .background(.white)
+            .background(AppConfig.parkingOnly ? Color.paper : Color.white)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: {

@@ -23,7 +23,7 @@ struct ForgotPasswordView: View {
                     VStack(spacing: 16) {
                         Image(systemName: "envelope.badge.fill")
                             .font(.system(size: 48))
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(.appAccent)
 
                         Text("Sjekk e-posten din")
                             .font(.system(size: 22, weight: .bold))
@@ -39,7 +39,7 @@ struct ForgotPasswordView: View {
                         .font(.system(size: 16, weight: .semibold))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.primary600)
+                        .background(Color.appAccent)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 } else {
@@ -80,7 +80,7 @@ struct ForgotPasswordView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.primary600)
+                        .background(Color.appAccent)
                         .foregroundStyle(.white)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
@@ -94,7 +94,7 @@ struct ForgotPasswordView: View {
                 Spacer()
             }
             .padding(.horizontal, 24)
-            .background(.white)
+            .background(AppConfig.parkingOnly ? Color.paper : Color.white)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: {

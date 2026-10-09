@@ -68,7 +68,7 @@ struct RegisterView: View {
                 .padding(.bottom, 32)
             }
             .scrollDismissesKeyboard(.interactively)
-            .background(.white)
+            .background(AppConfig.parkingOnly ? Color.paper : Color.white)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button { dismiss() } label: {
@@ -91,10 +91,10 @@ struct RegisterView: View {
     private var header: some View {
         VStack(spacing: 6) {
             Text("Opprett konto")
-                .font(.system(size: 26, weight: .bold))
+                .font(.app(size: 26, weight: .bold))
                 .foregroundStyle(.neutral900)
             Text("Kom i gang med Tuno")
-                .font(.system(size: 15))
+                .font(.app(size: 15))
                 .foregroundStyle(.neutral500)
         }
         .padding(.top, 8)
@@ -166,16 +166,16 @@ struct RegisterView: View {
                     Image(systemName: "g.circle.fill")
                         .font(.system(size: 20))
                     Text("Google")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.app(size: 15, weight: .semibold))
                 }
                 .frame(maxWidth: .infinity)
                 .frame(height: 50)
-                .background(.white)
+                .background(Color.appCard)
                 .foregroundStyle(.neutral800)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color.neutral200, lineWidth: 1)
+                        .stroke(Color.appLine, lineWidth: 1)
                 )
             }
             .disabled(isLoading)
@@ -185,11 +185,11 @@ struct RegisterView: View {
 
     private var divider: some View {
         HStack(spacing: 10) {
-            Rectangle().frame(height: 1).foregroundStyle(.neutral200)
+            Rectangle().frame(height: 1).foregroundStyle(.appLine)
             Text("eller med e-post")
-                .font(.system(size: 12, weight: .medium))
+                .font(.app(size: 12, weight: .medium))
                 .foregroundStyle(.neutral400)
-            Rectangle().frame(height: 1).foregroundStyle(.neutral200)
+            Rectangle().frame(height: 1).foregroundStyle(.appLine)
         }
     }
 
@@ -233,7 +233,7 @@ struct RegisterView: View {
                 HStack(alignment: .top, spacing: 10) {
                     Image(systemName: termsAccepted ? "checkmark.square.fill" : "square")
                         .font(.system(size: 20))
-                        .foregroundStyle(termsAccepted ? Color.primary600 : Color.neutral400)
+                        .foregroundStyle(termsAccepted ? Color.appAccent : Color.neutral400)
                     (Text("Jeg godtar Tunos ")
                         .foregroundStyle(.neutral600)
                      + Text("brukervilkår")
@@ -255,13 +255,13 @@ struct RegisterView: View {
                 Button("Les vilkår") {
                     if let url = URL(string: "https://tuno.no/vilkar") { openURL(url) }
                 }
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.primary600)
+                .font(.app(size: 12, weight: .medium))
+                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .primary600)
                 Button("Les personvern") {
                     if let url = URL(string: "https://tuno.no/personvern") { openURL(url) }
                 }
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.primary600)
+                .font(.app(size: 12, weight: .medium))
+                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .primary600)
             }
             .padding(.leading, 30)
 
@@ -295,12 +295,16 @@ struct RegisterView: View {
                     ProgressView().tint(.white)
                 } else {
                     Text("Registrer deg")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.app(size: 16, weight: .semibold))
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
-            .background(canSubmit ? Color.primary600 : Color.primary300)
+            .background(
+                canSubmit
+                    ? Color.appAccent
+                    : (AppConfig.parkingOnly ? Color.neutral400 : Color.primary300)
+            )
             .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
@@ -324,11 +328,11 @@ struct RegisterView: View {
     private var loginLink: some View {
         HStack(spacing: 4) {
             Text("Har du allerede konto?")
-                .font(.system(size: 14))
+                .font(.app(size: 14))
                 .foregroundStyle(.neutral500)
             Button("Logg inn") { dismiss() }
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.primary600)
+                .font(.app(size: 14, weight: .semibold))
+                .foregroundStyle(AppConfig.parkingOnly ? .neutral900 : .primary600)
         }
         .padding(.top, 4)
     }
@@ -358,14 +362,14 @@ private struct CompactField: View {
             .textInputAutocapitalization(keyboard == .emailAddress ? .never : .words)
             .autocorrectionDisabled(keyboard == .emailAddress)
             .submitLabel(submitLabel)
-            .font(.system(size: 16))
+            .font(.app(size: 16))
             .padding(.horizontal, 14)
             .frame(height: 52)
-            .background(Color.neutral50)
+            .background(AppConfig.parkingOnly ? Color.paperCard : Color.neutral50)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.neutral200, lineWidth: 1)
+                    .stroke(Color.appLine, lineWidth: 1)
             )
     }
 }
@@ -404,11 +408,11 @@ private struct CompactSecureField: View {
         }
         .padding(.horizontal, 14)
         .frame(height: 52)
-        .background(Color.neutral50)
+        .background(AppConfig.parkingOnly ? Color.paperCard : Color.neutral50)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(Color.neutral200, lineWidth: 1)
+                .stroke(Color.appLine, lineWidth: 1)
         )
     }
 }

@@ -34,7 +34,7 @@ struct EmailVerifiedView: View {
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 56)
-                            .background(Color.primary600)
+                            .background(Color.appAccent)
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                     }
                     .padding(.horizontal, 24)
@@ -70,11 +70,11 @@ struct EmailVerifiedView: View {
         VStack(spacing: 28) {
             ZStack {
                 Circle()
-                    .fill(Color.primary50)
+                    .fill(AppConfig.parkingOnly ? Color.mint.opacity(0.18) : Color.primary50)
                     .frame(width: 140, height: 140)
                 ProgressView()
                     .scaleEffect(2.0)
-                    .tint(.primary600)
+                    .tint(AppConfig.parkingOnly ? .mint : .primary600)
             }
             VStack(spacing: 8) {
                 Text("Bekrefter e-posten...")
@@ -91,14 +91,14 @@ struct EmailVerifiedView: View {
         VStack(spacing: 28) {
             ZStack {
                 Circle()
-                    .fill(Color.primary50)
+                    .fill(AppConfig.parkingOnly ? Color.mint.opacity(0.18) : Color.primary50)
                     .frame(width: 140, height: 140)
                 Circle()
-                    .fill(Color.primary600)
+                    .fill(AppConfig.parkingOnly ? Color.mint : Color.primary600)
                     .frame(width: 96, height: 96)
                 Image(systemName: "checkmark")
                     .font(.system(size: 44, weight: .bold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(AppConfig.parkingOnly ? Color.mintInk : Color.white)
             }
             .scaleEffect(checkmarkScale)
             .opacity(checkmarkOpacity)
