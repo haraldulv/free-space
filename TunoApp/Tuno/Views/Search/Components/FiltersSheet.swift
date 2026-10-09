@@ -97,7 +97,7 @@ struct FiltersSheet: View {
                 .padding(.top, 8)
                 .padding(.bottom, 120)
             }
-            .background(Color.white)
+            .background(Color.appCard)
             .safeAreaInset(edge: .bottom) {
                 bottomBar
             }
@@ -304,7 +304,7 @@ struct FiltersSheet: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
-        .background(Color.neutral50)
+        .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
     }
@@ -343,6 +343,6 @@ struct FiltersSheet: View {
             .padding(.horizontal, 20)
             .padding(.vertical, 14)
         }
-        .background(Color.white)
+        .background(Color.appCard)
     }
 }

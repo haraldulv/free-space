@@ -36,7 +36,7 @@ struct ParkingWizardView: View {
                 ))
                 .animation(.easeInOut(duration: 0.32), value: step)
         }
-        .background(Color.neutral50)
+        .background(Color.paper)
         .contentShape(Rectangle())
         .onTapGesture {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)

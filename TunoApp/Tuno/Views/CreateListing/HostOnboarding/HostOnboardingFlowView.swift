@@ -607,7 +607,7 @@ private struct HostOnboardingAddressStep: View {
                                     }
                                 }
                             }
-                            .background(Color.white)
+                            .background(Color.appCard)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                             .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.neutral200, lineWidth: 1))
                             .shadow(color: .black.opacity(0.06), radius: 8, y: 4)
@@ -939,7 +939,7 @@ private struct StatusStep: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(16)
-                .background(Color.neutral50)
+                .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
@@ -1024,7 +1024,7 @@ private struct PhoneInputField: View {
                     }
                     .padding(.horizontal, 12)
                     .frame(height: 52)
-                    .background(Color.white)
+                    .background(Color.appCard)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
                             .stroke(Color.neutral200, lineWidth: 1)
@@ -1041,7 +1041,7 @@ private struct PhoneInputField: View {
                     .foregroundStyle(.neutral900)
                     .padding(.horizontal, 16)
                     .frame(height: 52)
-                    .background(Color.white)
+                    .background(Color.appCard)
                     .overlay(
                         RoundedRectangle(cornerRadius: 14)
                             .stroke(error != nil ? Color.red : (focused.wrappedValue == focusValue ? Color.appAccent : Color.neutral200), lineWidth: focused.wrappedValue == focusValue || error != nil ? 2 : 1)
@@ -1099,7 +1099,7 @@ private struct OnboardingTextField: View {
                 .foregroundStyle(.neutral900)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 16)
-                .background(Color.white)
+                .background(Color.appCard)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(borderColor, lineWidth: isFocused || error != nil ? 2 : 1)

@@ -179,7 +179,7 @@ private struct NotificationRow: View {
         switch notification.type {
         case "booking_received", "booking_confirmed", "payout_sent": return Color.appAccent
         case "booking_cancelled": return .red
-        case "new_message": return Color(hex: "#3b82f6")
+        case "new_message": return AppConfig.parkingOnly ? .neutral700 : Color(hex: "#3b82f6")
         case "new_review": return Color(hex: "#f59e0b")
         default: return .neutral600
         }

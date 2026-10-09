@@ -129,7 +129,7 @@ struct PublicProfileView: View {
                         .foregroundStyle(.white)
                     Image(systemName: "seal.fill")
                         .font(.system(size: 32))
-                        .foregroundStyle(Color(hex: "#1d9bf0"))
+                        .foregroundStyle(AppConfig.parkingOnly ? Color.ink : Color(hex: "#1d9bf0"))
                     Image(systemName: "checkmark")
                         .font(.system(size: 14, weight: .heavy))
                         .foregroundStyle(.white)

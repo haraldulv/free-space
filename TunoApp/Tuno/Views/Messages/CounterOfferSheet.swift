@@ -38,7 +38,7 @@ struct CounterOfferSheet: View {
                     }
                     .padding(14)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.neutral50)
+                    .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
                     VStack(alignment: .leading, spacing: 8) {
@@ -65,7 +65,7 @@ struct CounterOfferSheet: View {
                             .lineLimit(2...4)
                             .padding(.vertical, 12)
                             .padding(.horizontal, 14)
-                            .background(Color.neutral50)
+                            .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
 

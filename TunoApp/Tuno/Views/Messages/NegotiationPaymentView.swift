@@ -50,7 +50,7 @@ struct NegotiationPaymentView: View {
                         CardFormView(isComplete: $cardComplete, cardField: $cardField)
                             .frame(height: 48)
                             .padding(.horizontal, 12)
-                            .background(Color.neutral50)
+                            .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
 
@@ -111,7 +111,7 @@ struct NegotiationPaymentView: View {
         }
         .padding(20)
         .frame(maxWidth: .infinity)
-        .background(Color.neutral50)
+        .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 

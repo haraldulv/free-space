@@ -102,7 +102,7 @@ struct BookingConfirmationView: View {
                 }
             }
             .padding(20)
-            .background(Color.neutral50)
+            .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
@@ -125,7 +125,7 @@ struct BookingConfirmationView: View {
             .padding(.bottom, 8)
         }
         .padding(24)
-        .background(.white)
+        .background(Color.appCard)
         .navigationBarBackButtonHidden(true)
     }
 
