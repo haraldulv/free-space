@@ -41,6 +41,10 @@ struct SearchView: View {
     /// pille bruker dette for å gå direkte fra forsiden til kart-flow uten
     /// dobbel fullScreenCover).
     private let openWhereSheetOnAppear: Bool
+    /// Parkering (Asker-pivoten): kartet ER tab 0, ikke en fullScreenCover.
+    /// Da finnes ingen back (dismiss er no-op), skuffen må respektere
+    /// tab-baren, og uten lokasjon faller kartet tilbake til Asker.
+    private let isRootTab: Bool
 
     init(
         initialQuery: String = "",
@@ -53,7 +57,8 @@ struct SearchView: View {
         initialCategory: ListingCategory? = nil,
         initialPlace: PlacePrediction? = nil,
         useMyLocationOnAppear: Bool = false,
-        openWhereSheetOnAppear: Bool = false
+        openWhereSheetOnAppear: Bool = false,
+        isRootTab: Bool = false
     ) {
         self.initialQuery = initialQuery
         self.initialCheckIn = initialCheckIn
@@ -66,6 +71,7 @@ struct SearchView: View {
         self.initialPlace = initialPlace
         self.useMyLocationOnAppear = useMyLocationOnAppear
         self.openWhereSheetOnAppear = openWhereSheetOnAppear
+        self.isRootTab = isRootTab
         _showWhereSheet = State(initialValue: false)
         // Ved åpning fra forside-pille: render WhereSheet INLINE (ikke som
         // fullScreenCover) til brukeren har lukket den første gang. Inline
@@ -232,6 +238,16 @@ struct SearchView: View {
                     return
                 }
             }
+            // Rot-tab uten lokasjon: start i Asker og lås hasInitialLocation,
+            // så en sen GPS-fix ikke rykker kartet under brukeren (hen kan
+            // alltid tappe Min posisjon).
+            if isRootTab {
+                let zoom = Float(log2(360.0 / AskerDefaults.regionSpanDegrees))
+                setSearchCenter(lat: AskerDefaults.centerLat, lng: AskerDefaults.centerLng, zoom: zoom)
+                hasInitialLocation = true
+                await searchAt(lat: AskerDefaults.centerLat, lng: AskerDefaults.centerLng)
+                return
+            }
             await searchAt(lat: nil, lng: nil)
         }
         .onReceive(locationManager.$userLocation) { newLoc in
@@ -241,7 +257,13 @@ struct SearchView: View {
             performSearch()
         }
         .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
-            dismiss()
+            if isRootTab {
+                // Ingen cover å lukke — nullstill navigasjonsstacken i stedet,
+                // så brukeren ikke står igjen dypt i en gammel booking-sti.
+                navigationPath = NavigationPath()
+            } else {
+                dismiss()
+            }
         }
     }
 
@@ -259,7 +281,8 @@ struct SearchView: View {
                             navigationPath.append(listing)
                         },
                         referenceLat: AppConfig.parkingOnly ? parkingRefLat : locationManager.userLocation?.latitude,
-                        referenceLng: AppConfig.parkingOnly ? parkingRefLng : locationManager.userLocation?.longitude
+                        referenceLng: AppConfig.parkingOnly ? parkingRefLng : locationManager.userLocation?.longitude,
+                        respectsBottomSafeArea: isRootTab
                     )
                     .zIndex(1)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -333,20 +356,23 @@ struct SearchView: View {
     private var topBar: some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 10) {
-                Button(action: { dismiss() }) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.neutral900)
-                        .frame(width: 40, height: 40)
-                        .background {
-                            Circle()
-                                .fill(Color.white.opacity(0.85))
-                                .background(.regularMaterial, in: Circle())
-                        }
-                        .overlay(Circle().stroke(Color.white.opacity(0.7), lineWidth: 0.5))
-                        .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+                // På tab-rot finnes ingen flate å gå tilbake til.
+                if !isRootTab {
+                    Button(action: { dismiss() }) {
+                        Image(systemName: "chevron.left")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.neutral900)
+                            .frame(width: 40, height: 40)
+                            .background {
+                                Circle()
+                                    .fill(Color.white.opacity(0.85))
+                                    .background(.regularMaterial, in: Circle())
+                            }
+                            .overlay(Circle().stroke(Color.white.opacity(0.7), lineWidth: 0.5))
+                            .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
 
                 SearchPill(
                     primary: query.isEmpty

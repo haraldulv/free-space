@@ -56,8 +56,17 @@ struct MainTabView: View {
         // Tidligere brukte vi en custom HStack med PreferenceKey-padding;
         // ryddet bort fordi den hadde flere safe-area-bugs (build 55-58).
         TabView(selection: $selectedTab) {
-            NavigationStack(path: $homeNavPath) {
-                HomeView()
+            // Parkering (Asker-pivoten): kartet ER utforsk-flaten. SearchView
+            // eier sin egen NavigationStack og kan derfor IKKE pakkes i en
+            // ytre stack (dobbel stack knekker navigationDestination).
+            Group {
+                if AppConfig.parkingOnly {
+                    SearchView(isRootTab: true)
+                } else {
+                    NavigationStack(path: $homeNavPath) {
+                        HomeView()
+                    }
+                }
             }
             .tabItem { Label { Text("Utforsk") } icon: { Self.outlineIcon("magnifyingglass") } }
             .tag(0)
@@ -104,7 +113,7 @@ struct MainTabView: View {
             .badge(pendingHostRequests)
             .tag(4)
         }
-        .tint(.primary600)
+        .tint(AppConfig.parkingOnly ? Color.ink : .primary600)
         .environmentObject(chatService)
         .environmentObject(profileStats)
         .ignoresSafeArea(.keyboard)
