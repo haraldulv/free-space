@@ -705,6 +705,17 @@ struct SearchView: View {
             instantOnly: filters.bookingPreference == .directOnly,
             openingHours: filters.openingHours
         )
+        // Parkering: prefetch radenes thumbnails så skuffen scroller uten
+        // bilde-pop (samme mønster som prefetchHomeImages på forsiden).
+        if AppConfig.parkingOnly {
+            var urls: [URL] = []
+            for listing in listingService.searchResults {
+                if let first = (listing.images ?? []).first, let url = URL(string: first) {
+                    urls.append(url)
+                }
+            }
+            ImagePrefetcher.prefetch(urls: urls)
+        }
     }
 
     private func handleSelectPlace(_ prediction: PlacePrediction) {
