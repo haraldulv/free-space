@@ -97,6 +97,9 @@ struct BookingView: View {
     /// Optional: forvalg plass (brukes når man klikker på et Plasser-kort fra
     /// annonsesiden — da pre-velges den plassen i selectedSpotIds).
     var preSelectedSpotId: String? = nil
+    /// Parkering: true = åpne med «Fast månedsplass» forvalgt (fra pris-tiles
+    /// på annonsesiden). Inert for annonser uten månedspris.
+    var preselectMonthPlan: Bool = false
 
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var chatService: ChatService
@@ -726,6 +729,12 @@ struct BookingView: View {
                 }
                 syncHourlyToCheckInOut()
             }
+            // Forvalg fra annonsesidens pris-tiles: «Fast månedsplass».
+            // Etter context-pre-fyllet, så presetet ankres på evt. lagret startdato.
+            if preselectMonthPlan && isParkingDayMonthChoice && !monthPlan {
+                monthPlan = true
+                applyBookingPeriodPreset(days: 30)
+            }
             async let avail: () = checkAvailability()
             async let booked = bookingService.fetchBookedDates(listingId: listing.id)
             _ = await avail
@@ -929,33 +938,13 @@ struct BookingView: View {
 
     // MARK: - Parkering: dag/måned-valg
 
-    /// Laveste pakkepris av gitt type (periodValue 1) på tvers av plassene.
-    private func lowestPackagePrice(_ type: PricePackagePeriodType) -> Int? {
-        let spots: [SpotMarker] = listing.spotMarkers ?? []
-        var lowest: Int? = nil
-        for spot in spots {
-            let packages: [PricePackage] = spot.pricePackages ?? []
-            for pkg in packages where pkg.periodType == type && pkg.periodValue == 1 {
-                if lowest == nil || pkg.priceNok < lowest! { lowest = pkg.priceNok }
-            }
-        }
-        return lowest
-    }
-
     /// Laveste månedspris (MONTH×1) på tvers av plassene, om tilbudt.
-    private var monthPackagePrice: Int? { lowestPackagePrice(.month) }
+    /// Delegert til Listing-extension (Models.swift) — én kilde for tiles,
+    /// rader og booking.
+    private var monthPackagePrice: Int? { listing.parkingMonthPrice }
 
     /// Dagspris for parkering: annonseprisen, ellers laveste DAY-pakke/plasspris.
-    private var dayUnitPrice: Int? {
-        if let p = listing.price, p > 0 { return p }
-        if let pkgDay = lowestPackagePrice(.day) { return pkgDay }
-        let spots: [SpotMarker] = listing.spotMarkers ?? []
-        var lowest: Int? = nil
-        for spot in spots {
-            if let p = spot.price, p > 0, lowest == nil || p < lowest! { lowest = p }
-        }
-        return lowest
-    }
+    private var dayUnitPrice: Int? { listing.parkingDayPrice }
 
     /// Parkering med månedspris → vis to-valget (Dagsleie / Fast månedsplass).
     private var isParkingDayMonthChoice: Bool {

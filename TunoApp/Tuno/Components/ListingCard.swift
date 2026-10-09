@@ -15,17 +15,7 @@ struct ListingCard: View {
     private var images: [String] { listing.images ?? [] }
 
     private var distanceLabel: String? {
-        guard let refLat = referenceLat, let refLng = referenceLng,
-              let lat = listing.lat, let lng = listing.lng else { return nil }
-        let km = haversineDistanceKm(lat1: refLat, lng1: refLng, lat2: lat, lng2: lng)
-        if km < 1 {
-            let m = Int((km * 1000).rounded())
-            return "\(m)m"
-        }
-        if km < 10 {
-            return String(format: "%.1fkm", km).replacingOccurrences(of: ".", with: ",")
-        }
-        return "\(Int(km.rounded()))km"
+        listing.distanceLabel(fromLat: referenceLat, fromLng: referenceLng)
     }
 
     var body: some View {

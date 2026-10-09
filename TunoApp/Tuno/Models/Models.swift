@@ -932,6 +932,33 @@ extension Listing {
         guard let h = headlinePrice else { return "—" }
         return "\(h.price) kr\(h.suffix)"
     }
+
+    // MARK: - Parkering: dag/måned-priser (én kilde for tiles, rader og booking)
+
+    /// Laveste pakkepris av gitt type (periodValue 1) på tvers av plassene.
+    func lowestPackagePrice(_ type: PricePackagePeriodType) -> Int? {
+        var lowest: Int? = nil
+        for spot in spotMarkers ?? [] {
+            for pkg in spot.pricePackages ?? [] where pkg.periodType == type && pkg.periodValue == 1 {
+                if lowest == nil || pkg.priceNok < lowest! { lowest = pkg.priceNok }
+            }
+        }
+        return lowest
+    }
+
+    /// Dagspris for parkering: annonseprisen, ellers laveste DAY-pakke/plasspris.
+    var parkingDayPrice: Int? {
+        if let p = price, p > 0 { return p }
+        if let pkgDay = lowestPackagePrice(.day) { return pkgDay }
+        var lowest: Int? = nil
+        for spot in spotMarkers ?? [] {
+            if let p = spot.price, p > 0, lowest == nil || p < lowest! { lowest = p }
+        }
+        return lowest
+    }
+
+    /// Laveste månedspris (MONTH×1) på tvers av plassene, om tilbudt.
+    var parkingMonthPrice: Int? { lowestPackagePrice(.month) }
 }
 
 // MARK: - OpeningHours

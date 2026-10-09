@@ -98,6 +98,7 @@
 		87D3139C0104F4350A1AAC1B /* empty-spots.json in Resources */ = {isa = PBXBuildFile; fileRef = 425E4953E02A6C131CFEB198 /* empty-spots.json */; };
 		8B3FFD2821A8DBF0C4752B71 /* BookingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A031A3724EC9DE0FAFF7A4A /* BookingView.swift */; };
 		8DE4BBDB474E278A300397DE /* BlockedSlots.swift in Sources */ = {isa = PBXBuildFile; fileRef = 41E71E1C8EA6E28F59A76B9A /* BlockedSlots.swift */; };
+		90CA34A7DF2625F65DC1B632 /* Formatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = F165956FA4B3D4F1EAF02CCA /* Formatting.swift */; };
 		90D70482683053BEFF821336 /* EarningsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C68D73AEFE78CC1D1DEE15 /* EarningsView.swift */; };
 		94FB5AF1112FC3731BA29E3E /* ModerationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AC0A801BFB0591C84AFD834 /* ModerationService.swift */; };
 		96B48987F842D9D98F4FE0F7 /* SearchContextStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40D0D12BC80A797DF8A6DEED /* SearchContextStore.swift */; };
@@ -316,6 +317,7 @@
 		ED34354F8C7AAA6F81D0CB62 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
 		ED8BDCBFB9D65C5B686E088E /* ny-annonse.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ny-annonse.json"; sourceTree = "<group>"; };
 		F00C528A0B372436B8CFBAF2 /* TextEditorWithCounter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextEditorWithCounter.swift; sourceTree = "<group>"; };
+		F165956FA4B3D4F1EAF02CCA /* Formatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatting.swift; sourceTree = "<group>"; };
 		F20335764277C2E44F7825D2 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
 		F3BF694A798055824C4651A4 /* MessagesStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessagesStep.swift; sourceTree = "<group>"; };
 		F65149FFDD665E73DD3401C9 /* ProfileSummaryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileSummaryCard.swift; sourceTree = "<group>"; };
@@ -565,6 +567,7 @@
 				431F9F309F86B122C4BBF171 /* AskerDefaults.swift */,
 				DF1A051046E94B7F1B495563 /* BandOverlap.swift */,
 				41E71E1C8EA6E28F59A76B9A /* BlockedSlots.swift */,
+				F165956FA4B3D4F1EAF02CCA /* Formatting.swift */,
 				CE5D15FD32854C9A77F7B169 /* IBANGenerator.swift */,
 				8912249569F172B1FAC73845 /* PersonnummerHelper.swift */,
 				B162D379B5ED1C064880C2ED /* ReceiptBuilder.swift */,
@@ -857,6 +860,7 @@
 				03A5A87D02A32009386B95E8 /* FiltersSheet.swift in Sources */,
 				69B9A4A36285CD891EF163A1 /* FlowLayout.swift in Sources */,
 				EB7B66E8A8376F8B8FF74300 /* ForgotPasswordView.swift in Sources */,
+				90CA34A7DF2625F65DC1B632 /* Formatting.swift in Sources */,
 				4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */,
 				E12BD446142FEAEF21A97826 /* HostInntektCard.swift in Sources */,
 				C60EB46DC9B8BF101F0AEA3B /* HostListingCard.swift in Sources */,
