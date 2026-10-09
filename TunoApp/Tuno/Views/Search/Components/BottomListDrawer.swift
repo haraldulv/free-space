@@ -24,34 +24,70 @@ struct BottomListDrawer: View {
 
     var body: some View {
         GeometryReader { geo in
-            let expandedHeight: CGFloat = max(420, geo.size.height * 0.78)
-            let baseHeight = isExpanded ? expandedHeight : collapsedHeight
-            // Drag-justering: positiv translation = drar ned (mindre høyde), negativ = opp (større)
-            let height = max(collapsedHeight, min(expandedHeight, baseHeight - dragTranslation))
+            if AppConfig.parkingOnly && !isExpanded {
+                // Parkering: kollapset tilstand er en flytende kapsel, ikke et
+                // fullbredde-bånd (båndet så halvveis/buggy ut over tab-baren).
+                collapsedPill
+            } else {
+                let expandedHeight: CGFloat = max(420, geo.size.height * 0.78)
+                let baseHeight = isExpanded ? expandedHeight : collapsedHeight
+                // Drag-justering: positiv translation = drar ned (mindre høyde), negativ = opp (større)
+                let height = max(collapsedHeight, min(expandedHeight, baseHeight - dragTranslation))
 
-            VStack(spacing: 0) {
-                Spacer(minLength: 0)
-                drawerContent(height: height, geoHeight: geo.size.height)
-                    .frame(height: height)
-                    .background(
-                        UnevenRoundedRectangle(
-                            topLeadingRadius: 16,
-                            bottomLeadingRadius: 0,
-                            bottomTrailingRadius: 0,
-                            topTrailingRadius: 16,
-                            style: .continuous
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    drawerContent(height: height, geoHeight: geo.size.height)
+                        .frame(height: height)
+                        .background(
+                            UnevenRoundedRectangle(
+                                topLeadingRadius: 16,
+                                bottomLeadingRadius: 0,
+                                bottomTrailingRadius: 0,
+                                topTrailingRadius: 16,
+                                style: .continuous
+                            )
+                            .fill(AppConfig.parkingOnly ? Color.paper : Color.white)
+                            .shadow(color: .black.opacity(0.12), radius: 14, y: -2)
                         )
-                        .fill(AppConfig.parkingOnly ? Color.paper : Color.white)
-                        .shadow(color: .black.opacity(0.12), radius: 14, y: -2)
-                    )
-                    .gesture(dragGesture)
-                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isExpanded)
-                    .animation(.interactiveSpring(), value: dragTranslation)
+                        .gesture(dragGesture)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: isExpanded)
+                        .animation(.interactiveSpring(), value: dragTranslation)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                .ignoresSafeArea(edges: respectsBottomSafeArea ? [] : .bottom)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-            .ignoresSafeArea(edges: respectsBottomSafeArea ? [] : .bottom)
         }
         .allowsHitTesting(true)
+    }
+
+    /// Flytende «X plasser»-kapsel (ink) over tab-baren. Tap eller dra opp
+    /// åpner listen.
+    private var collapsedPill: some View {
+        VStack {
+            Spacer()
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    isExpanded = true
+                }
+            } label: {
+                HStack(spacing: 7) {
+                    Image(systemName: "list.bullet")
+                        .font(.system(size: 13, weight: .semibold))
+                    Text(countLabel)
+                        .font(.tuno(size: 15, weight: .bold))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 12)
+                .background(Color.ink)
+                .clipShape(Capsule())
+                .shadow(color: .black.opacity(0.18), radius: 10, y: 3)
+            }
+            .buttonStyle(.plain)
+            .gesture(dragGesture)
+            .padding(.bottom, 10)
+        }
+        .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder

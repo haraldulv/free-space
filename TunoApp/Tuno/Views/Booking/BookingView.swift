@@ -693,6 +693,10 @@ struct BookingView: View {
             .presentationBackground(.ultraThinMaterial)
             .presentationCornerRadius(28)
         }
+        // Booking er en fokusert flyt: tab-baren skal ikke dukke opp igjen
+        // midt i trakten (annonsesiden skjuler den allerede). Harmløst i
+        // camping-kontekstene, som presenteres uten tab-bar uansett.
+        .toolbar(.hidden, for: .tabBar)
         .task {
             // Forvalg plass hvis brukeren klikket seg inn fra et Plasser-kort.
             if let preId = preSelectedSpotId, selectedSpotIds.isEmpty {

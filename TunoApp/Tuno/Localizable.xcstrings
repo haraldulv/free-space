@@ -264,6 +264,7 @@
       }
     },
     "%@ kr/%@" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -278,6 +279,12 @@
           }
         }
       }
+    },
+    "%@ kr/dag" : {
+
+    },
+    "%@ kr/mnd" : {
+
     },
     "%@ kr%@" : {
       "localizations" : {
@@ -367,6 +374,7 @@
       }
     },
     "%@p" : {
+      "extractionState" : "stale",
       "localizations" : {
         "de" : {
           "stringUnit" : {
@@ -3149,6 +3157,9 @@
         }
       }
     },
+    "Hvor vil du parkere?" : {
+
+    },
     "Hvor?" : {
 
     },
@@ -4566,6 +4577,9 @@
     "Maks antall %@" : {
 
     },
+    "Maks høyde: %@ m" : {
+
+    },
     "Maks kjøretøy-lengde" : {
 
     },
@@ -4803,6 +4817,9 @@
 
     },
     "Når ankommer du?" : {
+
+    },
+    "Når? (valgfritt)" : {
 
     },
     "natt" : {
@@ -5117,6 +5134,9 @@
           }
         }
       }
+    },
+    "Om plassen" : {
+
     },
     "Omtrentlig plassering" : {
       "extractionState" : "manual",
@@ -6368,6 +6388,9 @@
       }
     },
     "Sjekk at alt stemmer. Du kan endre alt senere." : {
+
+    },
+    "Sjekk at bilen din går klar." : {
 
     },
     "Sjekk e-posten din" : {

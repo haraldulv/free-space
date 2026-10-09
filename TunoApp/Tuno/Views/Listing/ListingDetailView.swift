@@ -275,6 +275,9 @@ struct ListingDetailView: View {
                     parkingTitleBlock(listing: listing)
                     parkingPriceTilesCard(listing: listing)
                     transitCard(listing: listing)
+                    // Plassering høyt oppe: hvor plassen ligger er kjøpskriterium
+                    // nummer én for parkering.
+                    locationCard(listing: listing, hideExact: hideExact)
                     photoThumbStrip(listing: listing)
                     parkingDescriptionCard(listing: listing)
                     if !amenities.isEmpty {
@@ -282,7 +285,6 @@ struct ListingDetailView: View {
                     }
                     maxHeightCard(listing: listing)
                     suitableForCard(listing: listing)
-                    locationCard(listing: listing, hideExact: hideExact)
                     Divider()
                     compactHostRow(listing: listing)
                     Divider()
@@ -298,6 +300,9 @@ struct ListingDetailView: View {
             parkingBookingBar(listing: listing)
         }
         .background(Color.paper)
+        // Annonsesiden får bunnen for seg selv: den mørke booking-baren og
+        // den lyse tab-baren oppå hverandre så rotete ut.
+        .toolbar(.hidden, for: .tabBar)
         .navigationDestination(isPresented: $showBookingFromTiles) {
             BookingView(listing: listing, preselectMonthPlan: tilePreselectMonth)
         }
@@ -669,7 +674,9 @@ struct ListingDetailView: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 14)
         .frame(maxWidth: .infinity)
-        .background(Color.ink)
+        // Tab-baren er skjult på denne siden, så ink-flaten må selv dekke
+        // home-indicator-området.
+        .background(Color.ink.ignoresSafeArea(edges: .bottom))
     }
 
     // MARK: - Reviews
