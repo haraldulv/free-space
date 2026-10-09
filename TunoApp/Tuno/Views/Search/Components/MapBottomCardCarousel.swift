@@ -18,21 +18,36 @@ struct MapBottomCardCarousel: View {
     var body: some View {
         TabView(selection: $selectedIndex) {
             ForEach(Array(listings.enumerated()), id: \.offset) { index, listing in
-                MapListingBigCard(
-                    listing: listing,
-                    isFavorited: isFavorited(listing.id),
-                    onTap: { onTap(listing) },
-                    onClose: onClose,
-                    onFavoriteToggle: { onFavoriteToggle(listing.id) },
-                    referenceLat: referenceLat,
-                    referenceLng: referenceLng
-                )
+                Group {
+                    if AppConfig.parkingOnly {
+                        // Asker-pivoten: kompakt fakta-rad i stedet for stort bildekort.
+                        ParkingListingRow(
+                            listing: listing,
+                            onClose: onClose,
+                            referenceLat: referenceLat,
+                            referenceLng: referenceLng
+                        )
+                        .shadow(color: .black.opacity(0.10), radius: 10, y: 2)
+                        .contentShape(RoundedRectangle(cornerRadius: TunoRadius.control))
+                        .onTapGesture { onTap(listing) }
+                    } else {
+                        MapListingBigCard(
+                            listing: listing,
+                            isFavorited: isFavorited(listing.id),
+                            onTap: { onTap(listing) },
+                            onClose: onClose,
+                            onFavoriteToggle: { onFavoriteToggle(listing.id) },
+                            referenceLat: referenceLat,
+                            referenceLng: referenceLng
+                        )
+                    }
+                }
                 .padding(.horizontal, 12)
                 .tag(index)
             }
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
-        .frame(height: 320)
+        .frame(height: AppConfig.parkingOnly ? 128 : 320)
         .padding(.bottom, 8)
     }
 }

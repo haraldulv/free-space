@@ -397,8 +397,8 @@ struct SearchView: View {
                     },
                     isFavorited: { id in favoritesService.favoriteIds.contains(id) },
                     onFavoriteToggle: toggleFavorite,
-                    referenceLat: locationManager.userLocation?.latitude,
-                    referenceLng: locationManager.userLocation?.longitude
+                    referenceLat: AppConfig.parkingOnly ? parkingRefLat : locationManager.userLocation?.latitude,
+                    referenceLng: AppConfig.parkingOnly ? parkingRefLng : locationManager.userLocation?.longitude
                 )
                 .transition(.move(edge: .bottom).combined(with: .opacity))
                 .padding(.bottom, 12)

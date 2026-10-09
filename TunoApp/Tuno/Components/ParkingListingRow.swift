@@ -8,6 +8,9 @@ struct ParkingListingRow: View {
     let listing: Listing
     var isFavorited: Bool = false
     var onFavoriteToggle: ((Bool) -> Void)? = nil
+    /// Satt i kart-kompaktkortet: viser en X i hjertets slot i stedet
+    /// (favoritt er tilgjengelig i skuffen og på annonsesiden).
+    var onClose: (() -> Void)? = nil
     /// Referansepunkt for avstandsetiketten (søkesenteret).
     var referenceLat: Double? = nil
     var referenceLng: Double? = nil
@@ -23,7 +26,7 @@ struct ParkingListingRow: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
                     Spacer(minLength: 0)
-                    heart
+                    trailingControl
                 }
                 Text(listing.title)
                     .font(.tuno(.body))
@@ -63,8 +66,18 @@ struct ParkingListingRow: View {
     }
 
     @ViewBuilder
-    private var heart: some View {
-        if let onFavoriteToggle {
+    private var trailingControl: some View {
+        if let onClose {
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.neutral700)
+                    .frame(width: 26, height: 26)
+                    .background(Color.neutral100)
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+        } else if let onFavoriteToggle {
             Button {
                 onFavoriteToggle(!isFavorited)
             } label: {
