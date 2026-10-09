@@ -80,10 +80,10 @@ struct BookingsView: View {
                     } label: {
                         HStack(spacing: 6) {
                             Text(tab.title)
-                                .font(.system(size: 14, weight: activeTab == tab ? .semibold : .medium))
+                                .font(.app(size: 14, weight: activeTab == tab ? .semibold : .medium))
                             if count > 0 {
                                 Text("\(count)")
-                                    .font(.system(size: 12, weight: .semibold))
+                                    .font(.app(size: 12, weight: .semibold))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 1)
                                     .background(activeTab == tab ? Color.white.opacity(0.25) : Color.neutral200.opacity(0.6))
@@ -116,10 +116,10 @@ struct BookingsView: View {
                 .font(.system(size: 44, weight: .light))
                 .foregroundStyle(.neutral300)
             Text(activeTab.emptyTitle)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.app(size: 17, weight: .semibold))
                 .foregroundStyle(.neutral700)
             Text(activeTab.emptySubtitle)
-                .font(.system(size: 14))
+                .font(.app(size: 14))
                 .foregroundStyle(.neutral500)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 32)
@@ -247,9 +247,17 @@ struct BookingCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            heroSection
+            // Parkering (fakta først): ingen stor foto-hero — liten thumb +
+            // status-chip i tittelraden i stedet. Camping beholder heroen.
+            if !AppConfig.parkingOnly {
+                heroSection
+            }
             VStack(alignment: .leading, spacing: 16) {
-                titleSection
+                if AppConfig.parkingOnly {
+                    parkingHeaderRow
+                } else {
+                    titleSection
+                }
                 Divider().opacity(0.5)
                 datesSection
                 if let listing = booking.listing, listing.address != nil || listing.city.isEmpty == false {
@@ -269,16 +277,16 @@ struct BookingCard: View {
                     HStack(spacing: 6) {
                         Image(systemName: "star.fill").foregroundStyle(.yellow).font(.system(size: 12))
                         Text("Anmeldelse sendt")
-                            .font(.system(size: 13)).foregroundStyle(.neutral500)
+                            .font(.app(size: 13)).foregroundStyle(.neutral500)
                     }
                 }
                 if showCancelConfirm { cancelConfirmSection }
             }
             .padding(16)
         }
-        .background(Color.white)
+        .background(Color.appCard)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.neutral200.opacity(0.6), lineWidth: 1))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(AppConfig.parkingOnly ? Color.paperLine : Color.neutral200.opacity(0.6), lineWidth: 1))
         .shadow(color: .black.opacity(0.05), radius: 10, y: 3)
         .opacity(booking.status == .cancelled ? 0.75 : 1)
         .navigationDestination(item: $chatConversationId) { id in
@@ -336,18 +344,47 @@ struct BookingCard: View {
         }
     }
 
+    /// Parkering: kompakt topprad — liten thumb, tittel/by og status-chip.
+    private var parkingHeaderRow: some View {
+        HStack(alignment: .top, spacing: 12) {
+            if let listing = booking.listing, let first = listing.images.first, let url = URL(string: first) {
+                CachedAsyncImage(url: url) { image in
+                    image.resizable().aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Rectangle().fill(Color.paper)
+                        .overlay(Image(systemName: "car.fill").foregroundStyle(.neutral300))
+                }
+                .frame(width: 56, height: 56)
+                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                if let listing = booking.listing {
+                    Text(listing.title)
+                        .font(.tuno(.heading))
+                        .foregroundStyle(.neutral900)
+                        .lineLimit(2)
+                    Text(listing.city)
+                        .font(.tuno(.caption))
+                        .foregroundStyle(.neutral500)
+                }
+            }
+            Spacer(minLength: 8)
+            StatusBadge(status: booking.status)
+        }
+    }
+
     private var datesSection: some View {
         HStack(alignment: .top, spacing: 16) {
             VStack(alignment: .leading, spacing: 2) {
-                Text("Innsjekk")
-                    .font(.system(size: 11, weight: .semibold))
+                Text(AppConfig.parkingOnly ? "Fra" : "Innsjekk")
+                    .font(.app(size: 11, weight: .semibold))
                     .foregroundStyle(.neutral500)
                 Text(formatDateLong(booking.checkIn))
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.app(size: 14, weight: .semibold))
                     .foregroundStyle(.neutral900)
                 if let t = booking.checkInTimeSnapshot {
                     Text("Fra \(t)")
-                        .font(.system(size: 11))
+                        .font(.app(size: 11))
                         .foregroundStyle(.neutral500)
                 }
             }
@@ -356,15 +393,15 @@ struct BookingCard: View {
                 .foregroundStyle(.neutral400)
                 .padding(.top, 18)
             VStack(alignment: .leading, spacing: 2) {
-                Text("Utsjekk")
-                    .font(.system(size: 11, weight: .semibold))
+                Text(AppConfig.parkingOnly ? "Til" : "Utsjekk")
+                    .font(.app(size: 11, weight: .semibold))
                     .foregroundStyle(.neutral500)
                 Text(formatDateLong(booking.checkOut))
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.app(size: 14, weight: .semibold))
                     .foregroundStyle(.neutral900)
                 if let t = booking.checkOutTimeSnapshot {
                     Text("Innen \(t)")
-                        .font(.system(size: 11))
+                        .font(.app(size: 11))
                         .foregroundStyle(.neutral500)
                 }
             }
@@ -377,12 +414,12 @@ struct BookingCard: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "mappin.and.ellipse")
                 .font(.system(size: 14))
-                .foregroundStyle(.primary600)
+                .foregroundStyle(.appAccent)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 2) {
                 if let addr = listing.address, !addr.isEmpty {
                     Text(addr)
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.app(size: 13, weight: .medium))
                         .foregroundStyle(.neutral800)
                         .lineLimit(2)
                 }
@@ -394,8 +431,8 @@ struct BookingCard: View {
                             Text("Få veibeskrivelse")
                             Image(systemName: "arrow.up.right.square")
                         }
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.primary600)
+                        .font(.app(size: 12, weight: .semibold))
+                        .foregroundStyle(.appAccent)
                     }
                     .buttonStyle(.plain)
                 }
@@ -409,25 +446,26 @@ struct BookingCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Total")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.app(size: 14, weight: .semibold))
                     .foregroundStyle(.neutral800)
                 Spacer()
                 Text("\(booking.totalPrice) kr")
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.app(size: 18, weight: .bold))
                     .foregroundStyle(.neutral900)
             }
             if let breakdown = booking.priceBreakdown, !breakdown.isEmpty {
                 let groups = groupBreakdownForBookingsView(breakdown)
                 if groups.count > 1 {
+                    let unitLabel = AppConfig.parkingOnly ? "dager" : "døgn"
                     VStack(alignment: .leading, spacing: 3) {
                         ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
                             HStack {
-                                Text("\(g.price) kr × \(g.count) døgn (\(bookingPriceSourceLabel(g.source)))")
-                                    .font(.system(size: 11))
+                                Text("\(g.price) kr × \(g.count) \(unitLabel) (\(bookingPriceSourceLabel(g.source)))")
+                                    .font(.app(size: 11))
                                     .foregroundStyle(.neutral500)
                                 Spacer()
                                 Text("\(g.price * g.count) kr")
-                                    .font(.system(size: 11))
+                                    .font(.app(size: 11))
                                     .foregroundStyle(.neutral500)
                             }
                         }
@@ -443,7 +481,7 @@ struct BookingCard: View {
                 .foregroundStyle(.orange)
                 .font(.system(size: 14))
             Text("Refundert \(amount) kr")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.app(size: 13, weight: .semibold))
                 .foregroundStyle(.neutral700)
         }
         .padding(.horizontal, 10)
@@ -489,18 +527,18 @@ struct BookingCard: View {
                         .frame(height: 16)
                 }
                 Text(label)
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.app(size: 11, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
             }
             .foregroundStyle(destructive ? .red : .neutral800)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 10)
-            .background(Color.neutral50)
+            .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
             .clipShape(RoundedRectangle(cornerRadius: 10))
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.neutral200, lineWidth: 1)
+                    .stroke(Color.appLine, lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -517,10 +555,10 @@ struct BookingCard: View {
                         .font(.system(size: 16))
                     VStack(alignment: .leading, spacing: 2) {
                         Text(text)
-                            .font(.system(size: 13, weight: .medium))
+                            .font(.app(size: 13, weight: .medium))
                         if let amt = previewAmount {
                             Text("Refusjon: \(amt) kr av \(booking.totalPrice) kr")
-                                .font(.system(size: 13))
+                                .font(.app(size: 13))
                                 .foregroundStyle(.neutral500)
                         }
                     }
@@ -540,7 +578,7 @@ struct BookingCard: View {
                     Task { await performCancel() }
                 } label: {
                     Text(cancelling ? "Kansellerer..." : "Bekreft kansellering")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.app(size: 14, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 10)
@@ -554,7 +592,7 @@ struct BookingCard: View {
                     previewAmount = nil
                     cancelError = nil
                 }
-                .font(.system(size: 14, weight: .medium))
+                .font(.app(size: 14, weight: .medium))
                 .foregroundStyle(.neutral500)
                 .frame(maxWidth: .infinity)
             }
@@ -593,8 +631,8 @@ struct BookingCard: View {
 
     private var reviewSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Hvordan var oppholdet?")
-                .font(.system(size: 14, weight: .semibold))
+            Text(AppConfig.parkingOnly ? "Hvordan var plassen?" : "Hvordan var oppholdet?")
+                .font(.app(size: 14, weight: .semibold))
                 .foregroundStyle(.neutral900)
 
             HStack(spacing: 6) {
@@ -614,22 +652,22 @@ struct BookingCard: View {
                 .lineLimit(2...4)
                 .textFieldStyle(.plain)
                 .padding(10)
-                .background(Color.neutral50)
+                .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
 
             if let err = reviewError {
-                Text(err).font(.system(size: 12)).foregroundStyle(.red)
+                Text(err).font(.app(size: 12)).foregroundStyle(.red)
             }
 
             Button {
                 Task { await submitReview() }
             } label: {
                 Text(reviewSubmitting ? "Sender..." : "Send anmeldelse")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.app(size: 14, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
-                    .background(reviewRating > 0 ? Color.primary600 : Color.neutral300)
+                    .background(reviewRating > 0 ? Color.appAccent : Color.neutral300)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .disabled(reviewRating == 0 || reviewSubmitting)
@@ -764,7 +802,7 @@ struct StatusBadge: View {
 
     var body: some View {
         Text(label)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.app(size: 12, weight: .semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(bgColor)
@@ -790,12 +828,16 @@ struct StatusBadge: View {
         switch status {
         case .pending, .requested, .awaiting_host: return .orange
         case .awaiting_guest, .awaiting_payment: return .orange
-        case .confirmed: return .primary600
+        // Parkering (palett C): mint som suksess-aksent, grønn i camping.
+        case .confirmed: return AppConfig.parkingOnly ? .mint : .primary600
         case .declined, .expired, .cancelled: return .neutral500
         }
     }
 
     private var textColor: Color {
-        Color.white
+        if status == .confirmed && AppConfig.parkingOnly {
+            return .mintInk
+        }
+        return .white
     }
 }

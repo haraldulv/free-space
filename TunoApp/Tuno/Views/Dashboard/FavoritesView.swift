@@ -23,27 +23,44 @@ struct FavoritesView: View {
                         .font(.system(size: 40))
                         .foregroundStyle(.neutral300)
                     Text("Ingen favoritter ennå")
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.app(size: 16, weight: .medium))
                         .foregroundStyle(.neutral500)
                     Text("Utforsk plasser og legg til favoritter")
-                        .font(.system(size: 14))
+                        .font(.app(size: 14))
                         .foregroundStyle(.neutral400)
                 }
             } else {
                 ScrollView {
-                    LazyVStack(spacing: 20) {
-                        ForEach(favorites) { listing in
-                            NavigationLink(value: listing) {
-                                ListingCard(
-                                    listing: listing,
-                                    isFavorited: favoritesService.favoriteIds.contains(listing.id),
-                                    onFavoriteToggle: { _ in toggleFavorite(listing.id) }
-                                )
+                    // Parkering (fakta først): kompakte rader, ikke bildekort.
+                    if AppConfig.parkingOnly {
+                        LazyVStack(spacing: 10) {
+                            ForEach(favorites) { listing in
+                                NavigationLink(value: listing) {
+                                    ParkingListingRow(
+                                        listing: listing,
+                                        isFavorited: favoritesService.favoriteIds.contains(listing.id),
+                                        onFavoriteToggle: { _ in toggleFavorite(listing.id) }
+                                    )
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
+                        .padding(16)
+                    } else {
+                        LazyVStack(spacing: 20) {
+                            ForEach(favorites) { listing in
+                                NavigationLink(value: listing) {
+                                    ListingCard(
+                                        listing: listing,
+                                        isFavorited: favoritesService.favoriteIds.contains(listing.id),
+                                        onFavoriteToggle: { _ in toggleFavorite(listing.id) }
+                                    )
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                        .padding(16)
                     }
-                    .padding(16)
                 }
                 .navigationDestination(for: Listing.self) { listing in
                     ListingDetailView(listingId: listing.id)

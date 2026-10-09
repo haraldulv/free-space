@@ -167,8 +167,11 @@ struct MessagesListView: View {
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 10)
-            .background(Color.neutral100)
+            .background(AppConfig.parkingOnly ? Color.paperCard : Color.neutral100)
             .clipShape(Capsule())
+            .overlay(
+                Capsule().stroke(AppConfig.parkingOnly ? Color.paperLine : Color.clear, lineWidth: 1)
+            )
 
             Button("Avbryt") {
                 searchFocused = false
@@ -177,7 +180,7 @@ struct MessagesListView: View {
                     searchText = ""
                 }
             }
-            .font(.system(size: 15))
+            .font(.app(size: 15))
             .foregroundStyle(.neutral900)
         }
     }
@@ -192,14 +195,14 @@ struct MessagesListView: View {
                         withAnimation { filter = option }
                     } label: {
                         Text(option.rawValue)
-                            .font(.system(size: 14, weight: filter == option ? .semibold : .medium))
+                            .font(.app(size: 14, weight: filter == option ? .semibold : .medium))
                             .foregroundStyle(filter == option ? .white : .neutral900)
                             .padding(.horizontal, 16)
                             .padding(.vertical, 9)
-                            .background(filter == option ? Color.neutral900 : Color.white)
+                            .background(filter == option ? Color.neutral900 : Color.appCard)
                             .clipShape(Capsule())
                             .overlay(
-                                Capsule().stroke(Color.neutral200, lineWidth: filter == option ? 0 : 1)
+                                Capsule().stroke(Color.appLine, lineWidth: filter == option ? 0 : 1)
                             )
                     }
                 }
@@ -233,11 +236,11 @@ struct MessagesListView: View {
                 .font(.system(size: 40))
                 .foregroundStyle(.neutral300)
             Text(searchText.isEmpty ? "Ingen meldinger" : "Ingen treff på \"\(searchText)\"")
-                .font(.system(size: 16, weight: .medium))
+                .font(.app(size: 16, weight: .medium))
                 .foregroundStyle(.neutral500)
             if searchText.isEmpty {
                 Text("Meldinger fra utleiere og gjester vises her")
-                    .font(.system(size: 14))
+                    .font(.app(size: 14))
                     .foregroundStyle(.neutral400)
             }
         }
@@ -321,27 +324,27 @@ struct SupportConversationRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text("Tuno support")
-                        .font(.system(size: 15, weight: conversation.unreadCount > 0 ? .bold : .semibold))
+                        .font(.app(size: 15, weight: conversation.unreadCount > 0 ? .bold : .semibold))
                         .foregroundStyle(.neutral900)
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 11))
-                        .foregroundStyle(.primary600)
+                        .foregroundStyle(AppConfig.parkingOnly ? .mint : .primary600)
                     Spacer()
                     if let dateStr = conversation.lastMessageAt {
                         Text(formatSupportDate(dateStr))
-                            .font(.system(size: 12))
+                            .font(.app(size: 12))
                             .foregroundStyle(.neutral400)
                     }
                 }
 
                 Text("Kundeservice")
-                    .font(.system(size: 13))
+                    .font(.app(size: 13))
                     .foregroundStyle(.neutral500)
                     .lineLimit(1)
 
                 if !conversation.lastMessage.isEmpty {
                     Text(conversation.lastMessage)
-                        .font(.system(size: 13))
+                        .font(.app(size: 13))
                         .foregroundStyle(.neutral500)
                         .lineLimit(1)
                 }
@@ -349,7 +352,7 @@ struct SupportConversationRow: View {
 
             if conversation.unreadCount > 0 {
                 Circle()
-                    .fill(Color.primary600)
+                    .fill(AppConfig.parkingOnly ? Color.mint : Color.primary600)
                     .frame(width: 8, height: 8)
                     .padding(.top, 6)
             }
@@ -424,7 +427,7 @@ struct AirbnbConversationRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(conversation.otherUserName)
-                        .font(.system(size: 15, weight: conversation.unreadCount > 0 ? .bold : .semibold))
+                        .font(.app(size: 15, weight: conversation.unreadCount > 0 ? .bold : .semibold))
                         .foregroundStyle(.neutral900)
                         .lineLimit(1)
                     if conversation.isStarred {
@@ -440,20 +443,20 @@ struct AirbnbConversationRow: View {
                     Spacer()
                     if let dateStr = conversation.lastMessageAt {
                         Text(formatDate(dateStr))
-                            .font(.system(size: 12))
+                            .font(.app(size: 12))
                             .foregroundStyle(.neutral400)
                             .layoutPriority(1)
                     }
                 }
 
                 Text(conversation.listingTitle)
-                    .font(.system(size: 13, weight: conversation.unreadCount > 0 ? .medium : .regular))
+                    .font(.app(size: 13, weight: conversation.unreadCount > 0 ? .medium : .regular))
                     .foregroundStyle(conversation.unreadCount > 0 ? .neutral900 : .neutral500)
                     .lineLimit(1)
 
                 if !conversation.lastMessage.isEmpty {
                     Text(conversation.lastMessage)
-                        .font(.system(size: 13))
+                        .font(.app(size: 13))
                         .foregroundStyle(.neutral500)
                         .lineLimit(1)
                 }
@@ -463,7 +466,7 @@ struct AirbnbConversationRow: View {
 
             if conversation.unreadCount > 0 {
                 Circle()
-                    .fill(Color.primary600)
+                    .fill(AppConfig.parkingOnly ? Color.mint : Color.primary600)
                     .frame(width: 8, height: 8)
                     .padding(.top, 6)
             }
@@ -482,7 +485,7 @@ struct AirbnbConversationRow: View {
                     Image(systemName: statusIcon(status))
                         .font(.system(size: 9, weight: .semibold))
                     Text(statusLabel(status))
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.app(size: 11, weight: .semibold))
                 }
                 .foregroundStyle(statusColor(status))
                 .padding(.horizontal, 8)
@@ -509,9 +512,11 @@ struct AirbnbConversationRow: View {
 
     private func statusColor(_ status: String) -> Color {
         switch status {
-        case "confirmed": return Color(hex: "#10b981")  // grønn
+        case "confirmed": return AppConfig.parkingOnly ? Color(hex: "#1f9177") : Color(hex: "#10b981")  // mint-mørk / grønn
         case "awaiting_payment": return Color(hex: "#f59e0b")  // oransje
-        case "awaiting_host", "awaiting_guest", "requested", "pending": return Color(hex: "#3b82f6")  // blå
+        case "awaiting_host", "awaiting_guest", "requested", "pending":
+            // Parkering: nøytral venter-farge (aldri blå i det nye designet).
+            return AppConfig.parkingOnly ? .neutral600 : Color(hex: "#3b82f6")
         case "expired", "declined": return Color(hex: "#ef4444")  // rød
         case "cancelled": return .neutral400
         default: return .neutral400
@@ -545,11 +550,11 @@ struct AirbnbConversationRow: View {
 
     private var avatarInitial: some View {
         Circle()
-            .fill(Color.primary100)
+            .fill(AppConfig.parkingOnly ? Color.ink.opacity(0.08) : Color.primary100)
             .overlay(
                 Text(String(conversation.otherUserName.prefix(1)).uppercased())
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(.primary600)
+                    .font(.app(size: 11, weight: .semibold))
+                    .foregroundStyle(AppConfig.parkingOnly ? Color.neutral900 : Color.primary600)
             )
     }
 
@@ -602,7 +607,7 @@ struct MessagesSettingsSheet: View {
                             Task { await savePushEnabled(newValue) }
                         }
                     ))
-                    .tint(.primary600)
+                    .tint(AppConfig.parkingOnly ? .mint : .primary600)
                     .disabled(isSaving)
                 }
 
@@ -612,7 +617,7 @@ struct MessagesSettingsSheet: View {
                     } label: {
                         HStack {
                             Image(systemName: "text.bubble")
-                                .foregroundStyle(.primary600)
+                                .foregroundStyle(.appAccent)
                             Text("Dine hurtigsvar")
                                 .foregroundStyle(.neutral900)
                             Spacer()
@@ -626,14 +631,20 @@ struct MessagesSettingsSheet: View {
                 Section("Om meldinger") {
                     HStack {
                         Image(systemName: "shield.lefthalf.filled")
-                            .foregroundStyle(.primary600)
+                            .foregroundStyle(.appAccent)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("Hold samtaler i Tuno").font(.system(size: 14, weight: .semibold))
+                            Text("Hold samtaler i Tuno").font(.app(size: 14, weight: .semibold))
                             Text("Del aldri betalings- eller kontaktinfo utenfor appen. Da er du ikke beskyttet.")
-                                .font(.system(size: 12))
+                                .font(.app(size: 12))
                                 .foregroundStyle(.neutral500)
                         }
                     }
+                }
+            }
+            .scrollContentBackground(AppConfig.parkingOnly ? .hidden : .automatic)
+            .background {
+                if AppConfig.parkingOnly {
+                    Color.paper.ignoresSafeArea()
                 }
             }
             .navigationTitle("Innstillinger")
@@ -767,10 +778,10 @@ struct QuickRepliesEditorSheet: View {
                                 } label: {
                                     VStack(alignment: .leading, spacing: 4) {
                                         Text(reply.title)
-                                            .font(.system(size: 14, weight: .semibold))
+                                            .font(.app(size: 14, weight: .semibold))
                                             .foregroundStyle(.neutral900)
                                         Text(reply.body)
-                                            .font(.system(size: 13))
+                                            .font(.app(size: 13))
                                             .foregroundStyle(.neutral600)
                                             .lineLimit(2)
                                     }
@@ -802,7 +813,7 @@ struct QuickRepliesEditorSheet: View {
                                 showAdd = true
                             } label: {
                                 Label("Legg til nytt", systemImage: "plus.circle.fill")
-                                    .foregroundStyle(.primary600)
+                                    .foregroundStyle(.appAccent)
                             }
                         }
                     }

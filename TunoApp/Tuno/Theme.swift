@@ -88,6 +88,44 @@ extension Color {
     static let mintInk = Color(hex: "#13201c")
 }
 
+// MARK: - Delte flater: parkering-design uten å røre camping
+
+/// Semantiske tokens for flater som DELES mellom parkering og camping
+/// (Bestillinger, Meldinger, Favoritter, Profil, auth, chat …). I parkering-
+/// modus gir de palett C; i camping resolver de til de gamle verdiene, så
+/// camping forblir visuelt identisk.
+extension Color {
+    /// Primær CTA/aksent på lyse flater: ink i parkering, Tuno-grønn i camping.
+    static var appAccent: Color { AppConfig.parkingOnly ? .ink : .primary600 }
+    /// Skjermbakgrunn: papir i parkering, systemhvit i camping.
+    static var appSurface: Color { AppConfig.parkingOnly ? .paper : Color(UIColor.systemBackground) }
+    /// Kortbakgrunn: paperCard i parkering, hvit i camping.
+    static var appCard: Color { AppConfig.parkingOnly ? .paperCard : .white }
+    /// Hairline rundt kort: paperLine i parkering, neutral200 i camping.
+    static var appLine: Color { AppConfig.parkingOnly ? .paperLine : .neutral200 }
+    /// Dus aksent-flate (soft fills/badges): ink-tint i parkering, primary50 i camping.
+    static var appAccentSoft: Color { AppConfig.parkingOnly ? Color.ink.opacity(0.08) : .primary50 }
+    /// Tekst på appAccentSoft.
+    static var appAccentSoftText: Color { AppConfig.parkingOnly ? .neutral900 : .primary700 }
+}
+
+extension ShapeStyle where Self == Color {
+    static var appAccent: Color { Color.appAccent }
+    static var appSurface: Color { Color.appSurface }
+    static var appCard: Color { Color.appCard }
+    static var appLine: Color { Color.appLine }
+    static var appAccentSoft: Color { Color.appAccentSoft }
+    static var appAccentSoftText: Color { Color.appAccentSoftText }
+}
+
+extension Font {
+    /// Schibsted Grotesk i parkering-modus, systemfont (samme størrelse/vekt)
+    /// i camping. Brukes på delte flater så camping forblir uendret.
+    static func app(size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        AppConfig.parkingOnly ? .tuno(size: size, weight: weight) : .system(size: size, weight: weight)
+    }
+}
+
 /// Typografi-skalaen for det nye parkering-designet. Schibsted Grotesk bundles via
 /// UIAppFonts (project.yml). KUN nye/omskrevne flater bruker Font.tuno —
 /// de gamle .font(.system(...))-kallene konverteres opportunistisk, aldri
