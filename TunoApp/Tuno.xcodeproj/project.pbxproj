@@ -55,6 +55,7 @@
 		4156CDDA3D20D3E029148484 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C244A5C6FD5FB43CCF0B3FFA /* HomeView.swift */; };
 		427C0F0D1B37C5AF58AFAD58 /* OpeningHoursStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 64B6DFA8459E85A9536C1F27 /* OpeningHoursStep.swift */; };
 		42BCA2F242941F8AC4F84750 /* stand-out.png in Resources */ = {isa = PBXBuildFile; fileRef = 00E476D769839A839AA8AD06 /* stand-out.png */; };
+		42D558F9ECD65AE537EB58BB /* ParkingSearchSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = B851675F771038C1DE44D696 /* ParkingSearchSheet.swift */; };
 		432DD68BE80C7C7E163D66CE /* AddressStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D457F224FB227BB0280276E /* AddressStep.swift */; };
 		468941D0A90A4A4D9C423A60 /* VisitedListingsStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = ABC8284C8DB15BB1AECA34F0 /* VisitedListingsStore.swift */; };
 		481B700D9FEB3AFB038F6A9E /* PhotosStep.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3357259B4CCDFE2FA9F1745C /* PhotosStep.swift */; };
@@ -277,6 +278,7 @@
 		B162D379B5ED1C064880C2ED /* ReceiptBuilder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReceiptBuilder.swift; sourceTree = "<group>"; };
 		B432FE81E7D9B6ECAB6EE3F8 /* SearchHerePill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchHerePill.swift; sourceTree = "<group>"; };
 		B4FAE01C676255DD56E0570A /* SpotPriceStep.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotPriceStep.swift; sourceTree = "<group>"; };
+		B851675F771038C1DE44D696 /* ParkingSearchSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParkingSearchSheet.swift; sourceTree = "<group>"; };
 		B8D99627256D695D60592DC8 /* EditListingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditListingView.swift; sourceTree = "<group>"; };
 		BA67FD0D010724DA8884A431 /* KrStepper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KrStepper.swift; sourceTree = "<group>"; };
 		BBA16C264EC99BF4AD61C2FC /* CounterOfferSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CounterOfferSheet.swift; sourceTree = "<group>"; };
@@ -537,6 +539,7 @@
 				1EAC854F4475506A9E845BA2 /* BottomListDrawer.swift */,
 				30327AE07ADF79432C8F3B35 /* FiltersSheet.swift */,
 				D542E42BA6CD2042CD0922EB /* MapBottomCardCarousel.swift */,
+				B851675F771038C1DE44D696 /* ParkingSearchSheet.swift */,
 				DA06602EF8129BE55A4E5CEC /* PriceHistogram.swift */,
 				F92A4E3ED44C52BBEC76E34D /* SearchDateRangePicker.swift */,
 				B432FE81E7D9B6ECAB6EE3F8 /* SearchHerePill.swift */,
@@ -907,6 +910,7 @@
 				1025D24E9A02E24F682DEE78 /* ParkingListingRow.swift in Sources */,
 				F22672C60C83901831A6F70F /* ParkingPriceStep.swift in Sources */,
 				3DC72601B41AE77E997D07DD /* ParkingPublishStep.swift in Sources */,
+				42D558F9ECD65AE537EB58BB /* ParkingSearchSheet.swift in Sources */,
 				DA2AD1D27B0576BB88B5574A /* ParkingWizardView.swift in Sources */,
 				8225D7A59A196A15D1387988 /* PayoutsService.swift in Sources */,
 				DF4CB397EEC21B6155822A74 /* PersonnummerHelper.swift in Sources */,

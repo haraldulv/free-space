@@ -70,7 +70,9 @@ struct SearchView: View {
         // Ved åpning fra forside-pille: render WhereSheet INLINE (ikke som
         // fullScreenCover) til brukeren har lukket den første gang. Inline
         // unngår cover-presentasjonsanimasjonen og gir umiddelbar visning.
-        _hasDismissedInitialSheet = State(initialValue: !openWhereSheetOnAppear)
+        // Parkering: WhereSheet-overlayet brukes aldri (eget ett-stegs ark),
+        // så initial-gatingen må aldri holde flagget nede.
+        _hasDismissedInitialSheet = State(initialValue: AppConfig.parkingOnly ? true : !openWhereSheetOnAppear)
         _query = State(initialValue: initialQuery)
         _checkIn = State(initialValue: initialCheckIn)
         _checkOut = State(initialValue: initialCheckOut)
@@ -126,6 +128,8 @@ struct SearchView: View {
     // Sheet-flagg
     @State private var showWhereSheet = false
     @State private var showFiltersSheet = false
+    /// Parkering (Asker-pivoten): det nye ett-stegs søkearket.
+    @State private var showParkingSearchSheet = false
     /// Når SearchView åpnes med `openWhereSheetOnAppear=true` (forside-pille)
     /// vil SwiftUI rendre body (kart + topBar) ETT frame før fullScreenCover
     /// legger WhereSheet over. Det gir et synlig kart-glimt. Vi gater alle
@@ -141,7 +145,7 @@ struct SearchView: View {
         ZStack {
             mainSearchUI
 
-            if whereSheetVisible {
+            if !AppConfig.parkingOnly && whereSheetVisible {
                 WhereSheet(
                     isPresented: Binding(
                         get: { whereSheetVisible },
@@ -178,6 +182,24 @@ struct SearchView: View {
             }
         }
         .animation(.easeInOut(duration: 0.18), value: whereSheetVisible)
+        .sheet(isPresented: $showParkingSearchSheet) {
+            ParkingSearchSheet(
+                query: $query,
+                checkIn: $checkIn,
+                checkOut: $checkOut,
+                placesService: placesService,
+                onSelectPlace: handleSelectPlace,
+                onPickArea: { _, lat, lng in
+                    setSearchCenter(lat: lat, lng: lng, zoom: 13)
+                    performSearch()
+                },
+                onUseMyLocation: goToMyLocation,
+                onSearch: performSearch
+            )
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
+            .presentationCornerRadius(TunoRadius.card)
+        }
         .task {
             if hasInitialLocation { return }
             // Restaurert søk fra SearchContextStore: hopp rett til lagret
@@ -327,11 +349,17 @@ struct SearchView: View {
                 .buttonStyle(.plain)
 
                 SearchPill(
-                    primary: query.isEmpty ? "Hvor vil du dra?" : query,
+                    primary: query.isEmpty
+                        ? (AppConfig.parkingOnly ? "Hvor vil du parkere?" : "Hvor vil du dra?")
+                        : query,
                     secondary: searchPillSubtitle,
                     onTap: {
                         hideKeyboard()
-                        showWhereSheet = true
+                        if AppConfig.parkingOnly {
+                            showParkingSearchSheet = true
+                        } else {
+                            showWhereSheet = true
+                        }
                     }
                 )
 
@@ -516,8 +544,9 @@ struct SearchView: View {
 
     private var searchPillSubtitle: String {
         var parts: [String] = []
-        // Kategori — vises først for tydelighet
-        if let cat = filters.category {
+        // Kategori og kjøretøy er støy i parkering-modus (alt er parkering,
+        // bil er default) — der viser vi kun datoene.
+        if !AppConfig.parkingOnly, let cat = filters.category {
             parts.append(cat == .camping ? "Camping" : "Parkering")
         }
         if let i = checkIn, let o = checkOut {
@@ -528,12 +557,14 @@ struct SearchView: View {
         } else {
             parts.append("Når som helst")
         }
-        if vehicles.isEmpty {
-            parts.append("Alle kjøretøy")
-        } else if vehicles.count == 1, let v = vehicles.first {
-            parts.append(v.displayName)
-        } else {
-            parts.append("\(vehicles.count) kjøretøy")
+        if !AppConfig.parkingOnly {
+            if vehicles.isEmpty {
+                parts.append("Alle kjøretøy")
+            } else if vehicles.count == 1, let v = vehicles.first {
+                parts.append(v.displayName)
+            } else {
+                parts.append("\(vehicles.count) kjøretøy")
+            }
         }
         return parts.joined(separator: " · ")
     }
