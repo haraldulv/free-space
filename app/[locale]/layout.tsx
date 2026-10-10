@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { DM_Sans } from "next/font/google";
+import { Schibsted_Grotesk } from "next/font/google";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -8,7 +8,10 @@ import PasswordGate from "@/components/PasswordGate";
 import { routing } from "@/i18n/routing";
 import "../globals.css";
 
-const dmSans = DM_Sans({
+// Palett C (Asker-pivoten): Schibsted Grotesk er profilfonten på tvers av
+// app og web. Beholder CSS-variabelnavnet så --font-sans-koblingen i
+// globals.css fortsatt treffer.
+const schibsted = Schibsted_Grotesk({
   variable: "--font-dm-sans",
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
@@ -70,7 +73,7 @@ export default async function LocaleLayout({
   setRequestLocale(locale);
 
   return (
-    <html lang={locale} className={`${dmSans.variable} h-full antialiased`}>
+    <html lang={locale} className={`${schibsted.variable} h-full antialiased`}>
       <head>
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <meta name="theme-color" content="#46C185" />

@@ -1,4 +1,5 @@
 import { searchListings } from "@/lib/supabase/listings";
+import { PARKING_ONLY } from "@/lib/config";
 import { ListingCategory, VehicleType, PricePackagePeriodType } from "@/types";
 import SearchResultsView from "@/components/features/search/SearchResultsView";
 
@@ -22,10 +23,13 @@ export default async function SearchPage({ searchParams }: SearchPageProps) {
 
   const query =
     typeof params.query === "string" ? params.query : undefined;
+  // Asker-pivoten: uten eksplisitt kategori-param er søket parkering-først.
   const category =
     params.category === "parking" || params.category === "camping"
       ? (params.category as ListingCategory)
-      : undefined;
+      : PARKING_ONLY
+        ? ("parking" as ListingCategory)
+        : undefined;
   const vehicleType =
     params.vehicle === "car" ||
     params.vehicle === "campervan" ||

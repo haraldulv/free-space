@@ -9,6 +9,10 @@ import { useLocale, useTranslations } from "next-intl";
 import { bcpLocale } from "@/lib/i18n-helpers";
 import DatePicker from "@/components/ui/DatePicker";
 import { VehicleType } from "@/types";
+import { PARKING_ONLY } from "@/lib/config";
+
+// Asker-pivoten: personbil er default i parkering-modus, bobil i camping.
+const DEFAULT_VEHICLE: VehicleType = PARKING_ONLY ? "car" : "motorhome";
 
 const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || "";
 
@@ -58,7 +62,7 @@ export default function SearchBar({
     motorcycle: "Motorsykkel",
   };
   const [location, setLocation] = useState(initialQuery);
-  const [vehicle, setVehicle] = useState<VehicleType>(initialVehicle || "motorhome");
+  const [vehicle, setVehicle] = useState<VehicleType>(initialVehicle || DEFAULT_VEHICLE);
   const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
     if (initialCheckIn && initialCheckOut) {
       return { from: new Date(initialCheckIn + "T00:00:00"), to: new Date(initialCheckOut + "T00:00:00") };
@@ -202,7 +206,7 @@ export default function SearchBar({
   const hasActiveFilter =
     location.trim().length > 0 ||
     !!dateRange?.from ||
-    vehicle !== "motorhome" ||
+    vehicle !== DEFAULT_VEHICLE ||
     searchLat !== undefined;
 
   const clearAll = () => {
@@ -210,7 +214,7 @@ export default function SearchBar({
     setSearchLat(undefined);
     setSearchLng(undefined);
     setDateRange(undefined);
-    setVehicle("motorhome");
+    setVehicle(DEFAULT_VEHICLE);
     setSuggestions([]);
     setActiveSegment(null);
   };
@@ -314,7 +318,7 @@ export default function SearchBar({
                     const Icon = opt.icon;
                     const sel = vehicle === opt.value;
                     return (
-                      <button key={opt.value} onClick={() => { setVehicle(sel ? "motorhome" : opt.value); setActiveSegment(null); }} className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${sel ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-700 hover:bg-neutral-50"}`}>
+                      <button key={opt.value} onClick={() => { setVehicle(sel ? DEFAULT_VEHICLE : opt.value); setActiveSegment(null); }} className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${sel ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-700 hover:bg-neutral-50"}`}>
                         <Icon className="h-5 w-5 shrink-0" />{vehicleLabels[opt.value]}
                       </button>
                     );
@@ -372,7 +376,7 @@ export default function SearchBar({
               <div>
                 <label className="mb-1.5 block text-sm font-semibold text-neutral-900">{t("vehicle")}</label>
                 <div className="grid grid-cols-2 gap-2">
-                  {vehicleOptions.map((opt) => { const Icon = opt.icon; const isSelected = vehicle === opt.value; return (<button key={opt.value} onClick={() => setVehicle(isSelected ? "motorhome" : opt.value)} className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${isSelected ? "border-primary-600 bg-primary-50 text-primary-700 font-medium" : "border-neutral-200 text-neutral-700 hover:border-neutral-300"}`}><Icon className="h-4 w-4" />{vehicleLabels[opt.value]}</button>); })}
+                  {vehicleOptions.map((opt) => { const Icon = opt.icon; const isSelected = vehicle === opt.value; return (<button key={opt.value} onClick={() => setVehicle(isSelected ? DEFAULT_VEHICLE : opt.value)} className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${isSelected ? "border-primary-600 bg-primary-50 text-primary-700 font-medium" : "border-neutral-200 text-neutral-700 hover:border-neutral-300"}`}><Icon className="h-4 w-4" />{vehicleLabels[opt.value]}</button>); })}
                 </div>
               </div>
               <button onClick={handleSearch} className="w-full rounded-lg bg-primary-600 px-4 py-3 text-sm font-medium text-white transition-colors hover:bg-primary-700">
@@ -475,7 +479,7 @@ export default function SearchBar({
               return (
                 <button
                   key={opt.value}
-                  onClick={() => { setVehicle(isSelected ? "motorhome" : opt.value); setActiveSegment(null); }}
+                  onClick={() => { setVehicle(isSelected ? DEFAULT_VEHICLE : opt.value); setActiveSegment(null); }}
                   className={`flex w-full items-center gap-3 px-4 py-2.5 text-sm transition-colors ${
                     isSelected ? "bg-primary-50 text-primary-700 font-medium" : "text-neutral-700 hover:bg-neutral-50"
                   }`}
@@ -560,7 +564,7 @@ export default function SearchBar({
                   return (
                     <button
                       key={opt.value}
-                      onClick={() => setVehicle(isSelected ? "motorhome" : opt.value)}
+                      onClick={() => setVehicle(isSelected ? DEFAULT_VEHICLE : opt.value)}
                       className={`flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
                         isSelected ? "border-primary-600 bg-primary-50 text-primary-700 font-medium" : "border-neutral-200 text-neutral-700 hover:border-neutral-300"
                       }`}

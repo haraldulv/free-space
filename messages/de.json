@@ -17,7 +17,15 @@
     "popular": "Beliebt in Norwegen",
     "featured": "Empfohlen in Norwegen",
     "availableToday": "Heute verfügbar",
-    "recent": "Neu hinzugefügt"
+    "recent": "Neu hinzugefügt",
+    "heroEyebrow": "Parken in Asker",
+    "heroTitle": "Fester Parkplatz, genau wo du ihn brauchst",
+    "heroSubtitle": "Miete einen Parkplatz pro Tag oder Monat von Leuten in deiner Nähe. Nah am Bahnhof, ganz ohne Stress.",
+    "heroCtaFind": "Parkplatz finden",
+    "heroCtaRentOut": "Platz vermieten",
+    "recentParking": "Neue Plätze",
+    "popularParking": "Beliebte Plätze",
+    "availableTodayParking": "Heute frei"
   },
   "footer": {
     "tagline": "Finde und buche Parkplätze und Campingplätze in ganz Norwegen.",

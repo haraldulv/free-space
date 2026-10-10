@@ -17,7 +17,15 @@
     "popular": "Populære i Norge",
     "featured": "Fremhevede i Norge",
     "availableToday": "Tilgjengelig i dag",
-    "recent": "Nylig opprettet"
+    "recent": "Nylig opprettet",
+    "heroEyebrow": "Parkering i Asker",
+    "heroTitle": "Fast parkering der du trenger den",
+    "heroSubtitle": "Lei parkeringsplass per dag eller måned av folk i nærheten. Nær stasjonen, uten stress.",
+    "heroCtaFind": "Finn parkering",
+    "heroCtaRentOut": "Lei ut plassen din",
+    "recentParking": "Nye plasser",
+    "popularParking": "Populære plasser",
+    "availableTodayParking": "Ledig i dag"
   },
   "footer": {
     "tagline": "Finn og book parkeringsplasser og campingplasser over hele Norge.",

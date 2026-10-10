@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { APP_STORE_URL } from "@/lib/config";
 import EarnCalculator from "@/components/features/earn/EarnCalculator";
@@ -17,29 +18,20 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-/** Hvit strek-illustrasjon i plakatens stil: hus, oppkjørsel og bil. */
+/** Kims flyer-illustrasjon (hvit strek, transparent bakgrunn): mann på vei
+    hjem til hus med ledig oppkjørsel. Hentet fra plakaten så QR-landingen
+    gjenkjennes umiddelbart. */
 function DrivewayIllustration() {
   return (
-    <svg viewBox="0 0 520 190" fill="none" aria-hidden="true" className="mx-auto h-36 w-full max-w-md sm:h-44">
-      <g stroke="#ffffff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        {/* Bakkelinje */}
-        <path d="M10 160 H510" />
-        {/* Hus */}
-        <path d="M330 160 V96 L395 58 L460 96 V160" />
-        <path d="M418 160 V118 H443 V160" />
-        <rect x="352" y="104" width="26" height="22" rx="2" />
-        {/* Busker */}
-        <path d="M300 160 c0-14 10-22 20-22 c8 0 14 6 15 22" />
-        <path d="M472 160 c0-12 8-19 17-19 c7 0 12 5 13 19" />
-        {/* Oppkjørsel */}
-        <path d="M212 160 L244 118 H316 L296 160" />
-        {/* Bil på plassen */}
-        <path d="M60 160 v-6 a8 8 0 0 1 8-8 h8 l12-18 h52 l14 18 h10 a8 8 0 0 1 8 8 v6" />
-        <circle cx="94" cy="160" r="10" />
-        <circle cx="152" cy="160" r="10" />
-        <path d="M96 146 l8-14 h34 l10 14" />
-      </g>
-    </svg>
+    <Image
+      src="/tjen-illustration.png"
+      alt=""
+      aria-hidden="true"
+      width={1101}
+      height={442}
+      className="mx-auto w-full max-w-2xl"
+      priority
+    />
   );
 }
 
@@ -60,7 +52,15 @@ export default async function TjenPage({ params }: PageProps) {
       <section className="bg-[#121412] px-5 pb-28 pt-8 text-[#f5f6f4] sm:pb-32">
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold lowercase tracking-tight">tuno</span>
+            {/* Logo som på plakaten: hvit pin + tuno */}
+            <Image
+              src="/tuno-logo-pin-white.png"
+              alt="Tuno"
+              width={766}
+              height={261}
+              className="h-8 w-auto"
+              priority
+            />
             <span className="rounded-full bg-[#37caa4]/15 px-4 py-1.5 text-sm font-semibold text-[#4fd6b2]">
               {t("eyebrow")}
             </span>

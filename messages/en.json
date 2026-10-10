@@ -17,7 +17,15 @@
     "popular": "Popular in Norway",
     "featured": "Featured in Norway",
     "availableToday": "Available today",
-    "recent": "Recently added"
+    "recent": "Recently added",
+    "heroEyebrow": "Parking in Asker",
+    "heroTitle": "Reliable parking where you need it",
+    "heroSubtitle": "Rent a parking spot by the day or month from people nearby. Close to the station, zero hassle.",
+    "heroCtaFind": "Find parking",
+    "heroCtaRentOut": "Rent out your spot",
+    "recentParking": "New spots",
+    "popularParking": "Popular spots",
+    "availableTodayParking": "Available today"
   },
   "footer": {
     "tagline": "Find and book parking spots and camping sites across Norway.",

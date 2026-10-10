@@ -45,6 +45,13 @@ export const HOST_PAYOUT_DELAY_HOURS = 24;
 export const MAX_INSTANT_NIGHTS = 7;
 
 /**
+ * Asker-pivoten: web-flatene er parkering-først. Styrer forside-innhold og
+ * søke-defaults (kategori parkering). Speiler iOS AppConfig.parkingOnly.
+ * Escape-hatch: sett NEXT_PUBLIC_PARKING_ONLY=false for å slå camping på igjen.
+ */
+export const PARKING_ONLY = process.env.NEXT_PUBLIC_PARKING_ONLY !== "false";
+
+/**
  * Parkering: direktebooking tillates opp til en hel månedsplass (30 dager)
  * med litt margin. Camping beholder 7-netters-grensen over. Uten denne ville
  * «Fast månedsplass» på en direkteannonse havnet i manual capture, som

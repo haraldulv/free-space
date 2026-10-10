@@ -1,17 +1,31 @@
 @import "tailwindcss";
 
 @theme inline {
-  /* Tuno mint green — fresh, modern, trustworthy. Brand = primary-600 (#46c185) */
-  --color-primary-50: #f0fdf6;
-  --color-primary-100: #dcfce8;
-  --color-primary-200: #bbf7d0;
-  --color-primary-300: #86efad;
-  --color-primary-400: #5dd896;
-  --color-primary-500: #4bcd8e;
-  --color-primary-600: #46c185;
-  --color-primary-700: #36a06b;
-  --color-primary-800: #2d7f55;
-  --color-primary-900: #266547;
+  /* Palett C «Kontrast» (Asker-pivoten 2026-10): ink-flater + varmt papir,
+     mint kun som aksent. Primary-skalaen er remappet til ink slik at alle
+     eksisterende bg-primary-600-CTAer og -aksenter blir ink uten å røre
+     hver komponent. Grønt brukes målrettet via --color-mint. */
+  --color-primary-50: #f1efe9;
+  --color-primary-100: #e5e2d9;
+  --color-primary-200: #d0cdc2;
+  --color-primary-300: #a8a79e;
+  --color-primary-400: #6f706b;
+  --color-primary-500: #3c403c;
+  --color-primary-600: #121412;
+  --color-primary-700: #0c0e0c;
+  --color-primary-800: #090a09;
+  --color-primary-900: #060706;
+
+  /* Palett C-tokens (samme verdier som iOS Theme.swift) */
+  --color-paper: #f4f1ea;
+  --color-paper-card: #fdfcf9;
+  --color-paper-line: #e8e5dc;
+  --color-ink: #121412;
+  --color-ink-elevated: #1b1e1b;
+  --color-ink-text: #f5f6f4;
+  --color-ink-muted: #a8afaa;
+  --color-mint: #37caa4;
+  --color-mint-ink: #13201c;
 
   --color-neutral-50: #fafafa;
   --color-neutral-100: #f5f5f5;
@@ -24,8 +38,8 @@
   --color-neutral-800: #262626;
   --color-neutral-900: #171717;
 
-  --color-background: #ffffff;
-  --color-foreground: #171717;
+  --color-background: #f4f1ea;
+  --color-foreground: #121412;
 
   --font-sans: var(--font-dm-sans);
 }
@@ -92,15 +106,15 @@ body {
 
 /* Glassmorphism navbar */
 .glass-navbar {
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(253, 252, 249, 0.85);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
 }
 
 /* Search bar animations */
 @keyframes search-glow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(26, 79, 214, 0); }
-  50% { box-shadow: 0 0 0 4px rgba(26, 79, 214, 0.1); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(18, 20, 18, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(18, 20, 18, 0.08); }
 }
 
 .search-pill {
