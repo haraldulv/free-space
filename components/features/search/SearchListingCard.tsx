@@ -140,8 +140,8 @@ export default function SearchListingCard({
               )}
               */}
               {listing.instantBooking && (
-                <span className="flex items-center text-[10px] font-semibold text-green-600" title={t("instantBook")}>
-                  <Zap className="h-3 w-3 fill-green-600" />
+                <span className="flex items-center text-[10px] font-semibold text-[#1f9177]" title={t("instantBook")}>
+                  <Zap className="h-3 w-3 fill-[#1f9177]" />
                 </span>
               )}
               {listing.spots > 1 && (

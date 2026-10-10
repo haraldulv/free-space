@@ -6,7 +6,7 @@ export default function Footer() {
   const t = useTranslations("footer");
   const year = new Date().getFullYear();
   return (
-    <footer className="border-t border-neutral-200 bg-white">
+    <footer className="border-t border-paper-line bg-paper-card">
       <Container className="py-12">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
