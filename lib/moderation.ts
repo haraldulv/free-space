@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
-import { ADMIN_EMAILS, AUTO_APPROVE_LISTINGS, SITE_URL } from "@/lib/config";
+import { ADMIN_EMAILS, AUTO_APPROVE_LISTINGS, MODERATION_BLOCKS_PUBLISH, SITE_URL } from "@/lib/config";
 import {
   sendAdminAlertEmail,
   sendListingApprovedToHost,
@@ -183,23 +183,34 @@ export async function moderateListing(listingId: string): Promise<ListingModerat
       return null;
     }
     const reason = "AI-sjekk feilet to ganger (bilde kunne ikke hentes eller API-feil). Trenger manuell gjennomgang.";
+    // Publiserings-policy: blokkerer ikke modereringen publisering, slippes
+    // annonsen live med varsel i stedet for å henge i flagged.
+    const fallbackStatus = MODERATION_BLOCKS_PUBLISH ? "flagged" : "approved";
     await supabase
       .from("listings")
       .update({
-        moderation_status: "flagged",
+        moderation_status: fallbackStatus,
         moderation_reason: reason,
         moderation_ai: { error: "no_result_twice", at: new Date().toISOString() },
         moderated_at: new Date().toISOString(),
       })
       .eq("id", listingId)
       .eq("moderation_status", "pending");
-    await notifyAfterModeration(listing, "flagged", { verdict: "flag", confidence: "low", reasons: [reason], images: [], text_quality: "unclear" });
+    await notifyAfterModeration(
+      listing,
+      fallbackStatus,
+      { verdict: "flag", confidence: "low", reasons: [reason], images: [], text_quality: "unclear" },
+      { publishedDespiteFlag: fallbackStatus === "approved" },
+    );
     return null;
   }
 
-  const approve = AUTO_APPROVE_LISTINGS && result.verdict === "approve";
-  const newStatus = approve ? "approved" : "flagged";
-  const reason = approve ? null : result.reasons.join(" · ");
+  const aiApproved = AUTO_APPROVE_LISTINGS && result.verdict === "approve";
+  // MODERATION_BLOCKS_PUBLISH=false: AI-flagg stopper ikke publisering —
+  // annonsen går live, grunnen lagres, og admin får ⚠️-varsel («vi følger
+  // med»-modus). Admin kan avpublisere manuelt.
+  const newStatus = aiApproved || !MODERATION_BLOCKS_PUBLISH ? "approved" : "flagged";
+  const reason = result.verdict === "approve" ? null : result.reasons.join(" · ");
 
   await supabase
     .from("listings")
@@ -213,7 +224,9 @@ export async function moderateListing(listingId: string): Promise<ListingModerat
     .eq("id", listingId)
     .eq("moderation_status", "pending");
 
-  await notifyAfterModeration(listing, newStatus, result);
+  await notifyAfterModeration(listing, newStatus, result, {
+    publishedDespiteFlag: newStatus === "approved" && result.verdict !== "approve",
+  });
   return result;
 }
 
@@ -221,6 +234,7 @@ async function notifyAfterModeration(
   listing: ListingRow,
   status: "approved" | "flagged",
   result: ListingModerationResult,
+  options?: { publishedDespiteFlag?: boolean },
 ) {
   const supabase = serviceClient();
   const adminUrl = `${SITE_URL}/admin/moderering?listing=${listing.id}`;
@@ -237,10 +251,13 @@ async function notifyAfterModeration(
   }
 
   // Admin: e-post + push + in-app notification
+  const publishedDespiteFlag = options?.publishedDespiteFlag === true;
   const adminTitle = status === "flagged"
     ? `⚠️ Annonse flagget: ${listing.title}`
-    : `Ny annonse godkjent: ${listing.title}`;
-  const adminBody = status === "flagged"
+    : publishedDespiteFlag
+      ? `⚠️ Publisert med AI-flagg: ${listing.title}`
+      : `Ny annonse godkjent: ${listing.title}`;
+  const adminBody = status === "flagged" || publishedDespiteFlag
     ? result.reasons.join(" · ")
     : `${hostName} · ${listing.city ?? ""} · ${(listing.images ?? []).length} bilder${listing.host_stripe_ready ? "" : " · Stripe ikke verifisert (skjult inntil da)"}`;
 

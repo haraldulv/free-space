@@ -24,6 +24,15 @@ export const ADMIN_EMAILS = ["harald@tuno.no", "haraldsalvesen@gmail.com"];
  */
 export const AUTO_APPROVE_LISTINGS = true;
 
+/**
+ * Om et AI-flagg skal HOLDE TILBAKE publisering. false (Harald 2026-10-11,
+ * «vi følger med»): alle annonser publiseres umiddelbart; AI-en kjører
+ * fortsatt og admin varsles med ⚠️ når noe ser galt ut, slik at dere kan
+ * avpublisere manuelt i /admin/moderering. true = flaggede annonser holdes
+ * skjult til admin har godkjent (lanserings-/skaleringsmodus).
+ */
+export const MODERATION_BLOCKS_PUBLISH = false;
+
 /** Flaggede annonser uten admin-avgjørelse avvises automatisk etter så mange timer. */
 export const FLAGGED_AUTO_REJECT_HOURS = 48;
 

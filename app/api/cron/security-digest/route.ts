@@ -102,7 +102,9 @@ export async function GET(request: NextRequest) {
   });
   const bulkHosts = Array.from(hostListingCounts.entries()).filter(([, n]) => n >= 3);
 
-  const flagged = (listingsNew ?? []).filter((l) => l.moderation_status === "flagged");
+  const flagged = (listingsNew ?? []).filter(
+    (l) => l.moderation_status === "flagged" || (l.moderation_status === "approved" && l.moderation_reason),
+  );
   const signals: string[] = [
     ...suspiciousDomains.map(([d, n]) => `${n} nye brukere fra <b>${esc(d)}</b> på ${hours} timer`),
     ...bulkHosts.map(([name, n]) => `<b>${esc(name)}</b> opprettet ${n} annonser på ${hours} timer`),
