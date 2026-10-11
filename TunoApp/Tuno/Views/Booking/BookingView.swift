@@ -535,8 +535,10 @@ struct BookingView: View {
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
 
-                // Card form (expandable)
-                if showCardForm {
+                // Card form (expandable). Parkering: skjemaet ligger i
+                // betalingsbaren nederst (der blikket er) — ikke her oppe
+                // i scrollen, der brukeren aldri fant det.
+                if showCardForm && listing.category != .parking {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Kortinformasjon")
                             .font(.system(size: 16, weight: .semibold))
@@ -607,6 +609,32 @@ struct BookingView: View {
                             .padding(.horizontal, 20)
                     }
                 } else if showCardForm {
+                    // Parkering: kortfeltet rett over Betal-knappen, med
+                    // autofokus så tastaturet kommer opp av seg selv.
+                    if listing.category == .parking {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Kortinformasjon")
+                                .font(.app(size: 14, weight: .semibold))
+                                .foregroundStyle(.neutral900)
+                            CardFormView(isComplete: $cardIsComplete, cardField: $cardField)
+                                .frame(height: 50)
+                        }
+                        .padding(.horizontal, 20)
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                cardField?.becomeFirstResponder()
+                            }
+                        }
+
+                        if let error = bookingService.error {
+                            Text(error)
+                                .font(.app(size: 13))
+                                .foregroundStyle(.red)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal, 20)
+                        }
+                    }
+
                     // Card payment button
                     Button {
                         Task { await confirmCardPayment() }
@@ -664,6 +692,17 @@ struct BookingView: View {
                     }
                     .disabled(!isFormValid || availableSpots == 0)
                     .padding(.bottom, 4)
+
+                    // Parkering: feil fra booking-opprettelsen (f.eks. avvist
+                    // av serveren) skal synes HER, ikke gjemt oppe i scrollen.
+                    if listing.category == .parking, let error = bookingService.error {
+                        Text(error)
+                            .font(.app(size: 13))
+                            .foregroundStyle(.red)
+                            .multilineTextAlignment(.center)
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 4)
+                    }
                 }
             }
             .padding(.vertical, 8)
