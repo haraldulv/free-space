@@ -117,6 +117,8 @@ final class BookingService: ObservableObject {
         let selectedSpotIds: [String]?
         let selectedExtras: SelectedExtras?
         let message: String?
+        /// «Foreslå pris»: gjestens foreslåtte totalpris. nil = standardpris.
+        var proposedPrice: Int? = nil
     }
 
     struct RequestBookingResponse: Decodable {

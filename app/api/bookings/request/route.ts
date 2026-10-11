@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       selectedSpotIds,
       selectedExtras,
       message,
+      proposedPrice,
     } = body as {
       listingId: string;
       checkIn: string;
@@ -54,6 +55,9 @@ export async function POST(request: NextRequest) {
       selectedSpotIds?: string[];
       selectedExtras?: SelectedExtras;
       message?: string;
+      /// «Foreslå pris»-flyten: gjestens foreslåtte TOTALpris for perioden.
+      /// Utelatt = standardpris (vanlig forespørsel).
+      proposedPrice?: number;
     };
 
     if (!listingId || !checkIn || !checkOut) {
@@ -93,7 +97,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: `Denne annonsen tillater maksimum ${listing.max_stay_days} dager.` }, { status: 400 });
     }
 
-    const { total: totalPrice, breakdown } = await computeBookingTotal({
+    const { total: computedTotal, breakdown } = await computeBookingTotal({
       listingId,
       listingPrice: listing.price,
       spotMarkers: listing.spot_markers as SpotMarker[] | null,
@@ -103,6 +107,21 @@ export async function POST(request: NextRequest) {
       selectedSpotIds,
       selectedExtras,
     });
+
+    // «Foreslå pris»: gjesten kan foreslå sin egen totalpris for perioden —
+    // utleier godtar eller kommer med motbud i chatten. Samme sanity-grenser
+    // som motbud-ruten (offer/route.ts).
+    let totalPrice = computedTotal;
+    if (typeof proposedPrice === "number" && Number.isFinite(proposedPrice)) {
+      const rounded = Math.round(proposedPrice);
+      if (rounded < 3) {
+        return NextResponse.json({ error: "Foreslått pris må være minst 3 kr." }, { status: 400 });
+      }
+      if (rounded > Math.max(computedTotal * 10, (listing.price ?? 0) * 100)) {
+        return NextResponse.json({ error: "Prisen er urealistisk høy" }, { status: 400 });
+      }
+      totalPrice = rounded;
+    }
 
     if (totalPrice < 3) {
       return NextResponse.json({ error: "Bestillingen må være på minst 3 kr." }, { status: 400 });

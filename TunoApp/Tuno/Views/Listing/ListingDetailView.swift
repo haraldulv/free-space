@@ -28,6 +28,7 @@ struct ListingDetailView: View {
     /// Parkering: navigasjon fra pris-tiles med forvalgt plan (dag/måned).
     @State private var showBookingFromTiles = false
     @State private var tilePreselectMonth = false
+    @State private var tileStartProposal = false
     @State private var scrollOffsetY: CGFloat = 0
     @StateObject private var chatService = ChatService()
     @StateObject private var locationManager = LocationManager()
@@ -308,7 +309,11 @@ struct ListingDetailView: View {
         // den lyse tab-baren oppå hverandre så rotete ut.
         .toolbar(.hidden, for: .tabBar)
         .navigationDestination(isPresented: $showBookingFromTiles) {
-            BookingView(listing: listing, preselectMonthPlan: tilePreselectMonth)
+            BookingView(
+                listing: listing,
+                preselectMonthPlan: tilePreselectMonth,
+                startInProposalMode: tileStartProposal
+            )
         }
         .sheet(isPresented: $showHostProfile) {
             if let hostId = listing.hostId {
@@ -481,6 +486,33 @@ struct ListingDetailView: View {
                             .buttonStyle(.plain)
                         }
                     }
+
+                    // «Foreslå pris» (forslag A): avtal lengre periode til
+                    // egen pris direkte med utleier.
+                    Button {
+                        guard authManager.isAuthenticated else {
+                            showLogin = true
+                            return
+                        }
+                        if let userId = authManager.currentUser?.id.uuidString.lowercased(),
+                           let hostId = listing.hostId?.lowercased(),
+                           userId == hostId {
+                            return
+                        }
+                        tilePreselectMonth = false
+                        tileStartProposal = true
+                        showBookingFromTiles = true
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "hand.wave")
+                                .font(.system(size: 13))
+                            Text("Lengre periode? Foreslå en pris")
+                                .font(.tuno(size: 14, weight: .medium))
+                                .underline()
+                        }
+                        .foregroundStyle(.neutral600)
+                    }
+                    .buttonStyle(.plain)
                 }
             }
         }
@@ -497,6 +529,7 @@ struct ListingDetailView: View {
             return
         }
         tilePreselectMonth = month
+        tileStartProposal = false
         showBookingFromTiles = true
     }
 

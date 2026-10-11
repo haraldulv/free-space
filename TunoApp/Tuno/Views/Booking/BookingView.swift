@@ -100,6 +100,9 @@ struct BookingView: View {
     /// Parkering: true = åpne med «Fast månedsplass» forvalgt (fra pris-tiles
     /// på annonsesiden). Inert for annonser uten månedspris.
     var preselectMonthPlan: Bool = false
+    /// «Foreslå pris»-inngangen fra annonsesiden: åpner bookingen i
+    /// forslag-modus (fri periode + egen pris + melding til utleier).
+    var startInProposalMode: Bool = false
 
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var chatService: ChatService
@@ -147,6 +150,10 @@ struct BookingView: View {
     @State private var applePayHandler: ApplePayHandler?
     @State private var isApplePayLoading = false
     @State private var isCreatingBooking = false
+    // «Foreslå pris»-flyten (forslag A fra Kim-møtet)
+    @State private var proposalMode = false
+    @State private var proposalPriceText = ""
+    @State private var proposalMessage = ""
     @State private var requestSending = false
     @State private var requestError: String?
     @State private var showRequestSent = false
@@ -580,7 +587,9 @@ struct BookingView: View {
                 // Forespørsel-flyt for instant_booking=false: ingen Stripe ved
                 // request, bare DB. Gjest sender, host godtar/motbyr i chat,
                 // og betaling skjer først etter aksept.
-                if listing.instantBooking != true {
+                if proposalMode {
+                    proposalSection
+                } else if listing.instantBooking != true {
                     Button {
                         Task { await sendBookingRequest() }
                     } label: {
@@ -709,6 +718,25 @@ struct BookingView: View {
                             .padding(.horizontal, 20)
                             .padding(.bottom, 4)
                     }
+
+                    // «Foreslå pris» (forslag A): alltid en vei inn til å
+                    // avtale lengre periode til egen pris, også på
+                    // direkteannonser.
+                    if listing.category == .parking {
+                        Button {
+                            withAnimation {
+                                proposalMode = true
+                                monthPlan = false
+                            }
+                        } label: {
+                            Text("Lengre periode? Foreslå en pris")
+                                .font(.app(size: 13, weight: .medium))
+                                .foregroundStyle(.neutral600)
+                                .underline()
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.bottom, 2)
+                    }
                 }
             }
             .padding(.vertical, 8)
@@ -797,6 +825,10 @@ struct BookingView: View {
             if (preselectMonthPlan || isMonthOnlyParking) && isParkingDayMonthChoice && !monthPlan {
                 monthPlan = true
                 applyBookingPeriodPreset(days: parkingPkg?.days ?? 30)
+            }
+            if startInProposalMode && !proposalMode {
+                proposalMode = true
+                monthPlan = false
             }
             async let avail: () = checkAvailability()
             async let booked = bookingService.fetchBookedDates(listingId: listing.id)
@@ -925,7 +957,22 @@ struct BookingView: View {
             Text("Hvor lenge?")
                 .font(.system(size: 18, weight: .semibold))
 
-            if isParkingDayMonthChoice {
+            if proposalMode {
+                // «Foreslå pris»: fri periode, ingen plan-kort. Forklaringen
+                // ligger i bunnbaren der prisen og meldingen fylles inn.
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "hand.wave.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.neutral700)
+                    Text("Velg hele perioden du ønsker, og foreslå prisen din nederst. Utleier svarer i meldinger.")
+                        .font(.tuno(.caption))
+                        .foregroundStyle(.neutral600)
+                }
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.paperCard)
+                .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
+            } else if isParkingDayMonthChoice {
                 // Parkering: to store valg (Dagsleie / Fast månedsplass) i
                 // stedet for chip-rekken. Måned = 30 dager fra startdato.
                 parkingPlanCards
@@ -935,7 +982,7 @@ struct BookingView: View {
                 availablePeriodToggle
             }
 
-            if isParkingDayMonthChoice && monthPlan {
+            if isParkingDayMonthChoice && monthPlan && !proposalMode {
                 monthStartDateSection
             } else {
                 rangeDateSection
@@ -1882,6 +1929,93 @@ struct BookingView: View {
 
     /// Forespørsel-flyt for instant_booking=false: ingen Stripe ved request,
     /// bare DB. Etter send navigeres vi til chat hvor host godtar/motbyr.
+    /// «Foreslå pris»-seksjonen i bunnbaren: totalpris + melding + send.
+    private var proposalSection: some View {
+        VStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Foreslå totalpris for perioden")
+                        .font(.app(size: 14, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    Spacer()
+                    if hasDates {
+                        Text("Ordinært: \(total) kr")
+                            .font(.app(size: 12))
+                            .foregroundStyle(.neutral500)
+                    }
+                }
+                HStack(spacing: 8) {
+                    TextField(hasDates ? "\(total)" : "0", text: $proposalPriceText)
+                        .keyboardType(.numberPad)
+                        .font(.tuno(.heading))
+                        .onChange(of: proposalPriceText) { _, v in
+                            let digits = v.filter(\.isNumber)
+                            if digits != v { proposalPriceText = digits }
+                        }
+                    Text("kr")
+                        .font(.tuno(.body))
+                        .foregroundStyle(.neutral500)
+                }
+                .padding(12)
+                .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appLine, lineWidth: 1))
+            }
+
+            TextField("Melding til utleier (valgfritt)", text: $proposalMessage, axis: .vertical)
+                .font(.app(size: 14))
+                .lineLimit(1...3)
+                .padding(10)
+                .background(AppConfig.parkingOnly ? Color.paper : Color.neutral50)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.appLine, lineWidth: 1))
+
+            Button {
+                Task { await sendBookingRequest() }
+            } label: {
+                HStack {
+                    if requestSending {
+                        ProgressView().tint(.white)
+                    } else {
+                        Text("Send forespørsel")
+                            .font(.app(size: 16, weight: .semibold))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(proposalIsValid && !requestSending ? Color.appAccent : Color.neutral300)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .disabled(!proposalIsValid || requestSending)
+
+            Text("Du betaler først når dere er enige om prisen.")
+                .font(.app(size: 11))
+                .foregroundStyle(.neutral500)
+
+            if let err = requestError {
+                Text(err)
+                    .font(.app(size: 12))
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+            }
+
+            Button {
+                withAnimation { proposalMode = false }
+            } label: {
+                Text("Avbryt")
+                    .font(.app(size: 13, weight: .medium))
+                    .foregroundStyle(.neutral500)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 20)
+    }
+
+    private var proposalIsValid: Bool {
+        hasDates && (Int(proposalPriceText) ?? 0) >= 3
+    }
+
     private func sendBookingRequest() async {
         guard let ci = checkIn, let co = checkOut else { return }
         requestSending = true
@@ -1898,7 +2032,12 @@ struct BookingView: View {
             isRentalCar: isRentalCar,
             selectedSpotIds: selectedSpotIds.isEmpty ? nil : Array(selectedSpotIds),
             selectedExtras: buildSelectedExtrasPayload(),
-            message: nil
+            message: proposalMode
+                ? (proposalMessage.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                    ? nil
+                    : proposalMessage.trimmingCharacters(in: .whitespacesAndNewlines))
+                : nil,
+            proposedPrice: proposalMode ? Int(proposalPriceText) : nil
         )
 
         let response = await bookingService.requestBooking(payload: payload)
