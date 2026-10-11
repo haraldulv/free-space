@@ -260,6 +260,8 @@ export function spotLongerStayTiers(
   threeMonthPrice: number;
   sixMonthPrice: number;
   yearPrice: number;
+  customDays: number;
+  customPrice: number;
 } {
   // pricePackages er moderne kilde — la den gå foran legacy-feltene.
   // Importerte annonser (Hygglo/Finn) lagrer kun i pricePackages.
@@ -268,6 +270,12 @@ export function spotLongerStayTiers(
     const p = pkgs.find((x) => x.periodType === type && x.periodValue === value);
     return p?.priceNok ?? 0;
   };
+  // Parkering (Kim-modellen): utleier kan tilby ÉN egen pakke på 2–30 dager
+  // (f.eks. «20 dager for 1 200 kr» for man–fre-pendlere). Lagres som
+  // DAY-pakke med periodValue >= 2.
+  const customPkg = pkgs.find(
+    (x) => x.periodType === "DAY" && x.periodValue >= 2 && x.periodValue <= 30 && x.priceNok > 0,
+  );
   return {
     dailyPrice: findPkg("DAY", 1) || (spot?.dailyPrice ?? 0),
     weeklyPrice: findPkg("WEEK", 1) || (spot?.weeklyPrice ?? 0),
@@ -275,6 +283,8 @@ export function spotLongerStayTiers(
     threeMonthPrice: findPkg("MONTH", 3) || (spot?.threeMonthPrice ?? 0),
     sixMonthPrice: findPkg("MONTH", 6) || (spot?.sixMonthPrice ?? 0),
     yearPrice: findPkg("YEAR", 1) || (spot?.yearPrice ?? 0),
+    customDays: customPkg?.periodValue ?? 0,
+    customPrice: customPkg?.priceNok ?? 0,
   };
 }
 
@@ -293,6 +303,10 @@ export interface LongerStayInput {
   sixMonthPrice?: number;
   /** Pris (kr) for 365 påfølgende fulle døgn. 0 = ingen tilbud. */
   yearPrice?: number;
+  /** Kim-pakken: antall dager (2–30) for utleiers egen pakke. 0 = ingen. */
+  customDays?: number;
+  /** Pris (kr) for customDays påfølgende dager. 0 = ingen tilbud. */
+  customPrice?: number;
 }
 
 export interface LongerStayResult {
@@ -310,6 +324,7 @@ export interface LongerStayResult {
     sixMonths: number;
     threeMonths: number;
     months: number;
+    custom: number;
     weeks: number;
     days: number;
   };
@@ -332,6 +347,8 @@ export function applyLongerStayPricing(input: LongerStayInput): LongerStayResult
     threeMonthPrice = 0,
     sixMonthPrice = 0,
     yearPrice = 0,
+    customDays = 0,
+    customPrice = 0,
   } = input;
   const baseTotal = breakdown.reduce((s, n) => s + n.price, 0);
   const totalDays = breakdown.length;
@@ -342,7 +359,8 @@ export function applyLongerStayPricing(input: LongerStayInput): LongerStayResult
     monthlyPrice <= 0 &&
     threeMonthPrice <= 0 &&
     sixMonthPrice <= 0 &&
-    yearPrice <= 0;
+    yearPrice <= 0 &&
+    customPrice <= 0;
 
   if (noOffers) {
     return {
@@ -350,14 +368,14 @@ export function applyLongerStayPricing(input: LongerStayInput): LongerStayResult
       baseTotal,
       savings: 0,
       fullDays: 0,
-      tiers: { years: 0, sixMonths: 0, threeMonths: 0, months: 0, weeks: 0, days: 0 },
+      tiers: { years: 0, sixMonths: 0, threeMonths: 0, months: 0, custom: 0, weeks: 0, days: 0 },
     };
   }
 
   let cursor = 0;
   let remaining = totalDays;
   let savings = 0;
-  const tiers = { years: 0, sixMonths: 0, threeMonths: 0, months: 0, weeks: 0, days: 0 };
+  const tiers = { years: 0, sixMonths: 0, threeMonths: 0, months: 0, custom: 0, weeks: 0, days: 0 };
 
   const tierSavings = (baseSum: number, tierPrice: number): number => {
     if (tierPrice <= 0) return 0;
@@ -372,6 +390,18 @@ export function applyLongerStayPricing(input: LongerStayInput): LongerStayResult
 
   const sumRange = (start: number, length: number): number =>
     breakdown.slice(start, start + length).reduce((s, n) => s + n.price, 0);
+
+  // Kim-pakken (2–30 dager): stables i størrelsesorden sammen med de faste
+  // tier-ene — kalles på riktig plass i rekkefølgen under, styrt av lengden.
+  const applyCustomTierIfDue = (minDays: number, maxDays: number) => {
+    if (customPrice <= 0 || customDays < minDays || customDays > maxDays) return;
+    while (remaining >= customDays) {
+      savings += tierSavings(sumRange(cursor, customDays), customPrice);
+      tiers.custom += 1;
+      cursor += customDays;
+      remaining -= customDays;
+    }
+  };
 
   while (yearPrice > 0 && remaining >= 365) {
     savings += tierSavings(sumRange(cursor, 365), yearPrice);
@@ -391,18 +421,21 @@ export function applyLongerStayPricing(input: LongerStayInput): LongerStayResult
     cursor += 90;
     remaining -= 90;
   }
+  applyCustomTierIfDue(30, 30);
   while (monthlyPrice > 0 && remaining >= 30) {
     savings += tierSavings(sumRange(cursor, 30), monthlyPrice);
     tiers.months += 1;
     cursor += 30;
     remaining -= 30;
   }
+  applyCustomTierIfDue(7, 29);
   while (weeklyPrice > 0 && remaining >= 7) {
     savings += tierSavings(sumRange(cursor, 7), weeklyPrice);
     tiers.weeks += 1;
     cursor += 7;
     remaining -= 7;
   }
+  applyCustomTierIfDue(2, 6);
   while (dailyPrice > 0 && remaining > 0) {
     savings += tierSavings(breakdown[cursor].price, dailyPrice);
     tiers.days += 1;

@@ -213,4 +213,9 @@ struct MainTabView: View {
 
 extension Notification.Name {
     static let switchToBookingsTab = Notification.Name("switchToBookingsTab")
+    /// Nullstiller Utforsk-stacken (kart som rot). Postes fra skjermer dypt i
+    /// stacken (f.eks. «Forespørsel sendt») som navigerer brukeren til en
+    /// annen tab — ellers står de fast på en skjerm uten tilbake-knapp når
+    /// de kommer tilbake til Utforsk.
+    static let resetExploreStack = Notification.Name("resetExploreStack")
 }

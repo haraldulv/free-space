@@ -165,8 +165,15 @@ struct BookingConfirmationView: View {
         case .confirmed, .reserved:
             NotificationCenter.default.post(name: .switchToBookingsTab, object: nil)
         case .requested(let conversationId):
+            // Rydd Utforsk-stacken FØR tab-bytte — ellers står denne skjermen
+            // (uten tilbake-knapp) igjen når brukeren vender tilbake til kartet.
+            NotificationCenter.default.post(name: .resetExploreStack, object: nil)
             if let id = conversationId {
                 PushRouter.shared.pendingConversationId = id
+            } else {
+                // Uten samtale-id: vis bestillingene i stedet for å gjøre
+                // ingenting (det var slik skjermen føltes «låst»).
+                NotificationCenter.default.post(name: .switchToBookingsTab, object: nil)
             }
         }
     }

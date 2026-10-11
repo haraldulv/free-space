@@ -57,7 +57,9 @@ async function safeSearch(imageUrl: string): Promise<{ approved: boolean; reason
     const violations: string[] = [];
     if (BLOCKED_LEVELS.includes(annotation.adult)) violations.push("seksuelt innhold");
     if (BLOCKED_LEVELS.includes(annotation.violence)) violations.push("voldelig innhold");
-    if (BLOCKED_LEVELS.includes(annotation.racy)) violations.push("upassende innhold");
+    // «racy» gir mange falske positive (biler, mennesker i sommerklær) —
+    // blokker kun på høyeste konfidens (Kim-feedback: for streng kontroll).
+    if (annotation.racy === "VERY_LIKELY") violations.push("upassende innhold");
 
     if (violations.length > 0) {
       return {

@@ -15,6 +15,8 @@ struct EditParkingView: View {
     @State private var descriptionText: String
     @State private var dailyText: String
     @State private var monthlyText: String
+    @State private var packageDays: Int
+    @State private var packageNote: String
     @State private var isActive: Bool
     @State private var isSaving = false
     @State private var error: String?
@@ -31,8 +33,13 @@ struct EditParkingView: View {
         let day = packages.first(where: { $0.periodType == .day && $0.periodValue == 1 })?.priceNok
             ?? listing.price ?? 0
         let month = packages.first(where: { $0.periodType == .month && $0.periodValue == 1 })?.priceNok
+        // Kim-pakken (DAY×N, 2-30 dager) går foran legacy MONTH-pakken.
+        let customPkg = packages.first(where: { $0.periodType == .day && $0.periodValue >= 2 && $0.periodValue <= 30 })
+        let pkgPrice = customPkg?.priceNok ?? month
         _dailyText = State(initialValue: day > 0 ? "\(day)" : "")
-        _monthlyText = State(initialValue: month.map { "\($0)" } ?? "")
+        _monthlyText = State(initialValue: pkgPrice.map { "\($0)" } ?? "")
+        _packageDays = State(initialValue: customPkg?.periodValue ?? 30)
+        _packageNote = State(initialValue: customPkg?.note ?? "")
         _isActive = State(initialValue: listing.isActive ?? true)
     }
 
@@ -71,7 +78,7 @@ struct EditParkingView: View {
                             }
                     }
 
-                    field(label: "Fast månedsplass (kr per måned)") {
+                    field(label: "Fast pakke (kr for hele pakken)") {
                         TextField("0", text: $monthlyText)
                             .keyboardType(.numberPad)
                             .font(.tuno(.body))
@@ -79,6 +86,39 @@ struct EditParkingView: View {
                                 let digits = v.filter(\.isNumber)
                                 if digits != v { monthlyText = digits }
                             }
+                    }
+
+                    if (Int(monthlyText) ?? 0) > 0 {
+                        field(label: "Antall dager i pakken (30 = månedsplass)") {
+                            HStack(spacing: 16) {
+                                Button {
+                                    if packageDays > 2 { packageDays -= 1 }
+                                } label: {
+                                    Image(systemName: "minus.circle.fill")
+                                        .font(.system(size: 26))
+                                        .foregroundStyle(.neutral400)
+                                }
+                                .buttonStyle(.plain)
+                                Text(packageDays == 30 ? "30 dager (månedsplass)" : "\(packageDays) dager")
+                                    .font(.tuno(.body))
+                                    .foregroundStyle(.neutral900)
+                                Button {
+                                    if packageDays < 30 { packageDays += 1 }
+                                } label: {
+                                    Image(systemName: "plus.circle.fill")
+                                        .font(.system(size: 26))
+                                        .foregroundStyle(.neutral400)
+                                }
+                                .buttonStyle(.plain)
+                                Spacer()
+                            }
+                        }
+
+                        field(label: "Melding til leietaker (valgfritt, vises før betaling)") {
+                            TextField("F.eks. Plassen kan brukes man-fre 08-18.", text: $packageNote, axis: .vertical)
+                                .font(.tuno(.body))
+                                .lineLimit(2...4)
+                        }
                     }
 
                     // Pause
@@ -219,8 +259,19 @@ struct EditParkingView: View {
         error = nil
 
         var packages: [PricePackage] = [PricePackage(periodType: .day, periodValue: 1, priceNok: day)]
+        let trimmedNote = packageNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        let pkgDays = min(30, max(2, packageDays))
         if let month {
-            packages.append(PricePackage(periodType: .month, periodValue: 1, priceNok: month))
+            if pkgDays == 30 && trimmedNote.isEmpty {
+                packages.append(PricePackage(periodType: .month, periodValue: 1, priceNok: month))
+            } else {
+                packages.append(PricePackage(
+                    periodType: .day,
+                    periodValue: pkgDays,
+                    priceNok: month,
+                    note: trimmedNote.isEmpty ? nil : trimmedNote
+                ))
+            }
         }
 
         // Behold eksisterende markører (id/posisjon/label/bilder/blokkeringer),
@@ -233,7 +284,7 @@ struct EditParkingView: View {
         }
 
         var periods = ["DAY"]
-        if month != nil { periods.append("MONTH") }
+        if month != nil && pkgDays == 30 { periods.append("MONTH") }
 
         let payload = ParkingUpdatePayload(
             title: title.trimmingCharacters(in: .whitespaces),

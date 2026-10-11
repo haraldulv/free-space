@@ -290,6 +290,7 @@ struct ListingDetailView: View {
                     suitableForCard(listing: listing)
                     Divider()
                     compactHostRow(listing: listing)
+                    parkingContactHostButton(listing: listing)
                     Divider()
                     reviewsSection(listing: listing)
                     thingsToKnowCard(listing: listing)
@@ -451,8 +452,8 @@ struct ListingDetailView: View {
     @ViewBuilder
     private func parkingPriceTilesCard(listing: Listing) -> some View {
         let dayPrice = listing.parkingDayPrice ?? 0
-        let monthPrice = listing.parkingMonthPrice
-        if dayPrice > 0 || monthPrice != nil {
+        let pkg = listing.parkingPackage
+        if dayPrice > 0 || pkg != nil {
             sectionCard {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Priser")
@@ -467,11 +468,15 @@ struct ListingDetailView: View {
                             }
                             .buttonStyle(.plain)
                         }
-                        if let monthPrice {
+                        if let pkg {
                             Button {
                                 handlePriceTileTap(month: true, listing: listing)
                             } label: {
-                                parkingPriceTile(price: monthPrice, unit: "per måned", caption: "Fast plass i 30 dager")
+                                parkingPriceTile(
+                                    price: pkg.price,
+                                    unit: pkg.isMonthLike ? "per måned" : "for \(pkg.days) dager",
+                                    caption: pkg.note?.isEmpty == false ? "Se utleiers vilkår ved bestilling" : "Fast plass i \(pkg.days) dager"
+                                )
                             }
                             .buttonStyle(.plain)
                         }
@@ -624,17 +629,17 @@ struct ListingDetailView: View {
                     Text("\(day.nokFormatted) kr/dag")
                         .font(.tuno(.heading))
                         .foregroundStyle(Color.inkText)
-                    if let month = listing.parkingMonthPrice {
-                        Text("\(month.nokFormatted) kr/mnd")
+                    if let pkg = listing.parkingPackage {
+                        Text(pkg.isMonthLike ? "\(pkg.price.nokFormatted) kr/mnd" : "\(pkg.price.nokFormatted) kr/\(pkg.days) dager")
                             .font(.tuno(.caption))
                             .foregroundStyle(Color.inkMuted)
                     }
-                } else if let month = listing.parkingMonthPrice {
-                    // Måned-only: månedsprisen ER hovedprisen, ikke en bilinje.
-                    Text("\(month.nokFormatted) kr/mnd")
+                } else if let pkg = listing.parkingPackage {
+                    // Pakke-only: pakkeprisen ER hovedprisen, ikke en bilinje.
+                    Text(pkg.isMonthLike ? "\(pkg.price.nokFormatted) kr/mnd" : "\(pkg.price.nokFormatted) kr")
                         .font(.tuno(.heading))
                         .foregroundStyle(Color.inkText)
-                    Text("Fast månedsplass")
+                    Text(pkg.isMonthLike ? "Fast månedsplass" : "Fast plass, \(pkg.days) dager")
                         .font(.tuno(.caption))
                         .foregroundStyle(Color.inkMuted)
                 } else {
@@ -1015,7 +1020,48 @@ struct ListingDetailView: View {
 
     // MARK: - Kompakt host-rad (rett under tittel, Airbnb-stil)
 
+    /// Parkering (Kim-feedback): tydelig «Kontakt utleier»-knapp rett under
+    /// vertsraden, så terskelen for å ta kontakt er lav. Egen annonse → skjult.
     @ViewBuilder
+    private func parkingContactHostButton(listing: Listing) -> some View {
+        let isOwnListing = authManager.currentUser?.id.uuidString.lowercased() == listing.hostId?.lowercased()
+        if let hostId = listing.hostId, !isOwnListing {
+            Button {
+                guard authManager.isAuthenticated else {
+                    showLogin = true
+                    return
+                }
+                Task {
+                    guard let userId = authManager.currentUser?.id else { return }
+                    let convoId = await chatService.getOrCreateConversation(
+                        listingId: listing.id,
+                        guestId: userId.uuidString,
+                        hostId: hostId
+                    )
+                    if let convoId {
+                        chatConversationId = convoId
+                        chatHostName = listing.hostName ?? "Utleier"
+                        showChat = true
+                    }
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "bubble.left.fill")
+                        .font(.system(size: 14))
+                    Text("Kontakt utleier")
+                        .font(.tuno(size: 15, weight: .semibold))
+                }
+                .foregroundStyle(.neutral900)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 13)
+                .background(Color.paperCard)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(Color.neutral900, lineWidth: 1.2))
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
     private func compactHostRow(listing: Listing) -> some View {
         Button {
             showHostProfile = true

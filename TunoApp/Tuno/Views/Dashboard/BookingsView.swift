@@ -232,7 +232,17 @@ struct BookingCard: View {
     @State private var reviewError: String?
 
     private var canCancel: Bool {
-        booking.status == .pending || booking.status == .confirmed
+        // Gjest kan trekke seg fra alt som ikke er avsluttet: bekreftede
+        // bookinger OG sendte forespørsler/forhandlinger (Kim-feedback: det
+        // var umulig å avbryte en forespørsel). Serverens cancel-rute
+        // håndterer alle ikke-kansellerte statuser og refunderer kun når
+        // det faktisk er betalt.
+        switch booking.status {
+        case .pending, .confirmed, .requested, .awaiting_host, .awaiting_guest, .awaiting_payment:
+            return true
+        case .declined, .expired, .cancelled:
+            return false
+        }
     }
 
     private var isPastCheckout: Bool {

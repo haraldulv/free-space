@@ -44,8 +44,10 @@ extension Listing {
         if let day = parkingDayPrice {
             parts.append("\(day.nokFormatted) kr/dag")
         }
-        if let month = parkingMonthPrice {
-            parts.append("\(month.nokFormatted) kr/mnd")
+        if let pkg = parkingPackage {
+            parts.append(pkg.isMonthLike
+                ? "\(pkg.price.nokFormatted) kr/mnd"
+                : "\(pkg.price.nokFormatted) kr/\(pkg.days) d")
         }
         if parts.isEmpty { return headlinePriceText }
         return parts.joined(separator: " · ")

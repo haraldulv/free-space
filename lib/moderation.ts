@@ -414,7 +414,13 @@ export async function moderateImageWithClaude(
     }
     const out = response.parsed_output;
     if (!out) return { approved: true };
-    if (out.category === "ok" || out.category === "unclear") {
+    // Lettet 2026-10-11 (Kim-feedback: for streng): opplastingssjekken
+    // blokkerer kun det som ALDRI er greit — nakenhet/vold og ID-dokumenter.
+    // Skjermbilder, personfokus og «irrelevante» bilder slipper gjennom her;
+    // annonse-modereringen (hele annonsen, manuell kø) fanger fortsatt
+    // ekstreme tilfeller før publisering.
+    const hardBlock = out.category === "identity_document" || out.category === "explicit_or_violent";
+    if (!hardBlock) {
       return { approved: true, category: out.category };
     }
     return { approved: false, reason: IMAGE_BLOCK_MESSAGES[out.category], category: out.category };

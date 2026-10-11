@@ -256,6 +256,11 @@ struct SearchView: View {
             setSearchCenter(lat: loc.latitude, lng: loc.longitude, zoom: 12)
             performSearch()
         }
+        .onReceive(NotificationCenter.default.publisher(for: .resetExploreStack)) { _ in
+            if isRootTab {
+                navigationPath = NavigationPath()
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .switchToBookingsTab)) { _ in
             if isRootTab {
                 // Ingen cover å lukke — nullstill navigasjonsstacken i stedet,

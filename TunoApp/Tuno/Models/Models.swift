@@ -817,9 +817,13 @@ enum PricePackagePeriodType: String, Codable, CaseIterable, Hashable {
 struct PricePackage: Codable, Hashable, Identifiable {
     var periodType: PricePackagePeriodType
     /// DAY 1-6, WEEK 1-3, MONTH 1-11, YEAR 1-3.
+    /// Parkering (Kim-pakken): DAY 2-30 er utleiers egen pakke.
     var periodValue: Int
     /// Pris i kr (heltall).
     var priceNok: Int
+    /// Valgfri melding fra utleier — vises for leietaker før betaling
+    /// (f.eks. «Plassen kan brukes man-fre 08-18»). Kun Kim-pakken.
+    var note: String? = nil
 
     var id: String { "\(periodType.rawValue)-\(periodValue)" }
 
@@ -959,6 +963,30 @@ extension Listing {
 
     /// Laveste månedspris (MONTH×1) på tvers av plassene, om tilbudt.
     var parkingMonthPrice: Int? { lowestPackagePrice(.month) }
+
+    /// Kim-pakken for parkering: utleiers egen pakke (dager, pris, valgfri
+    /// melding). Lagres som DAY-pakke med periodValue 2-30. Legacy-annonser
+    /// med MONTH×1 mappes til 30 dager, så booking-flyten har ÉN pakkevei.
+    struct ParkingPackage {
+        let days: Int
+        let price: Int
+        let note: String?
+        /// «30 dager» presenteres som månedsplass; andre lengder som N dager.
+        var isMonthLike: Bool { days == 30 }
+    }
+
+    var parkingPackage: ParkingPackage? {
+        for spot in spotMarkers ?? [] {
+            for pkg in spot.pricePackages ?? []
+            where pkg.periodType == .day && pkg.periodValue >= 2 && pkg.periodValue <= 30 && pkg.priceNok > 0 {
+                return ParkingPackage(days: pkg.periodValue, price: pkg.priceNok, note: pkg.note)
+            }
+        }
+        if let month = parkingMonthPrice {
+            return ParkingPackage(days: 30, price: month, note: nil)
+        }
+        return nil
+    }
 }
 
 // MARK: - OpeningHours

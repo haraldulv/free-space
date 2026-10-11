@@ -94,6 +94,31 @@ struct PhotosStep: View {
                     PhotoUploader.upload(items: newItems, into: form)
                 }
 
+                // Blokkerte bilder: vis årsaken HER, der brukeren ser grid-en
+                // (før lå den kun i form.error uten synlig visning på steget).
+                if let err = form.error, !err.isEmpty {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.orange)
+                        Text(err)
+                            .font(.system(size: 13))
+                            .foregroundStyle(.neutral800)
+                        Spacer(minLength: 0)
+                        Button {
+                            form.error = nil
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.neutral500)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(12)
+                    .background(Color.orange.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+
                 if !form.imageURLs.isEmpty || !form.uploadingPhotos.isEmpty {
                     if hasMultipleSpots {
                         spotTaggingHint
@@ -343,6 +368,7 @@ enum PhotoUploader {
     static func upload(items: [PhotosPickerItem], into form: ListingFormModel) {
         guard !items.isEmpty else { return }
         form.selectedPhotos = []
+        form.error = nil
 
         Task { @MainActor in
             guard let userId = try? await supabase.auth.session.user.id.uuidString.lowercased() else { return }
@@ -392,6 +418,13 @@ enum PhotoUploader {
                     }
                 }
             }
+
+            // Kanselleringsvern: blir tasken avbrutt (navigering midt i
+            // opplasting) yield-er ikke gruppen alle resultatene, og
+            // spinner-flisene ble hengende igjen for alltid. Fjern alt
+            // dette kallet la inn, uansett utfall.
+            let pendingIds = Set(pending.map { $0.0.id })
+            form.uploadingPhotos.removeAll { pendingIds.contains($0.id) }
         }
     }
 }

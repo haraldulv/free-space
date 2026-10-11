@@ -73,10 +73,14 @@ export const PRICE_PACKAGE_VALUE_RANGES: Record<PricePackagePeriodType, { min: n
 
 export interface PricePackage {
   periodType: PricePackagePeriodType;
-  /** DAY 1-6, WEEK 1-3, MONTH 1-11, YEAR 1-3 (jf. PRICE_PACKAGE_VALUE_RANGES). */
+  /** DAY 1-6, WEEK 1-3, MONTH 1-11, YEAR 1-3 (jf. PRICE_PACKAGE_VALUE_RANGES).
+   *  Parkering (Kim-pakken): DAY 2-30 brukes for utleiers egen pakke. */
   periodValue: number;
   /** Pris i kroner (heltall). */
   priceNok: number;
+  /** Valgfri melding fra utleier, vises for leietaker før betaling
+   *  (f.eks. «Plassen kan brukes man-fre 08-18»). Kun Kim-pakken. */
+  note?: string;
 }
 
 /** Type for parking_type på listings. NULL = ikke oppgitt. */

@@ -2,117 +2,114 @@
 
 import { useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  PARKING_AREAS,
-  estimateEarnings,
-  type AvailabilityKind,
-  type SpotKind,
-} from "@/lib/parking-rates";
 
 const nok = new Intl.NumberFormat("nb-NO");
 
-function PillRow<T extends string>({
-  options,
-  value,
-  onChange,
-}: {
-  options: { id: T; label: string }[];
-  value: T;
-  onChange: (id: T) => void;
-}) {
-  return (
-    <div className="flex flex-wrap gap-2">
-      {options.map((opt) => {
-        const active = opt.id === value;
-        return (
-          <button
-            key={opt.id}
-            type="button"
-            onClick={() => onChange(opt.id)}
-            className={`rounded-full px-4 py-2.5 text-sm font-semibold transition-colors ${
-              active
-                ? "bg-neutral-900 text-white"
-                : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
-            }`}
-          >
-            {opt.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
+/** Flyer-grønnfargen (samme som /tjen-heroen). */
+const GREEN = "#3ebf7f";
 
+/**
+ * Pendli-inspirert kalkulator (Kim-feedback): to slidere i stedet for
+ * dropdown-skjema. Brukeren styrer dagspris og antall utleide dager selv,
+ * og ser estimatet oppdatere seg umiddelbart.
+ */
 export default function EarnCalculator() {
   const t = useTranslations("tjen");
-  const [areaId, setAreaId] = useState(PARKING_AREAS[0].id);
-  const [kind, setKind] = useState<SpotKind>("outdoor");
-  const [availability, setAvailability] = useState<AvailabilityKind>("always");
+  const [dayPrice, setDayPrice] = useState(70);
+  const [daysPerMonth, setDaysPerMonth] = useState(20);
 
-  const estimate = useMemo(
-    () => estimateEarnings(areaId, kind, availability),
-    [areaId, kind, availability],
-  );
+  const monthly = useMemo(() => dayPrice * daysPerMonth, [dayPrice, daysPerMonth]);
+  const yearly = monthly * 12;
+
+  const presets: { label: string; days: number }[] = [
+    { label: t("presetWeekdays"), days: 20 },
+    { label: t("presetWeekends"), days: 8 },
+    { label: t("presetAll"), days: 30 },
+  ];
 
   return (
     <div className="rounded-3xl bg-[#fdfcf9] p-6 shadow-[0_18px_50px_rgba(18,20,18,0.18)] sm:p-8">
       <h2 className="text-xl font-bold text-neutral-900 sm:text-2xl">{t("calcTitle")}</h2>
 
-      <div className="mt-5 space-y-5">
+      <div className="mt-6 space-y-7">
         <div>
-          <label htmlFor="earn-area" className="mb-2 block text-sm font-semibold text-neutral-700">
-            {t("areaLabel")}
-          </label>
-          <select
-            id="earn-area"
-            value={areaId}
-            onChange={(e) => setAreaId(e.target.value)}
-            className="w-full appearance-none rounded-2xl border border-neutral-200 bg-white px-4 py-3 text-[15px] font-medium text-neutral-900 focus:border-[#37caa4] focus:outline-none"
-          >
-            {PARKING_AREAS.map((area) => (
-              <option key={area.id} value={area.id}>
-                {t(area.nameKey)}
-              </option>
-            ))}
-          </select>
+          <div className="mb-1 flex items-baseline justify-between">
+            <label htmlFor="earn-price" className="text-sm font-semibold text-neutral-700">
+              {t("calcDayPriceLabel")}
+            </label>
+            <span className="text-lg font-bold text-neutral-900">{nok.format(dayPrice)} kr</span>
+          </div>
+          <input
+            id="earn-price"
+            type="range"
+            min={20}
+            max={300}
+            step={5}
+            value={dayPrice}
+            onChange={(e) => setDayPrice(Number(e.target.value))}
+            className="w-full"
+            style={{ accentColor: GREEN }}
+          />
+          <div className="flex justify-between text-xs text-neutral-400">
+            <span>20 kr</span>
+            <span>300 kr</span>
+          </div>
         </div>
 
         <div>
-          <p className="mb-2 text-sm font-semibold text-neutral-700">{t("kindLabel")}</p>
-          <PillRow
-            options={[
-              { id: "outdoor" as SpotKind, label: t("kindOutdoor") },
-              { id: "carport" as SpotKind, label: t("kindCarport") },
-              { id: "garage" as SpotKind, label: t("kindGarage") },
-            ]}
-            value={kind}
-            onChange={setKind}
+          <div className="mb-1 flex items-baseline justify-between">
+            <label htmlFor="earn-days" className="text-sm font-semibold text-neutral-700">
+              {t("calcDaysLabel")}
+            </label>
+            <span className="text-lg font-bold text-neutral-900">{daysPerMonth}</span>
+          </div>
+          <input
+            id="earn-days"
+            type="range"
+            min={1}
+            max={30}
+            step={1}
+            value={daysPerMonth}
+            onChange={(e) => setDaysPerMonth(Number(e.target.value))}
+            className="w-full"
+            style={{ accentColor: GREEN }}
           />
-        </div>
-
-        <div>
-          <p className="mb-2 text-sm font-semibold text-neutral-700">{t("availLabel")}</p>
-          <PillRow
-            options={[
-              { id: "always" as AvailabilityKind, label: t("availAlways") },
-              { id: "weekdays" as AvailabilityKind, label: t("availWeekdays") },
-              { id: "weekends" as AvailabilityKind, label: t("availWeekends") },
-            ]}
-            value={availability}
-            onChange={setAvailability}
-          />
+          <div className="flex justify-between text-xs text-neutral-400">
+            <span>1</span>
+            <span>30</span>
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {presets.map((preset) => {
+              const active = preset.days === daysPerMonth;
+              return (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => setDaysPerMonth(preset.days)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+                    active
+                      ? "bg-neutral-900 text-white"
+                      : "bg-neutral-100 text-neutral-700 hover:bg-neutral-200"
+                  }`}
+                >
+                  {preset.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      <div className="mt-6 rounded-2xl bg-[#121412] px-6 py-5 text-[#f5f6f4]">
-        <p className="text-xs font-bold uppercase tracking-wide text-[#a8afaa]">
+      <div className="mt-7 rounded-2xl px-6 py-5 text-white" style={{ background: GREEN }}>
+        <p className="text-xs font-bold uppercase tracking-wide text-white/80">
           {t("estimateTitle")}
         </p>
-        <p className="mt-1 text-3xl font-bold text-[#37caa4] sm:text-4xl">
-          {t("estimateRange", { low: nok.format(estimate.monthLow), high: nok.format(estimate.monthHigh) })}
+        <p className="mt-1 text-4xl font-bold">
+          {nok.format(monthly)} kr
         </p>
-        <p className="mt-2 text-sm font-medium text-[#cfd4d0]">
-          {t("estimateDay", { low: nok.format(estimate.dayLow), high: nok.format(estimate.dayHigh) })}
+        <p className="mt-2 text-sm font-medium text-white/90">
+          {t("calcFormula", { price: nok.format(dayPrice), days: daysPerMonth })} ·{" "}
+          {t("estimateYear", { amount: nok.format(yearly) })}
         </p>
       </div>
 

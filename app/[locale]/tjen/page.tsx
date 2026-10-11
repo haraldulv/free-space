@@ -49,7 +49,7 @@ export default async function TjenPage({ params }: PageProps) {
   return (
     <main className="min-h-screen bg-[#f4f1ea]">
       {/* Mørk hero-flate (palett C «Kontrast») */}
-      <section className="bg-[#121412] px-5 pb-28 pt-8 text-[#f5f6f4] sm:pb-32">
+      <section className="bg-[#3ebf7f] px-5 pb-28 pt-8 text-white sm:pb-32">
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-between">
             {/* Logo som på plakaten: hvit pin + tuno */}
@@ -61,7 +61,7 @@ export default async function TjenPage({ params }: PageProps) {
               className="h-8 w-auto"
               priority
             />
-            <span className="rounded-full bg-[#37caa4]/15 px-4 py-1.5 text-sm font-semibold text-[#4fd6b2]">
+            <span className="rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white">
               {t("eyebrow")}
             </span>
           </div>
@@ -69,10 +69,10 @@ export default async function TjenPage({ params }: PageProps) {
           <h1 className="mt-10 text-center text-4xl font-bold leading-tight sm:text-6xl">
             {t("title")}
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-center text-lg font-medium leading-relaxed text-[#cfd4d0] sm:text-xl">
+          <p className="mx-auto mt-5 max-w-xl text-center text-lg font-medium leading-relaxed text-white/90 sm:text-xl">
             {t("subtitle")}
           </p>
-          <p className="mt-2 text-center text-sm font-medium text-[#a8afaa]">
+          <p className="mt-2 text-center text-sm font-medium text-white/75">
             {t("youDecide")}
           </p>
 
@@ -128,13 +128,13 @@ export default async function TjenPage({ params }: PageProps) {
       </section>
 
       {/* App-CTA */}
-      <section className="bg-[#121412] px-5 py-14 text-center text-[#f5f6f4]">
+      <section className="bg-[#3ebf7f] px-5 py-14 text-center text-white">
         <div className="mx-auto max-w-xl">
           <h2 className="text-3xl font-bold">{t("appTitle")}</h2>
-          <p className="mt-3 text-base font-medium text-[#a8afaa]">{t("appBody")}</p>
+          <p className="mt-3 text-base font-medium text-white/85">{t("appBody")}</p>
           <a
             href={APP_STORE_URL}
-            className="mt-7 inline-block rounded-full bg-[#37caa4] px-9 py-4 text-base font-bold text-[#13201c] transition-transform hover:scale-[1.02]"
+            className="mt-7 inline-block rounded-full bg-white px-9 py-4 text-base font-bold text-[#1a7a4f] transition-transform hover:scale-[1.02]"
           >
             {t("appCta")}
           </a>

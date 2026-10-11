@@ -111,8 +111,13 @@ final class ListingFormModel: ObservableObject {
     // MARK: - Parkering-wizard (Asker-pivoten 2026-10-07)
     /// Dagspris i kr for parkering-wizarden (modell A: havner som listing.price).
     @Published var parkingDailyPrice: Int? = nil
-    /// Månedspris i kr (30 dager) — blir MONTH-pakke på plassene.
+    /// Pakkepris i kr — blir MONTH-pakke (30 dager uten melding) eller
+    /// Kim-pakke (DAY×N med valgfri melding) på plassene.
     @Published var parkingMonthlyPrice: Int? = nil
+    /// Kim-pakken: antall dager (2-30). 30 = månedsplass.
+    @Published var parkingPackageDays: Int = 30
+    /// Valgfri melding/forbehold fra utleier, vises for leietaker før betaling.
+    @Published var parkingPackageNote: String = ""
     /// Obligatorisk bekreftelse: «Jeg har rett til å leie ut denne plassen».
     @Published var hasConfirmedOwnership = false
 
@@ -554,8 +559,21 @@ final class ListingFormModel: ObservableObject {
         let monthPrice = parkingMonthlyPrice
 
         var packages: [PricePackage] = [PricePackage(periodType: .day, periodValue: 1, priceNok: dayPrice)]
+        let pkgDays = min(30, max(2, parkingPackageDays))
+        let pkgNote = parkingPackageNote.trimmingCharacters(in: .whitespacesAndNewlines)
         if let monthPrice, monthPrice > 0 {
-            packages.append(PricePackage(periodType: .month, periodValue: 1, priceNok: monthPrice))
+            if pkgDays == 30 && pkgNote.isEmpty {
+                // Ren månedsplass — legacy-formatet som vises som «kr/mnd».
+                packages.append(PricePackage(periodType: .month, periodValue: 1, priceNok: monthPrice))
+            } else {
+                // Kim-pakken: N dager til fast pris, med utleiers forbehold.
+                packages.append(PricePackage(
+                    periodType: .day,
+                    periodValue: pkgDays,
+                    priceNok: monthPrice,
+                    note: pkgNote.isEmpty ? nil : pkgNote
+                ))
+            }
         }
 
         let markers: [SpotMarker] = (0..<max(1, spots)).map { i in
@@ -583,7 +601,7 @@ final class ListingFormModel: ObservableObject {
         }()
 
         var periods = ["DAY"]
-        if monthPrice ?? 0 > 0 { periods.append("MONTH") }
+        if monthPrice ?? 0 > 0 && pkgDays == 30 { periods.append("MONTH") }
 
         return CreateListingInput(
             id: UUID().uuidString.lowercased(),

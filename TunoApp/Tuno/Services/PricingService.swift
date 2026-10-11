@@ -843,10 +843,14 @@ enum PricingService {
         let threeMonthPrice: Int
         let sixMonthPrice: Int
         let yearPrice: Int
+        /// Kim-pakken (parkering): utleiers egen pakke på 2-30 dager.
+        var customDays: Int = 0
+        var customPrice: Int = 0
 
         var hasAny: Bool {
             weeklyPrice > 0 || monthlyPrice > 0
                 || threeMonthPrice > 0 || sixMonthPrice > 0 || yearPrice > 0
+                || customPrice > 0
         }
     }
 
@@ -900,14 +904,28 @@ enum PricingService {
             savings += tierSavings(sumRange(cursor, 90), tiers.threeMonthPrice)
             threeMonths += 1; cursor += 90; remaining -= 90
         }
+        // Kim-pakken: stables i størrelsesorden (lengste først), speiler
+        // applyCustomTierIfDue i lib/pricing.ts.
+        func applyCustomTierIfDue(_ minDays: Int, _ maxDays: Int) {
+            guard tiers.customPrice > 0,
+                  tiers.customDays >= minDays, tiers.customDays <= maxDays else { return }
+            while remaining >= tiers.customDays {
+                savings += tierSavings(sumRange(cursor, tiers.customDays), tiers.customPrice)
+                cursor += tiers.customDays; remaining -= tiers.customDays
+            }
+        }
+
+        applyCustomTierIfDue(30, 30)
         while tiers.monthlyPrice > 0 && remaining >= 30 {
             savings += tierSavings(sumRange(cursor, 30), tiers.monthlyPrice)
             months += 1; cursor += 30; remaining -= 30
         }
+        applyCustomTierIfDue(7, 29)
         while tiers.weeklyPrice > 0 && remaining >= 7 {
             savings += tierSavings(sumRange(cursor, 7), tiers.weeklyPrice)
             weeks += 1; cursor += 7; remaining -= 7
         }
+        applyCustomTierIfDue(2, 6)
 
         return DurationDiscount(
             total: baseTotal - savings,

@@ -294,12 +294,15 @@ struct BookingView: View {
             ?? targetSpot?.sixMonthPrice ?? 0
         let pkgYear = pkgs.first { $0.periodType == .year && $0.periodValue == 1 }?.priceNok
             ?? targetSpot?.yearPrice ?? 0
+        let customPkg = pkgs.first { $0.periodType == .day && $0.periodValue >= 2 && $0.periodValue <= 30 }
         let tiers = PricingService.LongerStayTiers(
             weeklyPrice: longerStay.weekly,
             monthlyPrice: longerStay.monthly,
             threeMonthPrice: pkg3,
             sixMonthPrice: pkg6,
-            yearPrice: pkgYear
+            yearPrice: pkgYear,
+            customDays: customPkg?.periodValue ?? 0,
+            customPrice: customPkg?.priceNok ?? 0
         )
         if !tiers.hasAny {
             return breakdown.reduce(0) { $0 + $1.price }
@@ -327,13 +330,16 @@ struct BookingView: View {
             ?? targetSpot?.sixMonthPrice ?? 0
         let pkgYear = pkgs.first { $0.periodType == .year && $0.periodValue == 1 }?.priceNok
             ?? targetSpot?.yearPrice ?? 0
+        let customPkg = pkgs.first { $0.periodType == .day && $0.periodValue >= 2 && $0.periodValue <= 30 }
 
         let tiers = PricingService.LongerStayTiers(
             weeklyPrice: longerStay.weekly,
             monthlyPrice: longerStay.monthly,
             threeMonthPrice: pkg3,
             sixMonthPrice: pkg6,
-            yearPrice: pkgYear
+            yearPrice: pkgYear,
+            customDays: customPkg?.periodValue ?? 0,
+            customPrice: customPkg?.priceNok ?? 0
         )
         if !tiers.hasAny {
             return basePerDay * units
@@ -790,7 +796,7 @@ struct BookingView: View {
             // Etter context-pre-fyllet, så presetet ankres på evt. lagret startdato.
             if (preselectMonthPlan || isMonthOnlyParking) && isParkingDayMonthChoice && !monthPlan {
                 monthPlan = true
-                applyBookingPeriodPreset(days: 30)
+                applyBookingPeriodPreset(days: parkingPkg?.days ?? 30)
             }
             async let avail: () = checkAvailability()
             async let booked = bookingService.fetchBookedDates(listingId: listing.id)
@@ -939,7 +945,8 @@ struct BookingView: View {
             // Månedsplass: sluttdato følger alltid startdato (30 dager inklusivt).
             guard isParkingDayMonthChoice, monthPlan, let start = newValue else { return }
             let cal = Calendar(identifier: .gregorian)
-            checkOut = cal.date(byAdding: .day, value: 29, to: cal.startOfDay(for: start))
+            let pkgDays = parkingPkg?.days ?? 30
+            checkOut = cal.date(byAdding: .day, value: pkgDays - 1, to: cal.startOfDay(for: start))
         }
     }
 
@@ -951,9 +958,36 @@ struct BookingView: View {
             wheelPickerField = .checkIn
         }
         if let co = checkOut {
-            Text("Til og med \(formatShort(co)) · 30 dager")
+            Text("Til og med \(formatShort(co)) · \(parkingPkg?.days ?? 30) dager")
                 .font(.tuno(.caption))
                 .foregroundStyle(.neutral500)
+        }
+
+        // Kim-pakken: utleiers forbehold/instruks vises FØR betaling,
+        // f.eks. «Plassen kan brukes man-fre 08-18».
+        if monthPlan, let note = parkingPkg?.note, !note.isEmpty {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "info.circle.fill")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.neutral700)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Fra utleier")
+                        .font(.tuno(.caption))
+                        .foregroundStyle(.neutral500)
+                    Text(note)
+                        .font(.tuno(.body))
+                        .foregroundStyle(.neutral800)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.paperCard)
+            .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
+                    .stroke(Color.paperLine, lineWidth: 1)
+            )
         }
     }
 
@@ -1000,12 +1034,15 @@ struct BookingView: View {
     /// rader og booking.
     private var monthPackagePrice: Int? { listing.parkingMonthPrice }
 
+    /// Kim-pakken (eller legacy månedspakke mappet til 30 dager).
+    private var parkingPkg: Listing.ParkingPackage? { listing.parkingPackage }
+
     /// Dagspris for parkering: annonseprisen, ellers laveste DAY-pakke/plasspris.
     private var dayUnitPrice: Int? { listing.parkingDayPrice }
 
-    /// Parkering med månedspris → vis to-valget (Dagsleie / Fast månedsplass).
+    /// Parkering med pakke (måned eller Kim-pakke) → vis to-valget.
     private var isParkingDayMonthChoice: Bool {
-        listing.category == .parking && monthPackagePrice != nil
+        listing.category == .parking && parkingPkg != nil
     }
 
     /// Plassen leies KUN ut per måned (ingen dagspris). Da finnes det ikke
@@ -1029,16 +1066,16 @@ struct BookingView: View {
                 }
             }
             parkingPlanCard(
-                title: "Fast månedsplass",
-                price: monthPackagePrice.map { "\($0) kr/mnd" } ?? "",
+                title: (parkingPkg?.isMonthLike ?? true) ? "Fast månedsplass" : "Fast plass, \(parkingPkg?.days ?? 30) dager",
+                price: parkingPkg.map { $0.isMonthLike ? "\($0.price) kr/mnd" : "\($0.price) kr" } ?? "",
                 caption: isMonthOnlyParking
-                    ? "Plassen leies ut per måned. 30 dager fra startdato."
-                    : "30 dager fra startdato",
+                    ? "Plassen leies ut som fast plass. \(parkingPkg?.days ?? 30) dager fra startdato."
+                    : "\(parkingPkg?.days ?? 30) dager fra startdato",
                 isSelected: monthPlan
             ) {
                 guard !monthPlan else { return }
                 monthPlan = true
-                applyBookingPeriodPreset(days: 30)
+                applyBookingPeriodPreset(days: parkingPkg?.days ?? 30)
             }
         }
     }

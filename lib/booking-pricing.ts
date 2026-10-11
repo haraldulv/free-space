@@ -86,7 +86,8 @@ export async function computeBookingTotal(args: ComputeTotalArgs): Promise<Compu
       tiers.monthlyPrice > 0 ||
       tiers.threeMonthPrice > 0 ||
       tiers.sixMonthPrice > 0 ||
-      tiers.yearPrice > 0;
+      tiers.yearPrice > 0 ||
+      tiers.customPrice > 0;
     if (hasAny) {
       discount = applyLongerStayPricing({
         breakdown,
@@ -96,6 +97,8 @@ export async function computeBookingTotal(args: ComputeTotalArgs): Promise<Compu
         threeMonthPrice: tiers.threeMonthPrice,
         sixMonthPrice: tiers.sixMonthPrice,
         yearPrice: tiers.yearPrice,
+        customDays: tiers.customDays,
+        customPrice: tiers.customPrice,
       });
       baseTotal = discount.total;
     }
