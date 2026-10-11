@@ -32,27 +32,27 @@ export default async function HomePage() {
   return (
     <div className="pb-8">
       {PARKING_ONLY && (
-        <section className="bg-ink px-5 pb-10 pt-12 text-ink-text sm:pt-16">
+        <section className="bg-[#3ebf7f] px-5 pb-10 pt-12 text-white sm:pt-16">
           <div className="mx-auto max-w-5xl text-center">
-            <span className="inline-block rounded-full bg-mint/15 px-4 py-1.5 text-sm font-semibold text-[#4fd6b2]">
+            <span className="inline-block rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white">
               {t("heroEyebrow")}
             </span>
             <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-bold leading-tight sm:text-6xl">
               {t("heroTitle")}
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-lg font-medium leading-relaxed text-ink-muted">
+            <p className="mx-auto mt-4 max-w-xl text-lg font-medium leading-relaxed text-white/90">
               {t("heroSubtitle")}
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/search"
-                className="rounded-full bg-mint px-8 py-3.5 text-base font-bold text-mint-ink transition-transform hover:scale-[1.02]"
+                className="rounded-full bg-white px-8 py-3.5 text-base font-bold text-[#1a7a4f] transition-transform hover:scale-[1.02]"
               >
                 {t("heroCtaFind")}
               </Link>
               <Link
                 href="/tjen"
-                className="rounded-full border border-ink-muted/50 px-8 py-3.5 text-base font-semibold text-ink-text transition-colors hover:bg-ink-elevated"
+                className="rounded-full border border-white/60 px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/10"
               >
                 {t("heroCtaRentOut")}
               </Link>
