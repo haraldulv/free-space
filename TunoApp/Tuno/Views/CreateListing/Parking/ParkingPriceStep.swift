@@ -79,6 +79,30 @@ struct ParkingPriceStep: View {
                     FeeBreakdownCard(subtotal: day, unitLabel: "dag")
                 }
 
+                // Utleier skal VITE at prisforslag kan komme (Kim-møtet:
+                // «tydelig for begge parter»).
+                HStack(alignment: .top, spacing: 10) {
+                    Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.neutral700)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Leietakere kan foreslå pris for lengre perioder")
+                            .font(.tuno(.body))
+                            .foregroundStyle(.neutral900)
+                        Text("Du får forslaget i meldinger og bestemmer selv: godta, avslå, eller foreslå en annen pris.")
+                            .font(.tuno(.caption))
+                            .foregroundStyle(.neutral600)
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color.paperCard)
+                .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
+                        .stroke(Color.paperLine, lineWidth: 1)
+                )
+
                 calculatorCard
             }
             .padding(.horizontal, 20)

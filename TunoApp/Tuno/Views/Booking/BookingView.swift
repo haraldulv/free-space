@@ -729,13 +729,19 @@ struct BookingView: View {
                                 monthPlan = false
                             }
                         } label: {
-                            Text("Lengre periode? Foreslå en pris")
-                                .font(.app(size: 13, weight: .medium))
-                                .foregroundStyle(.neutral600)
-                                .underline()
+                            HStack(spacing: 6) {
+                                Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                                    .font(.system(size: 12))
+                                Text("Lengre periode? Foreslå en pris")
+                                    .font(.app(size: 14, weight: .semibold))
+                            }
+                            .foregroundStyle(.neutral900)
+                            .padding(.horizontal, 16)
+                            .padding(.vertical, 9)
+                            .overlay(Capsule().stroke(Color.neutral900, lineWidth: 1.2))
                         }
                         .buttonStyle(.plain)
-                        .padding(.bottom, 2)
+                        .padding(.bottom, 4)
                     }
                 }
             }

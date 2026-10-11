@@ -488,7 +488,8 @@ struct ListingDetailView: View {
                     }
 
                     // «Foreslå pris» (forslag A): avtal lengre periode til
-                    // egen pris direkte med utleier.
+                    // egen pris direkte med utleier. Eget kort i Priser-
+                    // seksjonen — en tekstlenke var for lett å overse.
                     Button {
                         guard authManager.isAuthenticated else {
                             showLogin = true
@@ -503,14 +504,34 @@ struct ListingDetailView: View {
                         tileStartProposal = true
                         showBookingFromTiles = true
                     } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "hand.wave")
-                                .font(.system(size: 13))
-                            Text("Lengre periode? Foreslå en pris")
-                                .font(.tuno(size: 14, weight: .medium))
-                                .underline()
+                        HStack(spacing: 12) {
+                            Image(systemName: "bubble.left.and.text.bubble.right.fill")
+                                .font(.system(size: 18))
+                                .foregroundStyle(.neutral900)
+                                .frame(width: 34, height: 34)
+                                .background(Color.mint.opacity(0.18))
+                                .clipShape(Circle())
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Trenger du plassen lenger?")
+                                    .font(.tuno(.body))
+                                    .foregroundStyle(.neutral900)
+                                Text("Foreslå din egen pris for perioden. Utleier svarer i meldinger.")
+                                    .font(.tuno(.caption))
+                                    .foregroundStyle(.neutral600)
+                            }
+                            Spacer(minLength: 8)
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(.neutral400)
                         }
-                        .foregroundStyle(.neutral600)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.paper)
+                        .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
+                                .stroke(Color.paperLine, lineWidth: 1)
+                        )
                     }
                     .buttonStyle(.plain)
                 }

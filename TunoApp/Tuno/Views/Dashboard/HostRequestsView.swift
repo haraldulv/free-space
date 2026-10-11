@@ -107,8 +107,13 @@ struct HostRequestsView: View {
                     }
                 }
                 Spacer()
-                Text("\(booking.totalPrice) kr")
-                    .font(.system(size: 16, weight: .bold))
+                VStack(alignment: .trailing, spacing: 1) {
+                    Text("\(booking.totalPrice) kr")
+                        .font(.system(size: 16, weight: .bold))
+                    Text("Gjestens forslag")
+                        .font(.app(size: 11))
+                        .foregroundStyle(.neutral500)
+                }
             }
 
             // Nedtelling
@@ -465,6 +470,10 @@ private struct HostRequestDetailSheet: View {
             Text("Du får utbetalt din pris. Tunos servicegebyr betales av gjesten på toppen.")
                 .font(.system(size: 12))
                 .foregroundStyle(.neutral500)
+            Text("Dette er gjestens prisforslag. Du kan godta, avslå, eller åpne samtalen og foreslå en annen pris.")
+                .font(.app(size: 12, weight: .medium))
+                .foregroundStyle(.neutral700)
+                .padding(.top, 2)
         }
     }
 
