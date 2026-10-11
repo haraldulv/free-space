@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await db
       .from("profiles")
-      .select("stripe_account_id, full_name")
+      .select("stripe_account_id, full_name, stripe_onboarding_complete")
       .eq("id", userId)
       .single();
 
@@ -77,6 +77,20 @@ export async function POST(request: NextRequest) {
     // to complete, and `charges_enabled`/`payouts_enabled` to show the final
     // "ready" status.
     const account = await stripe.accounts.retrieve(accountId);
+
+    // Synk fullført-flagget også fra POLLING, ikke bare webhooken.
+    // Uten dette var appen prisgitt account.updated-webhooken (som kan
+    // være treg/feilkonfigurert per miljø) før annonsene ble synlige —
+    // «Stripe-verifisering tar lang tid»-funnet fra Kims test 2026-10-11.
+    const isComplete =
+      (account.charges_enabled ?? false) &&
+      (account.requirements?.currently_due ?? []).length === 0;
+    if (isComplete && profile?.stripe_onboarding_complete !== true) {
+      await db
+        .from("profiles")
+        .update({ stripe_onboarding_complete: true })
+        .eq("id", userId);
+    }
 
     return NextResponse.json({
       accountId,
