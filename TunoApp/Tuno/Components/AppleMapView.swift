@@ -45,6 +45,9 @@ struct ListingMapView: UIViewRepresentable {
     var spotMarkers: [SpotMarker] = []
     var hideExactLocation: Bool = false
     var isSatellite: Bool = false
+    /// Parkering: nærmeste stasjon tegnes som egen pin, og (når adressen er
+    /// synlig) en gangrute fra plassen til stasjonen via MKDirections.
+    var walkToStation: AskerDefaults.TransitStation? = nil
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
@@ -67,6 +70,7 @@ struct ListingMapView: UIViewRepresentable {
         mapView.setRegion(MKCoordinateRegion(center: center, span: span), animated: false)
 
         addAnnotations(to: mapView, coordinator: context.coordinator)
+        addStationIfNeeded(to: mapView)
         return mapView
     }
 
@@ -96,6 +100,39 @@ struct ListingMapView: UIViewRepresentable {
         }
     }
 
+    /// Stasjonspin + gangrute. Ruten hentes asynkront fra MKDirections og
+    /// tegnes som stiplet ink-linje; feiler kallet står pinnen der uansett.
+    /// Med skjult adresse droppes ruten (den ville avslørt presis posisjon).
+    private func addStationIfNeeded(to mapView: MKMapView) {
+        guard let station = walkToStation else { return }
+        let stationCoord = CLLocationCoordinate2D(latitude: station.lat, longitude: station.lng)
+        mapView.addAnnotation(StationAnnotation(coordinate: stationCoord, name: station.name))
+
+        // Utvid synlig region så både plass og stasjon er med.
+        let listingCoord = CLLocationCoordinate2D(latitude: lat, longitude: lng)
+        let center = CLLocationCoordinate2D(
+            latitude: (lat + station.lat) / 2,
+            longitude: (lng + station.lng) / 2
+        )
+        let span = MKCoordinateSpan(
+            latitudeDelta: max(abs(lat - station.lat) * 2.6, 0.006),
+            longitudeDelta: max(abs(lng - station.lng) * 2.6, 0.006)
+        )
+        mapView.setRegion(MKCoordinateRegion(center: center, span: span), animated: false)
+
+        guard !hideExactLocation else { return }
+        let request = MKDirections.Request()
+        request.source = MKMapItem(placemark: MKPlacemark(coordinate: listingCoord))
+        request.destination = MKMapItem(placemark: MKPlacemark(coordinate: stationCoord))
+        request.transportType = .walking
+        Task { @MainActor [weak mapView] in
+            guard let response = try? await MKDirections(request: request).calculate(),
+                  let route = response.routes.first,
+                  let mapView else { return }
+            mapView.addOverlay(route.polyline)
+        }
+    }
+
     final class Coordinator: NSObject, MKMapViewDelegate {
         func mapView(_ mapView: MKMapView, viewFor annotation: MKAnnotation) -> MKAnnotationView? {
             if annotation is MKUserLocation { return nil }
@@ -108,19 +145,50 @@ struct ListingMapView: UIViewRepresentable {
                 view.canShowCallout = false
                 return view
             }
+            if let station = annotation as? StationAnnotation {
+                let id = "station-pin"
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
+                    ?? MKAnnotationView(annotation: station, reuseIdentifier: id)
+                view.annotation = station
+                view.image = MapBubbleRenderer.stationPin()
+                view.canShowCallout = true
+                return view
+            }
             return nil
         }
 
         func mapView(_ mapView: MKMapView, rendererFor overlay: MKOverlay) -> MKOverlayRenderer {
             if let circle = overlay as? MKCircle {
                 let renderer = MKCircleRenderer(circle: circle)
-                renderer.fillColor = TunoColors.green.withAlphaComponent(0.15)
-                renderer.strokeColor = TunoColors.green.withAlphaComponent(0.5)
+                let tone = AppConfig.parkingOnly ? TunoColors.ink : TunoColors.green
+                renderer.fillColor = tone.withAlphaComponent(0.15)
+                renderer.strokeColor = tone.withAlphaComponent(0.5)
                 renderer.lineWidth = 2
+                return renderer
+            }
+            if let polyline = overlay as? MKPolyline {
+                // Gangrute: stiplet ink-linje i plakatens strek-stil.
+                let renderer = MKPolylineRenderer(polyline: polyline)
+                renderer.strokeColor = TunoColors.ink
+                renderer.lineWidth = 3.5
+                renderer.lineDashPattern = [1, 7]
+                renderer.lineCap = .round
                 return renderer
             }
             return MKOverlayRenderer(overlay: overlay)
         }
+    }
+}
+
+/// Togstasjon-pin på kartene (parkering): egen annotasjon så vi ikke er
+/// avhengige av Apples egne POI-etiketter, som er upålitelige per zoom.
+final class StationAnnotation: NSObject, MKAnnotation {
+    let coordinate: CLLocationCoordinate2D
+    let name: String
+    var title: String? { name }
+    init(coordinate: CLLocationCoordinate2D, name: String) {
+        self.coordinate = coordinate
+        self.name = name
     }
 }
 
@@ -221,7 +289,12 @@ struct SearchMapView: UIViewRepresentable {
         mapView.isRotateEnabled = false
         mapView.showsCompass = false
         mapView.showsScale = false
-        mapView.showsPointsOfInterest = false
+        // Parkering: kollektivstopp er kjøpskriterium nr. 1 — vis transit-POI
+        // (Apples egne etiketter) i tillegg til våre faste stasjonspins under.
+        // Camping beholder helt rent kart som før.
+        mapView.pointOfInterestFilter = AppConfig.parkingOnly
+            ? MKPointOfInterestFilter(including: [.publicTransport])
+            : .excludingAll
         mapView.delegate = context.coordinator
 
         let key = Self.searchKey(lat: centerLat, lng: centerLng, zoom: centerZoom)
@@ -255,6 +328,18 @@ struct SearchMapView: UIViewRepresentable {
         context.coordinator.searchNights = searchNights
 
         addMarkers(to: mapView, coordinator: context.coordinator)
+
+        // Parkering: faste stasjonspins (Asker-stasjonene). Egne annotasjoner
+        // er pålitelige på alle zoom-nivåer, i motsetning til Apples POI.
+        // Legges til én gang og røres aldri av markør-diffen.
+        if AppConfig.parkingOnly {
+            for station in AskerDefaults.stations {
+                mapView.addAnnotation(StationAnnotation(
+                    coordinate: CLLocationCoordinate2D(latitude: station.lat, longitude: station.lng),
+                    name: station.name
+                ))
+            }
+        }
         return mapView
     }
 
@@ -555,6 +640,18 @@ struct SearchMapView: UIViewRepresentable {
                 view.image = MapBubbleRenderer.clusterBubble(count: cluster.count)
                 view.canShowCallout = false
                 view.centerOffset = CGPoint(x: 0, y: 0)
+                return view
+            }
+
+            if let station = annotation as? StationAnnotation {
+                let id = "station-pin"
+                let view = mapView.dequeueReusableAnnotationView(withIdentifier: id)
+                    ?? MKAnnotationView(annotation: station, reuseIdentifier: id)
+                view.annotation = station
+                view.image = MapBubbleRenderer.stationPin()
+                view.canShowCallout = true
+                // Under prisbobler ved overlapp — stasjonen er kontekst.
+                view.zPriority = .min
                 return view
             }
 
@@ -889,6 +986,39 @@ enum MapBubbleRenderer {
         return image
     }
 
+    nonisolated(unsafe) private static var stationPinCache: UIImage?
+
+    /// Togstasjon-pin: ink-sirkel med hvitt tram-symbol og hvit ring.
+    /// Liten (26pt) så den leses som kontekst, ikke som en annonse.
+    static func stationPin() -> UIImage {
+        if let cached = stationPinCache { return cached }
+        let size: CGFloat = 26
+        let imgSize = CGSize(width: size + 4, height: size + 4)
+        let renderer = UIGraphicsImageRenderer(size: imgSize)
+        let image = renderer.image { ctx in
+            let circleRect = CGRect(x: 2, y: 2, width: size, height: size)
+            ctx.cgContext.setFillColor(TunoColors.ink.cgColor)
+            ctx.cgContext.fillEllipse(in: circleRect)
+            ctx.cgContext.setStrokeColor(UIColor.white.cgColor)
+            ctx.cgContext.setLineWidth(2)
+            ctx.cgContext.strokeEllipse(in: circleRect)
+
+            let cfg = UIImage.SymbolConfiguration(pointSize: 12, weight: .semibold)
+            if let tram = UIImage(systemName: "tram.fill", withConfiguration: cfg)?
+                .withTintColor(.white, renderingMode: .alwaysOriginal) {
+                let glyphSize = tram.size
+                tram.draw(in: CGRect(
+                    x: (imgSize.width - glyphSize.width) / 2,
+                    y: (imgSize.height - glyphSize.height) / 2,
+                    width: glyphSize.width,
+                    height: glyphSize.height
+                ))
+            }
+        }
+        stationPinCache = image
+        return image
+    }
+
     nonisolated(unsafe) private static var mainPinCache: UIImage?
 
     /// Hovedposisjon-pin (rød). Bruker statisk UIImage på en custom
@@ -990,9 +1120,10 @@ enum MapBubbleRenderer {
         let imgSize = CGSize(width: size + 4, height: size + 4)
         let renderer = UIGraphicsImageRenderer(size: imgSize)
         let image = renderer.image { ctx in
-            // Hvit ring rundt sirkel
+            // Hvit ring rundt sirkel. Parkering (palett C): ink, ikke grønn.
             let circleRect = CGRect(x: 2, y: 2, width: size, height: size)
-            ctx.cgContext.setFillColor(TunoColors.green.cgColor)
+            let fill = AppConfig.parkingOnly ? TunoColors.ink : TunoColors.green
+            ctx.cgContext.setFillColor(fill.cgColor)
             ctx.cgContext.fillEllipse(in: circleRect)
             ctx.cgContext.setStrokeColor(UIColor.white.cgColor)
             ctx.cgContext.setLineWidth(2)

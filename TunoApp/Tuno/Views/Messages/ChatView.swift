@@ -190,6 +190,20 @@ struct ChatView: View {
                                 )
                                 .id(message.id)
                             }
+
+                            // «Sendt»/«Sett» under siste egen melding (iMessage-
+                            // mønsteret). `read` settes når motparten åpner
+                            // samtalen; statusen oppdateres ved neste last.
+                            if AppConfig.parkingOnly,
+                               isMe,
+                               index == chatService.messages.count - 1,
+                               !message.isSystem, !message.isOfferAccepted, !message.isOfferDeclined {
+                                Text(message.read ? "Sett" : "Sendt")
+                                    .font(.app(size: 11, weight: .medium))
+                                    .foregroundStyle(.neutral400)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                                    .padding(.trailing, 4)
+                            }
                         }
 
                         if let typicalResponseTime = conversationDetails?.typicalResponseTime {

@@ -221,13 +221,21 @@ export async function POST(request: NextRequest) {
 
     const { data: rawOverlap } = await supabase
       .from("bookings")
-      .select("selected_spot_ids, check_in, check_out")
+      .select("selected_spot_ids, check_in, check_out, status, created_at")
       .eq("listing_id", listingId)
       .in("status", ["confirmed", "pending", "requested"])
       .lt("check_in", checkOut)
       .gt("check_out", checkIn);
 
-    const overlappingBookings = rawOverlap || [];
+    // «pending» er en betaling underveis. Forlatte betalinger (lukket app,
+    // avbrutt Apple Pay) skal ikke blokkere kalenderen for alltid — de
+    // regnes som døde etter 30 minutter.
+    const PENDING_TTL_MS = 30 * 60 * 1000;
+    const overlappingBookings = (rawOverlap || []).filter(
+      (row) =>
+        row.status !== "pending" ||
+        new Date(row.created_at).getTime() > Date.now() - PENDING_TTL_MS,
+    );
 
     const bookedCount = overlappingBookings.reduce((sum, row) => {
       const ids = row.selected_spot_ids as string[] | null;

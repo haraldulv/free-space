@@ -233,6 +233,9 @@ struct ListingDetailView: View {
                     lng: lng,
                     spotMarkers: listing.spotMarkers ?? [],
                     hideExactLocation: listing.hideExactLocation ?? false,
+                    walkToStation: listing.category == .parking
+                        ? AskerDefaults.nearestTransitStation(lat: lat, lng: lng)
+                        : nil,
                     isSatellite: $isSatellite
                 )
             }
@@ -333,6 +336,9 @@ struct ListingDetailView: View {
                     lng: lng,
                     spotMarkers: listing.spotMarkers ?? [],
                     hideExactLocation: listing.hideExactLocation ?? false,
+                    walkToStation: listing.category == .parking
+                        ? AskerDefaults.nearestTransitStation(lat: lat, lng: lng)
+                        : nil,
                     isSatellite: $isSatellite
                 )
             }
@@ -1421,7 +1427,11 @@ struct ListingDetailView: View {
                             lng: lng,
                             spotMarkers: listing.spotMarkers ?? [],
                             hideExactLocation: hideExact,
-                            isSatellite: isSatellite
+                            isSatellite: isSatellite,
+                            // Parkering: stasjonspin + gangrute til nærmeste stasjon.
+                            walkToStation: listing.category == .parking
+                                ? AskerDefaults.nearestTransitStation(lat: lat, lng: lng)
+                                : nil
                         )
                         .frame(height: 240)
                         .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -2214,6 +2224,7 @@ private struct FullscreenMapView: View {
     let lng: Double
     let spotMarkers: [SpotMarker]
     let hideExactLocation: Bool
+    var walkToStation: AskerDefaults.TransitStation? = nil
     @Binding var isSatellite: Bool
     @Environment(\.dismiss) private var dismiss
 
@@ -2224,7 +2235,8 @@ private struct FullscreenMapView: View {
                 lng: lng,
                 spotMarkers: spotMarkers,
                 hideExactLocation: hideExactLocation,
-                isSatellite: isSatellite
+                isSatellite: isSatellite,
+                walkToStation: walkToStation
             )
             .ignoresSafeArea()
 

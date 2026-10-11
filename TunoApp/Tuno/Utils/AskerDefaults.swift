@@ -39,6 +39,20 @@ enum AskerDefaults {
         }
     }
 
+    /// Nærmeste stasjon MED koordinater — til kartpins og gangrute.
+    static func nearestTransitStation(lat: Double, lng: Double, maxKm: Double = 2.0) -> TransitStation? {
+        var best: TransitStation?
+        var bestKm = Double.greatestFiniteMagnitude
+        for station in stations {
+            let km = haversineKm(lat1: lat, lng1: lng, lat2: station.lat, lng2: station.lng)
+            if km <= maxKm && km < bestKm {
+                best = station
+                bestKm = km
+            }
+        }
+        return best
+    }
+
     /// Nærmeste stasjon fra et punkt, eller nil hvis alt er langt unna
     /// (annonser utenfor Asker-området skal ikke få et misvisende kort).
     static func nearestStation(lat: Double, lng: Double, maxKm: Double = 2.0) -> NearestStation? {

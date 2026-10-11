@@ -316,6 +316,9 @@ final class BookingService: ObservableObject {
                 .select("check_in, check_out, selected_spot_ids")
                 .eq("listing_id", value: listingId)
                 .in("status", values: ["confirmed", "pending", "requested"])
+                // Forlatte «pending»-betalinger (lukket app midt i betaling)
+                // blokkerer ikke kalenderen: pending teller kun i 30 min.
+                .or("status.neq.pending,created_at.gte.\(Self.pendingCutoffISO())")
                 .gte("check_out", value: today)
                 .execute()
                 .value
@@ -410,6 +413,8 @@ final class BookingService: ObservableObject {
                 .select("id", head: true, count: .exact)
                 .eq("listing_id", value: listingId)
                 .in("status", values: ["confirmed", "pending", "requested"])
+                // Samme stale-pending-regel som fetchBookedDates/serveren.
+                .or("status.neq.pending,created_at.gte.\(Self.pendingCutoffISO())")
                 .lt("check_in", value: checkOut)
                 .gt("check_out", value: checkIn)
                 .execute()
@@ -420,5 +425,15 @@ final class BookingService: ObservableObject {
             print("checkAvailability error: \(error)")
             return (available: 0, total: 0)
         }
+    }
+
+    /// ISO-tidspunkt 30 minutter tilbake: pending-bookinger eldre enn dette
+    /// regnes som forlatte betalinger og blokkerer ikke tilgjengelighet.
+    private static func pendingCutoffISO() -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
+        f.timeZone = TimeZone(identifier: "UTC")
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f.string(from: Date(timeIntervalSinceNow: -30 * 60))
     }
 }

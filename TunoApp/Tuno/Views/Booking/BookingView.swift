@@ -146,6 +146,7 @@ struct BookingView: View {
     @State private var showCardForm = false
     @State private var applePayHandler: ApplePayHandler?
     @State private var isApplePayLoading = false
+    @State private var isCreatingBooking = false
     @State private var requestSending = false
     @State private var requestError: String?
     @State private var showRequestSent = false
@@ -496,7 +497,8 @@ struct BookingView: View {
                     .background(Color.orange.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                if !hasSpotLevelPricing, let available = availableSpots, let total = totalSpots, total > 1 {
+                if !hasSpotLevelPricing, let available = availableSpots, let total = totalSpots,
+                   total > 1 || (listing.category == .parking && total >= 1) {
                     Divider()
                     HStack(spacing: 6) {
                         Image(systemName: available > 0 ? "checkmark.circle.fill" : "xmark.circle.fill")
@@ -556,6 +558,16 @@ struct BookingView: View {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 8) {
                 Divider()
+
+                // Uten denne sto brukeren med «døde» betalingsknapper og null
+                // forklaring når alle plassene var tatt for valgte datoer.
+                if hasDates, availableSpots == 0 {
+                    Text("Fullbooket for valgte datoer. Prøv andre datoer.")
+                        .font(.app(size: 13, weight: .semibold))
+                        .foregroundStyle(.red)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 20)
+                }
 
                 // Forespørsel-flyt for instant_booking=false: ingen Stripe ved
                 // request, bare DB. Gjest sender, host godtar/motbyr i chat,
@@ -1761,6 +1773,11 @@ struct BookingView: View {
     private func createBookingIfNeeded() async {
         guard bookingService.clientSecret == nil else { return }
         guard let ci = checkIn, let co = checkOut else { return }
+        // Re-entry-vern: to raske tap (eller Apple Pay + kort om hverandre)
+        // skal aldri kunne opprette to pending-bookinger på serveren.
+        guard !isCreatingBooking else { return }
+        isCreatingBooking = true
+        defer { isCreatingBooking = false }
 
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
