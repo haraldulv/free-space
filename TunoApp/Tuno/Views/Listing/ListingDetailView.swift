@@ -1184,17 +1184,23 @@ struct ListingDetailView: View {
     }
 
     private func hostSubtitle(listing: Listing) -> String {
+        // Synlige annonser krever fullført Stripe-KYC (host_stripe_ready),
+        // så utleieren her er alltid identitets- og bankverifisert. I
+        // parkering sier vi det eksplisitt; camping beholder gammel tekst.
+        let brand = AppConfig.parkingOnly ? "Verifisert utleier" : "Tuno-vert"
         let reviews = hostStats?.reviewCount ?? 0
         if reviews > 0, let rating = hostStats?.rating, rating > 0 {
             let ratingStr = String(format: "%.1f", rating).replacingOccurrences(of: ".", with: ",")
-            return "Tuno-vert · \(ratingStr) ★ · \(reviews) \(reviews == 1 ? "anmeldelse" : "anmeldelser")"
+            return "\(brand) · \(ratingStr) ★ · \(reviews) \(reviews == 1 ? "anmeldelse" : "anmeldelser")"
         }
         let joined = hostStats?.joinedYear ?? listing.hostJoinedYear ?? 0
         let years = joined > 0 ? max(Calendar.current.component(.year, from: Date()) - joined, 0) : 0
         if years > 0 {
-            return "Tuno-vert · \(years) år som vertskap"
+            return "\(brand) · \(years) år som vertskap"
         }
-        return "Tuno-vert"
+        return AppConfig.parkingOnly
+            ? "Verifisert utleier · Identitet og bankkonto bekreftet"
+            : "Tuno-vert"
     }
 
     // MARK: - Gjeste-favoritt badge

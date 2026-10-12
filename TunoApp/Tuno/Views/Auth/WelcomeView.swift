@@ -19,19 +19,11 @@ struct WelcomeView: View {
                 .scaledToFit()
                 .frame(height: 40)
 
-            Text("Parkering i Asker")
-                .font(.tuno(size: 13, weight: .semibold))
-                .foregroundStyle(Color.inkText)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(Color.white.opacity(0.12), in: Capsule())
-                .padding(.top, 24)
-
             Text("Finn eller lei ut parkeringsplass")
                 .font(.tuno(.display))
                 .foregroundStyle(Color.inkText)
                 .multilineTextAlignment(.center)
-                .padding(.top, 14)
+                .padding(.top, 28)
 
             Spacer(minLength: 24)
 

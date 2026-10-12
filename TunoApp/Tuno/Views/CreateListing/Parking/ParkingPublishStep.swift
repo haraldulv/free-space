@@ -104,8 +104,8 @@ struct ParkingPublishStep: View {
             default: return "Parkeringsplass"
             }
         }()
-        let place = form.city.isEmpty ? "Asker" : form.city
-        return "\(typeName) i \(place)"
+        // Uten by: ikke gjett geografi — bare plasstypen.
+        return form.city.isEmpty ? typeName : "\(typeName) i \(form.city)"
     }
 
     private var summaryCard: some View {

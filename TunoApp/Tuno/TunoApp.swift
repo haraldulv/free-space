@@ -199,16 +199,25 @@ struct TunoApp: App {
                         withAnimation(.easeInOut(duration: 0.3)) { didSkipWelcome = true }
                     })
                     .transition(.opacity)
+                } else if AppConfig.parkingOnly && authManager.pendingRolePick {
+                    // Helt ny bruker: velg rolle (finn parkering / lei ut)
+                    // før MainTabView tar over.
+                    RolePickerView()
+                        .transition(.opacity)
                 } else {
                     MainTabView()
                         .transition(.opacity)
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: authManager.isAuthenticated)
+            .animation(.easeInOut(duration: 0.3), value: authManager.pendingRolePick)
             // Deep links til annonser skal rett til innholdet, ikke stoppes
-            // av velkomstskjermen.
+            // av velkomstskjermen eller rollevalget.
             .onChange(of: deepLinkManager.pendingListingId, initial: true) {
-                if deepLinkManager.pendingListingId != nil { didSkipWelcome = true }
+                if deepLinkManager.pendingListingId != nil {
+                    didSkipWelcome = true
+                    if authManager.pendingRolePick { authManager.completeRolePick() }
+                }
             }
             .environmentObject(authManager)
             .environmentObject(favoritesService)
@@ -223,16 +232,28 @@ struct TunoApp: App {
                 Task {
                     if authManager.isAuthenticated, let userId = authManager.currentUser?.id {
                         await favoritesService.loadFavorites(userId: userId.uuidString)
-                        PushNotificationManager.shared.requestPermission()
+                        // Ikke be om push-tillatelse mens rollevalget vises —
+                        // iOS-dialogen ville lagt seg over skjermen. Spørres
+                        // i stedet når pendingRolePick flipper til false.
+                        if !authManager.pendingRolePick {
+                            PushNotificationManager.shared.requestPermission()
+                        }
                     } else {
                         favoritesService.favoriteIds = []
                     }
                 }
             }
+            .onChange(of: authManager.pendingRolePick) {
+                if !authManager.pendingRolePick && authManager.isAuthenticated {
+                    PushNotificationManager.shared.requestPermission()
+                }
+            }
             .task {
                 if authManager.isAuthenticated, let userId = authManager.currentUser?.id {
                     await favoritesService.loadFavorites(userId: userId.uuidString)
-                    PushNotificationManager.shared.requestPermission()
+                    if !authManager.pendingRolePick {
+                        PushNotificationManager.shared.requestPermission()
+                    }
                 }
             }
             .onOpenURL { url in

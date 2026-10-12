@@ -149,6 +149,17 @@ struct PublicProfileView: View {
         VStack(spacing: 6) {
             Text(profile?.fullName ?? initialName ?? "Utleier")
                 .font(.system(size: 22, weight: .bold))
+            // Parkering: si eksplisitt hva seglet betyr. Camping urørt.
+            if isVerified && AppConfig.parkingOnly {
+                HStack(spacing: 5) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 13))
+                        .foregroundStyle(Color.ink)
+                    Text("Verifisert utleier · Identitet og bankkonto bekreftet")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.neutral600)
+                }
+            }
             if let loc = profile?.location, !loc.isEmpty {
                 Text(loc)
                     .font(.system(size: 14))

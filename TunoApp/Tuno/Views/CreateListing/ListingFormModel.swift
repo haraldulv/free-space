@@ -596,8 +596,8 @@ final class ListingFormModel: ObservableObject {
                 default: return "Parkeringsplass"
                 }
             }()
-            let place = !city.isEmpty ? city : "Asker"
-            return "\(typeName) i \(place)"
+            // Uten by: ikke gjett geografi — bare plasstypen.
+            return city.isEmpty ? typeName : "\(typeName) i \(city)"
         }()
 
         var periods = ["DAY"]

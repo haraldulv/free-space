@@ -11,6 +11,13 @@ final class AuthManager: ObservableObject {
     @Published var profile: Profile?
     @Published var error: String?
 
+    /// Helt ny bruker skal velge rolle (finn parkering / lei ut) én gang
+    /// rett etter registrering. Roten i TunoApp viser RolePickerView så
+    /// lenge denne er true. Persisteres per bruker i UserDefaults så
+    /// valget aldri dukker opp igjen, heller ikke etter reinstall-fri
+    /// restart midt i 15-minutters-vinduet.
+    @Published var pendingRolePick = false
+
     init() {
         Task {
             await checkSession()
@@ -36,6 +43,7 @@ final class AuthManager: ObservableObject {
             currentUser = session.user
             isAuthenticated = true
             await loadProfile()
+            evaluateRolePick()
         } catch {
             isAuthenticated = false
             currentUser = nil
@@ -51,15 +59,41 @@ final class AuthManager: ObservableObject {
                     currentUser = session?.user
                     isAuthenticated = true
                     await loadProfile()
+                    evaluateRolePick()
                 case .signedOut:
                     currentUser = nil
                     profile = nil
                     isAuthenticated = false
+                    pendingRolePick = false
                 default:
                     break
                 }
             }
         }
+    }
+
+    // MARK: - Rollevalg etter registrering
+
+    /// «Ny konto» = opprettet for under 15 minutter siden. Dekker både
+    /// OAuth (innlogget umiddelbart) og e-post-signup (autentiseres først
+    /// via verifiseringslenken, normalt innen få minutter). Eldre kontoer
+    /// markeres ferdig med en gang så sjekken aldri gjentas.
+    private func evaluateRolePick() {
+        guard AppConfig.parkingOnly, let user = currentUser else { return }
+        let key = "rolePickDone:\(user.id.uuidString)"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+        guard Date().timeIntervalSince(user.createdAt) < 15 * 60 else {
+            UserDefaults.standard.set(true, forKey: key)
+            return
+        }
+        pendingRolePick = true
+    }
+
+    func completeRolePick() {
+        if let user = currentUser {
+            UserDefaults.standard.set(true, forKey: "rolePickDone:\(user.id.uuidString)")
+        }
+        pendingRolePick = false
     }
 
     func loadProfile() async {
@@ -76,8 +110,8 @@ final class AuthManager: ObservableObject {
         } catch {
             // PGRST116 = ingen profil-rad fantes. Skjer når e-post-signup
             // sin profile-insert ble blokkert av RLS før verifisering. Vi
-            // upserter nå fra user_metadata så brukerens navn og avatar
-            // blir riktig vist i UI-et fra første sekund.
+            // upserter nå fra user_metadata så brukerens navn blir riktig
+            // vist i UI-et fra første sekund.
             print("Failed to load profile: \(error)")
             await ensureProfileExists()
         }
@@ -85,24 +119,21 @@ final class AuthManager: ObservableObject {
     }
 
     /// Opprett profile-rad hvis den mangler. Bruker user_metadata fra Supabase
-    /// auth (som har full_name fra signUp data, eller name/picture fra OAuth).
+    /// auth (som har full_name fra signUp data, eller name fra OAuth).
+    /// Google-avatar kopieres bevisst IKKE inn: monogrammene deres skal ikke
+    /// inn i Tuno — brukere laster opp eget bilde i stedet.
     private func ensureProfileExists() async {
         guard let user = currentUser else { return }
         let metadata = user.userMetadata
         let fullName = metadata["full_name"]?.stringValue
             ?? metadata["name"]?.stringValue
             ?? ""
-        let avatarURL = metadata["avatar_url"]?.stringValue
-            ?? metadata["picture"]?.stringValue
 
-        var payload: [String: String] = [
+        let payload: [String: String] = [
             "id": user.id.uuidString.lowercased(),
             "full_name": fullName,
             "terms_accepted_at": ISO8601DateFormatter().string(from: Date()),
         ]
-        if let avatarURL, !avatarURL.isEmpty {
-            payload["avatar_url"] = avatarURL
-        }
 
         do {
             try await supabase.from("profiles").upsert(payload).execute()
@@ -202,29 +233,19 @@ final class AuthManager: ObservableObject {
                 launchFlow: launchFlow
             )
 
-            // Google leverer fullt navn + profilbilde i user_metadata.
-            // Upsert profilen så verten får navn + bilde i appen — MEN bare
-            // sett avatar_url hvis brukeren ikke allerede har lastet opp et
-            // eget bilde via Supabase Storage. Ellers ville Google's avatar
-            // overskrive brukerens valg ved hver innlogging.
+            // Google leverer fullt navn i user_metadata — upsert profilen så
+            // verten får riktig navn i appen. Googles avatar kopieres bevisst
+            // IKKE: auto-monogrammene deres skal ikke inn i Tuno, og eget
+            // opplastet bilde skal aldri overskrives.
             if let user = try? await supabase.auth.session.user {
                 let metadata = user.userMetadata
                 let fullName = metadata["full_name"]?.stringValue
                     ?? metadata["name"]?.stringValue
-                let avatarURL = metadata["avatar_url"]?.stringValue
-                    ?? metadata["picture"]?.stringValue
                 if let fullName, !fullName.isEmpty {
-                    var payload: [String: String] = [
+                    let payload: [String: String] = [
                         "id": user.id.uuidString.lowercased(),
                         "full_name": fullName,
                     ]
-                    // Sjekk eksisterende profile: behold custom avatar (Storage-URL)
-                    // og bare sett Google-avatar hvis avatar_url er nil/tom.
-                    let existingAvatar = await currentAvatarUrl(userId: user.id.uuidString)
-                    if let avatarURL, !avatarURL.isEmpty,
-                       (existingAvatar?.isEmpty ?? true) {
-                        payload["avatar_url"] = avatarURL
-                    }
                     try? await supabase.from("profiles").upsert(payload).execute()
                     // Refresh in-memory profile fordi auth-listeneren
                     // kjørte loadProfile() før vi rakk å upserte.
@@ -392,24 +413,6 @@ final class AuthManager: ObservableObject {
             }
             self.error = "Vipps-flyten feilet"
             return false
-        }
-    }
-
-    /// Henter eksisterende avatar_url for brukeren slik at OAuth-login ikke
-    /// overskriver et brukervalgt bilde.
-    private func currentAvatarUrl(userId: String) async -> String? {
-        struct Row: Decodable { let avatar_url: String? }
-        do {
-            let rows: [Row] = try await supabase
-                .from("profiles")
-                .select("avatar_url")
-                .eq("id", value: userId)
-                .limit(1)
-                .execute()
-                .value
-            return rows.first?.avatar_url
-        } catch {
-            return nil
         }
     }
 
