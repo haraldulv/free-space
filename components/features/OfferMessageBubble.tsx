@@ -36,7 +36,10 @@ export default function OfferMessageBubble({
   onDecline,
 }: OfferMessageBubbleProps) {
   const countdown = useExpiryCountdown(metadata.expiresAt);
-  const dateRange = formatDateRange(metadata.checkIn, metadata.checkOut);
+  // Multi-velg (parkering): vis antall valgte dager i tillegg til spennet.
+  const dayCount = metadata.dayCount ?? metadata.bookedDates?.length;
+  const range = formatDateRange(metadata.checkIn, metadata.checkOut);
+  const dateRange = dayCount && range ? `${dayCount} dager · ${range}` : range;
 
   const roleLabel =
     metadata.proposedByRole === "host"

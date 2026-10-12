@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, host_id, status, payment_intent_id, approval_deadline, user_id, listing_id, check_in, check_out, total_price, selected_extras")
+      .select("id, host_id, status, payment_intent_id, approval_deadline, user_id, listing_id, check_in, check_out, booked_dates, total_price, selected_extras")
       .eq("id", bookingId)
       .single();
 
@@ -94,6 +94,7 @@ export async function POST(request: NextRequest) {
             listingImage: listing?.images?.[0] ?? null,
             checkIn: booking.check_in,
             checkOut: booking.check_out,
+            bookedDates: booking.booked_dates ?? null,
             totalPrice: booking.total_price,
             selectedExtras: booking.selected_extras,
           }).catch((err) => console.error("[Email] approve failed:", err)),

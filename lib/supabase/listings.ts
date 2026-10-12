@@ -2,6 +2,7 @@ import { createClient } from "./server";
 import type { Listing, SearchFilters, ListingCategory, Amenity, SpotMarker, VehicleType, ParkingType, PricePackagePeriodType } from "@/types";
 import { vehicleFitsIn, derivePeriodTypesFromSpots } from "@/types";
 import { haversineKm } from "@/lib/geo";
+import { bookingDays, peakOccupancy, occupiedSpotIds, type BookingDayRow } from "@/lib/booking-days";
 
 /**
  * Deterministisk fuzz av lat/lng for listings med hide_exact_location=true.
@@ -203,7 +204,8 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
     // Enrich listings with available spots count
     const listingIds = listings.map((l) => l.id);
     if (listingIds.length > 0) {
-      const bookedCounts = await getBookedSpotsCounts(supabase, listingIds, filters.checkIn, filters.checkOut);
+      const parkingIds = new Set(listings.filter((l) => l.category === "parking").map((l) => l.id));
+      const bookedCounts = await getBookedSpotsCounts(supabase, listingIds, parkingIds, requestedDates);
       listings = listings.map((l) => ({
         ...l,
         availableSpots: l.spots - (bookedCounts.get(l.id) || 0),
@@ -216,29 +218,47 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
   return listings;
 }
 
-/** Count booked spots per listing for a date range */
+/**
+ * Høyeste belegg per annonse over de forespurte dagene. Per-dag-telling via
+ * listings_booked_ranges-RPC-en (security definer — bookings-RLS skjuler
+ * andres rader for vanlige klienter) slik at en man-ons-booking ikke stenger
+ * tor-fre, og multi-velg-bookinger (booked_dates med hull) telles riktig.
+ * Parkering teller siste dag inklusivt; camping beholder eksklusiv utsjekksdag.
+ */
 async function getBookedSpotsCounts(
   supabase: Awaited<ReturnType<typeof createClient>>,
   listingIds: string[],
-  checkIn: string,
-  checkOut: string,
+  parkingIds: Set<string>,
+  requestedDates: string[],
 ): Promise<Map<string, number>> {
-  const { data } = await supabase
-    .from("bookings")
-    .select("listing_id, selected_spot_ids")
-    .in("listing_id", listingIds)
-    .in("status", ["confirmed", "pending", "requested"])
-    .lt("check_in", checkOut)
-    .gt("check_out", checkIn);
+  const { data } = await supabase.rpc("listings_booked_ranges", {
+    p_listing_ids: listingIds,
+  });
+
+  const rowsByListing = new Map<string, BookingDayRow[]>();
+  for (const row of (data as (BookingDayRow & { listing_id: string })[] | null) || []) {
+    const list = rowsByListing.get(row.listing_id) ?? [];
+    list.push(row);
+    rowsByListing.set(row.listing_id, list);
+  }
+
+  // Camping: utsjekksdagen i søket er ikke en natt — tell den ikke.
+  const requestedNights = requestedDates.length > 1 ? requestedDates.slice(0, -1) : requestedDates;
 
   const counts = new Map<string, number>();
-  for (const row of data || []) {
-    const id = row.listing_id as string;
-    const spotIds = row.selected_spot_ids as string[] | null;
-    const increment = spotIds && spotIds.length > 0 ? spotIds.length : 1;
-    counts.set(id, (counts.get(id) || 0) + increment);
+  for (const [id, rows] of rowsByListing) {
+    const isParking = parkingIds.has(id);
+    counts.set(id, peakOccupancy(rows, isParking ? requestedDates : requestedNights, isParking));
   }
   return counts;
+}
+
+/** Dagene et web-søk/booking-skjema spør om, med riktig kategorisemantikk. */
+function requestedDaysFor(checkIn: string, checkOut: string, isParking: boolean): string[] {
+  const all = getDateRange(checkIn, checkOut);
+  if (isParking || all.length <= 1) return all;
+  // Camping: utsjekksdagen er ikke en natt.
+  return all.slice(0, -1);
 }
 
 /** Get available spots for a single listing in a date range */
@@ -251,26 +271,20 @@ export async function getAvailableSpots(
 
   const { data: listing } = await supabase
     .from("listings")
-    .select("spots")
+    .select("spots, category")
     .eq("id", listingId)
     .single();
 
   if (!listing) return 0;
 
-  const { data: overlapping } = await supabase
-    .from("bookings")
-    .select("selected_spot_ids")
-    .eq("listing_id", listingId)
-    .in("status", ["confirmed", "pending", "requested"])
-    .lt("check_in", checkOut)
-    .gt("check_out", checkIn);
+  const isParking = listing.category === "parking";
+  const { data } = await supabase.rpc("listings_booked_ranges", {
+    p_listing_ids: [listingId],
+  });
+  const rows = ((data as BookingDayRow[] | null) || []);
+  const peak = peakOccupancy(rows, requestedDaysFor(checkIn, checkOut, isParking), isParking);
 
-  const bookedCount = (overlapping || []).reduce((sum, row) => {
-    const ids = row.selected_spot_ids as string[] | null;
-    return sum + (ids && ids.length > 0 ? ids.length : 1);
-  }, 0);
-
-  return listing.spots - bookedCount;
+  return listing.spots - peak;
 }
 
 /**
@@ -284,20 +298,19 @@ export async function getBookedSpotIds(
   checkOut: string,
 ): Promise<Set<string>> {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("bookings")
-    .select("selected_spot_ids")
-    .eq("listing_id", listingId)
-    .in("status", ["confirmed", "pending", "requested"])
-    .lt("check_in", checkOut)
-    .gt("check_out", checkIn);
 
-  const booked = new Set<string>();
-  for (const row of data || []) {
-    const ids = row.selected_spot_ids as string[] | null;
-    (ids || []).forEach((id) => booked.add(id));
-  }
-  return booked;
+  const { data: listing } = await supabase
+    .from("listings")
+    .select("category")
+    .eq("id", listingId)
+    .single();
+  const isParking = listing?.category === "parking";
+
+  const { data } = await supabase.rpc("listings_booked_ranges", {
+    p_listing_ids: [listingId],
+  });
+  const rows = ((data as BookingDayRow[] | null) || []);
+  return occupiedSpotIds(rows, requestedDaysFor(checkIn, checkOut, isParking), isParking);
 }
 
 /**
@@ -310,28 +323,25 @@ export async function getFutureBookedDates(
   listingId: string,
 ): Promise<{ perSpot: Record<string, string[]>; perDateCount: Record<string, number> }> {
   const supabase = await createClient();
-  const today = new Date().toISOString().slice(0, 10);
 
-  const { data } = await supabase
-    .from("bookings")
-    .select("check_in, check_out, selected_spot_ids")
-    .eq("listing_id", listingId)
-    .in("status", ["confirmed", "pending", "requested"])
-    .gte("check_out", today);
+  // RPC-en (security definer) ser ALLE bookinger — vanlige klienter har bare
+  // RLS-innsyn i sine egne, så kalenderen gråer ellers bare ut egne datoer.
+  const [{ data: listing }, { data }] = await Promise.all([
+    supabase.from("listings").select("category").eq("id", listingId).single(),
+    supabase.rpc("listings_booked_ranges", { p_listing_ids: [listingId] }),
+  ]);
+  // Parkering: siste dag er betalt og opptatt (inklusiv). Camping: utsjekks-
+  // dagen er ledig for neste gjest (eksklusiv — uendret oppførsel).
+  const inclusiveEnd = listing?.category === "parking";
 
   const perSpot: Record<string, Set<string>> = {};
   const perDateCount: Record<string, number> = {};
 
-  for (const row of data || []) {
-    const checkIn = row.check_in as string;
-    const checkOut = row.check_out as string;
+  for (const row of ((data as BookingDayRow[] | null) || [])) {
     const spotIds = row.selected_spot_ids as string[] | null;
     const occupies = spotIds && spotIds.length > 0 ? spotIds.length : 1;
 
-    const cursor = new Date(checkIn + "T00:00:00");
-    const end = new Date(checkOut + "T00:00:00");
-    while (cursor < end) {
-      const d = cursor.toISOString().slice(0, 10);
+    for (const d of bookingDays(row, inclusiveEnd)) {
       perDateCount[d] = (perDateCount[d] || 0) + occupies;
       if (spotIds && spotIds.length > 0) {
         for (const sid of spotIds) {
@@ -339,7 +349,6 @@ export async function getFutureBookedDates(
           perSpot[sid].add(d);
         }
       }
-      cursor.setDate(cursor.getDate() + 1);
     }
   }
 

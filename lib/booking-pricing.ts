@@ -20,6 +20,9 @@ export interface ComputeTotalArgs {
   listingExtras: ListingExtra[] | null;
   checkIn: string;
   checkOut: string;
+  /** Multi-velg (parkering): eksplisitte dager som prises. Når satt er
+   * checkIn/checkOut bare konvolutt og antall dager = listens lengde. */
+  bookedDates?: string[];
   selectedSpotIds?: string[];
   selectedExtras?: SelectedExtras;
 }
@@ -33,11 +36,15 @@ export interface ComputeTotalResult {
 export async function computeBookingTotal(args: ComputeTotalArgs): Promise<ComputeTotalResult> {
   const start = new Date(args.checkIn);
   const end = new Date(args.checkOut);
-  // Inclusive begge endepunkter (parkering teller dager). 7. mai → 5. juni = 30 dager.
-  const nights = Math.max(
-    1,
-    Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1,
-  );
+  // Multi-velg: de valgte dagene er fasit. Ellers inclusive begge endepunkter
+  // (parkering teller dager). 7. mai → 5. juni = 30 dager.
+  const explicitDays = args.bookedDates && args.bookedDates.length > 0 ? args.bookedDates : null;
+  const nights = explicitDays
+    ? explicitDays.length
+    : Math.max(
+        1,
+        Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1,
+      );
 
   const selectedSpots = (args.spotMarkers || []).filter(
     (s) => s.id && args.selectedSpotIds?.includes(s.id),
@@ -53,11 +60,17 @@ export async function computeBookingTotal(args: ComputeTotalArgs): Promise<Compu
       const base = s.price ?? args.listingPrice;
       const overrides = s.datePriceOverrides ?? {};
       let spotTotal = 0;
-      const cursor = new Date(start);
-      for (let i = 0; i < nights; i++) {
-        const iso = cursor.toISOString().slice(0, 10);
-        spotTotal += overrides[iso] ?? base;
-        cursor.setUTCDate(cursor.getUTCDate() + 1);
+      if (explicitDays) {
+        for (const iso of explicitDays) {
+          spotTotal += overrides[iso] ?? base;
+        }
+      } else {
+        const cursor = new Date(start);
+        for (let i = 0; i < nights; i++) {
+          const iso = cursor.toISOString().slice(0, 10);
+          spotTotal += overrides[iso] ?? base;
+          cursor.setUTCDate(cursor.getUTCDate() + 1);
+        }
       }
       return sum + spotTotal;
     }, 0);
@@ -68,6 +81,7 @@ export async function computeBookingTotal(args: ComputeTotalArgs): Promise<Compu
         checkIn: args.checkIn,
         checkOut: args.checkOut,
         basePrice: args.listingPrice,
+        dates: explicitDays ?? undefined,
       },
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,

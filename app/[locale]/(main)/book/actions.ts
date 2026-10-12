@@ -3,7 +3,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { stripe } from "@/lib/stripe";
 import { getAvailableSpots, getBookedSpotIds } from "@/lib/supabase/listings";
-import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS } from "@/lib/config";
+import { SERVICE_FEE_RATE, MAX_INSTANT_NIGHTS, PARKING_MAX_INSTANT_DAYS } from "@/lib/config";
+import { expandDays, peakOccupancy, type BookingDayRow } from "@/lib/booking-days";
 import { computeRefund, type CancelledBy } from "@/lib/cancellation";
 import {
   sendCancellationEmail,
@@ -36,12 +37,19 @@ async function computeAuthoritativeTotal(args: {
   listingExtras: ListingExtra[] | null;
   checkIn: string;
   checkOut: string;
+  /** Parkering teller dager inklusivt (man-ons = 3). Uten flagget telles
+   * eksklusive netter (camping) — breakdown-stien er alltid inklusiv via
+   * getNightlyPrices, så flagget retter per-spot-prising og perNight-extras. */
+  inclusiveDays?: boolean;
   selectedSpotIds?: string[];
   selectedExtras?: SelectedExtrasClient;
 }): Promise<{ total: number; baseTotal: number; extrasTotal: number; serviceFee: number; breakdown: NightlyPrice[] | null }> {
   const start = new Date(args.checkIn);
   const end = new Date(args.checkOut);
-  const nights = Math.max(1, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+  const nights = Math.max(
+    1,
+    Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + (args.inclusiveDays ? 1 : 0),
+  );
 
   const selectedSpots = (args.spotMarkers || []).filter(
     (s) => s.id && args.selectedSpotIds?.includes(s.id),
@@ -182,25 +190,18 @@ export async function createBookingAction(data: {
 
     const { data: listing } = await supabase
       .from("listings")
-      .select("host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, spots")
+      .select("host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, spots, category")
       .eq("id", data.listingId)
       .single();
 
     if (!listing) return { error: "Annonse ikke funnet" };
+    const isParking = listing.category === "parking";
 
-    // Sjekk at valgte plasser ikke har manuell blokkering i perioden
+    // Sjekk at valgte plasser ikke har manuell blokkering i perioden.
+    // Parkering: siste dag er en betalt dag og sjekkes også (inklusiv).
     if (data.selectedSpotIds && data.selectedSpotIds.length > 0) {
       const spotMarkers = (listing.spot_markers as SpotMarker[] | null) || [];
-      const datesInRange: string[] = [];
-      const cursor = new Date(data.checkIn);
-      const end = new Date(data.checkOut);
-      while (cursor < end) {
-        const y = cursor.getFullYear();
-        const m = String(cursor.getMonth() + 1).padStart(2, "0");
-        const d = String(cursor.getDate()).padStart(2, "0");
-        datesInRange.push(`${y}-${m}-${d}`);
-        cursor.setDate(cursor.getDate() + 1);
-      }
+      const datesInRange = expandDays(data.checkIn, data.checkOut, isParking);
       for (const spotId of data.selectedSpotIds) {
         const spot = spotMarkers.find((s) => s.id === spotId);
         if (spot?.blockedDates?.some((d) => datesInRange.includes(d))) {
@@ -217,6 +218,7 @@ export async function createBookingAction(data: {
       listingExtras: listing.extras as ListingExtra[] | null,
       checkIn: data.checkIn,
       checkOut: data.checkOut,
+      inclusiveDays: isParking,
       selectedSpotIds: data.selectedSpotIds,
       selectedExtras: data.selectedExtras as SelectedExtrasClient | undefined,
     });
@@ -236,15 +238,19 @@ export async function createBookingAction(data: {
       return { error: "Utleier har ikke satt opp utbetalinger ennå. Prøv igjen senere." };
     }
 
-    // Opphold over MAX_INSTANT_NIGHTS krever alltid godkjenning — selv på
-    // instant-annonser. Beskytter host mot langtidsopphold de ikke aktivt har sagt ja til.
+    // Opphold over grensen krever alltid godkjenning — selv på instant-
+    // annonser. Beskytter host mot langtidsopphold de ikke aktivt har sagt ja
+    // til. Parkering: inklusive dager mot PARKING_MAX_INSTANT_DAYS (samme
+    // regel som /api/bookings/create, så månedsplass går som direktebooking).
     const nights = Math.max(
       1,
       Math.round(
         (new Date(data.checkOut).getTime() - new Date(data.checkIn).getTime()) / 86400000,
       ),
     );
-    const exceedsInstantLimit = nights > MAX_INSTANT_NIGHTS;
+    const exceedsInstantLimit = isParking
+      ? nights + 1 > PARKING_MAX_INSTANT_DAYS
+      : nights > MAX_INSTANT_NIGHTS;
     const requiresApproval = listing.instant_booking === false || exceedsInstantLimit;
     const approvalDeadline = requiresApproval
       ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
@@ -257,6 +263,9 @@ export async function createBookingAction(data: {
         listing_id: data.listingId,
         check_in: data.checkIn,
         check_out: data.checkOut,
+        // Parkering skriver alltid dagliste (sammenhengende her — web-skjemaet
+        // er range-basert) så nedstrøms-lesere har én kilde for dagene.
+        booked_dates: isParking ? expandDays(data.checkIn, data.checkOut, true) : null,
         // Snapshot tidspunkter — hvis host endrer listing.check_in_time/check_out_time
         // senere skal eksisterende bookinger beholde sin opprinnelige avtale.
         check_in_time: (listing.check_in_time as string) || "15:00",
@@ -286,14 +295,18 @@ export async function createBookingAction(data: {
     // bookinger ikke overstiger listing.spots. Taperen (den med nyeste
     // created_at) rulles tilbake. Dette er pragmatisk beskyttelse uten å
     // kreve DB-transaksjon.
-    const { data: overlapping } = await supabase
+    let postQuery = supabase
       .from("bookings")
-      .select("id, created_at, selected_spot_ids")
+      .select("id, created_at, selected_spot_ids, check_in, check_out, booked_dates")
       .eq("listing_id", data.listingId)
       .in("status", ["pending", "requested", "confirmed"])
-      .lt("check_in", data.checkOut)
-      .gt("check_out", data.checkIn)
       .order("created_at", { ascending: true });
+    // Parkering: inklusiv grensedag — en booking som slutter samme dag som
+    // vår starter opptar den dagen.
+    postQuery = isParking
+      ? postQuery.lte("check_in", data.checkOut).gte("check_out", data.checkIn)
+      : postQuery.lt("check_in", data.checkOut).gt("check_out", data.checkIn);
+    const { data: overlapping } = await postQuery;
 
     if (overlapping) {
       const totalSpots = (listing.spots as number) || 1;
@@ -312,6 +325,17 @@ export async function createBookingAction(data: {
         if (conflict) {
           await supabase.from("bookings").delete().eq("id", booking.id);
           return { error: "Plassen ble booket av en annen bruker akkurat nå. Velg en annen plass." };
+        }
+      } else if (isParking) {
+        // Per-dag: taper hvis bookinger opprettet FØR vår allerede fyller
+        // alle plassene på en av dagene våre (created_at = stabil taperegel).
+        const ourIdx = overlapping.findIndex((o) => o.id === booking.id);
+        const earlierRows = ourIdx >= 0 ? overlapping.slice(0, ourIdx) : overlapping;
+        const requested = expandDays(data.checkIn, data.checkOut, true);
+        const peakBeforeUs = peakOccupancy(earlierRows as BookingDayRow[], requested, true);
+        if (peakBeforeUs >= totalSpots) {
+          await supabase.from("bookings").delete().eq("id", booking.id);
+          return { error: "Annonsen ble fullbooket av andre brukere akkurat nå. Prøv en annen dato." };
         }
       } else {
         // Listing-level check: totalt antall bookinger må ikke overstige spots.
@@ -492,7 +516,7 @@ export async function approveBookingAction(bookingId: string): Promise<{ error?:
 
     const { data: booking } = await supabase
       .from("bookings")
-      .select("id, host_id, status, payment_intent_id, approval_deadline, user_id, listing_id, check_in, check_out, total_price")
+      .select("id, host_id, status, payment_intent_id, approval_deadline, user_id, listing_id, check_in, check_out, booked_dates, total_price")
       .eq("id", bookingId)
       .single();
 
@@ -544,6 +568,7 @@ export async function approveBookingAction(bookingId: string): Promise<{ error?:
             listingImage: listing?.images?.[0] ?? null,
             checkIn: booking.check_in,
             checkOut: booking.check_out,
+            bookedDates: booking.booked_dates ?? null,
             totalPrice: booking.total_price,
           }).catch((err) => console.error("[Email] approve failed:", err)),
         );

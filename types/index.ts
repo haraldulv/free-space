@@ -381,6 +381,8 @@ export interface Booking {
   location: string;
   checkIn: string;
   checkOut: string;
+  /** Multi-velg (parkering): eksplisitte bookede dager (kan ha hull). */
+  bookedDates?: string[] | null;
   totalPrice: number;
   status: "pending" | "requested" | "confirmed" | "cancelled";
   createdAt: string;
@@ -452,6 +454,9 @@ export interface OfferMessageMetadata {
   totalPrice?: number;
   checkIn?: string;
   checkOut?: string;
+  /** Multi-velg (parkering): eksplisitte dager forespørselen gjelder. */
+  bookedDates?: string[];
+  dayCount?: number;
   proposedByRole?: "guest" | "host";
   round?: number;
   expiresAt?: string;

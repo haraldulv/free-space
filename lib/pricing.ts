@@ -110,8 +110,10 @@ export function resolveNightlyPrice(
 interface ResolveInput {
   listingId: string;
   checkIn: string;  // "YYYY-MM-DD"
-  checkOut: string; // exclusive
+  checkOut: string; // inklusiv siste dag (parkering teller dager)
   basePrice: number;
+  /** Eksplisitt dagliste (multi-velg). Når satt prises KUN disse dagene. */
+  dates?: string[];
 }
 
 /**
@@ -126,12 +128,13 @@ export async function getNightlyPrices(input: ResolveInput): Promise<NightlyPric
       .from("listing_pricing_rules")
       .select("*")
       .eq("listing_id", input.listingId),
+    // .lte: breakdownen inkluderer siste dag, så overrides må også gjøre det.
     supabase
       .from("listing_pricing_overrides")
       .select("*")
       .eq("listing_id", input.listingId)
       .gte("date", input.checkIn)
-      .lt("date", input.checkOut),
+      .lte("date", input.checkOut),
   ]);
 
   const rules: PricingRule[] = (rulesRes.data || []).map(rowToRule);
@@ -156,12 +159,13 @@ export async function getNightlyPricesWithServiceClient(
       .from("listing_pricing_rules")
       .select("*")
       .eq("listing_id", input.listingId),
+    // .lte: breakdownen inkluderer siste dag, så overrides må også gjøre det.
     supabase
       .from("listing_pricing_overrides")
       .select("*")
       .eq("listing_id", input.listingId)
       .gte("date", input.checkIn)
-      .lt("date", input.checkOut),
+      .lte("date", input.checkOut),
   ]);
 
   const rules: PricingRule[] = (rulesRes.data || []).map(rowToRule);
@@ -176,6 +180,15 @@ function buildBreakdown(
   overrides: PricingOverride[],
 ): NightlyPrice[] {
   const breakdown: NightlyPrice[] = [];
+  // Multi-velg: pris nøyaktig de valgte dagene (kan ha hull).
+  if (input.dates && input.dates.length > 0) {
+    for (const iso of input.dates) {
+      const day = parseDate(iso);
+      const { price, source } = resolveNightlyPrice(day, input.basePrice, rules, overrides);
+      breakdown.push({ date: iso, price, source });
+    }
+    return breakdown;
+  }
   const cursor = parseDate(input.checkIn);
   const end = parseDate(input.checkOut);
   // Inkluderer begge endepunkter (parkering teller dager). 7. mai → 5. juni = 30 entries.

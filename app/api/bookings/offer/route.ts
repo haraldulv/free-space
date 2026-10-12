@@ -99,6 +99,12 @@ export async function POST(request: NextRequest) {
 
     const newCheckIn = checkIn ?? prevOffer.check_in;
     const newCheckOut = checkOut ?? prevOffer.check_out;
+    // Multi-velg (parkering): daglisten arves når perioden er uendret.
+    // Endrer et motbud perioden, er den gamle daglisten ugyldig — da gjelder
+    // konvolutten (inklusiv ekspansjon skjer nedstrøms).
+    const datesChanged =
+      newCheckIn !== prevOffer.check_in || newCheckOut !== prevOffer.check_out;
+    const newBookedDates = datesChanged ? null : (prevOffer.booked_dates ?? null);
     const newRound = booking.negotiation_round + 1;
     const newAwaitingParty = expectedSender === "host" ? "guest" : "host";
     const newStatus = newAwaitingParty === "host" ? "awaiting_host" : "awaiting_guest";
@@ -121,6 +127,7 @@ export async function POST(request: NextRequest) {
         price_breakdown: prevOffer.price_breakdown,
         check_in: newCheckIn,
         check_out: newCheckOut,
+        booked_dates: newBookedDates,
         selected_extras: prevOffer.selected_extras,
         selected_spot_ids: prevOffer.selected_spot_ids,
         message: message ?? null,
@@ -144,6 +151,7 @@ export async function POST(request: NextRequest) {
         approval_deadline: expiresAt,
         check_in: newCheckIn,
         check_out: newCheckOut,
+        booked_dates: newBookedDates,
         total_price: totalPrice,
       })
       .eq("id", bookingId)

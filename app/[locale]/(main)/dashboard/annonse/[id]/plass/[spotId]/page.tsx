@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import Container from "@/components/ui/Container";
 import { SpotAvailabilityPanel } from "./SpotAvailabilityPanel";
 import type { SpotMarker } from "@/types";
+import { bookingDays, type BookingDayRow } from "@/lib/booking-days";
 
 export default async function SpotDetailPage({
   params,
@@ -21,7 +22,7 @@ export default async function SpotDetailPage({
 
   const { data: listing } = await supabase
     .from("listings")
-    .select("id, title, host_id, spot_markers")
+    .select("id, title, host_id, spot_markers, category")
     .eq("id", id)
     .single();
 
@@ -37,7 +38,7 @@ export default async function SpotDetailPage({
   const today = new Date().toISOString().split("T")[0];
   const { data: bookingRows } = await supabase
     .from("bookings")
-    .select("id, check_in, check_out, status, total_price, selected_spot_ids, guest:user_id(full_name)")
+    .select("id, check_in, check_out, booked_dates, status, total_price, selected_spot_ids, guest:user_id(full_name)")
     .eq("listing_id", id)
     .in("status", ["confirmed", "requested"])
     .gte("check_out", today)
@@ -47,17 +48,14 @@ export default async function SpotDetailPage({
     ((b.selected_spot_ids as string[] | null) || []).includes(spotId),
   );
 
-  // Datoer som er booket av faktiske bookinger (ikke manuell blokkering)
+  // Datoer som er booket av faktiske bookinger (ikke manuell blokkering).
+  // booked_dates (multi-velg) er autoritativ; parkering teller siste dag
+  // inklusivt, camping beholder eksklusiv utsjekksdag.
+  const inclusiveEnd = (listing.category as string) === "parking";
   const bookedDateSet = new Set<string>();
   for (const b of spotBookings) {
-    const start = new Date(b.check_in as string);
-    const end = new Date(b.check_out as string);
-    const cursor = new Date(start);
-    while (cursor < end) {
-      bookedDateSet.add(
-        `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}-${String(cursor.getDate()).padStart(2, "0")}`,
-      );
-      cursor.setDate(cursor.getDate() + 1);
+    for (const day of bookingDays(b as unknown as BookingDayRow, inclusiveEnd)) {
+      bookedDateSet.add(day);
     }
   }
 

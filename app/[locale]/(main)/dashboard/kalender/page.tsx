@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import { Link } from "@/i18n/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { resolveNightlyPrice, type PricingRule, type PricingOverride } from "@/lib/pricing";
+import { bookingDays, type BookingDayRow } from "@/lib/booking-days";
 import Container from "@/components/ui/Container";
 import { HostCalendarGrid, type CalendarCell, type CalendarListing } from "@/components/features/host-calendar/HostCalendarGrid";
 
@@ -32,7 +33,7 @@ export default async function HostCalendarPage({
   // Hente alle host's aktive listings
   const { data: listings } = await supabase
     .from("listings")
-    .select("id, title, price, images, spots, blocked_dates")
+    .select("id, title, price, images, spots, blocked_dates, category")
     .eq("host_id", user.id)
     .neq("is_active", false)
     .order("title");
@@ -66,7 +67,7 @@ export default async function HostCalendarPage({
   const [bookingsRes, overridesRes, rulesRes] = await Promise.all([
     supabase
       .from("bookings")
-      .select("listing_id, check_in, check_out, status, guest:user_id(full_name)")
+      .select("listing_id, check_in, check_out, booked_dates, status, guest:user_id(full_name)")
       .in("listing_id", listingIds)
       .in("status", ["confirmed", "requested", "pending"])
       .gte("check_out", startDate)
@@ -107,7 +108,12 @@ export default async function HostCalendarPage({
     });
   }
 
-  // Bygge booked-set per listing per dato
+  // Bygge booked-set per listing per dato. booked_dates (multi-velg) er
+  // autoritativ når satt; ellers ekspanderes konvolutten — inklusiv siste dag
+  // for parkering (betalt dag), eksklusiv for camping (utsjekksmorgen).
+  const parkingListingIds = new Set(
+    allListings.filter((l) => (l.category as string) === "parking").map((l) => l.id as string),
+  );
   const bookedByListingDate = new Map<string, { guestName: string | null; requested: boolean }>();
   for (const b of bookingsRes.data || []) {
     const listingId = b.listing_id as string;
@@ -115,16 +121,17 @@ export default async function HostCalendarPage({
     const guestObj = Array.isArray(guestRow) ? guestRow[0] : guestRow;
     const guestName = guestObj?.full_name || null;
     const isRequested = (b.status as string) === "requested";
-    const cursor = new Date((b.check_in as string) + "T00:00:00");
-    const end = new Date((b.check_out as string) + "T00:00:00");
-    while (cursor < end) {
-      const key = `${listingId}:${formatDate(cursor)}`;
+    const days = bookingDays(
+      b as unknown as BookingDayRow,
+      parkingListingIds.has(listingId),
+    );
+    for (const day of days) {
+      const key = `${listingId}:${day}`;
       const existing = bookedByListingDate.get(key);
       // Confirmed vinner over requested i visning
       if (!existing || (existing.requested && !isRequested)) {
         bookedByListingDate.set(key, { guestName, requested: isRequested });
       }
-      cursor.setDate(cursor.getDate() + 1);
     }
   }
 

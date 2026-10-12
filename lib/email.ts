@@ -63,6 +63,9 @@ function listingCard(opts: {
   checkIn: string;
   checkOut: string;
   bottomLine: string;
+  /** Multi-velg (parkering): eksplisitte dager. Med hull vises «N valgte
+   * dager mellom X og Y» i stedet for Innsjekk/Utsjekk. */
+  bookedDates?: string[] | null;
 }) {
   const url = opts.listingId ? `https://tuno.no/listings/${opts.listingId}` : null;
   const title = url
@@ -73,13 +76,19 @@ function listingCard(opts: {
          <img src="${opts.listingImage}" alt="${opts.listingTitle}" width="512" style="display:block;width:100%;max-width:512px;height:auto;border-radius:8px;margin-bottom:12px;" />
        </a>`
     : "";
+  const dayCount = opts.bookedDates?.length ?? 0;
+  const envelopeDays = nightsBetween(opts.checkIn, opts.checkOut) + 1;
+  const hasGaps = dayCount > 0 && dayCount < envelopeDays;
+  const dateLines = hasGaps
+    ? `<p style="margin:4px 0 0;font-size:14px;color:#737373;">${dayCount} valgte dager mellom ${opts.checkIn} og ${opts.checkOut}</p>`
+    : `<p style="margin:4px 0 0;font-size:14px;color:#737373;">Innsjekk: ${opts.checkIn}</p>
+        <p style="margin:4px 0 0;font-size:14px;color:#737373;">Utsjekk: ${opts.checkOut}</p>`;
   return `
     <div style="margin:16px 0;">
       ${image}
       <div style="background:#f5f5f5;border-radius:8px;padding:16px;">
         <p style="margin:0;font-size:14px;color:#525252;">${title}</p>
-        <p style="margin:4px 0 0;font-size:14px;color:#737373;">Innsjekk: ${opts.checkIn}</p>
-        <p style="margin:4px 0 0;font-size:14px;color:#737373;">Utsjekk: ${opts.checkOut}</p>
+        ${dateLines}
         <p style="margin:8px 0 0;font-size:16px;font-weight:700;color:#171717;">${opts.bottomLine}</p>
       </div>
     </div>`;
@@ -98,6 +107,7 @@ export async function sendBookingConfirmation(to: string, data: {
   listingImage?: string | null;
   checkIn: string;
   checkOut: string;
+  bookedDates?: string[] | null;
   totalPrice: number;
   bookingId: string;
   selectedExtras?: SelectedExtras | null;
@@ -117,6 +127,7 @@ export async function sendBookingConfirmation(to: string, data: {
         listingImage: data.listingImage ?? null,
         checkIn: data.checkIn,
         checkOut: data.checkOut,
+        bookedDates: data.bookedDates ?? null,
         bottomLine: `${data.totalPrice} kr`,
       })}
       ${extrasBlock(data.selectedExtras, nights)}
@@ -133,6 +144,7 @@ export async function sendBookingNotificationToHost(to: string, data: {
   listingImage?: string | null;
   checkIn: string;
   checkOut: string;
+  bookedDates?: string[] | null;
   totalPrice: number;
   selectedExtras?: SelectedExtras | null;
 }) {
@@ -152,6 +164,7 @@ export async function sendBookingNotificationToHost(to: string, data: {
         listingImage: data.listingImage ?? null,
         checkIn: data.checkIn,
         checkOut: data.checkOut,
+        bookedDates: data.bookedDates ?? null,
         bottomLine: `Din utbetaling: ${hostAmount} kr`,
       })}
       ${extrasBlock(data.selectedExtras, nights)}
@@ -245,6 +258,7 @@ export async function sendBookingRequestToHost(to: string, data: {
   listingImage?: string | null;
   checkIn: string;
   checkOut: string;
+  bookedDates?: string[] | null;
   totalPrice: number;
   approvalDeadline?: string | null;
   selectedExtras?: SelectedExtras | null;
@@ -268,6 +282,7 @@ export async function sendBookingRequestToHost(to: string, data: {
         listingImage: data.listingImage ?? null,
         checkIn: data.checkIn,
         checkOut: data.checkOut,
+        bookedDates: data.bookedDates ?? null,
         bottomLine: `Din utbetaling: ${hostAmount} kr`,
       })}
       ${extrasBlock(data.selectedExtras, nights)}
@@ -284,6 +299,7 @@ export async function sendBookingRequestPendingToGuest(to: string, data: {
   listingImage?: string | null;
   checkIn: string;
   checkOut: string;
+  bookedDates?: string[] | null;
   totalPrice: number;
   selectedExtras?: SelectedExtras | null;
 }) {
@@ -303,6 +319,7 @@ export async function sendBookingRequestPendingToGuest(to: string, data: {
         listingImage: data.listingImage ?? null,
         checkIn: data.checkIn,
         checkOut: data.checkOut,
+        bookedDates: data.bookedDates ?? null,
         bottomLine: `${data.totalPrice} kr`,
       })}
       ${extrasBlock(data.selectedExtras, nights)}
@@ -321,6 +338,7 @@ export async function sendBookingApprovedToGuest(to: string, data: {
   listingImage?: string | null;
   checkIn: string;
   checkOut: string;
+  bookedDates?: string[] | null;
   totalPrice: number;
   selectedExtras?: SelectedExtras | null;
 }) {
@@ -339,6 +357,7 @@ export async function sendBookingApprovedToGuest(to: string, data: {
         listingImage: data.listingImage ?? null,
         checkIn: data.checkIn,
         checkOut: data.checkOut,
+        bookedDates: data.bookedDates ?? null,
         bottomLine: `${data.totalPrice} kr`,
       })}
       ${extrasBlock(data.selectedExtras, nights)}

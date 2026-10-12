@@ -182,6 +182,12 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
             <span className="flex items-center gap-1">
               <CalendarDays className="h-3.5 w-3.5" />
               {checkIn} – {checkOut}
+              {(booking.bookedDates?.length ?? 0) > 0 && (
+                <span className="text-neutral-400">
+                  · {booking.bookedDates!.length}{" "}
+                  {booking.bookedDates!.length === 1 ? tListing("day") : tListing("days")}
+                </span>
+              )}
             </span>
             <span className="font-medium text-neutral-900">
               {booking.totalPrice} kr

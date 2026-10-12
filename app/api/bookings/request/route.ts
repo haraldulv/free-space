@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { computeBookingTotal } from "@/lib/booking-pricing";
+import {
+  expandDays,
+  normalizeBookedDates,
+  peakOccupancy,
+  occupiedSpotIds,
+  type BookingDayRow,
+} from "@/lib/booking-days";
 import { sendPushToUser } from "@/lib/push";
 import type { SpotMarker, ListingExtra, SelectedExtras } from "@/types";
 
@@ -38,8 +45,9 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       listingId,
-      checkIn,
-      checkOut,
+      checkIn: rawCheckIn,
+      checkOut: rawCheckOut,
+      bookedDates: rawBookedDates,
       licensePlate,
       isRentalCar,
       selectedSpotIds,
@@ -50,6 +58,7 @@ export async function POST(request: NextRequest) {
       listingId: string;
       checkIn: string;
       checkOut: string;
+      bookedDates?: string[];
       licensePlate?: string;
       isRentalCar?: boolean;
       selectedSpotIds?: string[];
@@ -59,6 +68,17 @@ export async function POST(request: NextRequest) {
       /// Utelatt = standardpris (vanlig forespørsel).
       proposedPrice?: number;
     };
+
+    // Multi-velg (parkering): eksplisitt dagliste; konvolutten utledes.
+    let bookedDates: string[] | null = null;
+    if (rawBookedDates !== undefined) {
+      bookedDates = normalizeBookedDates(rawBookedDates);
+      if (!bookedDates) {
+        return NextResponse.json({ error: "Ugyldig datoliste" }, { status: 400 });
+      }
+    }
+    const checkIn = bookedDates ? bookedDates[0] : rawCheckIn;
+    const checkOut = bookedDates ? bookedDates[bookedDates.length - 1] : rawCheckOut;
 
     if (!listingId || !checkIn || !checkOut) {
       return NextResponse.json({ error: "Mangler påkrevde felt" }, { status: 400 });
@@ -82,14 +102,23 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Du kan ikke booke din egen annonse" }, { status: 400 });
     }
 
+    const isParking = listing.category === "parking";
+    if (bookedDates && !isParking) {
+      return NextResponse.json({ error: "Datoliste støttes kun for parkering" }, { status: 400 });
+    }
+    // Dagene forespørselen faktisk gjelder (parkering: inklusiv siste dag).
+    const requestedDays: string[] = bookedDates ?? expandDays(checkIn, checkOut, true);
+
     // Inclusive begge endepunkter (samme konvensjon som pris-utregning):
     // 5. juni → 4. juli = 30 dager, ikke 29.
-    const stayDays = Math.max(
-      1,
-      Math.round(
-        (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24),
-      ) + 1,
-    );
+    const stayDays = bookedDates
+      ? bookedDates.length
+      : Math.max(
+          1,
+          Math.round(
+            (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60 * 24),
+          ) + 1,
+        );
     if (listing.min_stay_days != null && stayDays < listing.min_stay_days) {
       return NextResponse.json({ error: `Denne annonsen krever minimum ${listing.min_stay_days} dager.` }, { status: 400 });
     }
@@ -104,6 +133,7 @@ export async function POST(request: NextRequest) {
       listingExtras: listing.extras as ListingExtra[] | null,
       checkIn,
       checkOut,
+      bookedDates: bookedDates ?? undefined,
       selectedSpotIds,
       selectedExtras,
     });
@@ -128,30 +158,46 @@ export async function POST(request: NextRequest) {
     }
 
     // Sjekk overlapp: andre forespurte/bekreftede bookinger i samme tidsrom.
-    const { data: rawOverlap } = await supabase
+    // Parkering: inklusiv grensedag (lte/gte) + per-dag-telling, så
+    // ikke-overlappende dager (f.eks. tor-fre etter en man-ons-booking)
+    // forblir ledige. Camping: uendret konvolutt-telling.
+    let overlapQuery = supabase
       .from("bookings")
-      .select("selected_spot_ids, check_in, check_out")
+      .select("selected_spot_ids, check_in, check_out, booked_dates")
       .eq("listing_id", listingId)
-      .in("status", ["confirmed", "pending", "requested", "awaiting_host", "awaiting_guest", "awaiting_payment"])
-      .lt("check_in", checkOut)
-      .gt("check_out", checkIn);
+      .in("status", ["confirmed", "pending", "requested", "awaiting_host", "awaiting_guest", "awaiting_payment"]);
+    overlapQuery = isParking
+      ? overlapQuery.lte("check_in", checkOut).gte("check_out", checkIn)
+      : overlapQuery.lt("check_in", checkOut).gt("check_out", checkIn);
+    const { data: rawOverlap } = await overlapQuery;
 
     const overlappingBookings = rawOverlap || [];
-    const bookedCount = overlappingBookings.reduce((sum, row) => {
-      const ids = row.selected_spot_ids as string[] | null;
-      return sum + (ids && ids.length > 0 ? ids.length : 1);
-    }, 0);
-    const available = listing.spots - bookedCount;
-    if (available <= 0) {
-      return NextResponse.json({ error: "Ingen ledige plasser for valgte datoer" }, { status: 409 });
+    if (isParking) {
+      const peak = peakOccupancy(overlappingBookings as BookingDayRow[], requestedDays, true);
+      if (listing.spots - peak <= 0) {
+        return NextResponse.json({ error: "Ingen ledige plasser for valgte datoer" }, { status: 409 });
+      }
+    } else {
+      const bookedCount = overlappingBookings.reduce((sum, row) => {
+        const ids = row.selected_spot_ids as string[] | null;
+        return sum + (ids && ids.length > 0 ? ids.length : 1);
+      }, 0);
+      if (listing.spots - bookedCount <= 0) {
+        return NextResponse.json({ error: "Ingen ledige plasser for valgte datoer" }, { status: 409 });
+      }
     }
 
     if (selectedSpotIds && selectedSpotIds.length > 0) {
-      const alreadyBooked = new Set<string>();
-      for (const row of overlappingBookings) {
-        const ids = row.selected_spot_ids as string[] | null;
-        (ids || []).forEach((id) => alreadyBooked.add(id));
-      }
+      const alreadyBooked = isParking
+        ? occupiedSpotIds(overlappingBookings as BookingDayRow[], requestedDays, true)
+        : (() => {
+            const set = new Set<string>();
+            for (const row of overlappingBookings) {
+              const ids = row.selected_spot_ids as string[] | null;
+              (ids || []).forEach((id) => set.add(id));
+            }
+            return set;
+          })();
       const conflict = selectedSpotIds.find((id) => alreadyBooked.has(id));
       if (conflict) {
         return NextResponse.json({ error: "En eller flere av de valgte plassene er allerede booket. Velg andre plasser." }, { status: 409 });
@@ -179,6 +225,7 @@ export async function POST(request: NextRequest) {
         listing_id: listingId,
         check_in: checkIn,
         check_out: checkOut,
+        booked_dates: isParking ? requestedDays : null,
         check_in_time: (listing.check_in_time as string) || "15:00",
         check_out_time: (listing.check_out_time as string) || "11:00",
         total_price: totalPrice,
@@ -214,6 +261,7 @@ export async function POST(request: NextRequest) {
         price_breakdown: breakdown,
         check_in: checkIn,
         check_out: checkOut,
+        booked_dates: isParking ? requestedDays : null,
         selected_extras: selectedExtras ?? null,
         selected_spot_ids: selectedSpotIds ?? null,
         message: message ?? null,
@@ -284,6 +332,8 @@ export async function POST(request: NextRequest) {
           totalPrice,
           checkIn,
           checkOut,
+          // Multi-velg: antall + dagliste så tilbuds-bobla kan vise «N dager».
+          ...(bookedDates ? { bookedDates, dayCount: bookedDates.length } : {}),
           proposedByRole: "guest",
           round: 1,
           expiresAt,

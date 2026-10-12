@@ -174,6 +174,7 @@ export async function POST(request: NextRequest) {
       payment_deadline: paymentDeadline,
       check_in: offer.check_in,
       check_out: offer.check_out,
+      booked_dates: offer.booked_dates ?? null,
       total_price: offer.total_price,
       selected_extras: offer.selected_extras,
       selected_spot_ids: offer.selected_spot_ids,
