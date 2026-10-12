@@ -1017,13 +1017,15 @@
     "leadError": "Etwas ist schiefgelaufen. Versuche es erneut oder schreibe an support@tuno.no.",
     "appTitle": "Bereit, deinen Platz zu inserieren?",
     "appBody": "Lade die Tuno-App herunter und veröffentliche deinen Platz noch heute.",
-    "appCta": "App herunterladen",
     "calcDayPriceLabel": "Tagespreis",
     "calcDaysLabel": "Vermietete Tage pro Monat",
     "presetWeekdays": "Wochentage",
     "presetWeekends": "Wochenenden",
     "presetAll": "Ganzer Monat",
     "calcFormula": "{price} kr × {days} Tage",
-    "estimateYear": "≈ {amount} kr pro Jahr"
+    "estimateYear": "≈ {amount} kr pro Jahr",
+    "androidSoon": "Die Android-Version steht kurz bevor",
+    "androidSoonPill": "Bald auch für Android",
+    "appStoreBadgeAlt": "Im App Store laden"
   }
 }

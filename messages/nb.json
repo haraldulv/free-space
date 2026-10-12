@@ -1017,13 +1017,15 @@
     "leadError": "Noe gikk galt. Prøv igjen, eller send en e-post til support@tuno.no.",
     "appTitle": "Klar til å legge ut plassen?",
     "appBody": "Last ned Tuno-appen og publiser plassen din i dag.",
-    "appCta": "Last ned appen",
     "calcDayPriceLabel": "Dagspris",
     "calcDaysLabel": "Dager utleid per måned",
     "presetWeekdays": "Hverdager",
     "presetWeekends": "Helger",
     "presetAll": "Hele måneden",
     "calcFormula": "{price} kr × {days} dager",
-    "estimateYear": "≈ {amount} kr i året"
+    "estimateYear": "≈ {amount} kr i året",
+    "androidSoon": "Android-versjonen er like rundt hjørnet",
+    "androidSoonPill": "Kommer snart på Android",
+    "appStoreBadgeAlt": "Last ned i App Store"
   }
 }

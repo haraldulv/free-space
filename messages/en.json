@@ -1017,13 +1017,15 @@
     "leadError": "Something went wrong. Try again, or email support@tuno.no.",
     "appTitle": "Ready to list your space?",
     "appBody": "Download the Tuno app and publish your space today.",
-    "appCta": "Download the app",
     "calcDayPriceLabel": "Day price",
     "calcDaysLabel": "Days rented per month",
     "presetWeekdays": "Weekdays",
     "presetWeekends": "Weekends",
     "presetAll": "All month",
     "calcFormula": "NOK {price} × {days} days",
-    "estimateYear": "≈ NOK {amount} a year"
+    "estimateYear": "≈ NOK {amount} a year",
+    "androidSoon": "The Android version is right around the corner",
+    "androidSoonPill": "Coming soon to Android",
+    "appStoreBadgeAlt": "Download on the App Store"
   }
 }

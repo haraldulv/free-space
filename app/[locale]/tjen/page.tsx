@@ -40,6 +40,9 @@ export default async function TjenPage({ params }: PageProps) {
   setRequestLocale(locale);
   const t = await getTranslations("tjen");
 
+  // Offisiell Apple-badge per språk (nb er fallback).
+  const badgeSrc = `/app-store-badge-${locale === "en" || locale === "de" ? locale : "nb"}.svg`;
+
   const steps = [
     { title: t("how1Title"), body: t("how1Body") },
     { title: t("how2Title"), body: t("how2Body") },
@@ -75,6 +78,23 @@ export default async function TjenPage({ params }: PageProps) {
           <p className="mt-2 text-center text-sm font-medium text-white/75">
             {t("youDecide")}
           </p>
+
+          <div className="mt-8 flex flex-col items-center gap-3">
+            <a
+              href={APP_STORE_URL}
+              className="inline-block transition-transform hover:scale-[1.03]"
+            >
+              <Image
+                src={badgeSrc}
+                alt={t("appStoreBadgeAlt")}
+                width={156}
+                height={52}
+                className="h-[52px] w-auto"
+                priority
+              />
+            </a>
+            <p className="text-sm font-medium text-white/75">{t("androidSoon")}</p>
+          </div>
 
           <div className="mt-10">
             <DrivewayIllustration />
@@ -128,16 +148,40 @@ export default async function TjenPage({ params }: PageProps) {
       </section>
 
       {/* App-CTA */}
-      <section className="bg-[#3ebf7f] px-5 py-14 text-center text-white">
+      <section className="bg-[#3ebf7f] px-5 py-16 text-center text-white">
         <div className="mx-auto max-w-xl">
-          <h2 className="text-3xl font-bold">{t("appTitle")}</h2>
-          <p className="mt-3 text-base font-medium text-white/85">{t("appBody")}</p>
+          {/* App-ikon-flis: hvit avrundet firkant med pin, «dette er en app»-signal */}
+          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[22px] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
+            <Image
+              src="/tuno-pin-ink.png"
+              alt=""
+              aria-hidden="true"
+              width={40}
+              height={40}
+              className="h-10 w-auto"
+            />
+          </div>
+          <h2 className="mt-6 text-3xl font-bold sm:text-4xl">{t("appTitle")}</h2>
+          <p className="mx-auto mt-3 max-w-md text-base font-medium text-white/85">
+            {t("appBody")}
+          </p>
           <a
             href={APP_STORE_URL}
-            className="mt-7 inline-block rounded-full bg-white px-9 py-4 text-base font-bold text-[#1a7a4f] transition-transform hover:scale-[1.02]"
+            className="mt-8 inline-block transition-transform hover:scale-[1.03]"
           >
-            {t("appCta")}
+            <Image
+              src={badgeSrc}
+              alt={t("appStoreBadgeAlt")}
+              width={168}
+              height={56}
+              className="h-14 w-auto"
+            />
           </a>
+          <div className="mt-4 flex justify-center">
+            <span className="rounded-full border border-white/40 px-4 py-1.5 text-sm font-semibold text-white/90">
+              {t("androidSoonPill")}
+            </span>
+          </div>
         </div>
       </section>
 
