@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// Ett-stegs søkeark for parkering (Asker-pivoten): stedfelt med Asker-
-/// forslag, «I nærheten», valgfrie fra/til-datoer og én stor Søk-knapp.
-/// Erstatter den tre-stegs WhereSheet-accordionen i parkering-modus;
-/// kjøretøytype bor i Filtre-arket.
+/// To-stegs søkeark for parkering (Kim-feedback 2026-10-12): steg 1 «Hvor?»
+/// med stedfelt og Asker-forslag, steg 2 «Når?» med valgfrie fra/til-datoer
+/// og Søk-knappen. Valg av sted sentrerer kartet bak arket uten å søke;
+/// søket kjører først på Søk. Kjøretøytype bor i Filtre-arket.
 struct ParkingSearchSheet: View {
     @Binding var query: String
     @Binding var checkIn: Date?
@@ -19,6 +19,14 @@ struct ParkingSearchSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var typing: String = ""
     @State private var wheelPickerField: DateWheelField? = nil
+    @FocusState private var searchFocused: Bool
+
+    private enum Step: Equatable {
+        case place
+        case dates
+    }
+
+    @State private var step: Step = .place
 
     private struct AreaSuggestion: Identifiable {
         let name: String
@@ -39,28 +47,26 @@ struct ParkingSearchSheet: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Hvor vil du parkere?")
-                    .font(.tuno(.title))
-                    .foregroundStyle(.neutral900)
-                    .padding(.top, 18)
-
-                searchField
-
-                if placesService.predictions.isEmpty {
-                    suggestionList
-                } else {
-                    predictionList
+                switch step {
+                case .place:
+                    placeStep
+                        .transition(.move(edge: .leading).combined(with: .opacity))
+                case .dates:
+                    dateStep
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
-
-                dateSection
             }
             .padding(.horizontal, 20)
             .padding(.bottom, 12)
         }
         .background(Color.paper)
-        .safeAreaInset(edge: .bottom) { searchButton }
+        .safeAreaInset(edge: .bottom) { bottomBar }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: step)
         .onAppear { typing = query }
         .onChange(of: typing) { _, newValue in
+            // pick()/forslagsrader setter typing programmatisk idet vi går til
+            // steg 2 — ikke start en ny autocomplete da.
+            guard step == .place else { return }
             if newValue.isEmpty {
                 placesService.clear()
             } else {
@@ -82,7 +88,24 @@ struct ParkingSearchSheet: View {
         }
     }
 
-    // MARK: - Stedfelt
+    // MARK: - Steg 1: Hvor?
+
+    private var placeStep: some View {
+        VStack(alignment: .leading, spacing: 18) {
+            Text("Hvor vil du parkere?")
+                .font(.tuno(.title))
+                .foregroundStyle(.neutral900)
+                .padding(.top, 18)
+
+            searchField
+
+            if placesService.predictions.isEmpty {
+                suggestionList
+            } else {
+                predictionList
+            }
+        }
+    }
 
     private var searchField: some View {
         HStack(spacing: 10) {
@@ -92,6 +115,7 @@ struct ParkingSearchSheet: View {
             TextField("Søk sted eller adresse", text: $typing)
                 .font(.tuno(.body))
                 .autocorrectionDisabled()
+                .focused($searchFocused)
                 .onSubmit {
                     if let first = placesService.predictions.first {
                         pick(first)
@@ -124,8 +148,10 @@ struct ParkingSearchSheet: View {
     private var suggestionList: some View {
         VStack(spacing: 0) {
             Button {
+                query = "Min posisjon"
+                typing = "Min posisjon"
                 onUseMyLocation()
-                dismiss()
+                advanceToDates()
             } label: {
                 suggestionRowLabel(icon: "location.fill", title: "I nærheten", subtitle: "Bruk min posisjon")
             }
@@ -137,7 +163,7 @@ struct ParkingSearchSheet: View {
                     query = area.name
                     typing = area.name
                     onPickArea(area.name, area.lat, area.lng)
-                    dismiss()
+                    advanceToDates()
                 } label: {
                     suggestionRowLabel(icon: area.icon, title: area.name, subtitle: area.subtitle)
                 }
@@ -171,7 +197,12 @@ struct ParkingSearchSheet: View {
         typing = prediction.mainText
         placesService.clear()
         onSelectPlace(prediction)
-        dismiss()
+        advanceToDates()
+    }
+
+    private func advanceToDates() {
+        searchFocused = false
+        step = .dates
     }
 
     private func suggestionRowLabel(icon: String, title: String, subtitle: String) -> some View {
@@ -200,26 +231,59 @@ struct ParkingSearchSheet: View {
         .contentShape(Rectangle())
     }
 
-    // MARK: - Datoer
+    // MARK: - Steg 2: Når?
 
-    private var dateSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Når? (valgfritt)")
-                .font(.tuno(.label))
-                .foregroundStyle(.neutral600)
-
+    private var dateStep: some View {
+        VStack(alignment: .leading, spacing: 18) {
             HStack(spacing: 10) {
-                datePill(label: "Fra dato", date: checkIn) { wheelPickerField = .checkIn }
-                datePill(label: "Til dato", date: checkOut) { wheelPickerField = .checkOut }
-            }
-
-            if checkIn != nil || checkOut != nil {
-                Button("Nullstill datoer") {
-                    checkIn = nil
-                    checkOut = nil
+                Button {
+                    step = .place
+                } label: {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.neutral600)
+                        .frame(width: 32, height: 32)
+                        .background(Color.paperCard)
+                        .clipShape(Circle())
                 }
-                .font(.tuno(.caption))
-                .foregroundStyle(.neutral600)
+                .buttonStyle(.plain)
+                .accessibilityLabel("Tilbake til stedvalg")
+
+                Text("Når vil du parkere?")
+                    .font(.tuno(.title))
+                    .foregroundStyle(.neutral900)
+            }
+            .padding(.top, 18)
+
+            Button {
+                step = .place
+            } label: {
+                suggestionRowLabel(
+                    icon: "mappin.circle.fill",
+                    title: query.isEmpty ? "Velg sted" : query,
+                    subtitle: "Endre sted"
+                )
+            }
+            .buttonStyle(.plain)
+
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Valgfritt. Du kan søke uten datoer.")
+                    .font(.tuno(.caption))
+                    .foregroundStyle(.neutral500)
+
+                HStack(spacing: 10) {
+                    datePill(label: "Fra dato", date: checkIn) { wheelPickerField = .checkIn }
+                    datePill(label: "Til dato", date: checkOut) { wheelPickerField = .checkOut }
+                }
+
+                if checkIn != nil || checkOut != nil {
+                    Button("Nullstill datoer") {
+                        checkIn = nil
+                        checkOut = nil
+                    }
+                    .font(.tuno(.caption))
+                    .foregroundStyle(.neutral600)
+                }
             }
         }
     }
@@ -254,17 +318,32 @@ struct ParkingSearchSheet: View {
         return df.string(from: date)
     }
 
-    // MARK: - Søk
+    // MARK: - Bunnbar
 
-    private var searchButton: some View {
-        Button("Søk") {
-            dismiss()
-            onSearch()
+    @ViewBuilder
+    private var bottomBar: some View {
+        switch step {
+        case .place:
+            if !query.isEmpty {
+                Button("Neste") {
+                    advanceToDates()
+                }
+                .buttonStyle(TunoPillButtonStyle())
+                .padding(.horizontal, 20)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+                .background(Color.paper)
+            }
+        case .dates:
+            Button(checkIn == nil && checkOut == nil ? "Søk uten datoer" : "Søk") {
+                dismiss()
+                onSearch()
+            }
+            .buttonStyle(TunoPillButtonStyle())
+            .padding(.horizontal, 20)
+            .padding(.top, 10)
+            .padding(.bottom, 8)
+            .background(Color.paper)
         }
-        .buttonStyle(TunoPillButtonStyle())
-        .padding(.horizontal, 20)
-        .padding(.top, 10)
-        .padding(.bottom, 8)
-        .background(Color.paper)
     }
 }

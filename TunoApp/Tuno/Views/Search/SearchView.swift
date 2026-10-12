@@ -189,17 +189,23 @@ struct SearchView: View {
         }
         .animation(.easeInOut(duration: 0.18), value: whereSheetVisible)
         .sheet(isPresented: $showParkingSearchSheet) {
+            // To-stegs ark (Hvor → Når): valg av sted SENTRERER bare kartet,
+            // selve søket kjører først på Søk-knappen (onSearch). Programmatisk
+            // sentrering trigger ikke kartets auto-søk.
             ParkingSearchSheet(
                 query: $query,
                 checkIn: $checkIn,
                 checkOut: $checkOut,
                 placesService: placesService,
-                onSelectPlace: handleSelectPlace,
+                onSelectPlace: { prediction in
+                    Task { await centerOnPlace(prediction) }
+                },
                 onPickArea: { _, lat, lng in
                     setSearchCenter(lat: lat, lng: lng, zoom: 13)
-                    performSearch()
                 },
-                onUseMyLocation: goToMyLocation,
+                onUseMyLocation: {
+                    Task { await centerOnMyLocation() }
+                },
                 onSearch: performSearch
             )
             .presentationDetents([.medium, .large])
@@ -731,36 +737,53 @@ struct SearchView: View {
         }
     }
 
+    /// Sentrerer kartet på et Places-treff UTEN å søke. Programmatisk
+    /// sentrering trigger ikke kartets auto-søk (gated på brukergest), så
+    /// parkering-arket kan sentrere på steg «Hvor?» og vente med selve søket
+    /// til Søk-knappen. Returnerer koordinatet ved suksess.
+    @discardableResult
+    private func centerOnPlace(_ prediction: PlacePrediction) async -> (lat: Double, lng: Double)? {
+        guard let detail = await placesService.getPlaceDetail(placeId: prediction.id) else { return nil }
+        if let v = detail.viewport {
+            setSearchRegion(lat: detail.lat, lng: detail.lng, viewport: v)
+        } else {
+            setSearchCenter(lat: detail.lat, lng: detail.lng, zoom: 11)
+        }
+        return (detail.lat, detail.lng)
+    }
+
+    /// Sentrerer på brukerens posisjon UTEN å søke (inkl. vent på GPS-fix).
+    @discardableResult
+    private func centerOnMyLocation() async -> Bool {
+        if let loc = locationManager.userLocation {
+            setSearchCenter(lat: loc.latitude, lng: loc.longitude, zoom: 12)
+            query = "Min posisjon"
+            return true
+        }
+        locationManager.requestLocation()
+        for _ in 0..<50 {
+            try? await Task.sleep(for: .milliseconds(100))
+            if let loc = locationManager.userLocation {
+                setSearchCenter(lat: loc.latitude, lng: loc.longitude, zoom: 12)
+                query = "Min posisjon"
+                return true
+            }
+        }
+        return false
+    }
+
     private func handleSelectPlace(_ prediction: PlacePrediction) {
         Task {
-            if let detail = await placesService.getPlaceDetail(placeId: prediction.id) {
-                if let v = detail.viewport {
-                    setSearchRegion(lat: detail.lat, lng: detail.lng, viewport: v)
-                } else {
-                    setSearchCenter(lat: detail.lat, lng: detail.lng, zoom: 11)
-                }
-                await searchAt(lat: detail.lat, lng: detail.lng)
+            if let c = await centerOnPlace(prediction) {
+                await searchAt(lat: c.lat, lng: c.lng)
             }
         }
     }
 
     private func goToMyLocation() {
-        if let loc = locationManager.userLocation {
-            setSearchCenter(lat: loc.latitude, lng: loc.longitude, zoom: 12)
-            query = "Min posisjon"
-            performSearch()
-        } else {
-            locationManager.requestLocation()
-            Task {
-                for _ in 0..<50 {
-                    try? await Task.sleep(for: .milliseconds(100))
-                    if let loc = locationManager.userLocation {
-                        setSearchCenter(lat: loc.latitude, lng: loc.longitude, zoom: 12)
-                        query = "Min posisjon"
-                        performSearch()
-                        return
-                    }
-                }
+        Task {
+            if await centerOnMyLocation() {
+                performSearch()
             }
         }
     }
