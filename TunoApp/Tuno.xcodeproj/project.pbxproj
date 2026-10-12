@@ -72,6 +72,7 @@
 		5EDF76C6D90DDA30B6CE728E /* CounterOfferSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = BBA16C264EC99BF4AD61C2FC /* CounterOfferSheet.swift */; };
 		5F9A2C2EC2495CE2792C781D /* ReviewService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BBAD271DE88C999089599E1 /* ReviewService.swift */; };
 		642AF85B63EEA4DB11DEA032 /* ListingDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0E6DFB7D23F06D079D826635 /* ListingDetailView.swift */; };
+		64CFA37A66222CB2A898A1AF /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D9C77618F4C3AFFC255300FF /* WelcomeView.swift */; };
 		659CF3D7CDAA2F8951152056 /* TunoApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 75CE3CB213405AF521294421 /* TunoApp.swift */; };
 		666AD7D7FA51A19DC149E1EF /* progress-pin.json in Resources */ = {isa = PBXBuildFile; fileRef = 9BCA07B748FCC5E1497CD115 /* progress-pin.json */; };
 		66712985E67581E25E1DBAAF /* WizardScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 91BD5B56FDD4700D7C849E70 /* WizardScreen.swift */; };
@@ -303,6 +304,7 @@
 		D3BB2C75ED50A9F54DA87638 /* EmailVerifiedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailVerifiedView.swift; sourceTree = "<group>"; };
 		D49112D9A0860BD7EB235BDE /* CachedAsyncImage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CachedAsyncImage.swift; sourceTree = "<group>"; };
 		D542E42BA6CD2042CD0922EB /* MapBottomCardCarousel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapBottomCardCarousel.swift; sourceTree = "<group>"; };
+		D9C77618F4C3AFFC255300FF /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		DA06602EF8129BE55A4E5CEC /* PriceHistogram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PriceHistogram.swift; sourceTree = "<group>"; };
 		DAD96E8DCCD58804E7D8E5F9 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
 		DB14096D1AEF4406960194CB /* BookingConfirmationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BookingConfirmationView.swift; sourceTree = "<group>"; };
@@ -470,6 +472,7 @@
 				0F76B3BFE9867FFEFA9DFEAB /* ForgotPasswordView.swift */,
 				F20335764277C2E44F7825D2 /* LoginView.swift */,
 				ED34354F8C7AAA6F81D0CB62 /* RegisterView.swift */,
+				D9C77618F4C3AFFC255300FF /* WelcomeView.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -964,6 +967,7 @@
 				D1897733E089705C297273FD /* TurnstileView.swift in Sources */,
 				468941D0A90A4A4D9C423A60 /* VisitedListingsStore.swift in Sources */,
 				B6F0518213F5AE5FEF63012A /* WelcomeStep.swift in Sources */,
+				64CFA37A66222CB2A898A1AF /* WelcomeView.swift in Sources */,
 				4ED3E93250A6738DFDAD8848 /* WhereSheet.swift in Sources */,
 				3F9B2D62042A08F8EAD36159 /* WizardNavBar.swift in Sources */,
 				FFC836D6FEC0D9E8B9346EA5 /* WizardPricingCalendarView.swift in Sources */,

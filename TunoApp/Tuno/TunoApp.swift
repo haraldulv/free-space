@@ -152,6 +152,11 @@ struct TunoApp: App {
     @StateObject private var localizationManager = LocalizationManager.shared
     @StateObject private var pushRouter = PushRouter.shared
 
+    /// «Utforsk først» på velkomstskjermen hopper over for DENNE økten.
+    /// Bevisst ikke persistert: utloggede brukere møter skjermen på nytt
+    /// ved hver kaldstart (avklart med Harald 2026-10-12).
+    @State private var didSkipWelcome = false
+
     init() {
         #if DEBUG
         assertTunoFontsLoaded()
@@ -189,9 +194,21 @@ struct TunoApp: App {
             Group {
                 if authManager.isLoading {
                     LaunchScreen()
+                } else if AppConfig.parkingOnly && !authManager.isAuthenticated && !didSkipWelcome {
+                    WelcomeView(onSkip: {
+                        withAnimation(.easeInOut(duration: 0.3)) { didSkipWelcome = true }
+                    })
+                    .transition(.opacity)
                 } else {
                     MainTabView()
+                        .transition(.opacity)
                 }
+            }
+            .animation(.easeInOut(duration: 0.3), value: authManager.isAuthenticated)
+            // Deep links til annonser skal rett til innholdet, ikke stoppes
+            // av velkomstskjermen.
+            .onChange(of: deepLinkManager.pendingListingId, initial: true) {
+                if deepLinkManager.pendingListingId != nil { didSkipWelcome = true }
             }
             .environmentObject(authManager)
             .environmentObject(favoritesService)
