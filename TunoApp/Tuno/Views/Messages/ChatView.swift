@@ -703,6 +703,8 @@ struct ChatView: View {
             totalPrice: state.totalPrice,
             checkIn: nil,
             checkOut: nil,
+            bookedDates: nil,
+            dayCount: nil,
             proposedByRole: nil,
             round: nil,
             expiresAt: nil,

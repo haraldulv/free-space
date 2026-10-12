@@ -13,10 +13,17 @@ struct BookingConfirmationView: View {
     let checkOut: Date
     let total: Int
     var mode: BookingConfirmationMode = .confirmed
+    /// Multi-velg (parkering): faktisk antall bookede dager (kan ha hull
+    /// mellom checkIn og checkOut). nil = sammenhengende periode.
+    var dayCount: Int? = nil
     @Environment(\.dismiss) var dismiss
 
     private var nights: Int {
-        max(1, Calendar.current.dateComponents([.day], from: checkIn, to: checkOut).day ?? 1)
+        if let dayCount, dayCount > 0 { return dayCount }
+        let span = Calendar.current.dateComponents([.day], from: checkIn, to: checkOut).day ?? 1
+        // Parkering teller dager inklusivt (man-ons = 3 dager), camping døgn.
+        if listing.category == .parking { return max(1, span + 1) }
+        return max(1, span)
     }
 
     /// "dag"/"dager" for parkering, "døgn" for camping. Brukes i Varighet-raden.
@@ -87,8 +94,13 @@ struct BookingConfirmationView: View {
 
                 Divider()
 
-                detailRow(label: "Innsjekk", value: dateFormatter.string(from: checkIn))
-                detailRow(label: "Utsjekk", value: dateFormatter.string(from: checkOut))
+                if listing.category == .parking {
+                    detailRow(label: "Fra", value: dateFormatter.string(from: checkIn))
+                    detailRow(label: "Til", value: dateFormatter.string(from: checkOut))
+                } else {
+                    detailRow(label: "Innsjekk", value: dateFormatter.string(from: checkIn))
+                    detailRow(label: "Utsjekk", value: dateFormatter.string(from: checkOut))
+                }
                 detailRow(label: "Varighet", value: "\(nights) \(durationUnit(count: nights))")
 
                 Divider()

@@ -385,39 +385,63 @@ struct BookingCard: View {
     }
 
     private var datesSection: some View {
-        HStack(alignment: .top, spacing: 16) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(AppConfig.parkingOnly ? "Fra" : "Innsjekk")
-                    .font(.app(size: 11, weight: .semibold))
-                    .foregroundStyle(.neutral500)
-                Text(formatDateLong(booking.checkIn))
-                    .font(.app(size: 14, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                if let t = booking.checkInTimeSnapshot {
-                    Text("Fra \(t)")
-                        .font(.app(size: 11))
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 16) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(AppConfig.parkingOnly ? "Fra" : "Innsjekk")
+                        .font(.app(size: 11, weight: .semibold))
                         .foregroundStyle(.neutral500)
+                    Text(formatDateLong(booking.checkIn))
+                        .font(.app(size: 14, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    if let t = booking.checkInTimeSnapshot {
+                        Text("Fra \(t)")
+                            .font(.app(size: 11))
+                            .foregroundStyle(.neutral500)
+                    }
                 }
-            }
-            Image(systemName: "arrow.right")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.neutral400)
-                .padding(.top, 18)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(AppConfig.parkingOnly ? "Til" : "Utsjekk")
-                    .font(.app(size: 11, weight: .semibold))
-                    .foregroundStyle(.neutral500)
-                Text(formatDateLong(booking.checkOut))
-                    .font(.app(size: 14, weight: .semibold))
-                    .foregroundStyle(.neutral900)
-                if let t = booking.checkOutTimeSnapshot {
-                    Text("Innen \(t)")
-                        .font(.app(size: 11))
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.neutral400)
+                    .padding(.top, 18)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(AppConfig.parkingOnly ? "Til" : "Utsjekk")
+                        .font(.app(size: 11, weight: .semibold))
                         .foregroundStyle(.neutral500)
+                    Text(formatDateLong(booking.checkOut))
+                        .font(.app(size: 14, weight: .semibold))
+                        .foregroundStyle(.neutral900)
+                    if let t = booking.checkOutTimeSnapshot {
+                        Text("Innen \(t)")
+                            .font(.app(size: 11))
+                            .foregroundStyle(.neutral500)
+                    }
                 }
+                Spacer()
             }
-            Spacer()
+
+            // Multi-velg: periodene har hull — vis antall + de faktiske dagene.
+            if booking.hasGappedDates, let dates = booking.bookedDates {
+                let runs = TunoCalendar.runs(dates)
+                let parts = runs.map { run in
+                    run.start == run.end
+                        ? formatDateShortKey(run.start)
+                        : "\(formatDateShortKey(run.start))–\(formatDateShortKey(run.end))"
+                }
+                Text("\(dates.count) \(dates.count == 1 ? "dag" : "dager"): \(parts.joined(separator: ", "))")
+                    .font(.app(size: 12))
+                    .foregroundStyle(.neutral600)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
+    }
+
+    private func formatDateShortKey(_ key: String) -> String {
+        guard let date = TunoCalendar.date(from: key) else { return key }
+        let f = DateFormatter()
+        f.dateFormat = "d. MMM"
+        f.locale = Locale(identifier: "nb_NO")
+        return f.string(from: date)
     }
 
     @ViewBuilder

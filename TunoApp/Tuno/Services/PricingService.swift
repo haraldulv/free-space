@@ -583,11 +583,14 @@ enum PricingService {
     }
 
     /// Beregn per-natt pris-breakdown. Kaller Supabase for regler + overrides.
+    /// `dates`: multi-velg (parkering) — kun disse dagene prises; checkIn/
+    /// checkOut er da bare konvolutt for override-fetchen.
     static func nightlyPrices(
         listingId: String,
         basePrice: Int,
         checkIn: Date,
         checkOut: Date,
+        dates: [String]? = nil,
     ) async -> [NightlyPriceEntry] {
         let rules: [Rule]
         let overrides: [Override]
@@ -602,16 +605,34 @@ enum PricingService {
             rules = []
         }
         do {
+            // .lte: breakdownen inkluderer siste dag (parkering teller dager),
+            // så en prisoverride på den dagen må også hentes (var .lt — bug).
             overrides = try await supabase
                 .from("listing_pricing_overrides")
                 .select()
                 .eq("listing_id", value: listingId)
                 .gte("date", value: format(checkIn))
-                .lt("date", value: format(checkOut))
+                .lte("date", value: format(checkOut))
                 .execute()
                 .value
         } catch {
             overrides = []
+        }
+
+        // Multi-velg: pris nøyaktig de valgte dagene (kan ha hull).
+        if let dates, !dates.isEmpty {
+            var cal = Calendar(identifier: .gregorian)
+            cal.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
+            return dates.sorted().compactMap { iso in
+                guard let day = isoFormatter.date(from: iso) else { return nil }
+                return resolve(
+                    date: cal.startOfDay(for: day),
+                    iso: iso,
+                    basePrice: basePrice,
+                    rules: rules,
+                    overrides: overrides,
+                )
+            }
         }
 
         return buildBreakdown(

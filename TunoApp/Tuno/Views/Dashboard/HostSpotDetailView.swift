@@ -288,15 +288,22 @@ struct HostSpotDetailView: View {
                 .execute()
                 .value
 
-            // Bygg sett av booket datoer for denne plassen
+            // Bygg sett av booket datoer for denne plassen. Parkering:
+            // parkingDays er booked_dates (multi-velg, kan ha hull) eller
+            // inklusiv ekspansjon — gammel loop var eksklusiv og mistet siste
+            // (betalte) dag. Camping beholder eksklusiv utsjekksdag.
             var booked = Set<String>()
             for b in bookings where (b.selectedSpotIds ?? []).contains(spotId) {
-                guard let start = TunoCalendar.date(from: b.checkIn),
-                      let end = TunoCalendar.date(from: b.checkOut) else { continue }
-                var cursor = start
-                while cursor < end {
-                    booked.insert(TunoCalendar.dateKey(cursor))
-                    cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? end
+                if listing.category == .parking {
+                    booked.formUnion(b.parkingDays)
+                } else {
+                    guard let start = TunoCalendar.date(from: b.checkIn),
+                          let end = TunoCalendar.date(from: b.checkOut) else { continue }
+                    var cursor = start
+                    while cursor < end {
+                        booked.insert(TunoCalendar.dateKey(cursor))
+                        cursor = calendar.date(byAdding: .day, value: 1, to: cursor) ?? end
+                    }
                 }
             }
             bookedDates = booked

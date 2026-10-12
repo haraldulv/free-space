@@ -8,6 +8,10 @@ struct CreateBookingRequest: Encodable {
     let listingId: String
     let checkIn: String       // "yyyy-MM-dd" — alltid satt
     let checkOut: String      // "yyyy-MM-dd" — alltid satt
+    /// Multi-velg (parkering): eksplisitte dager ("yyyy-MM-dd", kan ha hull).
+    /// Serveren priser og blokkerer KUN disse dagene; checkIn/checkOut
+    /// utledes server-side av lista.
+    var bookedDates: [String]? = nil
     /// ISO 8601 timestamp for hourly bookings (parkering per time). nil for daglige bookinger.
     let checkInAt: String?
     let checkOutAt: String?
@@ -112,6 +116,8 @@ final class BookingService: ObservableObject {
         let listingId: String
         let checkIn: String
         let checkOut: String
+        /// Multi-velg (parkering): eksplisitte dager, se CreateBookingRequest.
+        var bookedDates: [String]? = nil
         let licensePlate: String?
         let isRentalCar: Bool
         let selectedSpotIds: [String]?
@@ -300,48 +306,46 @@ final class BookingService: ObservableObject {
         let perDateCount: [String: Int]
     }
 
-    /// Henter fremtidige bookede datoer for en annonse, gruppert per spot-ID og per dato.
-    func fetchBookedDates(listingId: String) async -> BookedDates {
-        struct Row: Decodable {
-            let check_in: String
-            let check_out: String
-            let selected_spot_ids: [String]?
-        }
-        let fmt = DateFormatter()
-        fmt.dateFormat = "yyyy-MM-dd"
-        fmt.timeZone = TimeZone(identifier: "UTC")
-        let today = fmt.string(from: Date())
+    /// Rad fra listings_booked_ranges-RPC-en: anonyme opptatt-data for en
+    /// annonse. RPC-en er security definer fordi bookings-RLS bare lar
+    /// klienter se sine egne rader — uten den så gjesters kalender bare
+    /// egne bookinger og viste andres dager som ledige.
+    struct BookedRangeRow: Decodable {
+        let check_in: String
+        let check_out: String
+        let booked_dates: [String]?
+        let selected_spot_ids: [String]?
 
+        /// Dagene raden faktisk opptar. booked_dates (multi-velg) er
+        /// autoritativ; ellers ekspanderes konvolutten — inklusiv siste dag
+        /// for parkering (betalt dag), eksklusiv for camping (utsjekksmorgen).
+        func days(inclusiveEnd: Bool) -> [String] {
+            if let booked_dates, !booked_dates.isEmpty { return booked_dates }
+            let all = TunoCalendar.dateKeys(from: check_in, through: check_out)
+            return inclusiveEnd ? all : Array(all.dropLast())
+        }
+    }
+
+    /// Henter fremtidige bookede datoer for en annonse, gruppert per spot-ID
+    /// og per dato. `inclusiveEnd`: true for parkering (siste dag er betalt).
+    func fetchBookedDates(listingId: String, inclusiveEnd: Bool) async -> BookedDates {
         do {
-            let rows: [Row] = try await supabase
-                .from("bookings")
-                .select("check_in, check_out, selected_spot_ids")
-                .eq("listing_id", value: listingId)
-                .in("status", values: ["confirmed", "pending", "requested"])
-                // Forlatte «pending»-betalinger (lukket app midt i betaling)
-                // blokkerer ikke kalenderen: pending teller kun i 30 min.
-                .or("status.neq.pending,created_at.gte.\(Self.pendingCutoffISO())")
-                .gte("check_out", value: today)
+            let rows: [BookedRangeRow] = try await supabase
+                .rpc("listings_booked_ranges", params: ["p_listing_ids": [listingId]])
                 .execute()
                 .value
 
             var perSpot: [String: Set<String>] = [:]
             var perDateCount: [String: Int] = [:]
             for row in rows {
-                guard let start = fmt.date(from: row.check_in),
-                      let end = fmt.date(from: row.check_out) else { continue }
                 let occupies = (row.selected_spot_ids?.count ?? 0) > 0 ? row.selected_spot_ids!.count : 1
-                var cursor = start
-                while cursor < end {
-                    let d = fmt.string(from: cursor)
+                for d in row.days(inclusiveEnd: inclusiveEnd) {
                     perDateCount[d, default: 0] += occupies
                     if let ids = row.selected_spot_ids, !ids.isEmpty {
                         for sid in ids {
                             perSpot[sid, default: []].insert(d)
                         }
                     }
-                    guard let next = Calendar.current.date(byAdding: .day, value: 1, to: cursor) else { break }
-                    cursor = next
                 }
             }
             return BookedDates(
@@ -361,7 +365,9 @@ final class BookingService: ObservableObject {
     struct BookingForCalendar: Decodable, Identifiable {
         let id: String
         let check_in: String       // ISO yyyy-MM-dd
-        let check_out: String      // ISO yyyy-MM-dd (exclusive)
+        let check_out: String      // ISO yyyy-MM-dd (exclusive for camping)
+        /// Multi-velg (parkering): eksplisitte dager, autoritativ når satt.
+        let booked_dates: [String]?
         let selected_spot_ids: [String]?
         let status: String
         let guest: GuestInfo?
@@ -369,11 +375,20 @@ final class BookingService: ObservableObject {
             let full_name: String?
             let avatar_url: String?
         }
+
+        /// Dagene bookingen opptar — booked_dates (multi-velg) når satt,
+        /// ellers konvolutt-ekspansjon (inklusiv for parkering).
+        func days(inclusiveEnd: Bool) -> [String] {
+            if let booked_dates, !booked_dates.isEmpty { return booked_dates }
+            let all = TunoCalendar.dateKeys(from: check_in, through: check_out)
+            return inclusiveEnd ? all : Array(all.dropLast())
+        }
     }
 
     /// Henter fremtidige bookinger for en annonse med joinet gjest-info.
     /// Brukes til å vise sammenslåtte booking-spans (profilbilde + navn) i
-    /// host-kalenderen (`ProfileCalendarView`).
+    /// host-kalenderen (`ProfileCalendarView`). Host ser egne bookinger via
+    /// RLS, så direkte select er OK her.
     func fetchBookingsForListing(listingId: String) async -> [BookingForCalendar] {
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
@@ -383,7 +398,7 @@ final class BookingService: ObservableObject {
         do {
             let rows: [BookingForCalendar] = try await supabase
                 .from("bookings")
-                .select("id, check_in, check_out, selected_spot_ids, status, guest:profiles!user_id(full_name, avatar_url)")
+                .select("id, check_in, check_out, booked_dates, selected_spot_ids, status, guest:profiles!user_id(full_name, avatar_url)")
                 .eq("listing_id", value: listingId)
                 .in("status", values: ["confirmed", "pending", "requested"])
                 .gte("check_out", value: today)
@@ -396,7 +411,11 @@ final class BookingService: ObservableObject {
         }
     }
 
-    func checkAvailability(listingId: String, checkIn: String, checkOut: String) async -> (available: Int, total: Int) {
+    /// Per-dag-tilgjengelighet: laveste antall ledige plasser over de
+    /// forespurte dagene. Bruker RPC-en (ser alle bookinger, i motsetning til
+    /// RLS-begrenset direkte select) og teller per dag, så en man-ons-booking
+    /// ikke stenger tor-fre. Serverens create-rute er uansett autoritativ.
+    func checkAvailability(listingId: String, days: [String], inclusiveEnd: Bool) async -> (available: Int, total: Int) {
         do {
             struct ListingSpots: Decodable {
                 let spots: Int
@@ -410,32 +429,24 @@ final class BookingService: ObservableObject {
                 .execute()
                 .value
 
-            let count = try await supabase
-                .from("bookings")
-                .select("id", head: true, count: .exact)
-                .eq("listing_id", value: listingId)
-                .in("status", values: ["confirmed", "pending", "requested"])
-                // Samme stale-pending-regel som fetchBookedDates/serveren.
-                .or("status.neq.pending,created_at.gte.\(Self.pendingCutoffISO())")
-                .lt("check_in", value: checkOut)
-                .gt("check_out", value: checkIn)
+            let rows: [BookedRangeRow] = try await supabase
+                .rpc("listings_booked_ranges", params: ["p_listing_ids": [listingId]])
                 .execute()
-                .count ?? 0
+                .value
 
-            return (available: listing.spots - count, total: listing.spots)
+            let requested = Set(days)
+            var counts: [String: Int] = [:]
+            for row in rows {
+                let occupies = (row.selected_spot_ids?.count ?? 0) > 0 ? row.selected_spot_ids!.count : 1
+                for d in row.days(inclusiveEnd: inclusiveEnd) where requested.contains(d) {
+                    counts[d, default: 0] += occupies
+                }
+            }
+            let peak = counts.values.max() ?? 0
+            return (available: listing.spots - peak, total: listing.spots)
         } catch {
             print("checkAvailability error: \(error)")
             return (available: 0, total: 0)
         }
-    }
-
-    /// ISO-tidspunkt 30 minutter tilbake: pending-bookinger eldre enn dette
-    /// regnes som forlatte betalinger og blokkerer ikke tilgjengelighet.
-    private static func pendingCutoffISO() -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd'T'HH:mm:ss'Z'"
-        f.timeZone = TimeZone(identifier: "UTC")
-        f.locale = Locale(identifier: "en_US_POSIX")
-        return f.string(from: Date(timeIntervalSinceNow: -30 * 60))
     }
 }

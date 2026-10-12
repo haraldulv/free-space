@@ -1119,10 +1119,25 @@ struct Booking: Codable, Identifiable {
     let checkOutTimeSnapshot: String?
     /// Per-natt pris-breakdown. Lagres ved booking-insert når regler er aktive.
     let priceBreakdown: [NightlyPriceEntry]?
+    /// Multi-velg (parkering): eksplisitte bookede dager (kan ha hull).
+    /// nil = sammenhengende periode checkIn..checkOut (inklusiv for parkering).
+    let bookedDates: [String]?
 
     // Joined data
     let listing: BookingListing?
     let guest: BookingGuest?
+
+    /// Dagene bookingen faktisk opptar (parkering, inklusiv semantikk).
+    var parkingDays: [String] {
+        if let bookedDates, !bookedDates.isEmpty { return bookedDates }
+        return TunoCalendar.dateKeys(from: checkIn, through: checkOut)
+    }
+
+    /// true når daglisten har hull (multi-velg over flere perioder).
+    var hasGappedDates: Bool {
+        guard let bookedDates, !bookedDates.isEmpty else { return false }
+        return bookedDates.count < (TunoCalendar.nightsBetween(checkIn, checkOut).map { $0 + 1 } ?? bookedDates.count)
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, status, listing, guest
@@ -1131,6 +1146,7 @@ struct Booking: Codable, Identifiable {
         case hostId = "host_id"
         case checkIn = "check_in"
         case checkOut = "check_out"
+        case bookedDates = "booked_dates"
         case checkInAt = "check_in_at"
         case checkOutAt = "check_out_at"
         case totalPrice = "total_price"
@@ -1308,6 +1324,9 @@ struct OfferMetadata: Codable {
     let totalPrice: Int?
     let checkIn: String?
     let checkOut: String?
+    /// Multi-velg (parkering): eksplisitte dager forespørselen gjelder.
+    let bookedDates: [String]?
+    let dayCount: Int?
     let proposedByRole: String?  // "guest" eller "host"
     let round: Int?
     let expiresAt: String?

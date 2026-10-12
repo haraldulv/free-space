@@ -424,6 +424,13 @@ private struct HostRequestDetailSheet: View {
             }
             metaRow(label: "Ankomst", value: arrivalDisplay)
             metaRow(label: "Avreise", value: departureDisplay)
+            // Multi-velg: verten må se de FAKTISKE dagene for å kunne svare,
+            // ikke bare konvolutten.
+            if booking.hasGappedDates, let dates = booking.bookedDates {
+                let runs = TunoCalendar.runs(dates)
+                let parts = runs.map { $0.start == $0.end ? $0.start : "\($0.start) – \($0.end)" }
+                metaRow(label: "Dager", value: "\(dates.count) dager: \(parts.joined(separator: ", "))")
+            }
             if let deadlineText = deadlineLabel(booking.approvalDeadline) {
                 metaRow(label: "Frist", value: deadlineText, highlight: true)
             }
@@ -485,7 +492,7 @@ private struct HostRequestDetailSheet: View {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(Array(groups.enumerated()), id: \.offset) { _, g in
                         HStack {
-                            Text("\(g.price) kr × \(g.count) døgn")
+                            Text("\(g.price) kr × \(g.count) \(AppConfig.parkingOnly ? (g.count == 1 ? "dag" : "dager") : "døgn")")
                                 .font(.system(size: 12))
                                 .foregroundStyle(.neutral600)
                             + Text(" (\(sourceLabel(g.source)))")

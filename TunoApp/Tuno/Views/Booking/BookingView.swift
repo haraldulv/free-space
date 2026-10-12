@@ -113,6 +113,10 @@ struct BookingView: View {
     @State private var checkOut: Date? = nil
     /// Parkering: true = «Fast månedsplass» (30 dager fra valgt startdato).
     @State private var monthPlan = false
+    /// Multi-velg (parkering, Dagsleie): tap toggler enkeltdager i kalenderen.
+    /// checkIn/checkOut holdes synkront som konvolutt (min/maks) av pickeren.
+    @State private var multiDayMode = false
+    @State private var selectedDates: Set<String> = []
     @State private var showCalendar = false
     /// Hvilken dato (innsjekk vs utsjekk) som redigeres når calendarSheet
     /// åpnes for hourly-modus. true = innsjekk, false = utsjekk.
@@ -213,9 +217,24 @@ struct BookingView: View {
     private var nights: Int {
         // Antall dager i bookingen — INKLUDERER begge endepunkter (parkering teller dag, ikke natt).
         // 7. mai → 7. mai = 1 dag. 7. mai → 13. mai = 7 dager. 7. mai → 5. juni = 30 dager.
+        // Multi-velg: antall valgte dager (kan ha hull).
+        if isMultiDayActive { return selectedDates.count }
         guard let ci = checkIn, let co = checkOut else { return 0 }
         let span = Calendar.current.dateComponents([.day], from: ci, to: co).day ?? 0
         return max(1, span + 1)
+    }
+
+    /// Multi-velg er aktiv kun i parkeringens Dagsleie-gren.
+    private var isMultiDayActive: Bool {
+        listing.category == .parking && !monthPlan && !proposalMode && multiDayMode
+    }
+
+    /// Dagene bookingen faktisk gjelder, som sorterte ISO-strenger.
+    /// Multi-velg: de valgte dagene. Ellers: inklusiv ekspansjon av perioden.
+    private var bookingDayKeys: [String] {
+        if isMultiDayActive { return selectedDates.sorted() }
+        guard let ci = checkIn, let co = checkOut else { return [] }
+        return TunoCalendar.dateKeys(from: TunoCalendar.dateKey(ci), through: TunoCalendar.dateKey(co))
     }
 
     private var hours: Int {
@@ -235,7 +254,10 @@ struct BookingView: View {
 
     private var isHourly: Bool { effectiveBookingPriceUnit == .hour }
 
-    private var hasDates: Bool { checkIn != nil && checkOut != nil }
+    private var hasDates: Bool {
+        if isMultiDayActive { return !selectedDates.isEmpty }
+        return checkIn != nil && checkOut != nil
+    }
 
     private var baseTotal: Int {
         let units = unitsCount
@@ -244,6 +266,17 @@ struct BookingView: View {
             // ellers standard pris. For time-basert booking (parkering)
             // er det ingen dato-overstyringer (units = timer, ikke datoer).
             if !isHourly, let ci = checkIn, let co = checkOut, units > 0 {
+                // Parkering: pris nøyaktig dagene i bookingDayKeys — inklusiv
+                // siste dag (matcher serveren; gammel loop mistet den) og
+                // riktig for multi-velg med hull.
+                if listing.category == .parking {
+                    return selectedSpots.reduce(0) { sum, spot in
+                        let base = spot.price ?? listing.price ?? 0
+                        let overrides = spot.datePriceOverrides ?? [:]
+                        return sum + bookingDayKeys.reduce(0) { $0 + (overrides[$1] ?? base) }
+                    }
+                }
+
                 let isoFormatter = DateFormatter()
                 isoFormatter.dateFormat = "yyyy-MM-dd"
                 isoFormatter.timeZone = TimeZone(identifier: "Europe/Oslo") ?? .current
@@ -365,12 +398,14 @@ struct BookingView: View {
             return
         }
         loadingBreakdown = true
+        let multiDates = isMultiDayActive ? selectedDates.sorted() : nil
         Task {
             let breakdown = await PricingService.nightlyPrices(
                 listingId: listing.id,
                 basePrice: listing.price ?? 0,
                 checkIn: checkIn,
                 checkOut: checkOut,
+                dates: multiDates,
             )
             await MainActor.run {
                 nightlyPriceBreakdown = breakdown
@@ -534,12 +569,15 @@ struct BookingView: View {
 
                 priceBreakdown
 
-                if listing.instantBooking == true && nights > 7 {
+                if listing.instantBooking == true,
+                   listing.category == .parking ? nights > 31 : nights > 7 {
                     HStack(alignment: .top, spacing: 8) {
                         Image(systemName: "info.circle.fill")
                             .foregroundStyle(.orange)
                             .font(.system(size: 14))
-                        Text("Opphold på mer enn 7 netter krever godkjenning fra utleier. Beløpet reserveres på kortet ditt og belastes først når utleier godkjenner.")
+                        Text(listing.category == .parking
+                            ? "Bookinger på mer enn 31 dager krever godkjenning fra utleier. Beløpet reserveres på kortet ditt og belastes først når utleier godkjenner."
+                            : "Opphold på mer enn 7 netter krever godkjenning fra utleier. Beløpet reserveres på kortet ditt og belastes først når utleier godkjenner.")
                             .font(.system(size: 13))
                             .foregroundStyle(.neutral700)
                     }
@@ -756,7 +794,8 @@ struct BookingView: View {
                 checkIn: checkIn ?? Date(),
                 checkOut: checkOut ?? Date(),
                 total: total,
-                mode: bookingService.requiresApproval ? .reserved : .confirmed
+                mode: bookingService.requiresApproval ? .reserved : .confirmed,
+                dayCount: isMultiDayActive ? selectedDates.count : nil
             )
         }
         .navigationDestination(isPresented: $showRequestSent) {
@@ -765,7 +804,8 @@ struct BookingView: View {
                 checkIn: checkIn ?? Date(),
                 checkOut: checkOut ?? Date(),
                 total: total,
-                mode: .requested(conversationId: requestConversationId)
+                mode: .requested(conversationId: requestConversationId),
+                dayCount: isMultiDayActive ? selectedDates.count : nil
             )
         }
         .sheet(isPresented: $showCalendar) {
@@ -837,7 +877,10 @@ struct BookingView: View {
                 monthPlan = false
             }
             async let avail: () = checkAvailability()
-            async let booked = bookingService.fetchBookedDates(listingId: listing.id)
+            async let booked = bookingService.fetchBookedDates(
+                listingId: listing.id,
+                inclusiveEnd: listing.category == .parking
+            )
             _ = await avail
             bookedDates = await booked
         }
@@ -849,6 +892,17 @@ struct BookingView: View {
             loadPriceBreakdown()
         }
         .onChange(of: checkOut) {
+            showCardForm = false
+            bookingService.clientSecret = nil
+            deselectBlockedSpots()
+            Task { await checkAvailability() }
+            loadPriceBreakdown()
+        }
+        .onChange(of: selectedDates) {
+            // Multi-velg: samme resett som dato-endringer. checkIn/checkOut
+            // (konvolutten) settes av pickeren, men begge kan være uendret
+            // når en dag MIDT i settet toggles — derfor egen observer.
+            guard isMultiDayActive else { return }
             showCardForm = false
             bookingService.clientSecret = nil
             deselectBlockedSpots()
@@ -1044,40 +1098,135 @@ struct BookingView: View {
         }
     }
 
-    /// Standard datovalg: fra/til-pillar + inline-kalender.
+    /// Standard datovalg: fra/til-pillar + inline-kalender. Parkering har i
+    /// tillegg multi-velg («Velg enkeltdager», f.eks. man-ons flere uker) og
+    /// bruker paged kalender (én måned + piler) i stedet for den gamle
+    /// 12-måneders-stabelen i 540pt-ramme med scrolling avslått, der måneder
+    /// lengre frem var uoppnåelige.
     @ViewBuilder
     private var rangeDateSection: some View {
-        let fromLabel: String = listing.category == .parking ? "Fra dato" : "Innsjekk"
-        let toLabel: String = listing.category == .parking ? "Til dato" : "Utsjekk"
+        let isParking = listing.category == .parking
+        let fromLabel: String = isParking ? "Fra dato" : "Innsjekk"
+        let toLabel: String = isParking ? "Til dato" : "Utsjekk"
 
-        // Dato-pillar — tap åpner wheel-picker for direkte dato-valg
+        if isParking && !proposalMode {
+            multiDayToggle
+        }
+
+        if isMultiDayActive {
+            SearchDateRangePicker(
+                checkIn: $checkIn,
+                checkOut: $checkOut,
+                blockedDates: availabilityBlockedDates,
+                selectionMode: .multi,
+                selectedDates: $selectedDates,
+                paged: true
+            )
+
+            if selectedDates.isEmpty {
+                Text("Trykk på dagene du vil parkere. Du kan velge dager i flere uker.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
+            } else {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("\(selectedDates.count) \(selectedDates.count == 1 ? "dag" : "dager") valgt · \(multiDaySummary)")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral500)
+                    Spacer()
+                    Button("Nullstill") {
+                        selectedDates = []
+                        checkIn = nil
+                        checkOut = nil
+                    }
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.neutral600)
+                }
+            }
+        } else {
+            // Dato-pillar — tap åpner wheel-picker for direkte dato-valg
+            HStack(spacing: 8) {
+                bookingDatePill(label: fromLabel, date: checkIn, isActive: editingCheckIn) {
+                    editingCheckIn = true
+                    wheelPickerField = .checkIn
+                }
+                bookingDatePill(label: toLabel, date: checkOut, isActive: !editingCheckIn) {
+                    editingCheckIn = false
+                    wheelPickerField = .checkOut
+                }
+            }
+
+            if isParking {
+                SearchDateRangePicker(
+                    checkIn: $checkIn,
+                    checkOut: $checkOut,
+                    blockedDates: availabilityBlockedDates,
+                    paged: true
+                )
+            } else {
+                // Camping: uendret 12-måneders-stabel. Fast høyde som rommer
+                // ~3 måneder; lengre frem via dato-pillene → wheel-picker.
+                SearchDateRangePicker(
+                    checkIn: $checkIn,
+                    checkOut: $checkOut,
+                    blockedDates: availabilityBlockedDates
+                )
+                .frame(height: 540)
+                .scrollDisabled(true)
+            }
+
+            if hasDates {
+                Text("\(nights) \(effectiveBookingPriceUnit.pluralized(count: nights))")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.neutral500)
+            }
+        }
+    }
+
+    /// Kort oppsummering av multi-valgte dager som perioder: «3.–5. mar, 10.–12. mar».
+    private var multiDaySummary: String {
+        let runs = TunoCalendar.runs(Array(selectedDates))
+        let parts = runs.prefix(3).map { run -> String in
+            if run.start == run.end { return formatShortKey(run.start) }
+            return "\(formatShortKey(run.start))–\(formatShortKey(run.end))"
+        }
+        let suffix = runs.count > 3 ? " …" : ""
+        return parts.joined(separator: ", ") + suffix
+    }
+
+    private func formatShortKey(_ key: String) -> String {
+        guard let date = TunoCalendar.date(from: key) else { return key }
+        return formatShort(date)
+    }
+
+    /// Sammenhengende / Velg enkeltdager. Bytte nullstiller datovalget så
+    /// konvolutt og dagsett aldri spriker.
+    private var multiDayToggle: some View {
         HStack(spacing: 8) {
-            bookingDatePill(label: fromLabel, date: checkIn, isActive: editingCheckIn) {
-                editingCheckIn = true
-                wheelPickerField = .checkIn
-            }
-            bookingDatePill(label: toLabel, date: checkOut, isActive: !editingCheckIn) {
-                editingCheckIn = false
-                wheelPickerField = .checkOut
-            }
+            multiDayChip("Sammenhengende", selected: !multiDayMode) { setMultiDayMode(false) }
+            multiDayChip("Velg enkeltdager", selected: multiDayMode) { setMultiDayMode(true) }
+            Spacer()
         }
+    }
 
-        // Inline-kalender (samme komponent som i søket). Bruker en fast
-        // høyde som rommer ~3 måneder. For å hoppe lenger frem i tid kan
-        // bruker tappe dato-pillene → wheel-picker.
-        SearchDateRangePicker(
-            checkIn: $checkIn,
-            checkOut: $checkOut,
-            blockedDates: availabilityBlockedDates
-        )
-        .frame(height: 540)
-        .scrollDisabled(true)
-
-        if hasDates {
-            Text("\(nights) \(effectiveBookingPriceUnit.pluralized(count: nights))")
-                .font(.system(size: 13))
-                .foregroundStyle(.neutral500)
+    private func multiDayChip(_ title: String, selected: Bool, onTap: @escaping () -> Void) -> some View {
+        Button(action: onTap) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(selected ? Color.white : Color.neutral700)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(selected ? Color.appAccent : Color.appCard)
+                .clipShape(Capsule())
         }
+        .buttonStyle(.plain)
+    }
+
+    private func setMultiDayMode(_ on: Bool) {
+        guard multiDayMode != on else { return }
+        multiDayMode = on
+        selectedDates = []
+        checkIn = nil
+        checkOut = nil
     }
 
     // MARK: - Parkering: dag/måned-valg
@@ -1715,9 +1864,14 @@ struct BookingView: View {
     }
 
     private func isSpotBlockedByDates(_ spot: SpotMarker) -> Bool {
-        guard let ci = checkIn, let co = checkOut else { return false }
         let blocked = effectiveSpotBlockedDates(spot)
         guard !blocked.isEmpty else { return false }
+        if listing.category == .parking {
+            // Dagene bookingen faktisk gjelder — multi-velg eller inklusiv
+            // ekspansjon. Gammel loop var eksklusiv og overså siste dag.
+            return bookingDayKeys.contains { blocked.contains($0) }
+        }
+        guard let ci = checkIn, let co = checkOut else { return false }
         let fmt = DateFormatter()
         fmt.dateFormat = "yyyy-MM-dd"
         var cursor = Calendar.current.startOfDay(for: ci)
@@ -1850,17 +2004,20 @@ struct BookingView: View {
     // MARK: - Actions
 
     private func checkAvailability() async {
-        guard let ci = checkIn, let co = checkOut else {
+        let isParking = listing.category == .parking
+        var days = bookingDayKeys
+        // Camping: utsjekksdagen er ikke en natt — den skal ikke telle mot
+        // kapasiteten (bookingDayKeys ekspanderer inklusivt).
+        if !isParking && days.count > 1 { days = Array(days.dropLast()) }
+        guard !days.isEmpty else {
             availableSpots = nil
             totalSpots = nil
             return
         }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
         let result = await bookingService.checkAvailability(
             listingId: listing.id,
-            checkIn: formatter.string(from: ci),
-            checkOut: formatter.string(from: co)
+            days: days,
+            inclusiveEnd: isParking
         )
         availableSpots = result.available
         totalSpots = result.total
@@ -1922,6 +2079,8 @@ struct BookingView: View {
             listingId: listing.id,
             checkIn: dateFormatter.string(from: dateForCheckIn),
             checkOut: dateFormatter.string(from: dateForCheckOut),
+            // Multi-velg: serveren priser og blokkerer nøyaktig disse dagene.
+            bookedDates: isMultiDayActive ? selectedDates.sorted() : nil,
             checkInAt: isHourly ? isoFormatter.string(from: ci) : nil,
             checkOutAt: isHourly ? isoFormatter.string(from: co) : nil,
             licensePlate: isRentalCar ? nil : licensePlate.trimmingCharacters(in: .whitespaces).uppercased(),
@@ -2034,6 +2193,7 @@ struct BookingView: View {
             listingId: listing.id,
             checkIn: dateFormatter.string(from: ci),
             checkOut: dateFormatter.string(from: co),
+            bookedDates: isMultiDayActive ? selectedDates.sorted() : nil,
             licensePlate: isRentalCar ? nil : licensePlate.trimmingCharacters(in: .whitespaces).uppercased(),
             isRentalCar: isRentalCar,
             selectedSpotIds: selectedSpotIds.isEmpty ? nil : Array(selectedSpotIds),
@@ -2083,6 +2243,11 @@ struct BookingView: View {
         dateFmt.dateFormat = "d. MMM."
         let dateRange: String = {
             guard let ci = checkIn, let co = checkOut else { return "" }
+            // Multi-velg: spennet alene villeder (hull imellom) — antall dager
+            // står i unitLabel, så spennet merkes som «mellom».
+            if isMultiDayActive && selectedDates.count > 1 {
+                return "mellom \(dateFmt.string(from: ci)) og \(dateFmt.string(from: co))"
+            }
             return "\(dateFmt.string(from: ci)) - \(dateFmt.string(from: co))"
         }()
         let unitLabel: String = {

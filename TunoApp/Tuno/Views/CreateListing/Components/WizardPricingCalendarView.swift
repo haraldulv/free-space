@@ -535,35 +535,53 @@ struct WizardPricingCalendarView: View {
     }
 
     /// Returnerer alle booking-segmenter som overlapper denne uka.
+    /// Dag-medlemskap avgjøres av bookingens faktiske dagsett: booked_dates
+    /// (multi-velg, kan ha hull — da splittes pillen i flere segmenter per
+    /// uke) eller konvolutt-ekspansjon (inklusiv siste dag for parkering;
+    /// gammel sammenligning var eksklusiv og tegnet pillen én dag for kort).
     private func bookingSegments(for week: WeekRow) -> [BookingSegment] {
         guard !filteredBookings.isEmpty else { return [] }
+        let inclusiveEnd = form.category == .parking
         var result: [BookingSegment] = []
         for booking in filteredBookings {
-            guard let checkIn = Self.isoFormatter.date(from: booking.check_in),
-                  let checkOut = Self.isoFormatter.date(from: booking.check_out) else { continue }
-            var firstCol: Int? = nil
-            var lastCol: Int? = nil
-            var includesCheckIn = false
-            for col in 0..<7 {
-                guard let day = week.days[col] else { continue }
-                let startOfDay = Self.osloCalendar.startOfDay(for: day)
-                if startOfDay >= Self.osloCalendar.startOfDay(for: checkIn) &&
-                    startOfDay < Self.osloCalendar.startOfDay(for: checkOut) {
-                    if firstCol == nil { firstCol = col }
-                    lastCol = col
-                    if Self.osloCalendar.isDate(day, inSameDayAs: checkIn) {
+            let daySet = Set(booking.days(inclusiveEnd: inclusiveEnd))
+            guard !daySet.isEmpty else { continue }
+            // Sammenhengende kolonne-runs i uka (multi-velg kan ha hull).
+            var runStart: Int? = nil
+            var prevCol: Int? = nil
+            func closeRun(endCol: Int) {
+                guard let s = runStart else { return }
+                var includesCheckIn = false
+                for col in s...endCol {
+                    if let day = week.days[col],
+                       Self.isoFormatter.string(from: Self.osloCalendar.startOfDay(for: day)) == booking.check_in {
                         includesCheckIn = true
                     }
                 }
-            }
-            if let s = firstCol, let e = lastCol {
                 result.append(BookingSegment(
                     booking: booking,
                     startCol: s,
-                    endCol: e,
+                    endCol: endCol,
                     includesCheckIn: includesCheckIn
                 ))
+                runStart = nil
             }
+            for col in 0..<7 {
+                guard let day = week.days[col] else {
+                    if let p = prevCol { closeRun(endCol: p) }
+                    prevCol = nil
+                    continue
+                }
+                let iso = Self.isoFormatter.string(from: Self.osloCalendar.startOfDay(for: day))
+                if daySet.contains(iso) {
+                    if runStart == nil { runStart = col }
+                    prevCol = col
+                } else {
+                    if let p = prevCol { closeRun(endCol: p) }
+                    prevCol = nil
+                }
+            }
+            if let p = prevCol { closeRun(endCol: p) }
         }
         return result
     }

@@ -201,10 +201,17 @@ struct OfferMessageBubble: View {
         dayMonth.locale = Locale(identifier: "nb_NO")
 
         let cal = Calendar(identifier: .gregorian)
+        let range: String
         if cal.isDate(start, equalTo: end, toGranularity: .month) {
-            return "\(day.string(from: start))–\(dayMonth.string(from: end))"
+            range = "\(day.string(from: start))–\(dayMonth.string(from: end))"
+        } else {
+            range = "\(dayMonth.string(from: start))–\(dayMonth.string(from: end))"
         }
-        return "\(dayMonth.string(from: start))–\(dayMonth.string(from: end))"
+        // Multi-velg: spennet alene villeder (hull imellom) — vis antall dager.
+        if let count = metadata.dayCount ?? metadata.bookedDates?.count, count > 0 {
+            return "\(count) \(count == 1 ? "dag" : "dager") · \(range)"
+        }
+        return range
     }
 
     private var countdownText: String? {
