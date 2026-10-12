@@ -558,11 +558,11 @@ export async function createListing(input: CreateListingData, hostId: string): P
     // Fetch user metadata from auth and create profile
     const { data: { user } } = await supabase.auth.getUser();
     const fullName = user?.user_metadata?.full_name || user?.user_metadata?.name || "Anonym";
-    const avatar = user?.user_metadata?.avatar_url || "";
+    // avatar_url settes bevisst tom: Google-monogrammer skal ikke inn.
     await supabase.from("profiles").insert({
       id: hostId,
       full_name: fullName,
-      avatar_url: avatar,
+      avatar_url: "",
       joined_year: new Date().getFullYear(),
     });
   }

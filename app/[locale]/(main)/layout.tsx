@@ -43,7 +43,9 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
       setUser({
         email,
         fullName: profile?.full_name || (metadata?.full_name as string) || undefined,
-        avatar: profile?.avatar_url || (metadata?.avatar_url as string) || undefined,
+        // Kun egne opplastede bilder (profiles.avatar_url). Google-metadata
+        // brukes ikke: auto-monogrammene derfra skal ikke inn i Tuno.
+        avatar: profile?.avatar_url || undefined,
         id: userId,
       });
 
@@ -62,7 +64,6 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         setUser({
           email: data.user.email || "",
           fullName: data.user.user_metadata?.full_name,
-          avatar: data.user.user_metadata?.avatar_url,
           id: data.user.id,
         });
         loadUserData(data.user.id, data.user.email || "", data.user.user_metadata || {});
@@ -75,7 +76,6 @@ function MainLayoutInner({ children }: { children: React.ReactNode }) {
         setUser({
           email: session.user.email || "",
           fullName: session.user.user_metadata?.full_name,
-          avatar: session.user.user_metadata?.avatar_url,
           id: session.user.id,
         });
         loadUserData(session.user.id, session.user.email || "", session.user.user_metadata || {});

@@ -213,7 +213,9 @@
     "hostStatsReviews": "{count, plural, =1 {1 anmeldelse} other {# anmeldelser}}",
     "hostStatsNoReviews": "Ingen anmeldelser ennå",
     "hostStatsListings": "Annonser",
-    "hostStatsResponse": "Svarprosent"
+    "hostStatsResponse": "Svarprosent",
+    "verifiedHost": "Verifisert utleier",
+    "verifiedHostSub": "Identitet og bankkonto bekreftet"
   },
   "booking": {
     "title": "Bestilling",

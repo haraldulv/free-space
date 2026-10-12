@@ -2,7 +2,7 @@
 
 import Avatar from "@/components/ui/Avatar";
 import { Host } from "@/types";
-import { Star, Home } from "lucide-react";
+import { Star, Home, BadgeCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import ContactHostButton from "./ContactHostButton";
 import ReportButton from "./ReportButton";
@@ -31,6 +31,16 @@ export default function HostCard({ host, listingId }: HostCardProps) {
           ) : (
             <p className="text-sm text-neutral-500">{t("hostLabel")}</p>
           )}
+        </div>
+      </div>
+
+      {/* Synlige annonser krever fullført Stripe-KYC (host_stripe_ready),
+          så utleieren her er alltid identitets- og bankverifisert. */}
+      <div className="mt-4 flex items-start gap-2 rounded-xl bg-neutral-50 px-3 py-2.5">
+        <BadgeCheck className="mt-0.5 h-4 w-4 shrink-0 text-primary-600" />
+        <div>
+          <p className="text-sm font-semibold text-neutral-900">{t("verifiedHost")}</p>
+          <p className="text-xs text-neutral-500">{t("verifiedHostSub")}</p>
         </div>
       </div>
 

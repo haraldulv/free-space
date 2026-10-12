@@ -213,7 +213,9 @@
     "hostStatsReviews": "{count, plural, =1 {1 review} other {# reviews}}",
     "hostStatsNoReviews": "No reviews yet",
     "hostStatsListings": "Listings",
-    "hostStatsResponse": "Response rate"
+    "hostStatsResponse": "Response rate",
+    "verifiedHost": "Verified host",
+    "verifiedHostSub": "Identity and bank account confirmed"
   },
   "booking": {
     "title": "Booking",

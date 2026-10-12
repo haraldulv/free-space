@@ -213,7 +213,9 @@
     "hostStatsReviews": "{count, plural, =1 {1 Bewertung} other {# Bewertungen}}",
     "hostStatsNoReviews": "Noch keine Bewertungen",
     "hostStatsListings": "Anzeigen",
-    "hostStatsResponse": "Antwortrate"
+    "hostStatsResponse": "Antwortrate",
+    "verifiedHost": "Verifizierter Vermieter",
+    "verifiedHostSub": "Identität und Bankkonto bestätigt"
   },
   "booking": {
     "title": "Buchung",

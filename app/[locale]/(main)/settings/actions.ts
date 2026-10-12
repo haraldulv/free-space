@@ -41,7 +41,7 @@ export async function getProfileAction(): Promise<{
         id: user.id,
         email: user.email || "",
         fullName: profile?.full_name || user.user_metadata?.full_name || "",
-        avatar: profile?.avatar_url || user.user_metadata?.avatar_url || "",
+        avatar: profile?.avatar_url || "",
         responseRate: profile?.response_rate || 0,
         responseTime: profile?.response_time || "innen 1 time",
         joinedYear: profile?.joined_year || new Date().getFullYear(),
