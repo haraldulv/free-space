@@ -1,7 +1,7 @@
 import Foundation
 import GooglePlaces
 
-struct PlacePrediction: Identifiable {
+struct PlacePrediction: Identifiable, Equatable {
     let id: String
     let description: String
     let mainText: String
@@ -46,9 +46,17 @@ final class PlacesService: ObservableObject {
     private let client = GMSPlacesClient.shared()
     private var searchTask: Task<Void, Never>?
     private var sessionToken = GMSAutocompleteSessionToken()
+    /// Ordner svar fra Google: bare svaret på SISTE forespørsel får skrive
+    /// predictions. Task-kansellering stopper ikke en request som alt er
+    /// sendt, og callbackens egen Task kan ikke sjekke searchTasks
+    /// kansellering — uten generasjonssjekken overskriver gamle svar nye
+    /// (lista «hopper» mens man skriver).
+    private var requestGeneration = 0
 
     func autocomplete(query: String) {
         searchTask?.cancel()
+        requestGeneration += 1
+        let generation = requestGeneration
 
         guard !query.isEmpty else {
             predictions = []
@@ -70,18 +78,21 @@ final class PlacesService: ObservableObject {
                     sessionToken: sessionToken
                 ) { [weak self] results, error in
                     Task { @MainActor in
-                        guard let self else {
+                        guard let self, generation == self.requestGeneration else {
                             continuation.resume()
                             return
                         }
                         if let results {
-                            self.predictions = results.map { result in
+                            let mapped = results.map { result in
                                 PlacePrediction(
                                     id: result.placeID,
                                     description: result.attributedFullText.string,
                                     mainText: result.attributedPrimaryText.string,
                                     secondaryText: result.attributedSecondaryText?.string ?? ""
                                 )
+                            }
+                            if mapped != self.predictions {
+                                self.predictions = mapped
                             }
                         } else if let error {
                             print("Places autocomplete error: \(error.localizedDescription)")
@@ -196,6 +207,9 @@ final class PlacesService: ObservableObject {
 
     func clear() {
         searchTask?.cancel()
+        // Uten bump kan et svar som alt er underveis refylle predictions
+        // ETTER clear (f.eks. rett etter at brukeren valgte et treff).
+        requestGeneration += 1
         predictions = []
         sessionToken = GMSAutocompleteSessionToken()
     }
