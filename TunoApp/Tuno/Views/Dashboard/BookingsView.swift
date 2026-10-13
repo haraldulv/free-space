@@ -1,11 +1,20 @@
 import SwiftUI
 
 struct BookingsView: View {
+    /// Verter trenger utleie-oversikten der de leter: i Bestillinger.
+    /// Samme språk som Meldinger-filteret («Som vert»/«Som gjest»).
+    private enum BookingRole {
+        case guest
+        case host
+    }
+
     @EnvironmentObject var authManager: AuthManager
     @State private var bookings: [Booking] = []
     @State private var isLoading = true
     @State private var showLogin = false
     @State private var activeTab: BookingTab = .upcoming
+    @State private var role: BookingRole = .guest
+    @State private var didAutoPickRole = false
 
     var body: some View {
         Group {
@@ -39,27 +48,63 @@ struct BookingsView: View {
 
     private var contentWithTabs: some View {
         VStack(spacing: 0) {
-            tabBar
+            if authManager.isHost {
+                roleBar
+            }
+            if role == .guest {
+                tabBar
+            }
             Divider().opacity(0.4)
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    let visible = filteredBookings
-                    if visible.isEmpty {
-                        emptyState
-                            .padding(.top, 80)
-                    } else {
-                        ForEach(visible) { booking in
-                            BookingCard(booking: booking, onCancelled: { updated in
-                                if let idx = bookings.firstIndex(where: { $0.id == updated.id }) {
-                                    bookings[idx] = updated
-                                }
-                            })
+            if role == .host {
+                HostBookingsContent()
+            } else {
+                ScrollView {
+                    LazyVStack(spacing: 16) {
+                        let visible = filteredBookings
+                        if visible.isEmpty {
+                            emptyState
+                                .padding(.top, 80)
+                        } else {
+                            ForEach(visible) { booking in
+                                BookingCard(booking: booking, onCancelled: { updated in
+                                    if let idx = bookings.firstIndex(where: { $0.id == updated.id }) {
+                                        bookings[idx] = updated
+                                    }
+                                })
+                            }
                         }
                     }
+                    .padding(16)
                 }
-                .padding(16)
             }
         }
+    }
+
+    private var roleBar: some View {
+        HStack(spacing: 6) {
+            roleChip("Som gjest", value: .guest)
+            roleChip("Som vert", value: .host)
+            Spacer()
+        }
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, role == .host ? 12 : 0)
+    }
+
+    private func roleChip(_ label: String, value: BookingRole) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.18)) { role = value }
+        } label: {
+            Text(label)
+                .font(.app(size: 14, weight: role == value ? .semibold : .medium))
+                .foregroundStyle(role == value ? .white : .neutral800)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(role == value ? activeChipColor : inactiveChipColor)
+                .clipShape(Capsule())
+                .overlay(Capsule().stroke(role == value ? activeChipColor : Color.neutral200, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     /// Palett C i parkering-modus (ink-chip), gammel grønn i camping.
@@ -144,6 +189,14 @@ struct BookingsView: View {
             print("Failed to load bookings: \(error)")
         }
         isLoading = false
+        // Ren vert (ingen egne bestillinger): start på vert-visningen —
+        // det er den de kom for.
+        if !didAutoPickRole {
+            didAutoPickRole = true
+            if bookings.isEmpty && authManager.isHost {
+                role = .host
+            }
+        }
     }
 }
 

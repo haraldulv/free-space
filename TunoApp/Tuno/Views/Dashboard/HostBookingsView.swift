@@ -1,10 +1,11 @@
 import SwiftUI
 
-/// «Utleiinger»: vertens samlede oversikt over bookinger på egne annonser,
-/// gruppert Pågår nå / Kommende / Venter på svar / Tidligere. Bygget etter
-/// Haralds testrunde 2026-10-13: det fantes ingen samlet liste, bare
-/// per-annonse-visningen i HostListingStatsView.
-struct HostBookingsView: View {
+/// Vertens samlede oversikt over bookinger på egne annonser, gruppert
+/// Pågår nå / Kommende / Venter på svar / Tidligere. Bor i Bestillinger-
+/// fanen bak «Som vert»-velgeren (Harald 2026-10-13: en egen «Utleiinger»-
+/// rad i profilen var for godt gjemt og hadde et dårlig navn). Embeddes av
+/// BookingsView — ingen egen navigationTitle/bakgrunn.
+struct HostBookingsContent: View {
     @EnvironmentObject var authManager: AuthManager
     @State private var bookings: [Booking] = []
     @State private var isLoading = true
@@ -19,9 +20,10 @@ struct HostBookingsView: View {
                     Image(systemName: "calendar.badge.clock")
                         .font(.system(size: 40))
                         .foregroundStyle(.neutral300)
-                    Text("Ingen utleiinger ennå")
+                    Text("Ingen bookinger på plassene dine ennå")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(.neutral500)
+                        .multilineTextAlignment(.center)
                     Text("Når noen booker en av plassene dine, vises bookingen her.")
                         .font(.system(size: 14))
                         .foregroundStyle(.neutral400)
@@ -43,13 +45,6 @@ struct HostBookingsView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background {
-            if AppConfig.parkingOnly {
-                Color.paper.ignoresSafeArea()
-            }
-        }
-        .navigationTitle("Utleiinger")
-        .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
     }
 
