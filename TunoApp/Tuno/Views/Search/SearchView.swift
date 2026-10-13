@@ -136,6 +136,7 @@ struct SearchView: View {
     @State private var showFiltersSheet = false
     /// Parkering (Asker-pivoten): det nye ett-stegs søkearket.
     @State private var showParkingSearchSheet = false
+    @State private var parkingSheetDetent: PresentationDetent = .medium
     /// Når SearchView åpnes med `openWhereSheetOnAppear=true` (forside-pille)
     /// vil SwiftUI rendre body (kart + topBar) ETT frame før fullScreenCover
     /// legger WhereSheet over. Det gir et synlig kart-glimt. Vi gater alle
@@ -196,6 +197,7 @@ struct SearchView: View {
                 query: $query,
                 checkIn: $checkIn,
                 checkOut: $checkOut,
+                detent: $parkingSheetDetent,
                 placesService: placesService,
                 onSelectPlace: { prediction in
                     Task { await centerOnPlace(prediction) }
@@ -208,7 +210,7 @@ struct SearchView: View {
                 },
                 onSearch: performSearch
             )
-            .presentationDetents([.medium, .large])
+            .presentationDetents([.medium, .large], selection: $parkingSheetDetent)
             .presentationDragIndicator(.visible)
             .presentationCornerRadius(TunoRadius.card)
         }

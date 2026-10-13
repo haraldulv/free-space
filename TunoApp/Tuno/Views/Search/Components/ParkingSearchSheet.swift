@@ -8,6 +8,9 @@ struct ParkingSearchSheet: View {
     @Binding var query: String
     @Binding var checkIn: Date?
     @Binding var checkOut: Date?
+    /// Styres av arket: steg 2 (kalenderen) trenger full høyde, så vi løfter
+    /// detenten til .large når brukeren går videre fra stedvalget.
+    @Binding var detent: PresentationDetent
     @ObservedObject var placesService: PlacesService
     let onSelectPlace: (PlacePrediction) -> Void
     /// Områdeforslag med kjent koordinat (Asker-stasjonene): navn, lat, lng.
@@ -18,7 +21,6 @@ struct ParkingSearchSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var typing: String = ""
-    @State private var wheelPickerField: DateWheelField? = nil
     @FocusState private var searchFocused: Bool
 
     private enum Step: Equatable {
@@ -62,7 +64,12 @@ struct ParkingSearchSheet: View {
         .background(Color.paper)
         .safeAreaInset(edge: .bottom) { bottomBar }
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: step)
-        .onAppear { typing = query }
+        .onAppear {
+            typing = query
+            // Hver presentasjon starter på steg 1 (fersk @State) — start i
+            // medium så kartet fortsatt synes bak.
+            detent = .medium
+        }
         .onChange(of: typing) { _, newValue in
             // pick()/forslagsrader setter typing programmatisk idet vi går til
             // steg 2 — ikke start en ny autocomplete da.
@@ -72,19 +79,6 @@ struct ParkingSearchSheet: View {
             } else {
                 placesService.autocomplete(query: newValue)
             }
-        }
-        .sheet(item: $wheelPickerField) { field in
-            DateWheelSheet(
-                field: field,
-                checkIn: $checkIn,
-                checkOut: $checkOut,
-                allowSameDayCheckOut: false,
-                onClose: { wheelPickerField = nil }
-            )
-            .presentationDetents([.height(380)])
-            .presentationDragIndicator(.visible)
-            .presentationBackground(.ultraThinMaterial)
-            .presentationCornerRadius(28)
         }
     }
 
@@ -203,6 +197,8 @@ struct ParkingSearchSheet: View {
     private func advanceToDates() {
         searchFocused = false
         step = .dates
+        // Kalenderen trenger full høyde.
+        detent = .large
     }
 
     private func suggestionRowLabel(icon: String, title: String, subtitle: String) -> some View {
@@ -266,56 +262,86 @@ struct ParkingSearchSheet: View {
             }
             .buttonStyle(.plain)
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 Text("Valgfritt. Du kan søke uten datoer.")
                     .font(.tuno(.caption))
                     .foregroundStyle(.neutral500)
 
-                HStack(spacing: 10) {
-                    datePill(label: "Fra dato", date: checkIn) { wheelPickerField = .checkIn }
-                    datePill(label: "Til dato", date: checkOut) { wheelPickerField = .checkOut }
+                HStack(spacing: 8) {
+                    quickDateChip("I dag", offset: 0)
+                    quickDateChip("I morgen", offset: 1)
+                    Spacer()
+                    if checkIn != nil || checkOut != nil {
+                        Button("Nullstill") {
+                            checkIn = nil
+                            checkOut = nil
+                        }
+                        .font(.tuno(.caption))
+                        .foregroundStyle(.neutral600)
+                    }
                 }
 
-                if checkIn != nil || checkOut != nil {
-                    Button("Nullstill datoer") {
-                        checkIn = nil
-                        checkOut = nil
-                    }
-                    .font(.tuno(.caption))
-                    .foregroundStyle(.neutral600)
+                SearchDateRangePicker(
+                    checkIn: $checkIn,
+                    checkOut: $checkOut,
+                    paged: true
+                )
+                .padding(12)
+                .background(Color.paperCard)
+                .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
+                        .stroke(Color.paperLine, lineWidth: 1)
+                )
+
+                if let summary = selectionSummary {
+                    Text(summary)
+                        .font(.tuno(.body))
+                        .foregroundStyle(.neutral700)
                 }
             }
         }
     }
 
-    private func datePill(label: String, date: Date?, onTap: @escaping () -> Void) -> some View {
-        Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.tuno(.caption))
-                    .foregroundStyle(.neutral500)
-                Text(date.map(Self.formatDate) ?? "Velg dato")
-                    .font(.tuno(.body))
-                    .foregroundStyle(date == nil ? .neutral400 : .neutral900)
+    /// «I dag»/«I morgen»: ett tap setter en éndagsperiode. Tapp på valgt
+    /// chip nullstiller.
+    private func quickDateChip(_ label: String, offset: Int) -> some View {
+        let day = Calendar.current.startOfDay(for: Date()).addingTimeInterval(Double(offset) * 86400)
+        let isSelected = checkIn == day && (checkOut == day || checkOut == nil)
+        return Button {
+            if isSelected {
+                checkIn = nil
+                checkOut = nil
+            } else {
+                checkIn = day
+                checkOut = day
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 12)
-            .background(Color.paperCard)
-            .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
-                    .stroke(Color.paperLine, lineWidth: 1)
-            )
+        } label: {
+            Text(label)
+                .font(.tuno(.label))
+                .foregroundStyle(isSelected ? .white : .neutral900)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 7)
+                .background(isSelected ? Color.ink : Color.paperCard)
+                .clipShape(Capsule())
+                .overlay(
+                    Capsule().stroke(isSelected ? Color.ink : Color.paperLine, lineWidth: 1)
+                )
         }
         .buttonStyle(.plain)
     }
 
-    private static func formatDate(_ date: Date) -> String {
+    private var selectionSummary: String? {
+        guard let start = checkIn else { return nil }
+        let end = checkOut ?? start
+        let days = (Calendar.current.dateComponents([.day], from: start, to: end).day ?? 0) + 1
         let df = DateFormatter()
         df.dateFormat = "d. MMM"
         df.locale = Locale(identifier: "nb_NO")
-        return df.string(from: date)
+        if days == 1 {
+            return "\(df.string(from: start)) · 1 dag"
+        }
+        return "\(df.string(from: start)) – \(df.string(from: end)) · \(days) dager"
     }
 
     // MARK: - Bunnbar
@@ -336,6 +362,10 @@ struct ParkingSearchSheet: View {
             }
         case .dates:
             Button(checkIn == nil && checkOut == nil ? "Søk uten datoer" : "Søk") {
+                // Ett tap i kalenderen = éndagssøk: fyll ut Til-datoen.
+                if let ci = checkIn, checkOut == nil {
+                    checkOut = ci
+                }
                 dismiss()
                 onSearch()
             }
