@@ -33,7 +33,7 @@ struct AuthPromptView: View {
             } label: {
                 Text("Logg inn")
             }
-            .buttonStyle(TunoPillButtonStyle(variant: .ink))
+            .buttonStyle(TunoPillButtonStyle(variant: .mint))
             .padding(.horizontal, 40)
 
             Spacer()

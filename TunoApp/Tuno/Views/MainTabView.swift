@@ -148,6 +148,13 @@ struct MainTabView: View {
             homeNavPath = NavigationPath()
             deepLinkManager.pendingListingId = nil
         }
+        .onChange(of: deepLinkManager.pendingMyListings, initial: true) { _, pending in
+            // Utleier-wizarden er ferdig: bytt til Profil-fanen; ProfileView
+            // konsumerer flagget og åpner Mine annonser. initial:true dekker
+            // ny-bruker-flyten der flagget settes før MainTabView monteres
+            // (RolePicker → wizard → verifisering → hit).
+            if pending { selectedTab = 4 }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .newPushNotification)) { _ in
             Task {
                 await loadUnreadCount()

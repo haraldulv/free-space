@@ -89,7 +89,7 @@ struct HostOnboardingFlowView: View {
     private var stepContent: some View {
         switch viewModel.step {
         case .welcome:
-            HostOnboardingWelcomeStep()
+            HostOnboardingWelcomeStep(viewModel: viewModel)
         case .personal:
             PersonalStep(viewModel: viewModel, focusedField: $focusedField)
         case .address:
@@ -164,13 +164,16 @@ struct HostOnboardingFlowView: View {
 
     private var nextLabel: String {
         switch viewModel.step {
-        case .welcome: return "Jeg godtar og fortsetter"
+        case .welcome: return "Kom i gang"
         case .personal: return "Neste"
         case .address: return "Neste"
         case .bank: return "Fullfør oppsett"
         case .status:
             switch viewModel.pollingState {
-            case .approved: return "Lag annonse"
+            // Parkering: annonsen er allerede publisert FØR verifiseringen
+            // (ParkingStripePrompt), så «Lag annonse» her var forvirrende —
+            // flyten ruter videre til Mine annonser.
+            case .approved: return AppConfig.parkingOnly ? "Ferdig" : "Lag annonse"
             case .timedOut: return "Lukk"
             case .idle, .polling: return "Vent litt..."
             }
@@ -308,41 +311,98 @@ private struct ProgressHeader: View {
 // MARK: - Step 1: Welcome
 
 private struct HostOnboardingWelcomeStep: View {
+    @ObservedObject var viewModel: HostOnboardingViewModel
+
     var body: some View {
         WizardScreen(
-            title: "Velkommen som utleier",
-            subtitle: "Vi trenger litt info for å kunne betale ut leieinntektene dine."
+            title: "La oss gjøre deg klar til utleie! 👋",
+            subtitle: "Det tar bare et par minutter, så kan du begynne å tjene penger på plassen din."
         ) {
             VStack(spacing: 0) {
                 // Nummererte steg, ikke ikon-rader: radene så tappbare ut og
                 // ble forvekslet med skjemafelter. Dette er en oversikt over
                 // de neste stegene.
-                Text("Dette fyller du ut i de neste stegene:")
+                Text("Dette trenger vi fra deg:")
                     .font(.system(size: 14))
                     .foregroundStyle(.neutral600)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.bottom, 12)
                 BulletRow(
                     stepNumber: 1,
-                    title: "Personlig info",
-                    subtitle: "Navn, fnr og telefon"
+                    title: "Om deg",
+                    subtitle: "Navn, personnummer og telefon"
                 )
                 BulletRow(
                     stepNumber: 2,
-                    title: "Adresse",
+                    title: "Din adresse",
                     subtitle: "Hjemmeadressen din"
                 )
                 BulletRow(
                     stepNumber: 3,
-                    title: "Bankkonto",
-                    subtitle: "Kontonummer for utbetalinger"
+                    title: "Utbetaling",
+                    subtitle: "Bankkontoen du vil ha pengene inn på"
                 )
 
-                Text("Ved å fortsette godtar du [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer](https://tuno.no/retningslinjer). Tuno bruker Stripe som betalingsleverandør.")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.neutral500)
-                    .tint(.appAccent)
-                    .padding(.top, 16)
+                // Tillits-kort: lås + Stripe (Kim-feedback: bankkonto og
+                // personnummer gjør folk skeptiske — forklar hvorfor det er trygt).
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        Circle()
+                            .fill(Color.mint.opacity(0.18))
+                            .frame(width: 38, height: 38)
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.mintInk)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("Trygg registrering med Stripe")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(.neutral900)
+                        Text("Opplysningene dine behandles sikkert og brukes kun til verifisering og utbetaling.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.neutral600)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer()
+                }
+                .padding(14)
+                .background(Color.mint.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
+                .overlay(
+                    RoundedRectangle(cornerRadius: TunoRadius.control)
+                        .stroke(Color.mint.opacity(0.3), lineWidth: 1)
+                )
+                .padding(.top, 16)
+
+                // Samtykke-checkbox rett over Kom i gang-knappen (Kim-feedback:
+                // juridisk tekst skal henge sammen med knappen, ikke sveve).
+                HStack(alignment: .top, spacing: 12) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            viewModel.hasAcceptedTerms.toggle()
+                        }
+                    } label: {
+                        Image(systemName: viewModel.hasAcceptedTerms ? "checkmark.square.fill" : "square")
+                            .font(.system(size: 22))
+                            .foregroundStyle(viewModel.hasAcceptedTerms ? Color.mint : .neutral400)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Godta vilkårene")
+
+                    Text("Jeg godtar [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer](https://tuno.no/retningslinjer).")
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral600)
+                        .tint(.appAccentDeep)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(14)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
+                .overlay(
+                    RoundedRectangle(cornerRadius: TunoRadius.control)
+                        .stroke(viewModel.hasAcceptedTerms ? Color.mint : Color.neutral200, lineWidth: viewModel.hasAcceptedTerms ? 1.5 : 1)
+                )
+                .padding(.top, 12)
             }
         }
     }
@@ -895,7 +955,9 @@ private struct StatusStep: View {
                 Text("Du er godkjent!")
                     .font(.system(size: 24, weight: .bold))
                     .foregroundStyle(.neutral900)
-                Text("Klar til å lage din første annonse. Utbetalinger skjer automatisk etter hvert opphold.")
+                Text(AppConfig.parkingOnly
+                    ? "Alt er klart. Annonsen din blir synlig så snart Tuno har godkjent den, og utbetalinger skjer automatisk."
+                    : "Klar til å lage din første annonse. Utbetalinger skjer automatisk etter hvert opphold.")
                     .font(.system(size: 15))
                     .foregroundStyle(.neutral600)
                     .multilineTextAlignment(.center)

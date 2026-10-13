@@ -14,6 +14,17 @@ struct WizardNavBar: View {
     var onNext: () -> Void
     var onSkip: (() -> Void)? = nil
 
+    /// Parkering (palett C): mint-CTA med mørk tekst i stedet for helsvart —
+    /// vennligere wizard (Kim/Harald-feedback 2026-10-13). Camping beholder
+    /// appAccent (gammel grønn) uendret.
+    private var nextBackground: Color {
+        AppConfig.parkingOnly ? .mint : .appAccent
+    }
+
+    private var nextForeground: Color {
+        AppConfig.parkingOnly ? .mintInk : .white
+    }
+
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 12) {
@@ -31,7 +42,7 @@ struct WizardNavBar: View {
                 Button(action: onNext) {
                     HStack(spacing: 6) {
                         if nextLoading {
-                            ProgressView().tint(.white)
+                            ProgressView().tint(nextForeground)
                         } else {
                             Text(nextLabel)
                                 .font(.system(size: 17, weight: .semibold))
@@ -41,10 +52,10 @@ struct WizardNavBar: View {
                             }
                         }
                     }
-                    .foregroundStyle(.white)
+                    .foregroundStyle(nextEnabled ? nextForeground : .white)
                     .frame(maxWidth: .infinity)
                     .frame(height: 52)
-                    .background(nextEnabled ? Color.appAccent : Color.appAccentDisabled)
+                    .background(nextEnabled ? nextBackground : Color.appAccentDisabled)
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                 }
                 .disabled(!nextEnabled || nextLoading)

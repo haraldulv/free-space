@@ -9,6 +9,11 @@ final class DeepLinkManager: ObservableObject {
     /// Settes når brukeren klikker en e-post-verifiseringslenke. Trigger
     /// `EmailVerifiedView` som full-screen sheet i `TunoApp.body`.
     @Published var showEmailVerified = false
+    /// Settes når utleier-wizarden fullføres (publisert annonse, evt. med
+    /// Stripe-verifisering etterpå). MainTabView bytter til Profil-fanen og
+    /// ProfileView åpner Mine annonser, så verten lander på annonsen sin i
+    /// stedet for å bli spurt om å lage ny.
+    @Published var pendingMyListings = false
 
     /// Status for siste verifiseringsforsøk. EmailVerifiedView viser
     /// loading mens verifyOTP kjører, suksess når den lykkes, eller

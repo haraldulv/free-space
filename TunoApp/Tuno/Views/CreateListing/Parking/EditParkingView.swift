@@ -19,6 +19,7 @@ struct EditParkingView: View {
     @State private var packageDays: Int
     @State private var packageNote: String
     @State private var isActive: Bool
+    @State private var instantBooking: Bool
     @State private var isSaving = false
     @State private var error: String?
     @State private var showDeleteConfirm = false
@@ -43,6 +44,7 @@ struct EditParkingView: View {
         _packageDays = State(initialValue: customPkg?.periodValue ?? 30)
         _packageNote = State(initialValue: customPkg?.note ?? monthPkg?.note ?? "")
         _isActive = State(initialValue: listing.isActive ?? true)
+        _instantBooking = State(initialValue: listing.instantBooking ?? true)
     }
 
     var body: some View {
@@ -128,6 +130,26 @@ struct EditParkingView: View {
                                 .lineLimit(2...4)
                         }
                     }
+
+                    // Direktebestilling
+                    Toggle(isOn: $instantBooking) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Direktebestilling")
+                                .font(.tuno(.body))
+                                .foregroundStyle(.neutral900)
+                            Text("Leietaker booker og betaler med en gang. Slå av for å godkjenne hver bestilling selv.")
+                                .font(.tuno(.caption))
+                                .foregroundStyle(.neutral500)
+                        }
+                    }
+                    .tint(.mint)
+                    .padding(16)
+                    .background(Color.white)
+                    .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: TunoRadius.control)
+                            .stroke(Color.neutral200, lineWidth: 1)
+                    )
 
                     // Pause
                     Toggle(isOn: $isActive) {
@@ -245,6 +267,7 @@ struct EditParkingView: View {
         let description: String
         let price: Int
         let isActive: Bool
+        let instantBooking: Bool
         let spotMarkers: [SpotMarker]
         let rentalPeriodTypes: [String]
         let displayPrice: Int
@@ -253,6 +276,7 @@ struct EditParkingView: View {
         enum CodingKeys: String, CodingKey {
             case title, description, price
             case isActive = "is_active"
+            case instantBooking = "instant_booking"
             case spotMarkers = "spot_markers"
             case rentalPeriodTypes = "rental_period_types"
             case displayPrice = "display_price"
@@ -311,6 +335,7 @@ struct EditParkingView: View {
             description: descriptionText.trimmingCharacters(in: .whitespaces),
             price: day,
             isActive: isActive,
+            instantBooking: instantBooking,
             spotMarkers: markers,
             rentalPeriodTypes: periods.sorted(),
             displayPrice: day,

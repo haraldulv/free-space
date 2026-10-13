@@ -638,7 +638,7 @@ final class ListingFormModel: ObservableObject {
             spots: markers.count,
             images: imageURLs,
             amenities: Array(selectedAmenities),
-            instantBooking: true,
+            instantBooking: instantBooking,
             hideExactLocation: hideExactLocation,
             spotMarkers: markers,
             blockedDates: [],

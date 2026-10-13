@@ -79,8 +79,11 @@ struct ParkingWizardView: View {
         }
         .overlay {
             if showSuccess {
-                ListingPublishedCelebration(onDismiss: { dismiss() })
-                    .transition(.opacity)
+                ListingPublishedCelebration(onDismiss: {
+                    DeepLinkManager.shared.pendingMyListings = true
+                    dismiss()
+                })
+                .transition(.opacity)
             }
         }
         .overlay {
@@ -89,7 +92,13 @@ struct ParkingWizardView: View {
                     .transition(.opacity)
             }
         }
-        .fullScreenCover(isPresented: $showStripePrompt, onDismiss: { dismiss() }) {
+        .fullScreenCover(isPresented: $showStripePrompt, onDismiss: {
+            // Uansett om verifiseringen ble fullført eller utsatt: annonsen er
+            // publisert, så verten skal lande på Mine annonser, ikke spørres
+            // om å lage ny annonse.
+            DeepLinkManager.shared.pendingMyListings = true
+            dismiss()
+        }) {
             ParkingStripePrompt()
         }
         .animation(.easeOut(duration: 0.18), value: form.isSubmitting)
@@ -253,11 +262,11 @@ struct ParkingStripePrompt: View {
                 VStack(spacing: 10) {
                     Text("Annonsen er sendt inn!")
                         .font(.tuno(.display))
-                        .foregroundStyle(Color.inkText)
+                        .foregroundStyle(.neutral900)
                         .multilineTextAlignment(.center)
                     Text("Ett steg igjen: fullfør verifiseringen, så kan du motta utbetalinger og annonsen blir synlig for leietakere.")
                         .font(.tuno(.body))
-                        .foregroundStyle(Color.inkMuted)
+                        .foregroundStyle(.neutral600)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -277,7 +286,7 @@ struct ParkingStripePrompt: View {
                 } label: {
                     Text("Gjør det senere")
                         .font(.tuno(.body))
-                        .foregroundStyle(Color.inkMuted)
+                        .foregroundStyle(.neutral600)
                 }
                 .buttonStyle(.plain)
             }
@@ -285,7 +294,8 @@ struct ParkingStripePrompt: View {
             .padding(.bottom, 20)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.ink.ignoresSafeArea())
+        // Papir i stedet for helsvart — vennligere (Kim/Harald 2026-10-13).
+        .background(Color.paper.ignoresSafeArea())
         .fullScreenCover(isPresented: $showOnboarding, onDismiss: { dismiss() }) {
             NavigationStack {
                 HostOnboardingFlowView {

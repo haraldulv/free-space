@@ -20,6 +20,8 @@ final class HostOnboardingViewModel: ObservableObject {
     /// personnummer, adresse og telefon DIREKTE til Stripe Connect. Brukes
     /// til å vise grønn banner og hoppe forbi manuelle felter.
     @Published var vippsPrefilled: Bool = false
+    /// Samtykke-checkbox på velkomststeget: gater «Kom i gang»-knappen.
+    @Published var hasAcceptedTerms: Bool = false
 
     // Step 2 — Personal info
     // Fødselsdato spørres ikke lenger — vi utleder den fra personnummeret
@@ -306,7 +308,7 @@ final class HostOnboardingViewModel: ObservableObject {
     func canAdvance(for step: HostOnboardingStep) -> Bool {
         switch step {
         case .welcome:
-            return true
+            return hasAcceptedTerms
         case .personal:
             let firstOK = !firstName.trimmingCharacters(in: .whitespaces).isEmpty
             let lastOK = !lastName.trimmingCharacters(in: .whitespaces).isEmpty

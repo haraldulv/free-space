@@ -15,6 +15,7 @@ struct ProfileView: View {
     @EnvironmentObject var authManager: AuthManager
     @EnvironmentObject var pushRouter: PushRouter
     @EnvironmentObject var profileStats: ProfileStatsStore
+    @EnvironmentObject var deepLinkManager: DeepLinkManager
     @State private var showLogoutConfirm = false
     @State private var showLogin = false
     @State private var showRegister = false
@@ -58,7 +59,7 @@ struct ProfileView: View {
                     Button { showLogin = true } label: {
                         Text("Logg inn")
                     }
-                    .buttonStyle(TunoPillButtonStyle(variant: .ink))
+                    .buttonStyle(TunoPillButtonStyle(variant: .mint))
 
                     Button { showRegister = true } label: {
                         Text("Registrer deg")
@@ -262,6 +263,13 @@ struct ProfileView: View {
             NavigationStack {
                 BecomeHostView()
             }
+        }
+        .onChange(of: deepLinkManager.pendingMyListings, initial: true) { _, pending in
+            // Wizarden ble fullført (evt. via RolePicker-flyten der ProfileView
+            // ikke fantes da flagget ble satt): land på Mine annonser.
+            guard pending else { return }
+            deepLinkManager.pendingMyListings = false
+            presentedRoute = .myListings
         }
         .onChange(of: showBecomeHost) { _, isShown in
             // SwiftUI kaller ikke alltid .onAppear etter fullScreenCover-dismiss

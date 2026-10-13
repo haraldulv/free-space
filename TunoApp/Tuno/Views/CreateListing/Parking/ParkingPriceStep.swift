@@ -209,11 +209,13 @@ struct ParkingPriceStep: View {
         return max(viaDays, viaMonth) * max(1, form.spots)
     }
 
+    /// Lys mint-flate i stedet for helsvart kort — vennligere wizard
+    /// (Kim/Harald-feedback 2026-10-13: «litt for dev og AI»).
     private var calculatorCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Hva kan du tjene?")
                 .font(.tuno(.heading))
-                .foregroundStyle(.white)
+                .foregroundStyle(.neutral900)
 
             HStack(spacing: 8) {
                 occupancyChip(0.3, label: "Lavt belegg")
@@ -225,25 +227,29 @@ struct ParkingPriceStep: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Estimert per måned")
                         .font(.tuno(.label))
-                        .foregroundStyle(Color.inkMuted)
+                        .foregroundStyle(.neutral600)
                     Text("ca. \(estimate) kr")
                         .font(.tuno(.display))
-                        .foregroundStyle(Color.mint)
+                        .foregroundStyle(Color.mintInk)
                 }
             } else {
                 Text("Sett en dagspris for å se estimatet.")
                     .font(.tuno(.body))
-                    .foregroundStyle(Color.inkMuted)
+                    .foregroundStyle(.neutral600)
             }
 
             Text("Estimat, ikke en garanti. Avhenger av beliggenhet og etterspørsel.")
                 .font(.tuno(.caption))
-                .foregroundStyle(Color.inkMuted)
+                .foregroundStyle(.neutral600)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(Color.ink)
+        .background(Color.mint.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: TunoRadius.card))
+        .overlay(
+            RoundedRectangle(cornerRadius: TunoRadius.card)
+                .stroke(Color.mint.opacity(0.35), lineWidth: 1)
+        )
     }
 
     private func occupancyChip(_ value: Double, label: String) -> some View {
@@ -253,11 +259,14 @@ struct ParkingPriceStep: View {
         } label: {
             Text(label)
                 .font(.tuno(.label))
-                .foregroundStyle(isSelected ? Color.mintInk : Color.inkText)
+                .foregroundStyle(isSelected ? Color.mintInk : Color.neutral700)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.mint : Color.inkElevated)
+                .background(isSelected ? Color.mint : Color.white)
                 .clipShape(Capsule())
+                .overlay(
+                    Capsule().stroke(isSelected ? Color.mint : Color.neutral200, lineWidth: 1)
+                )
         }
         .buttonStyle(.plain)
     }

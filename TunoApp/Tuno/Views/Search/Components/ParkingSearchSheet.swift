@@ -453,7 +453,7 @@ struct ParkingSearchSheet: View {
                 Button("Neste") {
                     advanceToDates()
                 }
-                .buttonStyle(TunoPillButtonStyle())
+                .buttonStyle(TunoPillButtonStyle(variant: .mint))
                 .padding(.horizontal, 20)
                 .padding(.top, 10)
                 .padding(.bottom, 8)
@@ -469,7 +469,7 @@ struct ParkingSearchSheet: View {
                 dismiss()
                 onSearch()
             }
-            .buttonStyle(TunoPillButtonStyle())
+            .buttonStyle(TunoPillButtonStyle(variant: .mint))
             .padding(.horizontal, 20)
             .padding(.top, 10)
             .padding(.bottom, 8)

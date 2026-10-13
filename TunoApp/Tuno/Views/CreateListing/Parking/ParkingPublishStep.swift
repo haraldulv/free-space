@@ -19,6 +19,25 @@ struct ParkingPublishStep: View {
 
                 summaryCard
 
+                // Direktebestilling vs. forespørsel
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Hvordan vil du motta bestillinger?")
+                        .font(.tuno(.heading))
+                        .foregroundStyle(.neutral900)
+                    bookingModeCard(
+                        isSelected: form.instantBooking,
+                        icon: "bolt.fill",
+                        title: "Direktebestilling",
+                        subtitle: "Leietaker booker og betaler med en gang. Gir flest bestillinger."
+                    ) { form.instantBooking = true }
+                    bookingModeCard(
+                        isSelected: !form.instantBooking,
+                        icon: "hand.raised.fill",
+                        title: "På forespørsel",
+                        subtitle: "Du godkjenner hver bestilling før den gjennomføres."
+                    ) { form.instantBooking = false }
+                }
+
                 // Valgfri tittel + beskrivelse
                 VStack(alignment: .leading, spacing: 14) {
                     VStack(alignment: .leading, spacing: 6) {
@@ -64,7 +83,7 @@ struct ParkingPublishStep: View {
                     HStack(alignment: .top, spacing: 12) {
                         Image(systemName: form.hasConfirmedOwnership ? "checkmark.square.fill" : "square")
                             .font(.system(size: 22))
-                            .foregroundStyle(form.hasConfirmedOwnership ? Color.appAccent : .neutral400)
+                            .foregroundStyle(form.hasConfirmedOwnership ? Color.mint : .neutral400)
                         Text("Jeg har rett til å leie ut denne plassen")
                             .font(.tuno(.body))
                             .foregroundStyle(.neutral900)
@@ -76,7 +95,7 @@ struct ParkingPublishStep: View {
                     .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
                     .overlay(
                         RoundedRectangle(cornerRadius: TunoRadius.control)
-                            .stroke(form.hasConfirmedOwnership ? Color.appAccent : Color.neutral200, lineWidth: 1)
+                            .stroke(form.hasConfirmedOwnership ? Color.mint : Color.neutral200, lineWidth: form.hasConfirmedOwnership ? 1.5 : 1)
                     )
                 }
                 .buttonStyle(.plain)
@@ -108,6 +127,46 @@ struct ParkingPublishStep: View {
         return form.city.isEmpty ? typeName : "\(typeName) i \(form.city)"
     }
 
+    /// Stort valgbart kort for bestillingsmåte — mint-markering ved valg.
+    private func bookingModeCard(isSelected: Bool, icon: String, title: String, subtitle: String, onTap: @escaping () -> Void) -> some View {
+        Button {
+            withAnimation(.easeInOut(duration: 0.15)) { onTap() }
+        } label: {
+            HStack(alignment: .top, spacing: 12) {
+                ZStack {
+                    Circle()
+                        .fill(isSelected ? Color.mint.opacity(0.18) : Color.neutral100)
+                        .frame(width: 38, height: 38)
+                    Image(systemName: icon)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(isSelected ? Color.mintInk : Color.neutral500)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(title)
+                        .font(.tuno(.body))
+                        .foregroundStyle(.neutral900)
+                    Text(subtitle)
+                        .font(.tuno(.caption))
+                        .foregroundStyle(.neutral600)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer()
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(isSelected ? Color.mint : Color.neutral300)
+            }
+            .padding(14)
+            .background(Color.white)
+            .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
+            .overlay(
+                RoundedRectangle(cornerRadius: TunoRadius.control)
+                    .stroke(isSelected ? Color.mint : Color.neutral200, lineWidth: isSelected ? 1.5 : 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
     private var summaryCard: some View {
         VStack(spacing: 0) {
             summaryRow(label: "Adresse", value: form.address)
@@ -119,6 +178,8 @@ struct ParkingPublishStep: View {
             summaryRow(label: "Dagsleie", value: form.parkingDailyPrice.map { "\($0) kr" } ?? "")
             Divider()
             summaryRow(label: "Månedsplass", value: form.parkingMonthlyPrice.map { "\($0) kr" } ?? "")
+            Divider()
+            summaryRow(label: "Bestilling", value: form.instantBooking ? "Direkte" : "På forespørsel")
             Divider()
             summaryRow(label: "Bilder", value: "\(form.imageURLs.count)")
         }
