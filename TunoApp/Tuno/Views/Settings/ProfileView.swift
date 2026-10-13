@@ -860,7 +860,7 @@ struct MyListingsView: View {
             // Forhåndsvisning slik gjester ser annonsen. Egen NavigationStack
             // så detaljsidens back/dismiss lukker coveret.
             NavigationStack {
-                ListingDetailView(listing: listing)
+                ListingDetailView(listingId: listing.id)
             }
         }
         .fullScreenCover(item: $editingListing) { listing in
