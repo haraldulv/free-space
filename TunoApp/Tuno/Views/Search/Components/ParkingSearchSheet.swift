@@ -8,6 +8,10 @@ struct ParkingSearchSheet: View {
     @Binding var query: String
     @Binding var checkIn: Date?
     @Binding var checkOut: Date?
+    /// Multi-velg (samme som booking-flyten): «Velg enkeltdager» toggler
+    /// enkeltdager i kalenderen; checkIn/checkOut holder konvolutten.
+    @Binding var multiDayMode: Bool
+    @Binding var selectedDates: Set<String>
     /// Styres av arket: steg 2 (kalenderen) trenger full høyde, så vi løfter
     /// detenten til .large når brukeren går videre fra stedvalget.
     @Binding var detent: PresentationDetent
@@ -263,44 +267,132 @@ struct ParkingSearchSheet: View {
             .buttonStyle(.plain)
 
             VStack(alignment: .leading, spacing: 10) {
+                multiDayToggle
+
                 Text("Valgfritt. Du kan søke uten datoer.")
                     .font(.tuno(.caption))
                     .foregroundStyle(.neutral500)
 
-                HStack(spacing: 8) {
-                    quickDateChip("I dag", offset: 0)
-                    quickDateChip("I morgen", offset: 1)
-                    Spacer()
-                    if checkIn != nil || checkOut != nil {
-                        Button("Nullstill") {
-                            checkIn = nil
-                            checkOut = nil
+                if multiDayMode {
+                    SearchDateRangePicker(
+                        checkIn: $checkIn,
+                        checkOut: $checkOut,
+                        selectionMode: .multi,
+                        selectedDates: $selectedDates,
+                        paged: true
+                    )
+                    .padding(12)
+                    .background(Color.paperCard)
+                    .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
+                            .stroke(Color.paperLine, lineWidth: 1)
+                    )
+
+                    if selectedDates.isEmpty {
+                        Text("Trykk på dagene du vil parkere. Du kan velge dager i flere uker.")
+                            .font(.system(size: 13))
+                            .foregroundStyle(.neutral500)
+                    } else {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("\(selectedDates.count) \(selectedDates.count == 1 ? "dag" : "dager") valgt · \(multiDaySummary)")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.neutral500)
+                            Spacer()
+                            Button("Nullstill") {
+                                selectedDates = []
+                                checkIn = nil
+                                checkOut = nil
+                            }
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.neutral600)
                         }
-                        .font(.tuno(.caption))
-                        .foregroundStyle(.neutral600)
                     }
-                }
+                } else {
+                    HStack(spacing: 8) {
+                        quickDateChip("I dag", offset: 0)
+                        quickDateChip("I morgen", offset: 1)
+                        Spacer()
+                        if checkIn != nil || checkOut != nil {
+                            Button("Nullstill") {
+                                checkIn = nil
+                                checkOut = nil
+                            }
+                            .font(.tuno(.caption))
+                            .foregroundStyle(.neutral600)
+                        }
+                    }
 
-                SearchDateRangePicker(
-                    checkIn: $checkIn,
-                    checkOut: $checkOut,
-                    paged: true
-                )
-                .padding(12)
-                .background(Color.paperCard)
-                .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
-                        .stroke(Color.paperLine, lineWidth: 1)
-                )
+                    SearchDateRangePicker(
+                        checkIn: $checkIn,
+                        checkOut: $checkOut,
+                        paged: true
+                    )
+                    .padding(12)
+                    .background(Color.paperCard)
+                    .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
+                            .stroke(Color.paperLine, lineWidth: 1)
+                    )
 
-                if let summary = selectionSummary {
-                    Text(summary)
-                        .font(.tuno(.body))
-                        .foregroundStyle(.neutral700)
+                    if let summary = selectionSummary {
+                        Text(summary)
+                            .font(.tuno(.body))
+                            .foregroundStyle(.neutral700)
+                    }
                 }
             }
         }
+    }
+
+    /// Sammenhengende / Velg enkeltdager — samme chips som booking-flyten.
+    /// Bytte nullstiller datovalget så konvolutt og dagsett aldri spriker.
+    private var multiDayToggle: some View {
+        HStack(spacing: 8) {
+            multiDayChip("Sammenhengende", selected: !multiDayMode) { setMultiDayMode(false) }
+            multiDayChip("Velg enkeltdager", selected: multiDayMode) { setMultiDayMode(true) }
+            Spacer()
+        }
+    }
+
+    private func multiDayChip(_ title: String, selected: Bool, onTap: @escaping () -> Void) -> some View {
+        Button(action: onTap) {
+            Text(title)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(selected ? Color.white : Color.neutral700)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 8)
+                .background(selected ? Color.appAccent : Color.appCard)
+                .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func setMultiDayMode(_ on: Bool) {
+        guard multiDayMode != on else { return }
+        multiDayMode = on
+        selectedDates = []
+        checkIn = nil
+        checkOut = nil
+    }
+
+    /// Kort oppsummering av multi-valgte dager som perioder: «3.–5. mar, 10.–12. mar».
+    private var multiDaySummary: String {
+        let runs = TunoCalendar.runs(Array(selectedDates))
+        let df = DateFormatter()
+        df.dateFormat = "d. MMM"
+        df.locale = Locale(identifier: "nb_NO")
+        func short(_ key: String) -> String {
+            guard let date = TunoCalendar.date(from: key) else { return key }
+            return df.string(from: date)
+        }
+        let parts = runs.prefix(3).map { run -> String in
+            if run.start == run.end { return short(run.start) }
+            return "\(short(run.start))–\(short(run.end))"
+        }
+        let suffix = runs.count > 3 ? " …" : ""
+        return parts.joined(separator: ", ") + suffix
     }
 
     /// «I dag»/«I morgen»: ett tap setter en éndagsperiode. Tapp på valgt
@@ -346,6 +438,13 @@ struct ParkingSearchSheet: View {
 
     // MARK: - Bunnbar
 
+    private var searchButtonTitle: String {
+        if multiDayMode {
+            return selectedDates.isEmpty ? "Søk uten datoer" : "Søk"
+        }
+        return checkIn == nil && checkOut == nil ? "Søk uten datoer" : "Søk"
+    }
+
     @ViewBuilder
     private var bottomBar: some View {
         switch step {
@@ -361,9 +460,10 @@ struct ParkingSearchSheet: View {
                 .background(Color.paper)
             }
         case .dates:
-            Button(checkIn == nil && checkOut == nil ? "Søk uten datoer" : "Søk") {
+            Button(searchButtonTitle) {
                 // Ett tap i kalenderen = éndagssøk: fyll ut Til-datoen.
-                if let ci = checkIn, checkOut == nil {
+                // (Multi-velg vedlikeholder konvolutten selv i pickeren.)
+                if !multiDayMode, let ci = checkIn, checkOut == nil {
                     checkOut = ci
                 }
                 dismiss()

@@ -15,6 +15,9 @@ final class SearchContextStore: ObservableObject {
     @Published var query: String { didSet { persist() } }
     @Published var checkIn: Date? { didSet { persist() } }
     @Published var checkOut: Date? { didSet { persist() } }
+    /// Multi-velg (parkering): valgte enkeltdager som sorterte ISO-strenger
+    /// (yyyy-MM-dd). Tom = sammenhengende periode (checkIn/checkOut gjelder).
+    @Published var selectedDates: [String] { didSet { persist() } }
     @Published var placeName: String? { didSet { persist() } }
     @Published var placeLat: Double? { didSet { persist() } }
     @Published var placeLng: Double? { didSet { persist() } }
@@ -45,6 +48,11 @@ final class SearchContextStore: ObservableObject {
         } else {
             self.checkOut = nil
         }
+        // Multi-velg: dropp dager i fortiden (ISO-strenger sorterer leksikalsk).
+        let todayKey = TunoCalendar.dateKey(today)
+        self.selectedDates = (d.stringArray(forKey: "\(key).selectedDates") ?? [])
+            .filter { $0 >= todayKey }
+            .sorted()
         self.placeName = d.string(forKey: "\(key).placeName")
         self.placeLat = (d.object(forKey: "\(key).placeLat") as? NSNumber)?.doubleValue
         self.placeLng = (d.object(forKey: "\(key).placeLng") as? NSNumber)?.doubleValue
@@ -58,6 +66,7 @@ final class SearchContextStore: ObservableObject {
         d.set(query, forKey: "\(key).query")
         d.set(checkIn, forKey: "\(key).checkIn")
         d.set(checkOut, forKey: "\(key).checkOut")
+        d.set(selectedDates, forKey: "\(key).selectedDates")
         d.set(placeName, forKey: "\(key).placeName")
         if let lat = placeLat { d.set(lat, forKey: "\(key).placeLat") } else { d.removeObject(forKey: "\(key).placeLat") }
         if let lng = placeLng { d.set(lng, forKey: "\(key).placeLng") } else { d.removeObject(forKey: "\(key).placeLng") }
@@ -70,6 +79,7 @@ final class SearchContextStore: ObservableObject {
         query = ""
         checkIn = nil
         checkOut = nil
+        selectedDates = []
         placeName = nil
         placeLat = nil
         placeLng = nil

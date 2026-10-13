@@ -173,6 +173,10 @@ final class ListingService: ObservableObject {
         radiusKm: Double = 20,
         checkIn: String? = nil,
         checkOut: String? = nil,
+        /// Multi-velg (parkering): konkrete ISO-dager (yyyy-MM-dd) brukeren vil
+        /// parkere. Når satt overstyrer den checkIn/checkOut-rangen i dato-
+        /// filtreringen (min-stay teller valgte dager, blocked sjekkes per dag).
+        dates: [String]? = nil,
         amenities: Set<AmenityType>? = nil,
         instantOnly: Bool = false,
         flexibilityDays: Int = 0,
@@ -219,10 +223,24 @@ final class ListingService: ObservableObject {
                 }
             }
 
+            // Multi-velg (parkering): filtrer på de konkrete valgte dagene i
+            // stedet for konvolutten — annonsen må være åpen ALLE valgte dager,
+            // og min-stay sammenlignes mot antall valgte dager (count-basert,
+            // samme regel som prisingen).
+            if let dates, !dates.isEmpty {
+                listings = listings.filter { listing in
+                    if let minStay = listing.minStayDays, minStay > 0 {
+                        if dates.count < minStay { return false }
+                    }
+                    guard let blocked = listing.blockedDates, !blocked.isEmpty else { return true }
+                    let blockedSet = Set(blocked)
+                    return dates.allSatisfy { !blockedSet.isFullDayBlocked($0) }
+                }
+            }
             // Filter by blocked dates if check-in/check-out provided.
             // For parkering: kun HELE-DAG-blokker ekskluderer — time-blokker beholdes
             // siden gjest fortsatt kan booke andre timer. Eksakt time-validering skjer i booking-flow.
-            if let checkIn, let checkOut {
+            else if let checkIn, let checkOut {
                 let nights = nightsBetween(checkIn: checkIn, checkOut: checkOut)
                 let totalDays = max(nights, 1) + (nights == 0 ? 0 : 0) // 7-7 = 1 dag, 7-13 = 7 dager (begge inkl)
                 let bookedDays = nights + 1 // antall dager bruker leier (begge endepunkter inkludert)

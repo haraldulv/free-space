@@ -852,6 +852,21 @@ struct BookingView: View {
             let today = Calendar.current.startOfDay(for: Date())
             let validStoredIn: Date? = ctx.checkIn.flatMap { Calendar.current.startOfDay(for: $0) >= today ? $0 : nil }
             let validStoredOut: Date? = ctx.checkOut.flatMap { Calendar.current.startOfDay(for: $0) >= today ? $0 : nil }
+            // Multi-velg fra søket: gjenopprett de valgte enkeltdagene når
+            // brukeren kom fra et «Velg enkeltdager»-søk og ingenting annet
+            // (månedsplan/forespørsel) overstyrer datovalget.
+            if listing.category == .parking,
+               !preselectMonthPlan, !isMonthOnlyParking, !startInProposalMode,
+               checkIn == nil, selectedDates.isEmpty {
+                let todayKey = TunoCalendar.dateKey(today)
+                let futureDates = ctx.selectedDates.filter { $0 >= todayKey }
+                if futureDates.count >= 2 {
+                    multiDayMode = true
+                    selectedDates = Set(futureDates)
+                    checkIn = futureDates.first.flatMap { TunoCalendar.date(from: $0) }
+                    checkOut = futureDates.last.flatMap { TunoCalendar.date(from: $0) }
+                }
+            }
             if checkIn == nil, let storedIn = validStoredIn { checkIn = storedIn }
             if checkOut == nil, let storedOut = validStoredOut, let ci = checkIn, storedOut > ci {
                 checkOut = storedOut
@@ -893,6 +908,18 @@ struct BookingView: View {
             )
             _ = await avail
             bookedDates = await booked
+            // Multi-prefillet fra søket kan inneholde dager som er opptatt på
+            // akkurat denne annonsen — fjern dem her (blokkerte celler kan
+            // ikke av-velges med tap i kalenderen).
+            if isMultiDayActive && !selectedDates.isEmpty {
+                let cleaned = selectedDates.subtracting(availabilityBlockedDates)
+                if cleaned != selectedDates {
+                    selectedDates = cleaned
+                    let sorted = cleaned.sorted()
+                    checkIn = sorted.first.flatMap { TunoCalendar.date(from: $0) }
+                    checkOut = sorted.last.flatMap { TunoCalendar.date(from: $0) }
+                }
+            }
         }
         .onChange(of: checkIn) {
             showCardForm = false

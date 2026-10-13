@@ -99,6 +99,10 @@ struct SearchView: View {
     @State private var query = ""
     @State private var checkIn: Date?
     @State private var checkOut: Date?
+    /// Multi-velg (parkering, samme som booking): «Velg enkeltdager»-modus og
+    /// de valgte ISO-dagene. checkIn/checkOut holder konvolutten (min/maks).
+    @State private var searchMultiDayMode = false
+    @State private var searchSelectedDates: Set<String> = []
     @State private var vehicles: Set<VehicleType> = [.motorhome]
     @State private var bookingPref: BookingPreference = .all
     @State private var filters = SearchFilters()
@@ -197,6 +201,8 @@ struct SearchView: View {
                 query: $query,
                 checkIn: $checkIn,
                 checkOut: $checkOut,
+                multiDayMode: $searchMultiDayMode,
+                selectedDates: $searchSelectedDates,
                 detent: $parkingSheetDetent,
                 placesService: placesService,
                 onSelectPlace: { prediction in
@@ -483,9 +489,20 @@ struct SearchView: View {
 
     // MARK: - Computed
 
+    /// Multi-velg: de valgte dagene som sortert liste, eller nil når range-
+    /// modus (eller tomt valg) gjelder. Én kilde for searchAt/performSearch.
+    private var activeSearchDates: [String]? {
+        guard searchMultiDayMode, !searchSelectedDates.isEmpty else { return nil }
+        return searchSelectedDates.sorted()
+    }
+
     /// Antall døgn brukeren har søkt etter (utsjekk - innsjekk + 1). Nil hvis
     /// ingen periode er valgt. Brukes til å vise totalpris i prisbobler.
+    /// Multi-velg: antall valgte dager (ikke konvolutt-spennet).
     private var searchNightsCount: Int? {
+        if let dates = activeSearchDates {
+            return dates.count > 1 ? dates.count : nil
+        }
         guard let inDate = checkIn, let outDate = checkOut else { return nil }
         let cal = Calendar(identifier: .gregorian)
         let span = (cal.dateComponents([.day], from: inDate, to: outDate).day ?? 0) + 1
@@ -596,7 +613,9 @@ struct SearchView: View {
         if !AppConfig.parkingOnly, let cat = filters.category {
             parts.append(cat == .camping ? "Camping" : "Parkering")
         }
-        if let i = checkIn, let o = checkOut {
+        if let dates = activeSearchDates {
+            parts.append(dates.count == 1 ? "1 dag" : "\(dates.count) dager")
+        } else if let i = checkIn, let o = checkOut {
             let df = DateFormatter()
             df.dateFormat = "d. MMM"
             df.locale = Locale(identifier: "nb_NO")
@@ -681,6 +700,7 @@ struct SearchView: View {
         let store = SearchContextStore.shared
         store.checkIn = checkIn
         store.checkOut = checkOut
+        store.selectedDates = activeSearchDates ?? []
         store.category = filters.category?.rawValue
         store.query = query
         store.placeName = query.isEmpty ? nil : query
@@ -722,6 +742,7 @@ struct SearchView: View {
             radiusKm: lat != nil ? radiusKm : 20,
             checkIn: checkIn.map { df.string(from: $0) },
             checkOut: checkOut.map { df.string(from: $0) },
+            dates: activeSearchDates,
             amenities: amenitiesArg,
             instantOnly: filters.bookingPreference == .directOnly,
             openingHours: filters.openingHours
