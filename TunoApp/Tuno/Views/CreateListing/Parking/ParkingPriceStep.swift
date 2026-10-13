@@ -75,7 +75,7 @@ struct ParkingPriceStep: View {
                         priceField(title: "Tilby månedsleie? (valgfritt)", unit: "kr per måned", text: $monthlyText, field: .package) { value in
                             form.parkingMonthlyPrice = value
                         }
-                        Text("Månedsleie er 30 bookede dager i strekk til fast pris.")
+                        Text("Leietaker får fast plass i 30 dager til denne prisen.")
                             .font(.tuno(.caption))
                             .foregroundStyle(.neutral500)
                     }
@@ -83,6 +83,9 @@ struct ParkingPriceStep: View {
 
                 if let day = form.parkingDailyPrice, day > 0 {
                     FeeBreakdownCard(subtotal: day, unitLabel: "dag")
+                }
+                if let month = form.parkingMonthlyPrice, month > 0 {
+                    FeeBreakdownCard(subtotal: month, unitLabel: "måned")
                 }
 
                 // Utleier skal VITE at prisforslag kan komme (Kim-møtet:

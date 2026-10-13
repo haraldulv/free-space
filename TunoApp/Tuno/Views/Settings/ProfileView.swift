@@ -807,6 +807,8 @@ struct MyListingsView: View {
     /// EditListingHub sin NavigationStack fra Profil-tab sin parent-stack
     /// (TU-78 — uten dette popper iOS 18 hele Hub-en ved spot-push).
     @State private var editingListing: Listing?
+    /// Annonse som FORHÅNDSVISES slik gjester ser den («Se annonsen»).
+    @State private var viewingListing: Listing?
     /// True når bruker tappet "+" mens et utkast var aktivt — vis dialog
     /// som tvinger valg mellom Fortsett, Forkast eller Avbryt.
     @State private var showDraftConflictAlert = false
@@ -852,6 +854,13 @@ struct MyListingsView: View {
                     showStripeOnboarding = false
                     Task { await authManager.loadProfile() }
                 }
+            }
+        }
+        .fullScreenCover(item: $viewingListing) { listing in
+            // Forhåndsvisning slik gjester ser annonsen. Egen NavigationStack
+            // så detaljsidens back/dismiss lukker coveret.
+            NavigationStack {
+                ListingDetailView(listing: listing)
             }
         }
         .fullScreenCover(item: $editingListing) { listing in
@@ -982,16 +991,36 @@ struct MyListingsView: View {
             ScrollView {
                 LazyVStack(spacing: 24) {
                     ForEach(Array(listings.enumerated()), id: \.element.id) { idx, listing in
-                        Button {
-                            editingListing = listing
-                        } label: {
-                            HostListingCard(
-                                listing: listing,
-                                monthlyEarnings: monthlyEarnings[listing.id],
-                                onPauseToggle: { Task { await toggleListingActive(listing) } }
-                            )
+                        VStack(alignment: .leading, spacing: 10) {
+                            Button {
+                                editingListing = listing
+                            } label: {
+                                HostListingCard(
+                                    listing: listing,
+                                    monthlyEarnings: monthlyEarnings[listing.id],
+                                    onPauseToggle: { Task { await toggleListingActive(listing) } }
+                                )
+                            }
+                            .buttonStyle(.plain)
+
+                            Button {
+                                viewingListing = listing
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "eye")
+                                        .font(.system(size: 13, weight: .medium))
+                                    Text("Se annonsen slik gjester ser den")
+                                        .font(.app(size: 14, weight: .medium))
+                                }
+                                .foregroundStyle(.neutral800)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 9)
+                                .background(Color.appCard)
+                                .clipShape(Capsule())
+                                .overlay(Capsule().stroke(Color.appLine, lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .buttonStyle(.plain)
                         .onAppear {
                             // Trigger paginering når brukeren scroller forbi nest siste kortet
                             if idx == listings.count - 3 && hasMoreListings && !isLoadingMoreListings {
