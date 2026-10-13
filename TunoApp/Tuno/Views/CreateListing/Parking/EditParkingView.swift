@@ -15,6 +15,7 @@ struct EditParkingView: View {
     @State private var descriptionText: String
     @State private var dailyText: String
     @State private var monthlyText: String
+    @State private var dailyNote: String
     @State private var packageDays: Int
     @State private var packageNote: String
     @State private var isActive: Bool
@@ -30,16 +31,17 @@ struct EditParkingView: View {
         _title = State(initialValue: listing.title)
         _descriptionText = State(initialValue: listing.description ?? "")
         let packages = (listing.spotMarkers ?? []).flatMap { $0.pricePackages ?? [] }
-        let day = packages.first(where: { $0.periodType == .day && $0.periodValue == 1 })?.priceNok
-            ?? listing.price ?? 0
-        let month = packages.first(where: { $0.periodType == .month && $0.periodValue == 1 })?.priceNok
+        let dayPkg = packages.first(where: { $0.periodType == .day && $0.periodValue == 1 })
+        let day = dayPkg?.priceNok ?? listing.price ?? 0
+        let monthPkg = packages.first(where: { $0.periodType == .month && $0.periodValue == 1 })
         // Kim-pakken (DAY×N, 2-30 dager) går foran legacy MONTH-pakken.
         let customPkg = packages.first(where: { $0.periodType == .day && $0.periodValue >= 2 && $0.periodValue <= 30 })
-        let pkgPrice = customPkg?.priceNok ?? month
+        let pkgPrice = customPkg?.priceNok ?? monthPkg?.priceNok
         _dailyText = State(initialValue: day > 0 ? "\(day)" : "")
+        _dailyNote = State(initialValue: dayPkg?.note ?? "")
         _monthlyText = State(initialValue: pkgPrice.map { "\($0)" } ?? "")
         _packageDays = State(initialValue: customPkg?.periodValue ?? 30)
-        _packageNote = State(initialValue: customPkg?.note ?? "")
+        _packageNote = State(initialValue: customPkg?.note ?? monthPkg?.note ?? "")
         _isActive = State(initialValue: listing.isActive ?? true)
     }
 
@@ -78,6 +80,12 @@ struct EditParkingView: View {
                             }
                     }
 
+                    field(label: "Melding ved dagsleie (valgfritt, vises før betaling)") {
+                        TextField("F.eks. Parker helt inntil veggen.", text: $dailyNote, axis: .vertical)
+                            .font(.tuno(.body))
+                            .lineLimit(2...4)
+                    }
+
                     field(label: "Fast pakke (kr for hele pakken)") {
                         TextField("0", text: $monthlyText)
                             .keyboardType(.numberPad)
@@ -114,7 +122,7 @@ struct EditParkingView: View {
                             }
                         }
 
-                        field(label: "Melding til leietaker (valgfritt, vises før betaling)") {
+                        field(label: "Melding ved månedsleie (valgfritt, vises før betaling)") {
                             TextField("F.eks. Plassen kan brukes man-fre 08-18.", text: $packageNote, axis: .vertical)
                                 .font(.tuno(.body))
                                 .lineLimit(2...4)
@@ -258,12 +266,24 @@ struct EditParkingView: View {
         isSaving = true
         error = nil
 
-        var packages: [PricePackage] = [PricePackage(periodType: .day, periodValue: 1, priceNok: day)]
+        let trimmedDayNote = dailyNote.trimmingCharacters(in: .whitespacesAndNewlines)
+        var packages: [PricePackage] = [PricePackage(
+            periodType: .day,
+            periodValue: 1,
+            priceNok: day,
+            note: trimmedDayNote.isEmpty ? nil : trimmedDayNote
+        )]
         let trimmedNote = packageNote.trimmingCharacters(in: .whitespacesAndNewlines)
         let pkgDays = min(30, max(2, packageDays))
         if let month {
-            if pkgDays == 30 && trimmedNote.isEmpty {
-                packages.append(PricePackage(periodType: .month, periodValue: 1, priceNok: month))
+            if pkgDays == 30 {
+                // Ren månedsplass («kr/mnd»-visning) — meldingen følger pakken.
+                packages.append(PricePackage(
+                    periodType: .month,
+                    periodValue: 1,
+                    priceNok: month,
+                    note: trimmedNote.isEmpty ? nil : trimmedNote
+                ))
             } else {
                 packages.append(PricePackage(
                     periodType: .day,

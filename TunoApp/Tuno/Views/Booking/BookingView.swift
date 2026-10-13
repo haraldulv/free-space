@@ -1107,32 +1107,37 @@ struct BookingView: View {
                 .foregroundStyle(.neutral500)
         }
 
-        // Kim-pakken: utleiers forbehold/instruks vises FØR betaling,
+        // Utleiers forbehold/instruks for månedsleie vises FØR betaling,
         // f.eks. «Plassen kan brukes man-fre 08-18».
         if monthPlan, let note = parkingPkg?.note, !note.isEmpty {
-            HStack(alignment: .top, spacing: 10) {
-                Image(systemName: "info.circle.fill")
-                    .font(.system(size: 15))
-                    .foregroundStyle(.neutral700)
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Fra utleier")
-                        .font(.tuno(.caption))
-                        .foregroundStyle(.neutral500)
-                    Text(note)
-                        .font(.tuno(.body))
-                        .foregroundStyle(.neutral800)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.paperCard)
-            .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
-                    .stroke(Color.paperLine, lineWidth: 1)
-            )
+            hostNoteCard(note)
         }
+    }
+
+    /// «Fra utleier»-kort: utleiers melding/instruks, vises før betaling.
+    private func hostNoteCard(_ note: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: 15))
+                .foregroundStyle(.neutral700)
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Fra utleier")
+                    .font(.tuno(.caption))
+                    .foregroundStyle(.neutral500)
+                Text(note)
+                    .font(.tuno(.body))
+                    .foregroundStyle(.neutral800)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.paperCard)
+        .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
+                .stroke(Color.paperLine, lineWidth: 1)
+        )
     }
 
     /// Standard datovalg: fra/til-pillar + inline-kalender. Parkering har i
@@ -1216,6 +1221,12 @@ struct BookingView: View {
                     .font(.system(size: 13))
                     .foregroundStyle(.neutral500)
             }
+        }
+
+        // Utleiers forbehold/instruks for dagsleie vises FØR betaling,
+        // f.eks. «Parker helt inntil veggen».
+        if isParking, let note = listing.parkingDayNote {
+            hostNoteCard(note)
         }
     }
 

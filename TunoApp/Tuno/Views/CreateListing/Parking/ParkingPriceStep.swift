@@ -8,6 +8,8 @@ struct ParkingPriceStep: View {
 
     @State private var dailyText: String = ""
     @State private var monthlyText: String = ""
+    @State private var dailyNoteText: String = ""
+    @State private var monthlyNoteText: String = ""
     /// Belegg-preset for kalkulatoren (andel av dagene som leies ut ved dagsleie).
     @State private var occupancy: Double = 0.6
 
@@ -68,16 +70,34 @@ struct ParkingPriceStep: View {
                     Text("Pris")
                         .font(.tuno(.heading))
                         .foregroundStyle(.neutral900)
-                    priceField(title: "Dagsleie (påkrevd)", unit: "kr per dag", text: $dailyText, field: .daily) { value in
-                        form.parkingDailyPrice = value
-                    }
-                    VStack(alignment: .leading, spacing: 6) {
-                        priceField(title: "Tilby månedsleie? (valgfritt)", unit: "kr per måned", text: $monthlyText, field: .package) { value in
-                            form.parkingMonthlyPrice = value
+                    VStack(alignment: .leading, spacing: 10) {
+                        priceField(title: "Dagsleie (påkrevd)", unit: "kr per dag", text: $dailyText, field: .daily) { value in
+                            form.parkingDailyPrice = value
                         }
-                        Text("Leietaker får fast plass i 30 dager til denne prisen.")
-                            .font(.tuno(.caption))
-                            .foregroundStyle(.neutral500)
+                        noteField(
+                            title: "Melding ved dagsleie (valgfritt)",
+                            placeholder: "F.eks. Parker helt inntil veggen.",
+                            caption: "Vises til leietaker før betaling av dagsleie.",
+                            text: $dailyNoteText
+                        ) { form.parkingDailyNote = $0 }
+                    }
+                    VStack(alignment: .leading, spacing: 10) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            priceField(title: "Tilby månedsleie? (valgfritt)", unit: "kr per måned", text: $monthlyText, field: .package) { value in
+                                form.parkingMonthlyPrice = value
+                            }
+                            Text("Leietaker får fast plass i 30 dager til denne prisen.")
+                                .font(.tuno(.caption))
+                                .foregroundStyle(.neutral500)
+                        }
+                        if (form.parkingMonthlyPrice ?? 0) > 0 {
+                            noteField(
+                                title: "Melding ved månedsleie (valgfritt)",
+                                placeholder: "F.eks. Plassen kan brukes man-fre 08-18.",
+                                caption: "Vises til leietaker før betaling av månedsleie.",
+                                text: $monthlyNoteText
+                            ) { form.parkingPackageNote = $0 }
+                        }
                     }
                 }
 
@@ -120,6 +140,7 @@ struct ParkingPriceStep: View {
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: (form.parkingDailyPrice ?? 0) > 0)
+            .animation(.easeInOut(duration: 0.2), value: (form.parkingMonthlyPrice ?? 0) > 0)
             .padding(.horizontal, 20)
             .padding(.top, 8)
             .padding(.bottom, 120)
@@ -127,13 +148,14 @@ struct ParkingPriceStep: View {
         .onAppear {
             if let d = form.parkingDailyPrice, d > 0 { dailyText = "\(d)" }
             if let m = form.parkingMonthlyPrice, m > 0 { monthlyText = "\(m)" }
+            dailyNoteText = form.parkingDailyNote
+            monthlyNoteText = form.parkingPackageNote
             if form.parkingType == nil { form.parkingType = .outdoor }
             // Wizarden tilbyr kun ren månedsleie (30 bookede dager) — ikke
-            // Kim-pakkens frie dagetall/melding. Lås verdiene så
-            // buildParkingInput alltid produserer en ren MONTH-pakke
-            // («kr/mnd»-visning), også fra gamle drafts.
+            // Kim-pakkens frie dagetall. Lås dagetallet så buildParkingInput
+            // alltid produserer en ren MONTH-pakke («kr/mnd»-visning), også
+            // fra gamle drafts. Meldingene følger DAY×1- og MONTH-pakken.
             form.parkingPackageDays = 30
-            form.parkingPackageNote = ""
         }
         .safeAreaInset(edge: .bottom) {
             if focusedField != nil {
@@ -272,6 +294,35 @@ struct ParkingPriceStep: View {
                 .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
         }
         .buttonStyle(.plain)
+    }
+
+    /// Valgfritt meldingsfelt under et prisfelt: utleiers instruks/forbehold
+    /// som vises til leietaker før betaling. Placeholder fungerer som
+    /// eksempel-tooltip, caption forklarer hvor meldingen dukker opp.
+    private func noteField(title: String, placeholder: String, caption: String, text: Binding<String>, onChange: @escaping (String) -> Void) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.tuno(.label))
+                .foregroundStyle(.neutral600)
+            TextField(placeholder, text: text, axis: .vertical)
+                .font(.tuno(.body))
+                .foregroundStyle(.neutral900)
+                .lineLimit(2...4)
+                .onChange(of: text.wrappedValue) { _, newValue in
+                    onChange(newValue)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 14)
+                .background(Color.white)
+                .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
+                .overlay(
+                    RoundedRectangle(cornerRadius: TunoRadius.control)
+                        .stroke(Color.neutral200, lineWidth: 1)
+                )
+            Text(caption)
+                .font(.tuno(.caption))
+                .foregroundStyle(.neutral500)
+        }
     }
 
     private func priceField(title: String, unit: String, text: Binding<String>, field: Field, onChange: @escaping (Int?) -> Void) -> some View {

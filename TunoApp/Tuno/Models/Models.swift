@@ -964,6 +964,18 @@ extension Listing {
     /// Laveste månedspris (MONTH×1) på tvers av plassene, om tilbudt.
     var parkingMonthPrice: Int? { lowestPackagePrice(.month) }
 
+    /// Utleiers melding/instruks for dagsleie (note på DAY×1-pakken).
+    /// Vises til leietaker før betaling, f.eks. «Parker helt inntil veggen».
+    var parkingDayNote: String? {
+        for spot in spotMarkers ?? [] {
+            for pkg in spot.pricePackages ?? []
+            where pkg.periodType == .day && pkg.periodValue == 1 {
+                if let note = pkg.note, !note.isEmpty { return note }
+            }
+        }
+        return nil
+    }
+
     /// Kim-pakken for parkering: utleiers egen pakke (dager, pris, valgfri
     /// melding). Lagres som DAY-pakke med periodValue 2-30. Legacy-annonser
     /// med MONTH×1 mappes til 30 dager, så booking-flyten har ÉN pakkevei.
@@ -983,7 +995,20 @@ extension Listing {
             }
         }
         if let month = parkingMonthPrice {
-            return ParkingPackage(days: 30, price: month, note: nil)
+            // Ren MONTH×1-pakke: ta med utleiers melding fra pakken (den
+            // billigste, samme som prisen kommer fra).
+            var monthNote: String? = nil
+            var lowest: Int? = nil
+            for spot in spotMarkers ?? [] {
+                for pkg in spot.pricePackages ?? []
+                where pkg.periodType == .month && pkg.periodValue == 1 {
+                    if lowest == nil || pkg.priceNok < lowest! {
+                        lowest = pkg.priceNok
+                        monthNote = (pkg.note?.isEmpty == false) ? pkg.note : nil
+                    }
+                }
+            }
+            return ParkingPackage(days: 30, price: month, note: monthNote)
         }
         return nil
     }
