@@ -147,9 +147,18 @@ export async function sendBookingNotificationToHost(to: string, data: {
   bookedDates?: string[] | null;
   totalPrice: number;
   selectedExtras?: SelectedExtras | null;
+  /** Vises kun til verten, og kun for bekreftede bookinger (denne mailen
+   * sendes først når betalingen er gjennomført). */
+  licensePlate?: string | null;
+  isRentalCar?: boolean | null;
 }) {
   const hostAmount = splitHostAndFee(data.totalPrice).hostShareNok;
   const nights = nightsBetween(data.checkIn, data.checkOut);
+  const vehicleLine = data.licensePlate
+    ? `<p style="color:#525252;font-size:14px;line-height:1.6;">Gjestens bil: <strong>${data.licensePlate}</strong></p>`
+    : data.isRentalCar
+      ? `<p style="color:#525252;font-size:14px;line-height:1.6;">Gjesten kommer med leiebil, registreringsnummer er ikke oppgitt.</p>`
+      : "";
   await resend.emails.send({
     from: FROM,
     to,
@@ -158,6 +167,7 @@ export async function sendBookingNotificationToHost(to: string, data: {
       <p style="color:#525252;font-size:14px;line-height:1.6;">
         Hei ${data.hostName}, ${data.guestName} har booket plassen din.
       </p>
+      ${vehicleLine}
       ${listingCard({
         listingId: data.listingId ?? null,
         listingTitle: data.listingTitle,

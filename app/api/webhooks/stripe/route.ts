@@ -153,7 +153,7 @@ export async function POST(request: NextRequest) {
       // Get booking + profiles for notifications and emails
       const { data: booking } = await supabase
         .from("bookings")
-        .select("user_id, host_id, listing_id, check_in, check_out, booked_dates, total_price, selected_extras")
+        .select("user_id, host_id, listing_id, check_in, check_out, booked_dates, total_price, selected_extras, license_plate, is_rental_car")
         .eq("id", bookingId)
         .single();
 
@@ -252,6 +252,8 @@ export async function POST(request: NextRequest) {
               bookedDates: booking.booked_dates ?? null,
               totalPrice: booking.total_price,
               selectedExtras: booking.selected_extras,
+              licensePlate: booking.license_plate ?? null,
+              isRentalCar: booking.is_rental_car ?? null,
             })
               .then(() => console.log(`[Email] Host notification sent to ${hostEmail}`))
               .catch((err) => console.error(`[Email] Failed to send to ${hostEmail}:`, err)),

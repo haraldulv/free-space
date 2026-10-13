@@ -284,7 +284,6 @@ export default function DashboardPage() {
             listingAddress: (row.listings as Record<string, unknown>)?.address as string,
             guestName: (row.guest as Record<string, unknown>)?.full_name as string || t("anonymous"),
             guestAvatar: (row.guest as Record<string, unknown>)?.avatar_url as string || "",
-            guestEmail: (row.guest as Record<string, unknown>)?.email as string || "",
             guestRating: (row.guest as Record<string, unknown>)?.rating as number || 0,
             guestReviewCount: (row.guest as Record<string, unknown>)?.review_count as number || 0,
             cancelledAt: row.cancelled_at,

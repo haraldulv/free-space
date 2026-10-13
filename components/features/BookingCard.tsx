@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Image from "next/image";
-import { CalendarDays, MapPin, Car, Tent, Star, User, ChevronDown, Clock, CreditCard, Navigation, Mail, CarFront, AlertCircle, Phone, MessageCircle } from "lucide-react";
+import { CalendarDays, MapPin, Car, Tent, Star, User, ChevronDown, Clock, CreditCard, Navigation, CarFront, AlertCircle, Phone, MessageCircle } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { bcpLocale } from "@/lib/i18n-helpers";
@@ -233,19 +233,23 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
               </div>
             </div>
 
-            <div className="flex items-start gap-2 text-sm">
-              <CarFront className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
-              <div>
-                <p className="font-medium text-neutral-700">{t("licensePlate")}</p>
-                {booking.licensePlate ? (
-                  <p className="font-mono text-neutral-900 tracking-wider">{booking.licensePlate}</p>
-                ) : booking.isRentalCar ? (
-                  <p className="text-amber-600">{t("rentalCarNotProvided")}</p>
-                ) : (
-                  <p className="text-neutral-400">{t("notProvided")}</p>
-                )}
+            {/* Regnr er privat: verten ser det først når bookingen er bekreftet.
+                Gjesten ser alltid sitt eget. */}
+            {(variant === "guest" || booking.status === "confirmed") && (
+              <div className="flex items-start gap-2 text-sm">
+                <CarFront className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
+                <div>
+                  <p className="font-medium text-neutral-700">{t("licensePlate")}</p>
+                  {booking.licensePlate ? (
+                    <p className="font-mono text-neutral-900 tracking-wider">{booking.licensePlate}</p>
+                  ) : booking.isRentalCar ? (
+                    <p className="text-amber-600">{t("rentalCarNotProvided")}</p>
+                  ) : (
+                    <p className="text-neutral-400">{t("notProvided")}</p>
+                  )}
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="flex items-start gap-2 text-sm">
               <CreditCard className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
@@ -283,16 +287,6 @@ export default function BookingCard({ booking, variant = "guest", onCancel, onAp
                 <div>
                   <p className="font-medium text-neutral-700">{t("guest")}</p>
                   <p className="text-neutral-500">{booking.guestName || t("guest")}</p>
-                  {booking.guestEmail && (
-                    <a
-                      href={`mailto:${booking.guestEmail}`}
-                      className="mt-0.5 inline-flex items-center gap-1 text-primary-600 hover:text-primary-700"
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      <Mail className="h-3.5 w-3.5" />
-                      {booking.guestEmail}
-                    </a>
-                  )}
                 </div>
               </div>
             )}

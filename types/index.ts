@@ -396,7 +396,6 @@ export interface Booking {
   guestReviewCount?: number;
   guestName?: string;
   guestAvatar?: string;
-  guestEmail?: string;
   licensePlate?: string;
   isRentalCar?: boolean;
   checkInTime?: string;
