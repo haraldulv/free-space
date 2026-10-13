@@ -128,7 +128,7 @@ struct MessagesListView: View {
         .task {
             guard let userId = authManager.currentUser?.id else { return }
             if chatService.conversations.isEmpty && !chatService.isLoading {
-                await chatService.loadConversations(userId: userId.uuidString)
+                await chatService.loadConversations(userId: userId.uuidString.lowercased())
                 prefetchConversationImages()
             }
         }
@@ -137,7 +137,7 @@ struct MessagesListView: View {
             // nyopprettede samtaler (f.eks. forespørsel-flyt) dukker opp.
             guard let userId = authManager.currentUser?.id else { return }
             Task {
-                await chatService.loadConversations(userId: userId.uuidString)
+                await chatService.loadConversations(userId: userId.uuidString.lowercased())
                 prefetchConversationImages()
             }
         }
@@ -145,11 +145,11 @@ struct MessagesListView: View {
             // Når en ny samtale pushes onto path (etter forespørsel/push-deep-link),
             // sørg for at den finnes i listen så det er noe å gå tilbake til.
             guard newId != nil, let userId = authManager.currentUser?.id else { return }
-            Task { await chatService.loadConversations(userId: userId.uuidString) }
+            Task { await chatService.loadConversations(userId: userId.uuidString.lowercased()) }
         }
         .refreshable {
             guard let userId = authManager.currentUser?.id else { return }
-            await chatService.loadConversations(userId: userId.uuidString)
+            await chatService.loadConversations(userId: userId.uuidString.lowercased())
         }
     }
 

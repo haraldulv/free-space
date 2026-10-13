@@ -182,7 +182,8 @@ struct ParkingWizardView: View {
             if form.lat == 0 && form.lng == 0 { return "Velg en lokasjon fra forslagene" }
         case 1:
             if (form.parkingDailyPrice ?? 0) <= 0 { return "Sett en dagspris" }
-            if (form.parkingMonthlyPrice ?? 0) <= 0 { return "Sett en månedspris" }
+            // Fast pakke er valgfri — buildParkingInput hopper over pakken
+            // når prisen er tom/0.
         case 2:
             if form.imageURLs.isEmpty { return "Legg til minst 1 bilde" }
             if !form.uploadingPhotos.isEmpty { return "Vent til bildene er lastet opp" }

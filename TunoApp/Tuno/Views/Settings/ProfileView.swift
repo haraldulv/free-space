@@ -3,6 +3,7 @@ import PhotosUI
 
 private enum ProfileRoute: Hashable {
     case hostRequests
+    case hostBookings
     case calendar
     case myListings
     case earnings
@@ -201,6 +202,7 @@ struct ProfileView: View {
         .navigationDestination(item: $presentedRoute) { route in
             switch route {
             case .hostRequests: HostRequestsView()
+            case .hostBookings: HostBookingsView()
             case .calendar: CalendarRootView()
             case .myListings: MyListingsView()
             case .earnings: EarningsView()
@@ -296,6 +298,7 @@ struct ProfileView: View {
 
     private var hostRows: [MenuRowData] {
         [
+            MenuRowData(icon: "calendar.badge.clock", label: "Utleiinger", badge: nil, route: .hostBookings),
             MenuRowData(
                 icon: "tray.full.fill",
                 label: "Forespørsler",

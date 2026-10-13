@@ -16,7 +16,12 @@ class ChatService: ObservableObject {
 
     /// Henter samtaler i 4 batch-queries istedenfor 1 + 4·N (tidligere waterfall
     /// tok 8–20 sek for 10 samtaler). Nå typisk 300–800 ms uansett antall.
-    func loadConversations(userId: String) async {
+    func loadConversations(userId rawUserId: String) async {
+        // DB serialiserer uuid med små bokstaver; uuidString gir store.
+        // Normaliser her så klient-side-sammenlikningene (guestId == userId)
+        // aldri bommer — en bom gjorde at samtalen viste DIN EGEN profil som
+        // motpart (Harald-testrunde 2026-10-13).
+        let userId = rawUserId.lowercased()
         isLoading = true
         defer { isLoading = false }
         do {

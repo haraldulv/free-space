@@ -12,6 +12,12 @@ struct ParkingPriceStep: View {
     /// Belegg-preset for kalkulatoren (andel av dagene som leies ut ved dagsleie).
     @State private var occupancy: Double = 0.6
 
+    /// Fokus-kjede for feltene. numberPad har ingen returtast, så en egen
+    /// «Neste felt»-bar (safeAreaInset, se feedback_swiftui_keyboard_toolbar)
+    /// tar brukeren videre.
+    private enum Field: Hashable { case daily, package, note }
+    @FocusState private var focusedField: Field?
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
@@ -63,10 +69,10 @@ struct ParkingPriceStep: View {
                     Text("Pris")
                         .font(.tuno(.heading))
                         .foregroundStyle(.neutral900)
-                    priceField(title: "Dagsleie", unit: "kr per dag", text: $dailyText) { value in
+                    priceField(title: "Dagsleie", unit: "kr per dag", text: $dailyText, field: .daily) { value in
                         form.parkingDailyPrice = value
                     }
-                    priceField(title: "Fast pakke (valgfritt)", unit: "kr for hele pakken", text: $monthlyText) { value in
+                    priceField(title: "Fast pakke (valgfritt)", unit: "kr for hele pakken", text: $monthlyText, field: .package) { value in
                         form.parkingMonthlyPrice = value
                     }
 
@@ -121,6 +127,48 @@ struct ParkingPriceStep: View {
             if !form.parkingPackageNote.isEmpty { noteText = form.parkingPackageNote }
             if form.parkingType == nil { form.parkingType = .outdoor }
         }
+        .safeAreaInset(edge: .bottom) {
+            if focusedField != nil {
+                keyboardBar
+            }
+        }
+    }
+
+    // MARK: - Tastatur-navigasjon
+
+    private var nextField: Field? {
+        switch focusedField {
+        case .daily: return .package
+        case .package: return (form.parkingMonthlyPrice ?? 0) > 0 ? .note : nil
+        default: return nil
+        }
+    }
+
+    private var keyboardBar: some View {
+        HStack {
+            if let next = nextField {
+                Button {
+                    focusedField = next
+                } label: {
+                    HStack(spacing: 5) {
+                        Text("Neste felt")
+                            .font(.tuno(.label))
+                        Image(systemName: "arrow.down")
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundStyle(.neutral900)
+                }
+            }
+            Spacer()
+            Button("Ferdig") {
+                focusedField = nil
+            }
+            .font(.tuno(.label))
+            .foregroundStyle(.neutral900)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
     }
 
     // MARK: - Kim-pakken: dager + melding
@@ -162,6 +210,7 @@ struct ParkingPriceStep: View {
                     text: $noteText,
                     axis: .vertical
                 )
+                .focused($focusedField, equals: .note)
                 .font(.tuno(.body))
                 .lineLimit(2...4)
                 .padding(12)
@@ -280,7 +329,7 @@ struct ParkingPriceStep: View {
         .buttonStyle(.plain)
     }
 
-    private func priceField(title: String, unit: String, text: Binding<String>, onChange: @escaping (Int?) -> Void) -> some View {
+    private func priceField(title: String, unit: String, text: Binding<String>, field: Field, onChange: @escaping (Int?) -> Void) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.tuno(.label))
@@ -288,6 +337,7 @@ struct ParkingPriceStep: View {
             HStack(spacing: 8) {
                 TextField("0", text: text)
                     .keyboardType(.numberPad)
+                    .focused($focusedField, equals: field)
                     .font(.tuno(.title))
                     .foregroundStyle(.neutral900)
                     .onChange(of: text.wrappedValue) { _, newValue in
