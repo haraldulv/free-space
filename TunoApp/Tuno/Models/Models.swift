@@ -1139,6 +1139,14 @@ struct Booking: Codable, Identifiable {
         return bookedDates.count < (TunoCalendar.nightsBetween(checkIn, checkOut).map { $0 + 1 } ?? bookedDates.count)
     }
 
+    /// Bil-tekst for vertsflater. Regnr er privat og skal KUN vises for
+    /// bekreftede bookinger — callere håndhever status-sjekken.
+    var hostVehicleLabel: String? {
+        if let plate = licensePlate, !plate.isEmpty { return "Bil: \(plate)" }
+        if isRentalCar == true { return "Leiebil" }
+        return nil
+    }
+
     enum CodingKeys: String, CodingKey {
         case id, status, listing, guest
         case userId = "user_id"

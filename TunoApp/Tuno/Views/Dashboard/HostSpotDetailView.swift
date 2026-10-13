@@ -225,6 +225,13 @@ struct HostSpotDetailView: View {
                                 Text("\(b.checkIn) → \(b.checkOut)")
                                     .font(.system(size: 12))
                                     .foregroundStyle(.neutral500)
+                                // Regnr er privat: vises først når bookingen er
+                                // bekreftet, aldri på forespørsler.
+                                if b.status == .confirmed, let vehicle = b.hostVehicleLabel {
+                                    Text(vehicle)
+                                        .font(.system(size: 12, weight: .medium))
+                                        .foregroundStyle(.neutral600)
+                                }
                             }
                             Spacer()
                             Text("\(b.totalPrice) kr")
