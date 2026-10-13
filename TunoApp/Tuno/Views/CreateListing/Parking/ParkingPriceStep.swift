@@ -8,14 +8,13 @@ struct ParkingPriceStep: View {
 
     @State private var dailyText: String = ""
     @State private var monthlyText: String = ""
-    @State private var noteText: String = ""
     /// Belegg-preset for kalkulatoren (andel av dagene som leies ut ved dagsleie).
     @State private var occupancy: Double = 0.6
 
     /// Fokus-kjede for feltene. numberPad har ingen returtast, så en egen
     /// «Neste felt»-bar (safeAreaInset, se feedback_swiftui_keyboard_toolbar)
     /// tar brukeren videre.
-    private enum Field: Hashable { case daily, package, note }
+    private enum Field: Hashable { case daily, package }
     @FocusState private var focusedField: Field?
 
     var body: some View {
@@ -69,15 +68,16 @@ struct ParkingPriceStep: View {
                     Text("Pris")
                         .font(.tuno(.heading))
                         .foregroundStyle(.neutral900)
-                    priceField(title: "Dagsleie", unit: "kr per dag", text: $dailyText, field: .daily) { value in
+                    priceField(title: "Dagsleie (påkrevd)", unit: "kr per dag", text: $dailyText, field: .daily) { value in
                         form.parkingDailyPrice = value
                     }
-                    priceField(title: "Fast pakke (valgfritt)", unit: "kr for hele pakken", text: $monthlyText, field: .package) { value in
-                        form.parkingMonthlyPrice = value
-                    }
-
-                    if (form.parkingMonthlyPrice ?? 0) > 0 {
-                        packageEditor
+                    VStack(alignment: .leading, spacing: 6) {
+                        priceField(title: "Tilby månedsleie? (valgfritt)", unit: "kr per måned", text: $monthlyText, field: .package) { value in
+                            form.parkingMonthlyPrice = value
+                        }
+                        Text("Månedsleie er 30 bookede dager i strekk til fast pris.")
+                            .font(.tuno(.caption))
+                            .foregroundStyle(.neutral500)
                     }
                 }
 
@@ -124,8 +124,13 @@ struct ParkingPriceStep: View {
         .onAppear {
             if let d = form.parkingDailyPrice, d > 0 { dailyText = "\(d)" }
             if let m = form.parkingMonthlyPrice, m > 0 { monthlyText = "\(m)" }
-            if !form.parkingPackageNote.isEmpty { noteText = form.parkingPackageNote }
             if form.parkingType == nil { form.parkingType = .outdoor }
+            // Wizarden tilbyr kun ren månedsleie (30 bookede dager) — ikke
+            // Kim-pakkens frie dagetall/melding. Lås verdiene så
+            // buildParkingInput alltid produserer en ren MONTH-pakke
+            // («kr/mnd»-visning), også fra gamle drafts.
+            form.parkingPackageDays = 30
+            form.parkingPackageNote = ""
         }
         .safeAreaInset(edge: .bottom) {
             if focusedField != nil {
@@ -139,7 +144,6 @@ struct ParkingPriceStep: View {
     private var nextField: Field? {
         switch focusedField {
         case .daily: return .package
-        case .package: return (form.parkingMonthlyPrice ?? 0) > 0 ? .note : nil
         default: return nil
         }
     }
@@ -169,68 +173,6 @@ struct ParkingPriceStep: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 12)
         .background(.ultraThinMaterial)
-    }
-
-    // MARK: - Kim-pakken: dager + melding
-
-    /// Pakke-detaljer: hvor mange dager pakken gjelder (2-30) og en valgfri
-    /// melding/forbehold som leietaker ser før betaling, f.eks.
-    /// «Plassen kan brukes man-fre 08-18».
-    private var packageEditor: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            VStack(alignment: .leading, spacing: 10) {
-                Text("Hvor mange dager gjelder pakken?")
-                    .font(.tuno(.body))
-                    .foregroundStyle(.neutral700)
-                HStack(spacing: 16) {
-                    stepperButton(systemName: "minus") {
-                        if form.parkingPackageDays > 2 { form.parkingPackageDays -= 1 }
-                    }
-                    Text(form.parkingPackageDays == 30 ? "30 dager (månedsplass)" : "\(form.parkingPackageDays) dager")
-                        .font(.tuno(.heading))
-                        .foregroundStyle(.neutral900)
-                        .frame(minWidth: 120)
-                        .contentTransition(.numericText())
-                    stepperButton(systemName: "plus") {
-                        if form.parkingPackageDays < 30 { form.parkingPackageDays += 1 }
-                    }
-                    Spacer()
-                }
-                Text("F.eks. 20 dager hvis plassen bare kan brukes på hverdager.")
-                    .font(.tuno(.caption))
-                    .foregroundStyle(.neutral500)
-            }
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Melding til leietaker (valgfritt)")
-                    .font(.tuno(.body))
-                    .foregroundStyle(.neutral700)
-                TextField(
-                    "F.eks. Plassen kan brukes man-fre 08-18.",
-                    text: $noteText,
-                    axis: .vertical
-                )
-                .focused($focusedField, equals: .note)
-                .font(.tuno(.body))
-                .lineLimit(2...4)
-                .padding(12)
-                .background(Color.paperCard)
-                .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous)
-                        .stroke(Color.paperLine, lineWidth: 1)
-                )
-                .onChange(of: noteText) { _, newValue in
-                    form.parkingPackageNote = newValue
-                }
-                Text("Vises for leietaker før betaling.")
-                    .font(.tuno(.caption))
-                    .foregroundStyle(.neutral500)
-            }
-        }
-        .padding(14)
-        .background(Color.paper)
-        .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control, style: .continuous))
     }
 
     // MARK: - Kalkulator
