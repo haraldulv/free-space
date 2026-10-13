@@ -314,18 +314,26 @@ private struct HostOnboardingWelcomeStep: View {
             subtitle: "Vi trenger litt info for å kunne betale ut leieinntektene dine."
         ) {
             VStack(spacing: 0) {
+                // Nummererte steg, ikke ikon-rader: radene så tappbare ut og
+                // ble forvekslet med skjemafelter. Dette er en oversikt over
+                // de neste stegene.
+                Text("Dette fyller du ut i de neste stegene:")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.neutral600)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.bottom, 12)
                 BulletRow(
-                    iconName: "person.text.rectangle.fill",
+                    stepNumber: 1,
                     title: "Personlig info",
                     subtitle: "Navn, fnr og telefon"
                 )
                 BulletRow(
-                    iconName: "house.fill",
+                    stepNumber: 2,
                     title: "Adresse",
                     subtitle: "Hjemmeadressen din"
                 )
                 BulletRow(
-                    iconName: "creditcard.fill",
+                    stepNumber: 3,
                     title: "Bankkonto",
                     subtitle: "Kontonummer for utbetalinger"
                 )
@@ -341,16 +349,18 @@ private struct HostOnboardingWelcomeStep: View {
 }
 
 private struct BulletRow: View {
-    let iconName: String
+    let stepNumber: Int
     let title: String
     let subtitle: String
 
     var body: some View {
         HStack(spacing: 14) {
-            Image(systemName: iconName)
-                .font(.system(size: 18, weight: .medium))
+            Text("\(stepNumber)")
+                .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(.appAccentDeep)
-                .frame(width: 28, alignment: .center)
+                .frame(width: 28, height: 28)
+                .background(Color.appTint)
+                .clipShape(Circle())
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold))

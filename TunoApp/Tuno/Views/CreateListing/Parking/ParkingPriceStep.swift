@@ -103,8 +103,14 @@ struct ParkingPriceStep: View {
                         .stroke(Color.paperLine, lineWidth: 1)
                 )
 
-                calculatorCard
+                // Kalkulatoren er død vekt uten dagspris; vis den først når
+                // den har noe å estimere.
+                if (form.parkingDailyPrice ?? 0) > 0 {
+                    calculatorCard
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                }
             }
+            .animation(.easeInOut(duration: 0.2), value: (form.parkingDailyPrice ?? 0) > 0)
             .padding(.horizontal, 20)
             .padding(.top, 8)
             .padding(.bottom, 120)

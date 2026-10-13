@@ -21,10 +21,15 @@ struct AddressStep: View {
             subtitle: "Søk etter adresse. Vi bruker dette til å vise annonsen på kartet for gjester."
         ) {
             VStack(alignment: .leading, spacing: 18) {
-                WizardTooltip(
-                    title: "Tips: Én adresse, flere plasser",
-                    message: "Du kan ha flere plasser på samme adresse, for eksempel 5 bobilplasser i en hage. Gjester kan reservere én plass av gangen."
-                )
+                // Parkering: tipset skapte mer forvirring enn det løste
+                // (og teksten var bobil-arv). Antall plasser forklares i
+                // pris-steget der stepperen faktisk er.
+                if form.category != .parking {
+                    WizardTooltip(
+                        title: "Tips: Én adresse, flere plasser",
+                        message: "Du kan ha flere plasser på samme adresse, for eksempel 5 bobilplasser i en hage. Gjester kan reservere én plass av gangen."
+                    )
+                }
 
                 // Søkefelt
                 VStack(alignment: .leading, spacing: 0) {
