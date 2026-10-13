@@ -497,8 +497,10 @@ struct BookingView: View {
     }
 
     private var isFormValid: Bool {
-        // Regnr er fjernet fra booking-flyten — vehicleOK er alltid sant.
-        let vehicleOK = true
+        // Parkering: regnr påkrevd (web-paritet), med leiebil som unntak.
+        let vehicleOK = listing.category != .parking
+            || isRentalCar
+            || !licensePlate.trimmingCharacters(in: .whitespaces).isEmpty
         let spotOK = !hasSpotLevelPricing || !selectedSpotIds.isEmpty
         let datesOK = isHourly ? (hourlyDate != nil && endMinutes > startMinutes) : hasDates
         return datesOK && vehicleOK && spotOK && stayLengthError == nil
@@ -565,6 +567,14 @@ struct BookingView: View {
                 if !(listing.extras ?? []).isEmpty {
                     listingExtrasSection
                     Divider()
+                }
+
+                // Parkering: regnr er leietakers «verifisering» mot verten
+                // (vises for vert KUN etter bekreftet booking). Seksjonen lå
+                // død i koden uten å bli rendret — tilbake 2026-10-13.
+                if listing.category == .parking {
+                    Divider()
+                    vehicleSection
                 }
 
                 priceBreakdown
