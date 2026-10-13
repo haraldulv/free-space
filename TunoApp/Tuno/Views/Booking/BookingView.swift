@@ -1668,6 +1668,15 @@ struct BookingView: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Kjøretøy")
                 .font(.system(size: 18, weight: .semibold))
+                .onAppear {
+                    // Kim-ønske: skiltet huskes etter første booking, så
+                    // feltet er forhåndsutfylt (kan alltid endres).
+                    if licensePlate.isEmpty, !isRentalCar,
+                       let saved = UserDefaults.standard.string(forKey: "tuno.lastLicensePlate"),
+                       !saved.isEmpty {
+                        licensePlate = saved
+                    }
+                }
             Toggle("Leiebil (ingen registreringsnummer)", isOn: $isRentalCar)
                 .font(.system(size: 14))
                 .tint(.appAccent)
@@ -1687,6 +1696,14 @@ struct BookingView: View {
                 }
             }
         }
+    }
+
+    /// Husk skiltet lokalt så feltet er forhåndsutfylt ved neste booking
+    /// (Kim-ønske 2026-10-13). Lagres kun på denne enheten.
+    private func rememberLicensePlate() {
+        let plate = licensePlate.trimmingCharacters(in: .whitespaces).uppercased()
+        guard !isRentalCar, !plate.isEmpty else { return }
+        UserDefaults.standard.set(plate, forKey: "tuno.lastLicensePlate")
     }
 
     private var priceBreakdown: some View {
@@ -2085,6 +2102,7 @@ struct BookingView: View {
         let dateForCheckIn = isHourly ? Calendar.current.startOfDay(for: ci) : ci
         let dateForCheckOut = isHourly ? Calendar.current.startOfDay(for: ci) : co
 
+        rememberLicensePlate()
         let request = CreateBookingRequest(
             listingId: listing.id,
             checkIn: dateFormatter.string(from: dateForCheckIn),
@@ -2199,6 +2217,7 @@ struct BookingView: View {
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
 
+        rememberLicensePlate()
         let payload = BookingService.RequestBookingPayload(
             listingId: listing.id,
             checkIn: dateFormatter.string(from: ci),
