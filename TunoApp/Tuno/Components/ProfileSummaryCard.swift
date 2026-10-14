@@ -65,9 +65,10 @@ struct ProfileSummaryCard: View {
 
                 VStack(spacing: 2) {
                     Text(firstName)
-                        .font(.app(size: 24, weight: .bold))
+                        .font(.app(size: 26, weight: .bold))
                         .foregroundStyle(.neutral900)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     if let location, !location.isEmpty {
                         Text(location)
                             .font(.app(size: 14))
@@ -134,15 +135,15 @@ struct ProfileSummaryCard: View {
             HStack(spacing: 4) {
                 if let icon {
                     Image(systemName: icon)
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.neutral900)
                 }
                 Text(value)
-                    .font(.app(size: 22, weight: .bold))
+                    .font(.app(size: 24, weight: .bold))
                     .foregroundStyle(.neutral900)
             }
             Text(label)
-                .font(.app(size: 14))
+                .font(.app(size: 14, weight: .medium))
                 .foregroundStyle(.neutral600)
         }
         .frame(maxWidth: .infinity, alignment: .leading)

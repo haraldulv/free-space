@@ -37,6 +37,10 @@ struct WizardPricingCalendarView: View {
 
     @State private var mode: CalendarMode = .idle
     @State private var selectedDates: Set<String> = []
+    /// Anker for range-valg (Airbnb-mønsteret): første tap setter anker,
+    /// neste tap fyller hele perioden mellom. Nullstilles etter fyll, ved
+    /// fjerning av ankerdagen, og ved drag.
+    @State private var anchorISO: String? = nil
     @State private var hasScrolledToCurrent = false
 
     // MARK: - Drag-select state (iOS 18)
@@ -62,12 +66,6 @@ struct WizardPricingCalendarView: View {
     /// på at multi-select-modus er aktivt.
     @State private var dragOriginISO: String? = nil
 
-    // MARK: - Panel-minimer state
-    /// True når bunn-panelet er kollapset til kun pille + reset + maks-knapp.
-    /// Auto-trigges på scroll ned, manuelt toggles via X / chevron.up.
-    @State private var panelMinimized: Bool = false
-    /// Seneste scroll-offset for delta-beregning i onScrollGeometryChange.
-    @State private var lastScrollY: CGFloat = 0
     @State private var priceEditValue: Int = 0
     @FocusState private var priceEditFocused: Bool
 
@@ -359,19 +357,6 @@ struct WizardPricingCalendarView: View {
                         .onEnded { _ in commitDrag() }
                 )
                 .scrollDisabled(isDragging)
-                // Auto-minimer panel ved scroll ned. Sjekker delta >30pt slik
-                // at små bevegelser (overscroll-bounce) ikke trigger.
-                .onScrollGeometryChange(for: CGFloat.self) { geo in
-                    geo.contentOffset.y
-                } action: { _, newY in
-                    let delta = newY - lastScrollY
-                    lastScrollY = newY
-                    if delta > 30, !panelMinimized, !selectedDates.isEmpty {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
-                            panelMinimized = true
-                        }
-                    }
-                }
                 .onAppear {
                     // Pre-warm haptics for lavest mulig latency.
                     selectionHaptic.prepare()
@@ -688,9 +673,9 @@ struct WizardPricingCalendarView: View {
         let isPast = Self.osloCalendar.startOfDay(for: date) < startOfToday
         let isToday = Self.osloCalendar.isDate(date, inSameDayAs: Date())
         let isSelected = selectedDates.contains(iso)
-        // isAnchor fjernet — single-tap = toggle, ingen anker-konsept lenger.
-        // Behold lokalvariabelen som `false` for å minimere downstream-endringer.
-        let isAnchor = false
+        // Anker = første tap i range-valget. Får ekstra indre ring så det er
+        // tydelig at neste tap fyller perioden frem til det.
+        let isAnchor = anchorISO == iso
         let isBlocked = blockedDates.contains(iso)
         // hasOverride er kun true når overstyringen FAKTISK avviker fra
         // base — defensiv mot stale data der dict'en kan ha verdier lik base.
@@ -727,16 +712,22 @@ struct WizardPricingCalendarView: View {
                     cellBorder(isSelected: isSelected, isAnchor: isAnchor, isPast: isPast, isBlocked: isBlocked, isClosedByHours: isClosedByHours),
                     lineWidth: isAnchor ? 2 : (isSelected || dimAsBlocked ? 1.5 : 1)
                 )
+            // Anker-indikator: indre hvit ring på den fylte cellen.
+            if isAnchor {
+                RoundedRectangle(cornerRadius: 9)
+                    .strokeBorder(Color.white.opacity(0.65), lineWidth: 1.5)
+                    .padding(3)
+            }
 
             VStack(spacing: 0) {
                 VStack(spacing: 3) {
                     Text("\(day)")
                         .font(.system(size: 16, weight: (isSelected || isAnchor) ? .bold : .semibold))
-                        .foregroundStyle(cellText(isPast: isPast, isBlocked: dimAsBlocked))
+                        .foregroundStyle(cellText(isPast: isPast, isBlocked: dimAsBlocked, isSelected: isSelected || isAnchor))
                     // Liten prikk under tallet for i dag. Tar samme plass
                     // (Color.clear) på andre dager så cellene ikke hopper.
                     Circle()
-                        .fill(isToday && !dimAsBlocked ? Color.neutral900 : Color.clear)
+                        .fill(isToday && !dimAsBlocked ? ((isSelected || isAnchor) ? Color.white : Color.neutral900) : Color.clear)
                         .frame(width: 4, height: 4)
                 }
                 .padding(.top, 14)
@@ -757,7 +748,8 @@ struct WizardPricingCalendarView: View {
                     statusLine(
                         isBlocked: isBlocked,
                         isClosedByHours: isClosedByHours,
-                        ohDisplay: ohDisplay
+                        ohDisplay: ohDisplay,
+                        isSelected: isSelected || isAnchor
                     )
                 }
                 .padding(.bottom, 10)
@@ -821,12 +813,15 @@ struct WizardPricingCalendarView: View {
     private func statusLine(
         isBlocked: Bool,
         isClosedByHours: Bool,
-        ohDisplay: CellOpeningDisplay
+        ohDisplay: CellOpeningDisplay,
+        isSelected: Bool = false
     ) -> some View {
         if isBlocked || isClosedByHours {
             Text("Stengt")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundStyle(Color(red: 185/255, green: 28/255, blue: 28/255))
+                .foregroundStyle(isSelected
+                    ? Color(red: 252/255, green: 165/255, blue: 165/255)
+                    : Color(red: 185/255, green: 28/255, blue: 28/255))
                 .frame(height: 14)
         } else {
             switch ohDisplay {
@@ -850,8 +845,9 @@ struct WizardPricingCalendarView: View {
     // MARK: - Cell styling
 
     private func cellBackground(isPast: Bool, isSelected: Bool, isAnchor: Bool, isBlocked: Bool, isClosedByHours: Bool, hasOverride: Bool) -> Color {
-        if isAnchor { return Color.appAccent.opacity(0.18) }
-        if isSelected { return Color.appAccent.opacity(0.10) }
+        // Valgt dag = fylt aksentfarge (ink i parkering, grønn i camping) —
+        // mye tydeligere enn den gamle 10 %-tinten.
+        if isSelected || isAnchor { return Color.appAccent }
         // Stengt = stengt: både manuelt blokkert OG av åpningstid har samme
         // visuelle stil — svak rødtone. Bruker skal ikke trenge å huske
         // hvilken kilde stengningen kommer fra.
@@ -862,8 +858,7 @@ struct WizardPricingCalendarView: View {
     }
 
     private func cellBorder(isSelected: Bool, isAnchor: Bool, isPast: Bool, isBlocked: Bool, isClosedByHours: Bool) -> Color {
-        if isAnchor { return Color.appAccent }
-        if isSelected { return Color.appAccentBright }
+        if isSelected || isAnchor { return Color.appAccent }
         if isBlocked || isClosedByHours {
             return Color(red: 252/255, green: 165/255, blue: 165/255)
         }
@@ -871,7 +866,8 @@ struct WizardPricingCalendarView: View {
         return Color.neutral200
     }
 
-    private func cellText(isPast: Bool, isBlocked: Bool) -> Color {
+    private func cellText(isPast: Bool, isBlocked: Bool, isSelected: Bool = false) -> Color {
+        if isSelected { return .white }
         if isPast { return Color.neutral300 }
         // Stengt-tall: dempet rødtone for konsistens med "Stengt"-teksten
         if isBlocked { return Color(red: 185/255, green: 28/255, blue: 28/255).opacity(0.55) }
@@ -879,8 +875,8 @@ struct WizardPricingCalendarView: View {
     }
 
     private func priceTextColor(isSelected: Bool, isAnchor: Bool, isOverride: Bool) -> Color {
+        if isSelected || isAnchor { return Color.white.opacity(0.85) }
         if isOverride { return Color.appAccentDeep }
-        if isSelected || isAnchor { return Color.appAccentDeep }
         return Color.neutral500
     }
 
@@ -980,90 +976,127 @@ struct WizardPricingCalendarView: View {
         return result
     }
 
-    // MARK: - Bottom action bar (glassmorphism cards)
+    // MARK: - Bottom action bar (lyst panel: antall valgt + Blokker/Åpne)
 
+    /// Panelet som dukker opp når minst én dato er valgt. Lyst kort i stedet
+    /// for det gamle mørke glass-panelet: tittel med antall dager, hint/
+    /// periode, Tøm-knapp, og to tydelige handlinger — Blokker og Åpne.
+    /// Camping får i tillegg prisredigering for valgte datoer.
     private var dateOverrideActionBar: some View {
-        VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                dateRangePill
-                Spacer()
-                // Pil = nullstill seleksjon (close action bar helt).
-                // Vises bare når noe er valgt.
-                if !selectedDates.isEmpty {
-                    Button {
-                        closeActionBar()
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 38, height: 38)
-                            .background(glassCircleBackground)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("Tøm valg")
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .center, spacing: 12) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(selectionTitle)
+                        .font(.app(size: 18, weight: .bold))
+                        .foregroundStyle(.neutral900)
+                    Text(selectionSubtitle)
+                        .font(.app(size: 13))
+                        .foregroundStyle(.neutral500)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
-                // X = minimer panel (skjul kortene, behold pill + pil).
-                // Når minimert: ikonet byttes til chevron.up = maksimer-knapp.
+                Spacer()
                 Button {
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.85)) {
-                        panelMinimized.toggle()
-                    }
+                    closeActionBar()
                 } label: {
-                    Image(systemName: panelMinimized ? "chevron.up" : "xmark")
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(.white)
-                        .frame(width: 38, height: 38)
-                        .background(glassCircleBackground)
+                    Text("Tøm")
+                        .font(.app(size: 14, weight: .semibold))
+                        .foregroundStyle(.neutral700)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(Capsule().fill(Color.neutral100))
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel(panelMinimized ? "Maksimer panel" : "Minimer panel")
+                .accessibilityLabel("Tøm valg")
             }
-            .padding(.horizontal, 16)
 
-            // Innhold bytter basert på sub-modus. Skjul ved minimer.
-            if !panelMinimized {
-                Group {
-                    switch actionBarSubMode {
-                    case .availability:
-                        if isParking {
-                            // Parkering: kun blokkering — pris-overstyringer
-                            // per dato faktureres ikke (se isParking-doc).
-                            availabilityCard
-                        } else {
-                            HStack(alignment: .top, spacing: 10) {
-                                availabilityCard
-                                priceCard
-                            }
-                        }
-                    case .openingHours:
-                        openingHoursInlineEditor
-                    }
+            if case .openingHours = actionBarSubMode {
+                openingHoursInlineEditor
+                backToAvailabilityButton
+            } else {
+                HStack(spacing: 10) {
+                    selectionActionButton(
+                        title: "Blokker",
+                        icon: "nosign",
+                        filled: true,
+                        disabled: selectionAllBlocked
+                    ) { blockSelected() }
+                    selectionActionButton(
+                        title: "Åpne",
+                        icon: "checkmark.circle",
+                        filled: false,
+                        disabled: selectionNoneBlocked
+                    ) { openSelected() }
                 }
-                .padding(.horizontal, 12)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
 
-                // Bunn-rad bytter også basert på modus.
-                // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver toggle-knappen post-launch
-                Group {
-                    switch actionBarSubMode {
-                    case .availability:
-                        EmptyView()
-                        // if effectiveOpeningHours != nil {
-                        //     openingHoursToggleButton
-                        // }
-                    case .openingHours:
-                        backToAvailabilityButton
-                    }
+                if !isParking {
+                    lightPriceRow
                 }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 12)
-                .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .padding(.top, 10)
-        .padding(.bottom, panelMinimized ? 12 : 0)
+        .padding(16)
+        .frame(maxWidth: .infinity)
+        .background(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .fill(Color.appCard)
+                .shadow(color: .black.opacity(0.16), radius: 18, y: 4)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.appLine, lineWidth: 1)
+        )
+        .padding(.horizontal, 10)
+        .padding(.bottom, 8)
         .animation(.easeInOut(duration: 0.22), value: actionBarSubMode)
-        .animation(.spring(response: 0.32, dampingFraction: 0.85), value: panelMinimized)
+    }
+
+    private var selectionTitle: String {
+        let n = selectedDates.count
+        return n == 1 ? "1 dag valgt" : "\(n) dager valgt"
+    }
+
+    /// Hint-linjen under tittelen: forklarer range-fyllet mens ankeret er
+    /// aktivt, ellers vises den valgte perioden.
+    private var selectionSubtitle: String {
+        if anchorISO != nil && selectedDates.count == 1 {
+            return "Trykk på en sluttdato for å velge perioden"
+        }
+        return formatDateRange()
+    }
+
+    private var selectionAllBlocked: Bool {
+        !selectedDates.isEmpty && selectedDates.allSatisfy { blockedDates.contains($0) }
+    }
+
+    private var selectionNoneBlocked: Bool {
+        selectedDates.allSatisfy { !blockedDates.contains($0) }
+    }
+
+    @ViewBuilder
+    private func selectionActionButton(
+        title: String,
+        icon: String,
+        filled: Bool,
+        disabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 7) {
+                Image(systemName: icon)
+                    .font(.system(size: 14, weight: .semibold))
+                Text(title)
+                    .font(.app(size: 15, weight: .semibold))
+            }
+            .foregroundStyle(filled ? .white : Color.neutral900)
+            .frame(maxWidth: .infinity)
+            .frame(height: 48)
+            .background(Capsule().fill(filled ? Color.appAccent : Color.clear))
+            .overlay(Capsule().stroke(filled ? Color.clear : Color.neutral300, lineWidth: 1.5))
+            .opacity(disabled ? 0.35 : 1)
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
     }
 
     /// Bunn-rad i .availability-modus: bytter til åpningstid-editor.
@@ -1307,25 +1340,12 @@ struct WizardPricingCalendarView: View {
             commitPriceEdit()
         }
         selectedDates.removeAll()
+        anchorISO = nil
         draft = nil
         mode = .idle
         actionBarSubMode = .availability
         priceEditFocused = false
         draftPriceFocused = false
-    }
-
-    private var dateRangePill: some View {
-        HStack(spacing: 6) {
-            Image(systemName: "calendar")
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white)
-            Text(formatDateRange())
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(.white)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(glassPillBackground)
     }
 
     /// Glass-Capsule for dato-pillen (samme look som kortene).
@@ -1350,82 +1370,29 @@ struct WizardPricingCalendarView: View {
             .overlay(Circle().stroke(Color.white.opacity(0.18), lineWidth: 1))
     }
 
-    private var availabilityCard: some View {
-        // Ignorer stengt-av-åpningstid i toggle-state: den behandles
-        // separat via åpningstid-editor. Tilgjengelig-toggle gjelder kun
-        // dager som faktisk kan blokkeres/åpnes manuelt.
-        let togglable = selectedDates.filter { iso -> Bool in
-            guard let d = Self.isoFormatter.date(from: iso) else { return false }
-            return !closedByOpeningHours(d)
-        }
-        let allBlocked = !togglable.isEmpty && togglable.allSatisfy { blockedDates.contains($0) }
-        let allOpen = !allBlocked
-
-        return Button {
-            toggleBlockSelected()
-        } label: {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(spacing: 6) {
-                    Text("Tilgjengelig")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.white)
-                    Circle()
-                        .fill(allOpen ? Color(hex: "#22c55e") : Color(hex: "#ef4444"))
-                        .frame(width: 7, height: 7)
-                }
-                Spacer(minLength: 0)
-                ZStack(alignment: allOpen ? .trailing : .leading) {
-                    Capsule()
-                        .fill(Color.white.opacity(0.16))
-                        .frame(width: 76, height: 32)
-                    Capsule()
-                        .fill(Color.white)
-                        .frame(width: 36, height: 28)
-                        .padding(.horizontal, 2)
-                        .overlay(
-                            Image(systemName: allOpen ? "checkmark" : "xmark")
-                                .font(.system(size: 12, weight: .bold))
-                                .foregroundStyle(.neutral900)
-                        )
-                }
-                .animation(.spring(response: 0.32, dampingFraction: 0.85), value: allOpen)
+    /// Prisredigering for valgte datoer — kun camping (parkering prises per
+    /// pakke på annonsenivå og har ikke per-dato-fakturering). Lys variant.
+    private var lightPriceRow: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Pris per døgn")
+                    .font(.app(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text("Gjelder valgte datoer")
+                    .font(.app(size: 11))
+                    .foregroundStyle(.neutral500)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
-            .frame(height: 130)
-            .background(glassCardBackground)
-        }
-        .buttonStyle(.plain)
-    }
+            Spacer()
 
-    private var priceCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Pris per døgn")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(.white)
-
-            Spacer(minLength: 0)
-
-            inlinePriceEditor
-
-            Spacer(minLength: 0)
-        }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 130)
-        .background(glassCardBackground)
-    }
-
-    private var inlinePriceEditor: some View {
-        HStack(spacing: 10) {
             Button {
                 stepPrice(by: -50)
             } label: {
                 Image(systemName: "minus")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 26, height: 26)
-                    .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                    .frame(width: 30, height: 30)
+                    .overlay(Circle().stroke(Color.neutral300, lineWidth: 1.5))
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
 
@@ -1434,28 +1401,32 @@ struct WizardPricingCalendarView: View {
                     .focused($priceEditFocused)
                     .keyboardType(.numberPad)
                     .multilineTextAlignment(.center)
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundStyle(.white)
+                    .font(.system(size: 20, weight: .bold))
+                    .foregroundStyle(.neutral900)
                     .fixedSize()
-                    .frame(minWidth: 40)
+                    .frame(minWidth: 36)
                     .onAppear { syncPriceEditFromSelection() }
                     .onChange(of: selectedDates) { _, _ in syncPriceEditFromSelection() }
                 Text("kr")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white.opacity(0.7))
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.neutral500)
             }
 
             Button {
                 stepPrice(by: 50)
             } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 26, height: 26)
-                    .overlay(Circle().stroke(Color.white.opacity(0.35), lineWidth: 1.5))
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                    .frame(width: 30, height: 30)
+                    .overlay(Circle().stroke(Color.neutral300, lineWidth: 1.5))
+                    .contentShape(Circle())
             }
             .buttonStyle(.plain)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.neutral100))
     }
 
     /// Glassmorphism: mørk frosted glass med hairline-kant.
@@ -1548,16 +1519,31 @@ struct WizardPricingCalendarView: View {
         if case .bandCreate = mode { return }
 
         if selectedDates.contains(iso) {
+            // Tap på allerede valgt dag fjerner den. Fjernes ankeret,
+            // nullstilles range-modusen også.
             selectedDates.remove(iso)
+            if anchorISO == iso { anchorISO = nil }
+        } else if let anchor = anchorISO, anchor != iso {
+            // Tap nummer to: fyll hele perioden anker → dag (begge inkludert).
+            // Fortidsdager hoppes over. Nytt tap etterpå starter nytt anker,
+            // så flere adskilte perioder kan akkumuleres.
+            for d in isoRange(from: anchor, to: iso) where !isPastISO(d) {
+                selectedDates.insert(d)
+            }
+            anchorISO = nil
         } else {
+            // Første tap: velg dagen og sett anker for range-fyll.
             selectedDates.insert(iso)
+            anchorISO = iso
         }
         selectionHaptic.selectionChanged()
         selectionHaptic.prepare()
         mode = selectedDates.isEmpty ? .idle : .dateOverride
-        if selectedDates.isEmpty {
-            panelMinimized = false  // reset minimer-tilstand når seleksjonen tømmes
-        }
+    }
+
+    private func isPastISO(_ iso: String) -> Bool {
+        guard let date = Self.isoFormatter.date(from: iso) else { return true }
+        return Self.osloCalendar.startOfDay(for: date) < Self.osloCalendar.startOfDay(for: Date())
     }
 
     // MARK: - Drag-select (iOS 18 simultaneousGesture på ScrollView)
@@ -1569,6 +1555,7 @@ struct WizardPricingCalendarView: View {
     private func startDrag(at iso: String) {
         isDragging = true
         dragOriginISO = iso
+        anchorISO = nil
         dragStartedOnSelected = selectedDates.contains(iso)
         dragVisited = [iso]
         applyDragVisit(iso)
@@ -1591,9 +1578,6 @@ struct WizardPricingCalendarView: View {
         dragOriginISO = nil
         dragVisited.removeAll()
         mode = selectedDates.isEmpty ? .idle : .dateOverride
-        if selectedDates.isEmpty {
-            panelMinimized = false
-        }
     }
 
     /// Slå opp hvilken dag-celle som inneholder gitt punkt i "calendarGrid"-
@@ -1628,28 +1612,23 @@ struct WizardPricingCalendarView: View {
 
     // MARK: - Action handlers
 
-    private func toggleBlockSelected() {
+    /// Blokkerer alle valgte datoer (idempotent — allerede blokkerte beholdes).
+    private func blockSelected() {
         guard let idx = spotIndex else { return }
-        let existing = Set(form.spotMarkers[idx].blockedDates ?? [])
-        // Stengt-av-åpningstid trumfer manuell blokk — vi blokkerer/åpner kun
-        // dager som faktisk er booking-bare. Ellers blir det inkonsistent at
-        // bruker "blokkerer" en stengt søndag og taper den røde stengt-stil.
-        let togglable = selectedDates.filter { iso in
-            guard let date = Self.isoFormatter.date(from: iso) else { return false }
-            return !closedByOpeningHours(date)
-        }
-        guard !togglable.isEmpty else {
-            clearSelectionState()
-            return
-        }
-        let allBlocked = togglable.allSatisfy { existing.contains($0) }
-        var updated = existing
-        if allBlocked {
-            updated.subtract(togglable)
-        } else {
-            updated.formUnion(togglable)
-        }
+        var updated = Set(form.spotMarkers[idx].blockedDates ?? [])
+        updated.formUnion(selectedDates)
         form.spotMarkers[idx].blockedDates = updated.isEmpty ? nil : Array(updated).sorted()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        clearSelectionState()
+    }
+
+    /// Åpner (fjerner blokkering på) alle valgte datoer.
+    private func openSelected() {
+        guard let idx = spotIndex else { return }
+        var updated = Set(form.spotMarkers[idx].blockedDates ?? [])
+        updated.subtract(selectedDates)
+        form.spotMarkers[idx].blockedDates = updated.isEmpty ? nil : Array(updated).sorted()
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
         clearSelectionState()
     }
 
@@ -1657,6 +1636,7 @@ struct WizardPricingCalendarView: View {
     /// handling i kalenderen (blokker/åpne dager, bekreft pris-override osv).
     private func clearSelectionState() {
         selectedDates.removeAll()
+        anchorISO = nil
         mode = .idle
         actionBarSubMode = .availability
     }

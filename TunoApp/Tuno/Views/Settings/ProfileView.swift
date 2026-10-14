@@ -6,6 +6,7 @@ private enum ProfileRoute: Hashable {
     case calendar
     case myListings
     case earnings
+    case favorites
     case editProfile
     case settings
     case reviews
@@ -205,6 +206,7 @@ struct ProfileView: View {
             case .calendar: CalendarRootView()
             case .myListings: MyListingsView()
             case .earnings: EarningsView()
+            case .favorites: FavoritesView()
             case .editProfile: EditProfileView()
             case .settings: SettingsView()
             case .reviews: ProfileReviewsView(reviews: receivedReviews)
@@ -317,10 +319,15 @@ struct ProfileView: View {
     }
 
     private var accountRows: [MenuRowData] {
-        [
-            MenuRowData(icon: "person.fill", label: "Rediger profil", badge: nil, route: .editProfile),
-            MenuRowData(icon: "gearshape.fill", label: "Innstillinger", badge: nil, route: .settings),
-        ]
+        var rows: [MenuRowData] = []
+        // Utleiere har Annonser i tab-baren i stedet for Favoritter —
+        // Favoritter nås derfor herfra (Harald 2026-10-14).
+        if authManager.isHost {
+            rows.append(MenuRowData(icon: "heart.fill", label: "Favoritter", badge: nil, route: .favorites))
+        }
+        rows.append(MenuRowData(icon: "person.fill", label: "Rediger profil", badge: nil, route: .editProfile))
+        rows.append(MenuRowData(icon: "gearshape.fill", label: "Innstillinger", badge: nil, route: .settings))
+        return rows
     }
 
     private var hostSection: some View {
@@ -456,27 +463,33 @@ struct ProfileView: View {
     private func sectionHeader(_ title: String) -> some View {
         HStack {
             Text(title)
-                .font(.app(size: 20, weight: .semibold))
-                .foregroundStyle(.neutral800)
+                .font(.app(size: 22, weight: .bold))
+                .foregroundStyle(.neutral900)
             Spacer()
         }
         .padding(.horizontal, 4)
-        .padding(.top, 24)
-        .padding(.bottom, 10)
+        .padding(.top, 26)
+        .padding(.bottom, 12)
     }
 
     /// Ren rad-content (HStack med icon/label/badge/chevron). Bg + shape settes
     /// av GroupedCardButtonStyle, så denne funksjonen bryr seg KUN om innholdet.
+    /// Modernisert 2026-10-14: ikon i myk sirkel, større tekst og chevron —
+    /// Harald syntes de gamle radene var for små og tørre.
     @ViewBuilder
     private func rowContent(_ row: MenuRowData) -> some View {
-        HStack(spacing: 16) {
-            Image(systemName: row.icon)
-                .font(.system(size: 18))
-                .foregroundStyle(.neutral600)
-                .frame(width: 28)
+        HStack(spacing: 14) {
+            ZStack {
+                Circle()
+                    .fill(Color.appTint)
+                    .frame(width: 40, height: 40)
+                Image(systemName: row.icon)
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(.neutral800)
+            }
             Text(row.label)
-                .font(.app(size: 16, weight: .regular))
-                .foregroundStyle(.neutral800)
+                .font(.app(size: 17, weight: .semibold))
+                .foregroundStyle(.neutral900)
             Spacer()
             if let badge = row.badge {
                 Text(badge)
@@ -487,6 +500,9 @@ struct ProfileView: View {
                     .background(Color.red)
                     .clipShape(Capsule())
             }
+            Image(systemName: "chevron.right")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(.neutral400)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -1011,23 +1027,45 @@ struct MyListingsView: View {
                             }
                             .buttonStyle(.plain)
 
-                            Button {
-                                viewingListing = listing
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "eye")
-                                        .font(.system(size: 13, weight: .medium))
-                                    Text("Se annonsen slik gjester ser den")
-                                        .font(.app(size: 14, weight: .medium))
+                            // Hurtighandlinger per annonse. Kalender fikk egen
+                            // knapp her (Harald 2026-10-14) — den lå for gjemt
+                            // bak Profil → Kalender.
+                            HStack(spacing: 8) {
+                                NavigationLink {
+                                    ProfileCalendarView(listing: listing)
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "calendar")
+                                            .font(.system(size: 13, weight: .semibold))
+                                        Text("Kalender")
+                                            .font(.app(size: 14, weight: .semibold))
+                                    }
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 9)
+                                    .background(Color.appAccent)
+                                    .clipShape(Capsule())
                                 }
-                                .foregroundStyle(.neutral800)
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 9)
-                                .background(Color.appCard)
-                                .clipShape(Capsule())
-                                .overlay(Capsule().stroke(Color.appLine, lineWidth: 1))
+                                .buttonStyle(.plain)
+
+                                Button {
+                                    viewingListing = listing
+                                } label: {
+                                    HStack(spacing: 6) {
+                                        Image(systemName: "eye")
+                                            .font(.system(size: 13, weight: .medium))
+                                        Text("Se annonsen")
+                                            .font(.app(size: 14, weight: .medium))
+                                    }
+                                    .foregroundStyle(.neutral800)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 9)
+                                    .background(Color.appCard)
+                                    .clipShape(Capsule())
+                                    .overlay(Capsule().stroke(Color.appLine, lineWidth: 1))
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                         .onAppear {
                             // Trigger paginering når brukeren scroller forbi nest siste kortet

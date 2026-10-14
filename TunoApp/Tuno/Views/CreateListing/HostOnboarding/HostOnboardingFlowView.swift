@@ -389,10 +389,10 @@ private struct HostOnboardingWelcomeStep: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Godta vilkårene")
 
-                    Text("Jeg godtar [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer](https://tuno.no/retningslinjer).")
+                    Text(Self.termsAttributed)
                         .font(.system(size: 13))
                         .foregroundStyle(.neutral600)
-                        .tint(.appAccentDeep)
+                        .tint(Self.termsLinkColor)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(14)
@@ -406,6 +406,24 @@ private struct HostOnboardingWelcomeStep: View {
             }
         }
     }
+
+    /// Grønn lenkefarge med nok kontrast på hvit kortbakgrunn.
+    static let termsLinkColor = Color(hex: "#1f9177")
+
+    /// Vilkårsteksten med lenker som SER ut som lenker: understreket +
+    /// grønne. Ren markdown-Text med .tint(.appAccentDeep) ga svart tekst i
+    /// parkering-paletten, så lenkene var umulige å skille fra fet brødtekst.
+    static let termsAttributed: AttributedString = {
+        let markdown = String(localized: "Jeg godtar [Stripes tjenestevilkår](https://stripe.com/connect-account/legal/full), Tunos [utleiervilkår](https://tuno.no/utleiervilkar) og [retningslinjer](https://tuno.no/retningslinjer).")
+        var attr = (try? AttributedString(markdown: markdown)) ?? AttributedString(markdown)
+        let linkRanges = attr.runs.compactMap { $0.link != nil ? $0.range : nil }
+        for range in linkRanges {
+            attr[range].underlineStyle = .single
+            attr[range].foregroundColor = termsLinkColor
+            attr[range].font = .system(size: 13, weight: .semibold)
+        }
+        return attr
+    }()
 }
 
 private struct BulletRow: View {

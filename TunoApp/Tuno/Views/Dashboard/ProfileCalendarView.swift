@@ -86,10 +86,12 @@ struct ProfileCalendarView: View {
 
     @ViewBuilder
     private var content: some View {
-        ZStack(alignment: .top) {
-            calendarBody
-
-            VStack(spacing: 8) {
+        // VStack i stedet for ZStack-overlay: den gamle flytende topBar-en la
+        // X-knappen OPPÅ ukedags-headeren («Ma» ble skjult) og tannhjul-FAB-en
+        // kolliderte med action-baren i bunn. Nå har kalenderen en ordentlig
+        // topprad med tittel, lagre-status og annonse-handlinger.
+        VStack(spacing: 0) {
+            VStack(spacing: 10) {
                 topBar
                 if form.spotMarkers.count > 1 {
                     spotPickerBar
@@ -97,11 +99,10 @@ struct ProfileCalendarView: View {
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
-        }
-        .overlay(alignment: .bottomTrailing) {
-            quickActionsButton
-                .padding(.trailing, 18)
-                .padding(.bottom, 24)
+            .padding(.bottom, 10)
+            .background(Color.white)
+
+            calendarBody
         }
         .confirmationDialog(
             "Annonsen",
@@ -123,25 +124,6 @@ struct ProfileCalendarView: View {
         }
     }
 
-    /// Tannhjul-knapp nederst-høyre (TU-98). Speiler "FAB"-mønstret fra
-    /// kart-skjermen — sirkulær knapp med skygge så den løfter seg over
-    /// kalenderen.
-    private var quickActionsButton: some View {
-        Button {
-            showQuickActions = true
-        } label: {
-            Image(systemName: "gearshape.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(.neutral900)
-                .frame(width: 48, height: 48)
-                .background(Circle().fill(Color.white))
-                .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
-                .shadow(color: .black.opacity(0.15), radius: 8, y: 3)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Annonse-handlinger")
-    }
-
     @ViewBuilder
     private var calendarBody: some View {
         if let id = canonicalSpotId {
@@ -155,7 +137,7 @@ struct ProfileCalendarView: View {
     }
 
     private var topBar: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: 12) {
             Button {
                 dismiss()
             } label: {
@@ -165,14 +147,38 @@ struct ProfileCalendarView: View {
                     .frame(width: 36, height: 36)
                     .background(Circle().fill(Color.white))
                     .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
-                    .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Lukk")
 
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Kalender")
+                    .font(.app(size: 18, weight: .bold))
+                    .foregroundStyle(.neutral900)
+                Text(listing.internalName?.isEmpty == false ? listing.internalName! : listing.title)
+                    .font(.app(size: 12))
+                    .foregroundStyle(.neutral500)
+                    .lineLimit(1)
+            }
+
             Spacer()
 
             saveIndicator
+
+            // Annonse-handlinger (rediger/vis) — flyttet hit fra bunn-FAB-en
+            // som overlappet action-baren.
+            Button {
+                showQuickActions = true
+            } label: {
+                Image(systemName: "gearshape.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(Color.white))
+                    .overlay(Circle().stroke(Color.neutral200, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Annonse-handlinger")
 
             // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver post-launch
             // if listing.category == .parking {

@@ -16,6 +16,11 @@ struct HostInntektCard: View {
         let earnings: Int
     }
 
+    /// Parkering-designet (palett C): inntektskortet er en svart markedsflate
+    /// med mint-aksenter — matcher hero/booking-bar. Camping beholder det
+    /// gamle lyse gradient-kortet.
+    private var isInk: Bool { AppConfig.parkingOnly }
+
     var body: some View {
         HStack(alignment: .center, spacing: 14) {
             VStack(alignment: .leading, spacing: 6) {
@@ -23,12 +28,12 @@ struct HostInntektCard: View {
                     Image(systemName: "chart.line.uptrend.xyaxis")
                         .font(.system(size: 14, weight: .semibold))
                     Text("Inntekt")
-                        .font(.app(size: 15, weight: .semibold))
+                        .font(.app(size: 16, weight: .semibold))
                 }
-                .foregroundStyle(.appAccentDeep)
+                .foregroundStyle(isInk ? Color.mint : .appAccentDeep)
                 Text(monthName)
                     .font(.app(size: 13))
-                    .foregroundStyle(.neutral600)
+                    .foregroundStyle(isInk ? Color.inkMuted : .neutral600)
                 if let trend = trendLabel {
                     HStack(spacing: 3) {
                         Image(systemName: trend.isPositive ? "arrow.up.right" : "arrow.down.right")
@@ -36,7 +41,7 @@ struct HostInntektCard: View {
                         Text(trend.text)
                             .font(.app(size: 11, weight: .semibold))
                     }
-                    .foregroundStyle(trend.isPositive ? (AppConfig.parkingOnly ? Color(hex: "#1f9177") : .green) : .red)
+                    .foregroundStyle(trend.isPositive ? (isInk ? Color.mint : .green) : Color(hex: "#f87171"))
                     .padding(.top, 2)
                 }
             }
@@ -52,25 +57,29 @@ struct HostInntektCard: View {
 
             VStack(alignment: .trailing, spacing: 4) {
                 Text(formatKr(netIncome))
-                    .font(.app(size: 28, weight: .bold))
-                    .foregroundStyle(.neutral900)
+                    .font(.app(size: 30, weight: .bold))
+                    .foregroundStyle(isInk ? Color.inkText : .neutral900)
                 Text(bookingText)
                     .font(.app(size: 12))
-                    .foregroundStyle(.neutral500)
+                    .foregroundStyle(isInk ? Color.inkMuted : .neutral500)
             }
             .fixedSize()
         }
         .padding(.horizontal, 22)
         .padding(.vertical, 22)
-        .background(
-            LinearGradient(
-                colors: [Color.appTintSoft, Color.appCard],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-        )
+        .background {
+            if isInk {
+                Color.ink
+            } else {
+                LinearGradient(
+                    colors: [Color.appTintSoft, Color.appCard],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+            }
+        }
         .clipShape(RoundedRectangle(cornerRadius: 20))
-        .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.appTintLine.opacity(0.6), lineWidth: 0.5))
+        .overlay(RoundedRectangle(cornerRadius: 20).stroke(isInk ? Color.white.opacity(0.08) : Color.appTintLine.opacity(0.6), lineWidth: isInk ? 1 : 0.5))
     }
 
     /// Beregner endring fra forrige måned. Returnerer nil hvis vi mangler
@@ -97,8 +106,8 @@ struct HostInntektCard: View {
                 )
                 .foregroundStyle(
                     month.id == currentMonthKey
-                        ? Color.appAccent
-                        : Color.appAccent.opacity(0.28)
+                        ? (isInk ? Color.mint : Color.appAccent)
+                        : (isInk ? Color.mint.opacity(0.25) : Color.appAccent.opacity(0.28))
                 )
                 .cornerRadius(3)
             }
@@ -109,7 +118,7 @@ struct HostInntektCard: View {
             AxisMarks { _ in
                 AxisValueLabel()
                     .font(.system(size: 9))
-                    .foregroundStyle(.neutral500)
+                    .foregroundStyle(isInk ? Color.inkMuted : .neutral500)
             }
         }
         .frame(maxWidth: 110)

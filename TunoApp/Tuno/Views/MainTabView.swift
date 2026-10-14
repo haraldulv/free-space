@@ -71,10 +71,28 @@ struct MainTabView: View {
             .tabItem { Label { Text("Utforsk") } icon: { Self.outlineIcon("magnifyingglass") } }
             .tag(0)
 
-            NavigationStack {
-                FavoritesView()
+            // Utleiere: Mine annonser rett i tab-baren (Harald 2026-10-14) —
+            // kalenderen og annonsene lå for gjemt bak Profil. Favoritter
+            // flyttes til Profil-siden for utleiere; leietakere beholder
+            // Favoritter-taben som før.
+            Group {
+                if authManager.isHost {
+                    NavigationStack {
+                        MyListingsView()
+                    }
+                } else {
+                    NavigationStack {
+                        FavoritesView()
+                    }
+                }
             }
-            .tabItem { Label { Text("Favoritter") } icon: { Self.outlineIcon("heart") } }
+            .tabItem {
+                if authManager.isHost {
+                    Label { Text("Annonser") } icon: { Self.outlineIcon("rectangle.stack") }
+                } else {
+                    Label { Text("Favoritter") } icon: { Self.outlineIcon("heart") }
+                }
+            }
             .tag(1)
 
             NavigationStack {
@@ -149,11 +167,19 @@ struct MainTabView: View {
             deepLinkManager.pendingListingId = nil
         }
         .onChange(of: deepLinkManager.pendingMyListings, initial: true) { _, pending in
-            // Utleier-wizarden er ferdig: bytt til Profil-fanen; ProfileView
-            // konsumerer flagget og åpner Mine annonser. initial:true dekker
-            // ny-bruker-flyten der flagget settes før MainTabView monteres
-            // (RolePicker → wizard → verifisering → hit).
-            if pending { selectedTab = 4 }
+            // Utleier-wizarden er ferdig: land på Mine annonser. Utleiere har
+            // egen Annonser-tab (tag 1) — konsumer flagget her. Hvis isHost
+            // ikke har rukket å oppdatere ennå: fall tilbake til Profil-fanen,
+            // der ProfileView konsumerer flagget og pusher Mine annonser.
+            // initial:true dekker ny-bruker-flyten der flagget settes før
+            // MainTabView monteres (RolePicker → wizard → verifisering → hit).
+            guard pending else { return }
+            if authManager.isHost {
+                deepLinkManager.pendingMyListings = false
+                selectedTab = 1
+            } else {
+                selectedTab = 4
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: .newPushNotification)) { _ in
             Task {
