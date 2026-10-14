@@ -131,11 +131,11 @@ struct WizardPricingCalendarView: View {
         return (cellHeight - stackHeight) / 2
     }
 
-    /// Parkering: kalenderen er en ren tilgjengelighets-kalender. Per-dato
-    /// pris-overstyringer faktureres ikke av serverens parkering-prising
-    /// (pakke-stabling på annonsenivå), og basisprisen bor i pris-pakkene —
-    /// så pris-UI skjules for ikke å love noe som ikke skjer. Prisen endres
-    /// i Rediger annonse (tannhjulet).
+    /// Parkering: kalenderen viser dagsprisen (fra DAY-pakken) som ren
+    /// visning, men pris-EDITOREN er skjult: per-dato-overstyringer
+    /// faktureres ikke av serverens parkering-prising (pakke-stabling på
+    /// annonsenivå), så å la verten "endre" pris per dato ville lovet noe
+    /// som ikke skjer. Prisen endres i Rediger annonse (tannhjulet).
     private var isParking: Bool {
         form.category == .parking
     }
@@ -167,12 +167,17 @@ struct WizardPricingCalendarView: View {
     }
 
     /// Standardpris for plassen (kr/dag). Faller tilbake til legacy-felter
-    /// (pricePerNight, pricePerHour) for å støtte eldre annonser.
-    /// Brukes som referanse for å vite om en pris-overstyring faktisk
-    /// avviker fra standard.
+    /// (pricePerNight, pricePerHour) for å støtte eldre annonser, og til
+    /// DAY-pakken for parkering (modell A: spot.price er nil, prisen bor i
+    /// pris-pakkene). Brukes som visningspris og som referanse for å vite
+    /// om en pris-overstyring faktisk avviker fra standard.
     private var basePerHour: Int {
         let s = spot
-        return s?.price ?? s?.pricePerNight ?? s?.pricePerHour ?? 0
+        if let p = s?.price ?? s?.pricePerNight ?? s?.pricePerHour { return p }
+        if let dayPkg = s?.pricePackages?.first(where: { $0.periodType == .day && $0.periodValue == 1 }) {
+            return dayPkg.priceNok
+        }
+        return 0
     }
 
     // ÅPNINGSTIDER PAUSET pre-launch — re-aktiver alle tre helpers
@@ -233,8 +238,12 @@ struct WizardPricingCalendarView: View {
 
     /// Per-dato pris-overstyringer — leses direkte fra spot.datePriceOverrides
     /// (ikke fra availability.dateOverrides, som er den utgående bånd-modellen).
+    /// Parkering: alltid tom — overstyringene faktureres ikke av serveren, så
+    /// kalenderen skal aldri vise en pris leietaker ikke betaler (gamle
+    /// annonser kan ha stale overstyringer liggende fra før build 266).
     private var dateOverrides: [String: Int] {
-        spot?.datePriceOverrides ?? [:]
+        if isParking { return [:] }
+        return spot?.datePriceOverrides ?? [:]
     }
 
     private static var osloCalendar: Calendar {
@@ -693,7 +702,9 @@ struct WizardPricingCalendarView: View {
         // stedet for X — så bruker skjønner at det ikke er en manuell blokk.
         let isClosedByHours = !isPast && !isBlocked && closedByOpeningHours(date)
         let dimAsBlocked = isBlocked || isClosedByHours
-        let showPrice = !isParking && !isPast && !dimAsBlocked && priceInfo != nil &&
+        // Krever pris > 0 så celler aldri viser "0 kr" (annonser uten
+        // dagspris-pakke, f.eks. måned-only).
+        let showPrice = !isPast && !dimAsBlocked && (priceInfo?.amount ?? 0) > 0 &&
             !(dayCoveredByBand(date) && !hasOverride)
         let ohDisplay: CellOpeningDisplay = (!isPast && !dimAsBlocked)
             ? openingHoursDisplay(for: date)
