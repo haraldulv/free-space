@@ -327,14 +327,34 @@ struct ProfileCalendarView: View {
         }
         guard changed else { return }
 
-        // I "Alle plasser"-modus: kopier endringer til alle andre spots før save.
+        // I "Alle plasser"-modus: spre ENDRINGEN (delta siden sist lagring)
+        // til de andre plassene. Wholesale-kopiering av kanonisk plass slettet
+        // tidligere blokkeringer de andre plassene hadde fra før.
         if allSpotsMode, let canonical = canonicalSpotId,
            let canonicalIdx = form.spotMarkers.firstIndex(where: { $0.id == canonical }) {
-            let blocked = form.spotMarkers[canonicalIdx].blockedDates
-            let overrides = form.spotMarkers[canonicalIdx].datePriceOverrides
+            let prevCanonical = previous.first(where: { $0.id == canonical })
+            let currBlocked = Set(form.spotMarkers[canonicalIdx].blockedDates ?? [])
+            let prevBlocked = Set(prevCanonical?.blockedDates ?? [])
+            let addedBlocked = currBlocked.subtracting(prevBlocked)
+            let removedBlocked = prevBlocked.subtracting(currBlocked)
+
+            let currOverrides = form.spotMarkers[canonicalIdx].datePriceOverrides ?? [:]
+            let prevOverrides = prevCanonical?.datePriceOverrides ?? [:]
+            var changedKeys: Set<String> = []
+            for (key, value) in currOverrides where prevOverrides[key] != value { changedKeys.insert(key) }
+            for key in prevOverrides.keys where currOverrides[key] == nil { changedKeys.insert(key) }
+
             for i in form.spotMarkers.indices where form.spotMarkers[i].id != canonical {
-                form.spotMarkers[i].blockedDates = blocked
-                form.spotMarkers[i].datePriceOverrides = overrides
+                var blocked = Set(form.spotMarkers[i].blockedDates ?? [])
+                blocked.formUnion(addedBlocked)
+                blocked.subtract(removedBlocked)
+                form.spotMarkers[i].blockedDates = blocked.isEmpty ? nil : Array(blocked).sorted()
+
+                var overrides = form.spotMarkers[i].datePriceOverrides ?? [:]
+                for key in changedKeys {
+                    overrides[key] = currOverrides[key] // nil fjerner nøkkelen
+                }
+                form.spotMarkers[i].datePriceOverrides = overrides.isEmpty ? nil : overrides
             }
         }
 

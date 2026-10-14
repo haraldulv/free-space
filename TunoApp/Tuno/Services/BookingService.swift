@@ -417,13 +417,21 @@ final class BookingService: ObservableObject {
     /// ikke stenger tor-fre. Serverens create-rute er uansett autoritativ.
     func checkAvailability(listingId: String, days: [String], inclusiveEnd: Bool) async -> (available: Int, total: Int) {
         do {
-            struct ListingSpots: Decodable {
+            struct ListingCapacity: Decodable {
                 let spots: Int
+                let spotMarkers: [SpotMarker]?
+                let blockedDates: [String]?
+
+                enum CodingKeys: String, CodingKey {
+                    case spots
+                    case spotMarkers = "spot_markers"
+                    case blockedDates = "blocked_dates"
+                }
             }
 
-            let listing: ListingSpots = try await supabase
+            let listing: ListingCapacity = try await supabase
                 .from("listings")
-                .select("spots")
+                .select("spots, spot_markers, blocked_dates")
                 .eq("id", value: listingId)
                 .single()
                 .execute()
@@ -442,8 +450,23 @@ final class BookingService: ObservableObject {
                     counts[d, default: 0] += occupies
                 }
             }
-            let peak = counts.values.max() ?? 0
-            return (available: listing.spots - peak, total: listing.spots)
+
+            // Ledig per dag = spots - bookinger - vert-blokkerte plasser.
+            // Annonse-blokkerte dager teller som 0 ledige. Laveste verdi over
+            // perioden gjelder — samme regel som serverens create/request-ruter.
+            let markers = listing.spotMarkers ?? []
+            let listingBlocked = Set(listing.blockedDates ?? [])
+            var minFree = listing.spots
+            for day in days {
+                if listingBlocked.isFullDayBlocked(day) {
+                    minFree = 0
+                    break
+                }
+                let blockedSpots = markers.filter { ($0.blockedDates ?? []).contains(day) }.count
+                let free = listing.spots - blockedSpots - (counts[day] ?? 0)
+                if free < minFree { minFree = free }
+            }
+            return (available: max(0, minFree), total: listing.spots)
         } catch {
             print("checkAvailability error: \(error)")
             return (available: 0, total: 0)

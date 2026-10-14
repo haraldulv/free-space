@@ -1012,6 +1012,29 @@ extension Listing {
         }
         return nil
     }
+
+    // MARK: - Vert-blokkering (én kilde for søk, booking-kalender og kapasitet)
+
+    /// Kapasitetsgrunnlaget: listing.spots, ellers antall plass-markører.
+    var resolvedTotalSpots: Int {
+        if let s = spots, s > 0 { return s }
+        return max(spotMarkers?.count ?? 0, 1)
+    }
+
+    /// Antall plasser verten manuelt har blokkert en gitt dag ("yyyy-MM-dd")
+    /// i utleierkalenderen (spot_markers[].blockedDates).
+    func hostBlockedSpotCount(on day: String) -> Int {
+        (spotMarkers ?? []).count { ($0.blockedDates ?? []).contains(day) }
+    }
+
+    /// Dagen er helt stengt av verten: blokkert på annonsenivå, eller alle
+    /// plassene er blokkert i kalenderen. Brukes i søk og booking-kalenderen
+    /// — serverens create/request-ruter håndhever den samme regelen.
+    func isDayFullyHostBlocked(_ day: String) -> Bool {
+        if Set(blockedDates ?? []).isFullDayBlocked(day) { return true }
+        guard let markers = spotMarkers, !markers.isEmpty else { return false }
+        return hostBlockedSpotCount(on: day) >= resolvedTotalSpots
+    }
 }
 
 // MARK: - OpeningHours

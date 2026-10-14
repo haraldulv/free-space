@@ -232,9 +232,9 @@ final class ListingService: ObservableObject {
                     if let minStay = listing.minStayDays, minStay > 0 {
                         if dates.count < minStay { return false }
                     }
-                    guard let blocked = listing.blockedDates, !blocked.isEmpty else { return true }
-                    let blockedSet = Set(blocked)
-                    return dates.allSatisfy { !blockedSet.isFullDayBlocked($0) }
+                    // Vert-blokkering: annonse-nivå ELLER alle plasser blokkert
+                    // den dagen i utleierkalenderen.
+                    return dates.allSatisfy { !listing.isDayFullyHostBlocked($0) }
                 }
             }
             // Filter by blocked dates if check-in/check-out provided.
@@ -253,13 +253,12 @@ final class ListingService: ObservableObject {
                         if bookedDays < minStay { return false }
                     }
 
-                    // 2) Blocked-dates sjekk
-                    guard let blocked = listing.blockedDates, !blocked.isEmpty else { return true }
-                    let blockedSet = Set(blocked)
+                    // 2) Blocked-dates sjekk: annonse-nivå ELLER alle plasser
+                    // blokkert den dagen i utleierkalenderen.
                     let candidateStarts = shiftedStartDates(checkIn: checkIn, flexibilityDays: flexibilityDays)
                     return candidateStarts.contains { startISO in
                         let dates = dateRange(fromISO: startISO, nights: nights)
-                        return dates.allSatisfy { !blockedSet.isFullDayBlocked($0) }
+                        return dates.allSatisfy { !listing.isDayFullyHostBlocked($0) }
                     }
                 }
                 _ = totalDays // avoid unused-warning hvis vi bruker bookedDays direkte over

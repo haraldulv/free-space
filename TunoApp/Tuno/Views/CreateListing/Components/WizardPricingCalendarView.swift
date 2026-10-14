@@ -131,6 +131,15 @@ struct WizardPricingCalendarView: View {
         return (cellHeight - stackHeight) / 2
     }
 
+    /// Parkering: kalenderen er en ren tilgjengelighets-kalender. Per-dato
+    /// pris-overstyringer faktureres ikke av serverens parkering-prising
+    /// (pakke-stabling på annonsenivå), og basisprisen bor i pris-pakkene —
+    /// så pris-UI skjules for ikke å love noe som ikke skjer. Prisen endres
+    /// i Rediger annonse (tannhjulet).
+    private var isParking: Bool {
+        form.category == .parking
+    }
+
     private var availability: WizardSpotAvailability {
         form.availability(for: spotId)
     }
@@ -684,7 +693,7 @@ struct WizardPricingCalendarView: View {
         // stedet for X — så bruker skjønner at det ikke er en manuell blokk.
         let isClosedByHours = !isPast && !isBlocked && closedByOpeningHours(date)
         let dimAsBlocked = isBlocked || isClosedByHours
-        let showPrice = !isPast && !dimAsBlocked && priceInfo != nil &&
+        let showPrice = !isParking && !isPast && !dimAsBlocked && priceInfo != nil &&
             !(dayCoveredByBand(date) && !hasOverride)
         let ohDisplay: CellOpeningDisplay = (!isPast && !dimAsBlocked)
             ? openingHoursDisplay(for: date)
@@ -1005,9 +1014,15 @@ struct WizardPricingCalendarView: View {
                 Group {
                     switch actionBarSubMode {
                     case .availability:
-                        HStack(alignment: .top, spacing: 10) {
+                        if isParking {
+                            // Parkering: kun blokkering — pris-overstyringer
+                            // per dato faktureres ikke (se isParking-doc).
                             availabilityCard
-                            priceCard
+                        } else {
+                            HStack(alignment: .top, spacing: 10) {
+                                availabilityCard
+                                priceCard
+                            }
                         }
                     case .openingHours:
                         openingHoursInlineEditor

@@ -184,30 +184,35 @@ struct BookingView: View {
 
     /// ISO-dato-strenger (yyyy-MM-dd) som er utilgjengelige for booking.
     /// Union av host-blokkerte dager (listing + spot) og booking-opptatte
-    /// dager (per spot eller fullt-booket-on-listing).
+    /// dager (per spot, eller fullt per dag: bookinger + vert-blokkerte
+    /// plasser teller sammen mot kapasiteten).
     private var availabilityBlockedDates: Set<String> {
         var union: Set<String> = []
-        // 1. Host-blokkerte dager
+        // 1. Host-blokkerte dager på annonsenivå
         if let dates = listing.blockedDates { union.formUnion(dates) }
-        for spot in selectedSpots {
-            if let dates = spot.blockedDates { union.formUnion(dates) }
-        }
-        // 2. Booking-opptatte dager fra bookings-tabellen
-        if let booked = bookedDates {
-            if !selectedSpots.isEmpty {
-                // Spesifikke spots valgt: dag opptatt hvis noen av dem er booket
-                for spot in selectedSpots {
-                    if let sid = spot.id, let dates = booked.perSpot[sid] {
-                        union.formUnion(dates)
-                    }
+        if !selectedSpots.isEmpty {
+            // Spesifikke spots valgt: dag opptatt hvis en av dem er blokkert
+            // eller booket.
+            for spot in selectedSpots {
+                if let dates = spot.blockedDates { union.formUnion(dates) }
+                if let sid = spot.id, let dates = bookedDates?.perSpot[sid] {
+                    union.formUnion(dates)
                 }
-            } else {
-                // Ingen spot valgt: dag opptatt hvis alle spots er booket
-                let totalSpots = (listing.spotMarkers ?? []).count
-                if totalSpots > 0 {
-                    for (date, count) in booked.perDateCount where count >= totalSpots {
-                        union.insert(date)
-                    }
+            }
+        } else {
+            // Ingen spot valgt: dag opptatt når bookinger + vert-blokkerte
+            // plasser til sammen fyller kapasiteten. Dekker også delvis
+            // blokkert + delvis booket (f.eks. 2 plasser: 1 blokkert + 1
+            // booket = fullt), som før slapp gjennom.
+            let total = listing.resolvedTotalSpots
+            var candidates = Set((bookedDates?.perDateCount ?? [:]).keys)
+            for spot in listing.spotMarkers ?? [] {
+                candidates.formUnion(spot.blockedDates ?? [])
+            }
+            for day in candidates {
+                let occupied = bookedDates?.perDateCount[day] ?? 0
+                if occupied + listing.hostBlockedSpotCount(on: day) >= total {
+                    union.insert(day)
                 }
             }
         }
@@ -625,7 +630,7 @@ struct BookingView: View {
                 // Uten denne sto brukeren med «døde» betalingsknapper og null
                 // forklaring når alle plassene var tatt for valgte datoer.
                 if hasDates, availableSpots == 0 {
-                    Text("Fullbooket for valgte datoer. Prøv andre datoer.")
+                    Text("Ikke tilgjengelig for valgte datoer. Prøv andre datoer.")
                         .font(.app(size: 13, weight: .semibold))
                         .foregroundStyle(.red)
                         .multilineTextAlignment(.center)
@@ -1680,26 +1685,11 @@ struct BookingView: View {
         return f.string(from: date)
     }
 
-    /// Datoer som skal vises greyed ut i kalenderen: listing.blockedDates,
-    /// datoer der kapasitet er full, og datoer der alle spots er blokkert.
+    /// Datoer som skal vises greyed ut i kalenderen. Samme kilde som
+    /// availabilityBlockedDates (vert-blokkering + bookinger per dag) så
+    /// kalender-arket og inline-pickeren aldri spriker.
     private var calendarBlockedDates: Set<String> {
-        var set = Set(listing.blockedDates ?? [])
-        let totalSpots = listing.spots ?? 1
-        if let counts = bookedDates?.perDateCount {
-            for (date, count) in counts where count >= totalSpots {
-                set.insert(date)
-            }
-        }
-        let markers = listing.spotMarkers ?? []
-        if !markers.isEmpty {
-            let perSpot = markers.map { effectiveSpotBlockedDates($0) }
-            var candidates = Set<String>()
-            perSpot.forEach { $0.forEach { candidates.insert($0) } }
-            for d in candidates where perSpot.allSatisfy({ $0.contains(d) }) {
-                set.insert(d)
-            }
-        }
-        return set
+        availabilityBlockedDates
     }
 
     private var vehicleSection: some View {
