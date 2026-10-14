@@ -27,6 +27,8 @@ struct WelcomeView: View {
 
             Spacer(minLength: 24)
 
+            // Glass-kort rundt punktene: frosted flate over glow-bakgrunnen
+            // (Harald 2026-10-14: «svart, men litt mykere»).
             VStack(alignment: .leading, spacing: 22) {
                 welcomeRow(
                     icon: "map.fill",
@@ -44,7 +46,17 @@ struct WelcomeView: View {
                     body: "Du setter prisen og får hele summen selv.",
                 )
             }
-            .padding(.horizontal, 6)
+            .padding(20)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 24, style: .continuous)
+                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+            )
 
             Spacer(minLength: 24)
 
@@ -59,7 +71,9 @@ struct WelcomeView: View {
                         .font(.tuno(size: 15, weight: .semibold))
                         .foregroundStyle(Color.inkText)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 14)
+                        .background(Color.white.opacity(0.07), in: Capsule())
+                        .overlay(Capsule().stroke(Color.white.opacity(0.12), lineWidth: 1))
                 }
 
                 Button(action: onSkip) {
@@ -74,7 +88,24 @@ struct WelcomeView: View {
         .padding(.horizontal, 28)
         .padding(.bottom, 12)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.ink.ignoresSafeArea())
+        .background {
+            // Svart flate med myke mint-glows: beholder brand-øyeblikket,
+            // men tar bort det harde «dev-svarte».
+            ZStack {
+                Color.ink
+                Circle()
+                    .fill(Color.mint.opacity(0.20))
+                    .frame(width: 360, height: 360)
+                    .blur(radius: 90)
+                    .offset(x: -150, y: -310)
+                Circle()
+                    .fill(Color.mint.opacity(0.10))
+                    .frame(width: 320, height: 320)
+                    .blur(radius: 100)
+                    .offset(x: 170, y: 330)
+            }
+            .ignoresSafeArea()
+        }
         .fullScreenCover(isPresented: $showLogin) {
             LoginView()
         }

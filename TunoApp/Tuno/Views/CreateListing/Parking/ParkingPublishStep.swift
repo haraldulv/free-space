@@ -38,10 +38,10 @@ struct ParkingPublishStep: View {
                     ) { form.instantBooking = false }
                 }
 
-                // Valgfri tittel + beskrivelse
+                // Tittel (påkrevd, med forslag) + valgfri beskrivelse
                 VStack(alignment: .leading, spacing: 14) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("Tittel (valgfritt)")
+                        Text("Tittel")
                             .font(.tuno(.label))
                             .foregroundStyle(.neutral600)
                         TextField(autoTitlePlaceholder, text: $form.title)
@@ -55,6 +55,27 @@ struct ParkingPublishStep: View {
                                 RoundedRectangle(cornerRadius: TunoRadius.control)
                                     .stroke(Color.neutral200, lineWidth: 1)
                             )
+                        if form.title.trimmingCharacters(in: .whitespaces).isEmpty {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    form.title = autoTitlePlaceholder
+                                }
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "sparkles")
+                                        .font(.system(size: 12, weight: .semibold))
+                                    Text("Bruk forslag: \(autoTitlePlaceholder)")
+                                        .font(.tuno(.label))
+                                        .lineLimit(1)
+                                }
+                                .foregroundStyle(Color.mintInk)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(Color.mint.opacity(0.14))
+                                .clipShape(Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Beskrivelse (valgfritt)")

@@ -53,7 +53,24 @@ struct RolePickerView: View {
         }
         .padding(.horizontal, 28)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.ink.ignoresSafeArea())
+        .background {
+            // Samme myke glow-bakgrunn som WelcomeView, så de to
+            // brand-skjermene henger sammen.
+            ZStack {
+                Color.ink
+                Circle()
+                    .fill(Color.mint.opacity(0.20))
+                    .frame(width: 360, height: 360)
+                    .blur(radius: 90)
+                    .offset(x: -150, y: -310)
+                Circle()
+                    .fill(Color.mint.opacity(0.10))
+                    .frame(width: 320, height: 320)
+                    .blur(radius: 100)
+                    .offset(x: 170, y: 330)
+            }
+            .ignoresSafeArea()
+        }
         .fullScreenCover(isPresented: $showHostWizard, onDismiss: {
             // Uansett om annonsen ble publisert eller wizarden lukket:
             // rollevalget er gjort, og profil/vert-status hentes på nytt
@@ -104,7 +121,15 @@ struct RolePickerView: View {
                     .foregroundStyle(Color.inkMuted)
             }
             .padding(16)
-            .background(Color.white.opacity(0.08), in: RoundedRectangle(cornerRadius: 20))
+            .background(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .fill(.ultraThinMaterial)
+                    .environment(\.colorScheme, .dark)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 20, style: .continuous)
+                    .stroke(Color.white.opacity(0.10), lineWidth: 1)
+            )
         }
         .buttonStyle(.plain)
     }

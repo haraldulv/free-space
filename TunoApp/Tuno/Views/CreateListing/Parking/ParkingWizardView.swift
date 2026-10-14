@@ -197,6 +197,7 @@ struct ParkingWizardView: View {
             if form.imageURLs.isEmpty { return "Legg til minst 1 bilde" }
             if !form.uploadingPhotos.isEmpty { return "Vent til bildene er lastet opp" }
         case 3:
+            if form.title.trimmingCharacters(in: .whitespaces).isEmpty { return "Skriv en tittel, eller bruk forslaget" }
             if !form.hasConfirmedOwnership { return "Bekreft at du har rett til å leie ut plassen" }
         default: break
         }

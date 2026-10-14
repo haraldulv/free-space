@@ -102,10 +102,20 @@ struct ParkingPriceStep: View {
                 }
 
                 if let day = form.parkingDailyPrice, day > 0 {
-                    FeeBreakdownCard(subtotal: day, unitLabel: "dag")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Slik blir dagsleien")
+                            .font(.tuno(.heading))
+                            .foregroundStyle(.neutral900)
+                        FeeBreakdownCard(subtotal: day, unitLabel: "dag")
+                    }
                 }
                 if let month = form.parkingMonthlyPrice, month > 0 {
-                    FeeBreakdownCard(subtotal: month, unitLabel: "måned")
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Slik blir månedsleien")
+                            .font(.tuno(.heading))
+                            .foregroundStyle(.neutral900)
+                        FeeBreakdownCard(subtotal: month, unitLabel: "måned")
+                    }
                 }
 
                 // Utleier skal VITE at prisforslag kan komme (Kim-møtet:
@@ -209,13 +219,13 @@ struct ParkingPriceStep: View {
         return max(viaDays, viaMonth) * max(1, form.spots)
     }
 
-    /// Lys mint-flate i stedet for helsvart kort — vennligere wizard
-    /// (Kim/Harald-feedback 2026-10-13: «litt for dev og AI»).
+    /// Svart kort med mint-estimat — Harald 2026-10-14: kalkulatoren skal
+    /// være svart som før, ikke grønn.
     private var calculatorCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Hva kan du tjene?")
                 .font(.tuno(.heading))
-                .foregroundStyle(.neutral900)
+                .foregroundStyle(.white)
 
             HStack(spacing: 8) {
                 occupancyChip(0.3, label: "Lavt belegg")
@@ -227,29 +237,25 @@ struct ParkingPriceStep: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Estimert per måned")
                         .font(.tuno(.label))
-                        .foregroundStyle(.neutral600)
+                        .foregroundStyle(Color.inkMuted)
                     Text("ca. \(estimate) kr")
                         .font(.tuno(.display))
-                        .foregroundStyle(Color.mintInk)
+                        .foregroundStyle(Color.mint)
                 }
             } else {
                 Text("Sett en dagspris for å se estimatet.")
                     .font(.tuno(.body))
-                    .foregroundStyle(.neutral600)
+                    .foregroundStyle(Color.inkMuted)
             }
 
             Text("Estimat, ikke en garanti. Avhenger av beliggenhet og etterspørsel.")
                 .font(.tuno(.caption))
-                .foregroundStyle(.neutral600)
+                .foregroundStyle(Color.inkMuted)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(18)
-        .background(Color.mint.opacity(0.12))
+        .background(Color.ink)
         .clipShape(RoundedRectangle(cornerRadius: TunoRadius.card))
-        .overlay(
-            RoundedRectangle(cornerRadius: TunoRadius.card)
-                .stroke(Color.mint.opacity(0.35), lineWidth: 1)
-        )
     }
 
     private func occupancyChip(_ value: Double, label: String) -> some View {
@@ -259,14 +265,11 @@ struct ParkingPriceStep: View {
         } label: {
             Text(label)
                 .font(.tuno(.label))
-                .foregroundStyle(isSelected ? Color.mintInk : Color.neutral700)
+                .foregroundStyle(isSelected ? Color.mintInk : Color.inkText)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
-                .background(isSelected ? Color.mint : Color.white)
+                .background(isSelected ? Color.mint : Color.inkElevated)
                 .clipShape(Capsule())
-                .overlay(
-                    Capsule().stroke(isSelected ? Color.mint : Color.neutral200, lineWidth: 1)
-                )
         }
         .buttonStyle(.plain)
     }
