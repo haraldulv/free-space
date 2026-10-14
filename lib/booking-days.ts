@@ -62,8 +62,21 @@ export function peakOccupancy(
   requestedDays: string[],
   inclusiveEnd: boolean,
 ): number {
-  if (requestedDays.length === 0 || rows.length === 0) return 0;
+  let peak = 0;
+  for (const count of dayOccupancy(rows, requestedDays, inclusiveEnd).values()) {
+    if (count > peak) peak = count;
+  }
+  return peak;
+}
+
+/** Belegg (antall opptatte enheter) per forespurt dag. */
+export function dayOccupancy(
+  rows: BookingDayRow[],
+  requestedDays: string[],
+  inclusiveEnd: boolean,
+): Map<string, number> {
   const counts = new Map<string, number>();
+  if (requestedDays.length === 0 || rows.length === 0) return counts;
   const requested = new Set(requestedDays);
   for (const row of rows) {
     const units = row.selected_spot_ids?.length || 1;
@@ -72,11 +85,34 @@ export function peakOccupancy(
       counts.set(day, (counts.get(day) ?? 0) + units);
     }
   }
-  let peak = 0;
-  for (const count of counts.values()) {
-    if (count > peak) peak = count;
+  return counts;
+}
+
+/**
+ * Første forespurte dag UTEN ledig kapasitet for en parkering-annonse, eller
+ * null når alle dager har plass. Kapasitet per dag = spots minus plassene
+ * verten manuelt har blokkert den dagen (spot_markers[].blockedDates);
+ * dager i annonse-nivå blocked_dates har kapasitet 0. Belegg telles per dag
+ * så en man-ons-booking ikke stenger tor-fre.
+ */
+export function firstUnavailableParkingDay(args: {
+  requestedDays: string[];
+  rows: BookingDayRow[];
+  totalSpots: number;
+  spotMarkers?: { blockedDates?: string[] | null }[] | null;
+  listingBlockedDates?: string[] | null;
+}): string | null {
+  const { requestedDays, rows, totalSpots } = args;
+  const markers = args.spotMarkers ?? [];
+  const listingBlocked = new Set(args.listingBlockedDates ?? []);
+  const occupancy = dayOccupancy(rows, requestedDays, true);
+  for (const day of requestedDays) {
+    if (listingBlocked.has(day)) return day;
+    const blockedSpots = markers.filter((m) => m.blockedDates?.includes(day)).length;
+    const capacity = Math.max(0, totalSpots - blockedSpots);
+    if ((occupancy.get(day) ?? 0) >= capacity) return day;
   }
-  return peak;
+  return null;
 }
 
 /** Spot-id-er som er opptatt på minst én av de forespurte dagene. */

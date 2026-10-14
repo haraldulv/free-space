@@ -6,6 +6,7 @@ import { computeBookingTotal } from "@/lib/booking-pricing";
 import {
   expandDays,
   normalizeBookedDates,
+  firstUnavailableParkingDay,
   peakOccupancy,
   occupiedSpotIds,
   type BookingDayRow,
@@ -169,9 +170,17 @@ export async function POST(request: NextRequest) {
     if (isParking) {
       // Per-dag-kapasitet: bare dager vi faktisk ber om teller, så en
       // man-ons-booking stenger ikke tor-fre, og hull i multi-velg forblir
-      // ledige for andre.
-      const peak = peakOccupancy(overlappingBookings as BookingDayRow[], requestedDays, true);
-      if (listing.spots - peak <= 0) {
+      // ledige for andre. Kapasiteten trekker fra plasser verten manuelt har
+      // blokkert den dagen (spot_markers[].blockedDates) — før talte kun
+      // bookinger, så vert-blokkering var uten effekt for parkering.
+      const fullDay = firstUnavailableParkingDay({
+        requestedDays,
+        rows: overlappingBookings as BookingDayRow[],
+        totalSpots: listing.spots,
+        spotMarkers: listing.spot_markers as SpotMarker[] | null,
+        listingBlockedDates: listing.blocked_dates as string[] | null,
+      });
+      if (fullDay) {
         return NextResponse.json({ error: "Ingen ledige plasser for valgte datoer" });
       }
     } else {

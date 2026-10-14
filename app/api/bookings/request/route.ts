@@ -4,7 +4,7 @@ import { computeBookingTotal } from "@/lib/booking-pricing";
 import {
   expandDays,
   normalizeBookedDates,
-  peakOccupancy,
+  firstUnavailableParkingDay,
   occupiedSpotIds,
   type BookingDayRow,
 } from "@/lib/booking-days";
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     const { data: listing } = await supabase
       .from("listings")
-      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, category, min_stay_days, max_stay_days, moderation_status, host_stripe_ready, is_active")
+      .select("spots, host_id, title, price, spot_markers, extras, instant_booking, check_in_time, check_out_time, category, min_stay_days, max_stay_days, moderation_status, host_stripe_ready, is_active, blocked_dates")
       .eq("id", listingId)
       .single();
 
@@ -173,8 +173,17 @@ export async function POST(request: NextRequest) {
 
     const overlappingBookings = rawOverlap || [];
     if (isParking) {
-      const peak = peakOccupancy(overlappingBookings as BookingDayRow[], requestedDays, true);
-      if (listing.spots - peak <= 0) {
+      // Per-dag-kapasitet med vert-blokkering: ruten sjekket tidligere kun
+      // bookinger, så forespørsler kunne sendes på dager verten hadde stengt
+      // i kalenderen.
+      const fullDay = firstUnavailableParkingDay({
+        requestedDays,
+        rows: overlappingBookings as BookingDayRow[],
+        totalSpots: listing.spots,
+        spotMarkers: listing.spot_markers as SpotMarker[] | null,
+        listingBlockedDates: listing.blocked_dates as string[] | null,
+      });
+      if (fullDay) {
         return NextResponse.json({ error: "Ingen ledige plasser for valgte datoer" }, { status: 409 });
       }
     } else {
@@ -184,6 +193,11 @@ export async function POST(request: NextRequest) {
       }, 0);
       if (listing.spots - bookedCount <= 0) {
         return NextResponse.json({ error: "Ingen ledige plasser for valgte datoer" }, { status: 409 });
+      }
+      // Manuelt blokkerte datoer på annonsenivå (camping).
+      const listingBlocked = (listing.blocked_dates as string[] | null) || [];
+      if (listingBlocked.length > 0 && expandDays(checkIn, checkOut, true).some((d) => listingBlocked.includes(d))) {
+        return NextResponse.json({ error: "Plassen er ikke tilgjengelig for valgte datoer." }, { status: 409 });
       }
     }
 

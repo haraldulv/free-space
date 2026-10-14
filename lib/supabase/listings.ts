@@ -2,7 +2,7 @@ import { createClient } from "./server";
 import type { Listing, SearchFilters, ListingCategory, Amenity, SpotMarker, VehicleType, ParkingType, PricePackagePeriodType } from "@/types";
 import { vehicleFitsIn, derivePeriodTypesFromSpots } from "@/types";
 import { haversineKm } from "@/lib/geo";
-import { bookingDays, peakOccupancy, occupiedSpotIds, type BookingDayRow } from "@/lib/booking-days";
+import { bookingDays, peakOccupancy, dayOccupancy, occupiedSpotIds, type BookingDayRow } from "@/lib/booking-days";
 
 /**
  * Deterministisk fuzz av lat/lng for listings med hide_exact_location=true.
@@ -187,13 +187,19 @@ export async function searchListings(filters: SearchFilters): Promise<Listing[]>
       .map((item) => item.listing);
   }
 
-  // Filter out listings with blocked dates overlapping the requested range
+  // Filter out listings with blocked dates overlapping the requested range.
+  // En dag regnes som stengt når den ligger i annonse-nivå blocked_dates
+  // ELLER verten har blokkert alle plassene den dagen i kalenderen.
   if (filters.checkIn && filters.checkOut) {
     const requestedDates = getDateRange(filters.checkIn, filters.checkOut);
     listings = listings.filter((listing) => {
-      if (!listing.blockedDates || listing.blockedDates.length === 0) return true;
-      const blockedSet = new Set(listing.blockedDates);
-      return !requestedDates.some((d) => blockedSet.has(d));
+      const blockedSet = new Set(listing.blockedDates ?? []);
+      const markers = listing.spotMarkers ?? [];
+      return !requestedDates.some(
+        (d) =>
+          blockedSet.has(d) ||
+          (markers.length > 0 && markers.every((m) => m.blockedDates?.includes(d))),
+      );
     });
 
     // Vi auto-filtrerer IKKE på åpningstid — gjest kan justere pickup-dag,
@@ -271,7 +277,7 @@ export async function getAvailableSpots(
 
   const { data: listing } = await supabase
     .from("listings")
-    .select("spots, category")
+    .select("spots, category, spot_markers, blocked_dates")
     .eq("id", listingId)
     .single();
 
@@ -282,9 +288,22 @@ export async function getAvailableSpots(
     p_listing_ids: [listingId],
   });
   const rows = ((data as BookingDayRow[] | null) || []);
-  const peak = peakOccupancy(rows, requestedDaysFor(checkIn, checkOut, isParking), isParking);
+  const days = requestedDaysFor(checkIn, checkOut, isParking);
+  const occupancy = dayOccupancy(rows, days, isParking);
 
-  return listing.spots - peak;
+  // Per dag: ledig = spots - bookinger - vert-blokkerte plasser. Dager i
+  // annonse-nivå blocked_dates teller som 0 ledige. Returnerer laveste
+  // verdi over perioden, så en delvis blokkert dag kapper hele bookingen.
+  const markers = (listing.spot_markers as SpotMarker[] | null) || [];
+  const listingBlocked = new Set((listing.blocked_dates as string[] | null) || []);
+  let minFree = listing.spots as number;
+  for (const day of days) {
+    if (listingBlocked.has(day)) return 0;
+    const blockedSpots = markers.filter((m) => m.blockedDates?.includes(day)).length;
+    const free = (listing.spots as number) - blockedSpots - (occupancy.get(day) ?? 0);
+    if (free < minFree) minFree = free;
+  }
+  return Math.max(0, minFree);
 }
 
 /**
