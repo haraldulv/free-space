@@ -1,7 +1,8 @@
 import SwiftUI
 
-/// Enkel redigering for parkering-annonser (Asker-pivoten). Målrettet UPDATE
-/// som alltid skriver pris-invariantene sammen (price + pakker + display_price
+/// Redigering for parkering-annonser (Asker-pivoten), i palett C-stil med
+/// seksjoner, KrStepper-priser og bilderedigering. Målrettet UPDATE som alltid
+/// skriver pris-invariantene sammen (price + pakker + display_price
 /// + rental_period_types) — bruker ALDRI buildUpdateInput, som ville skrevet
 /// price=0 for annonser uten per-plass-pris.
 struct EditParkingView: View {
@@ -13,8 +14,8 @@ struct EditParkingView: View {
 
     @State private var title: String
     @State private var descriptionText: String
-    @State private var dailyText: String
-    @State private var monthlyText: String
+    @State private var dayPrice: Int?
+    @State private var monthPrice: Int?
     @State private var dailyNote: String
     @State private var packageDays: Int
     @State private var packageNote: String
@@ -24,6 +25,36 @@ struct EditParkingView: View {
     @State private var error: String?
     @State private var showDeleteConfirm = false
     @State private var showSavedToast = false
+    @State private var showDiscardConfirm = false
+    @State private var dayFocused = false
+    @State private var monthFocused = false
+    @State private var daysFocused = false
+
+    /// Bildene redigeres via PhotoGridEditor, som binder mot en
+    /// ListingFormModel (imageURLs + uploadingPhotos + spotMarkers for
+    /// tagging). Endringer persisteres først ved Lagre.
+    @StateObject private var photoForm: ListingFormModel
+
+    /// Dagers-stepperen (2-30) vises kun for legacy-annonser med Kim-pakke
+    /// (DAY×N, N<30). Nye annonser har alltid ren månedspakke.
+    private let showLegacyPackageDays: Bool
+
+    private let initialSnapshot: Snapshot
+
+    /// Alt som kan endres på skjermen — brukes til dirty-guard på Avbryt.
+    private struct Snapshot: Equatable {
+        var title: String
+        var description: String
+        var dayPrice: Int?
+        var monthPrice: Int?
+        var dailyNote: String
+        var packageDays: Int
+        var packageNote: String
+        var isActive: Bool
+        var instantBooking: Bool
+        var images: [String]
+        var spotImages: [[String]?]
+    }
 
     init(listing: Listing, onSaved: ((Listing) -> Void)? = nil, onDeleted: (() -> Void)? = nil) {
         self.listing = listing
@@ -38,165 +69,204 @@ struct EditParkingView: View {
         // Kim-pakken (DAY×N, 2-30 dager) går foran legacy MONTH-pakken.
         let customPkg = packages.first(where: { $0.periodType == .day && $0.periodValue >= 2 && $0.periodValue <= 30 })
         let pkgPrice = customPkg?.priceNok ?? monthPkg?.priceNok
-        _dailyText = State(initialValue: day > 0 ? "\(day)" : "")
+        _dayPrice = State(initialValue: day > 0 ? day : nil)
         _dailyNote = State(initialValue: dayPkg?.note ?? "")
-        _monthlyText = State(initialValue: pkgPrice.map { "\($0)" } ?? "")
+        _monthPrice = State(initialValue: pkgPrice)
         _packageDays = State(initialValue: customPkg?.periodValue ?? 30)
         _packageNote = State(initialValue: customPkg?.note ?? monthPkg?.note ?? "")
         _isActive = State(initialValue: listing.isActive ?? true)
         _instantBooking = State(initialValue: listing.instantBooking ?? true)
+        showLegacyPackageDays = (customPkg?.periodValue ?? 30) < 30
+
+        let form = ListingFormModel()
+        form.category = .parking
+        form.imageURLs = listing.images ?? []
+        form.spotMarkers = listing.spotMarkers ?? []
+        _photoForm = StateObject(wrappedValue: form)
+
+        initialSnapshot = Snapshot(
+            title: listing.title,
+            description: listing.description ?? "",
+            dayPrice: day > 0 ? day : nil,
+            monthPrice: pkgPrice,
+            dailyNote: dayPkg?.note ?? "",
+            packageDays: customPkg?.periodValue ?? 30,
+            packageNote: customPkg?.note ?? monthPkg?.note ?? "",
+            isActive: listing.isActive ?? true,
+            instantBooking: listing.instantBooking ?? true,
+            images: listing.images ?? [],
+            spotImages: (listing.spotMarkers ?? []).map(\.images)
+        )
     }
+
+    private var currentSnapshot: Snapshot {
+        Snapshot(
+            title: title,
+            description: descriptionText,
+            dayPrice: dayPrice,
+            monthPrice: monthPrice,
+            dailyNote: dailyNote,
+            packageDays: packageDays,
+            packageNote: packageNote,
+            isActive: isActive,
+            instantBooking: instantBooking,
+            images: photoForm.imageURLs,
+            spotImages: photoForm.spotMarkers.map(\.images)
+        )
+    }
+
+    private var hasChanges: Bool { currentSnapshot != initialSnapshot }
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
+                VStack(alignment: .leading, spacing: 0) {
                     if let error {
-                        Text(error)
-                            .font(.tuno(.body))
-                            .foregroundStyle(.white)
-                            .padding(12)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(Color.red)
-                            .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
+                        errorBanner(error)
+                            .padding(.top, 12)
                     }
 
-                    field(label: "Tittel") {
-                        TextField("Tittel", text: $title)
-                            .font(.tuno(.body))
-                    }
-
-                    field(label: "Beskrivelse") {
-                        TextField("Beskrivelse", text: $descriptionText, axis: .vertical)
-                            .font(.tuno(.body))
-                            .lineLimit(3...8)
-                    }
-
-                    field(label: "Dagsleie (kr per dag)") {
-                        TextField("0", text: $dailyText)
-                            .keyboardType(.numberPad)
-                            .font(.tuno(.body))
-                            .onChange(of: dailyText) { _, v in
-                                let digits = v.filter(\.isNumber)
-                                if digits != v { dailyText = digits }
-                            }
-                    }
-
-                    field(label: "Melding ved dagsleie (valgfritt, vises før betaling)") {
-                        TextField("F.eks. Parker helt inntil veggen.", text: $dailyNote, axis: .vertical)
-                            .font(.tuno(.body))
-                            .lineLimit(2...4)
-                    }
-
-                    field(label: "Fast pakke (kr for hele pakken)") {
-                        TextField("0", text: $monthlyText)
-                            .keyboardType(.numberPad)
-                            .font(.tuno(.body))
-                            .onChange(of: monthlyText) { _, v in
-                                let digits = v.filter(\.isNumber)
-                                if digits != v { monthlyText = digits }
-                            }
-                    }
-
-                    if (Int(monthlyText) ?? 0) > 0 {
-                        field(label: "Antall dager i pakken (30 = månedsplass)") {
-                            HStack(spacing: 16) {
-                                Button {
-                                    if packageDays > 2 { packageDays -= 1 }
-                                } label: {
-                                    Image(systemName: "minus.circle.fill")
-                                        .font(.system(size: 26))
-                                        .foregroundStyle(.neutral400)
-                                }
-                                .buttonStyle(.plain)
-                                Text(packageDays == 30 ? "30 dager (månedsplass)" : "\(packageDays) dager")
-                                    .font(.tuno(.body))
-                                    .foregroundStyle(.neutral900)
-                                Button {
-                                    if packageDays < 30 { packageDays += 1 }
-                                } label: {
-                                    Image(systemName: "plus.circle.fill")
-                                        .font(.system(size: 26))
-                                        .foregroundStyle(.neutral400)
-                                }
-                                .buttonStyle(.plain)
-                                Spacer()
-                            }
-                        }
-
-                        field(label: "Melding ved månedsleie (valgfritt, vises før betaling)") {
-                            TextField("F.eks. Plassen kan brukes man-fre 08-18.", text: $packageNote, axis: .vertical)
+                    sectionHeader("Om plassen")
+                    VStack(spacing: 14) {
+                        fieldCard(label: "Tittel") {
+                            TextField("Tittel", text: $title)
                                 .font(.tuno(.body))
+                                .foregroundStyle(.neutral900)
+                        }
+                        fieldCard(label: "Beskrivelse") {
+                            TextField("Beskrivelse", text: $descriptionText, axis: .vertical)
+                                .font(.tuno(.body))
+                                .foregroundStyle(.neutral900)
+                                .lineLimit(3...8)
+                        }
+                        fieldCard(label: "Bilder") {
+                            PhotoGridEditor(form: photoForm)
+                        }
+                    }
+
+                    sectionHeader("Pris")
+                    VStack(spacing: 14) {
+                        fieldCard(label: "Dagsleie", caption: "Leietaker betaler per dag. Vises som pris i søket.") {
+                            KrStepper(
+                                value: $dayPrice,
+                                step: 5,
+                                unitLabel: "kr per dag",
+                                placeholder: "0",
+                                onFocusChange: { dayFocused = $0 }
+                            )
+                        }
+                        fieldCard(label: "Melding ved dagsleie (valgfritt)", caption: "Vises til leietaker før betaling av dagsleie.") {
+                            TextField("F.eks. Parker helt inntil veggen.", text: $dailyNote, axis: .vertical)
+                                .font(.tuno(.body))
+                                .foregroundStyle(.neutral900)
                                 .lineLimit(2...4)
                         }
-                    }
-
-                    // Direktebestilling
-                    Toggle(isOn: $instantBooking) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Direktebestilling")
-                                .font(.tuno(.body))
-                                .foregroundStyle(.neutral900)
-                            Text("Leietaker booker og betaler med en gang. Slå av for å godkjenne hver bestilling selv.")
-                                .font(.tuno(.caption))
-                                .foregroundStyle(.neutral500)
-                        }
-                    }
-                    .tint(.mint)
-                    .padding(16)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: TunoRadius.control)
-                            .stroke(Color.neutral200, lineWidth: 1)
-                    )
-
-                    // Pause
-                    Toggle(isOn: $isActive) {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Annonsen er aktiv")
-                                .font(.tuno(.body))
-                                .foregroundStyle(.neutral900)
-                            Text("Slå av for å pause nye bestillinger.")
-                                .font(.tuno(.caption))
-                                .foregroundStyle(.neutral500)
-                        }
-                    }
-                    .tint(.appAccent)
-                    .padding(16)
-                    .background(Color.white)
-                    .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: TunoRadius.control)
-                            .stroke(Color.neutral200, lineWidth: 1)
-                    )
-
-                    Button(role: .destructive) {
-                        showDeleteConfirm = true
-                    } label: {
-                        Text("Slett annonsen")
-                            .font(.tuno(.body))
-                            .foregroundStyle(.red)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 14)
-                            .background(Color.white)
-                            .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: TunoRadius.control)
-                                    .stroke(Color.red.opacity(0.4), lineWidth: 1)
+                        fieldCard(
+                            label: showLegacyPackageDays ? "Pakkepris (valgfritt)" : "Månedspris (valgfritt)",
+                            caption: showLegacyPackageDays
+                                ? "Leietaker får fast plass i \(packageDays) dager til denne prisen."
+                                : "Leietaker får fast plass i 30 dager til denne prisen."
+                        ) {
+                            KrStepper(
+                                value: $monthPrice,
+                                step: 50,
+                                unitLabel: showLegacyPackageDays ? "kr" : "kr per måned",
+                                placeholder: "0",
+                                onFocusChange: { monthFocused = $0 }
                             )
+                        }
+                        if (monthPrice ?? 0) > 0 {
+                            if showLegacyPackageDays {
+                                fieldCard(label: "Antall dager i pakken", caption: "30 dager blir vist som månedsplass.") {
+                                    KrStepper(
+                                        value: Binding(
+                                            get: { packageDays },
+                                            set: { packageDays = $0 ?? packageDays }
+                                        ),
+                                        step: 1,
+                                        minValue: 2,
+                                        maxValue: 30,
+                                        unitLabel: "dager",
+                                        placeholder: "30",
+                                        onFocusChange: { daysFocused = $0 }
+                                    )
+                                }
+                            }
+                            fieldCard(label: "Melding ved månedsleie (valgfritt)", caption: "Vises til leietaker før betaling av månedsleie.") {
+                                TextField("F.eks. Plassen kan brukes man-fre 08-18.", text: $packageNote, axis: .vertical)
+                                    .font(.tuno(.body))
+                                    .foregroundStyle(.neutral900)
+                                    .lineLimit(2...4)
+                            }
+                        }
                     }
-                    .buttonStyle(.plain)
+
+                    sectionHeader("Booking")
+                    fieldCard {
+                        Toggle(isOn: $instantBooking) {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Direktebestilling")
+                                    .font(.tuno(.body))
+                                    .foregroundStyle(.neutral900)
+                                Text("Leietaker booker og betaler med en gang. Slå av for å godkjenne hver bestilling selv.")
+                                    .font(.tuno(.caption))
+                                    .foregroundStyle(.neutral500)
+                            }
+                        }
+                        .tint(.appAccent)
+                    }
+
+                    sectionHeader("Annonse")
+                    VStack(spacing: 14) {
+                        fieldCard {
+                            Toggle(isOn: $isActive) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Annonsen er aktiv")
+                                        .font(.tuno(.body))
+                                        .foregroundStyle(.neutral900)
+                                    Text("Slå av for å pause nye bestillinger.")
+                                        .font(.tuno(.caption))
+                                        .foregroundStyle(.neutral500)
+                                }
+                            }
+                            .tint(.appAccent)
+                        }
+
+                        Button(role: .destructive) {
+                            showDeleteConfirm = true
+                        } label: {
+                            Text("Slett annonsen")
+                                .font(.tuno(.body))
+                                .foregroundStyle(.red)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 14)
+                                .background(Color.appCard)
+                                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                        .stroke(Color.red.opacity(0.4), lineWidth: 1)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .padding(20)
+                .padding(.horizontal, 20)
+                .padding(.top, 4)
+                .padding(.bottom, 40)
             }
-            .background(Color.neutral50)
+            .background(Color.paper)
             .navigationTitle("Rediger annonse")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Avbryt") { dismiss() }
-                        .foregroundStyle(.neutral700)
+                    Button("Avbryt") {
+                        if hasChanges {
+                            showDiscardConfirm = true
+                        } else {
+                            dismiss()
+                        }
+                    }
+                    .foregroundStyle(.neutral700)
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -206,11 +276,11 @@ struct EditParkingView: View {
                             ProgressView()
                         } else {
                             Text("Lagre")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(canSave ? Color.appAccent : .neutral400)
+                                .font(.app(size: 16, weight: .semibold))
+                                .foregroundStyle(saveEnabled ? Color.appAccent : .neutral400)
                         }
                     }
-                    .disabled(!canSave || isSaving)
+                    .disabled(!saveEnabled || isSaving)
                 }
             }
             .confirmationDialog("Slette annonsen?", isPresented: $showDeleteConfirm, titleVisibility: .visible) {
@@ -220,6 +290,15 @@ struct EditParkingView: View {
                 Button("Avbryt", role: .cancel) { }
             } message: {
                 Text("Dette kan ikke angres. Eksisterende bestillinger påvirkes ikke.")
+            }
+            .confirmationDialog("Forkaste endringene?", isPresented: $showDiscardConfirm, titleVisibility: .visible) {
+                Button("Forkast endringer", role: .destructive) { dismiss() }
+                Button("Fortsett å redigere", role: .cancel) { }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if dayFocused || monthFocused || daysFocused {
+                    keyboardBar
+                }
             }
             .overlay(alignment: .bottom) {
                 if showSavedToast {
@@ -238,24 +317,79 @@ struct EditParkingView: View {
     }
 
     private var canSave: Bool {
-        !title.trimmingCharacters(in: .whitespaces).isEmpty && Int(dailyText) ?? 0 > 0
+        !title.trimmingCharacters(in: .whitespaces).isEmpty && (dayPrice ?? 0) > 0
     }
 
-    private func field<Content: View>(label: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(label)
-                .font(.tuno(.label))
-                .foregroundStyle(.neutral600)
+    /// Lagre sperres også mens bilder laster opp, så vi aldri persisterer et
+    /// halvferdig bildesett.
+    private var saveEnabled: Bool {
+        canSave && photoForm.uploadingPhotos.isEmpty
+    }
+
+    // MARK: - Byggeklosser
+
+    private func sectionHeader(_ text: String) -> some View {
+        Text(text)
+            .font(.app(size: 22, weight: .bold))
+            .foregroundStyle(.neutral900)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 26)
+            .padding(.bottom, 12)
+            .padding(.horizontal, 4)
+    }
+
+    private func fieldCard<Content: View>(label: String? = nil, caption: String? = nil, @ViewBuilder content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let label {
+                Text(label)
+                    .font(.tuno(.label))
+                    .foregroundStyle(.neutral600)
+            }
             content()
-                .padding(.horizontal, 16)
-                .padding(.vertical, 14)
-                .background(Color.white)
-                .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
-                .overlay(
-                    RoundedRectangle(cornerRadius: TunoRadius.control)
-                        .stroke(Color.neutral200, lineWidth: 1)
-                )
+            if let caption {
+                Text(caption)
+                    .font(.tuno(.caption))
+                    .foregroundStyle(.neutral500)
+            }
         }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.appCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(Color.appLine, lineWidth: 1)
+        )
+    }
+
+    private func errorBanner(_ message: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.circle.fill")
+                .font(.system(size: 14))
+                .foregroundStyle(.red)
+            Text(message)
+                .font(.tuno(.body))
+                .foregroundStyle(.neutral900)
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.red.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
+    }
+
+    private var keyboardBar: some View {
+        HStack {
+            Spacer()
+            Button("Ferdig") {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+            .font(.tuno(.label))
+            .foregroundStyle(.neutral900)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
     }
 
     // MARK: - Save
@@ -268,13 +402,14 @@ struct EditParkingView: View {
         let price: Int
         let isActive: Bool
         let instantBooking: Bool
+        let images: [String]
         let spotMarkers: [SpotMarker]
         let rentalPeriodTypes: [String]
         let displayPrice: Int
         let displayPriceSuffix: String
 
         enum CodingKeys: String, CodingKey {
-            case title, description, price
+            case title, description, price, images
             case isActive = "is_active"
             case instantBooking = "instant_booking"
             case spotMarkers = "spot_markers"
@@ -285,8 +420,8 @@ struct EditParkingView: View {
     }
 
     private func save() async {
-        guard let day = Int(dailyText), day > 0 else { return }
-        let month = Int(monthlyText).flatMap { $0 > 0 ? $0 : nil }
+        guard let day = dayPrice, day > 0 else { return }
+        let month = (monthPrice ?? 0) > 0 ? monthPrice : nil
         isSaving = true
         error = nil
 
@@ -318,13 +453,19 @@ struct EditParkingView: View {
             }
         }
 
-        // Behold eksisterende markører (id/posisjon/label/bilder/blokkeringer),
-        // men skriv pris-modellen på nytt: price=nil + ferske pakker.
-        var markers = listing.spotMarkers ?? []
+        // Markørene tas fra photoForm slik at bilde-tagging overlever.
+        // Pris-modellen skrives på nytt: price=nil + ferske pakker. Spot-tags
+        // som peker på fjernede bilder prunes (grid-en rydder selv, dette er
+        // et sikkerhetsnett).
+        var markers = photoForm.spotMarkers
         for i in markers.indices {
             markers[i].price = nil
             markers[i].pricePerNight = nil
             markers[i].pricePackages = packages
+            if let imgs = markers[i].images {
+                let kept = imgs.filter { photoForm.imageURLs.contains($0) }
+                markers[i].images = kept.isEmpty ? nil : kept
+            }
         }
 
         var periods = ["DAY"]
@@ -336,6 +477,7 @@ struct EditParkingView: View {
             price: day,
             isActive: isActive,
             instantBooking: instantBooking,
+            images: photoForm.imageURLs,
             spotMarkers: markers,
             rentalPeriodTypes: periods.sorted(),
             displayPrice: day,

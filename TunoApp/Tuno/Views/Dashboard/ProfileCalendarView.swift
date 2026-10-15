@@ -10,6 +10,11 @@ import SwiftUI
 struct ProfileCalendarView: View {
     let listing: Listing
 
+    /// Levende kopi av annonsen. Oppdateres når Rediger annonse lagrer
+    /// (onSaved), slik at kalenderens form ikke blir stående med gamle
+    /// pris-pakker og overskriver redigeringen ved neste auto-lagring.
+    @State private var currentListing: Listing
+
     @StateObject private var form = ListingFormModel()
     @State private var focusedSpotId: String? = nil
     @State private var allSpotsMode: Bool = true
@@ -25,6 +30,13 @@ struct ProfileCalendarView: View {
     @State private var showQuickActions = false
     @State private var showEditListing = false
     @State private var showListingDetail = false
+    /// Fokus for dagspris-stepperen (parkering) — styrer «Ferdig»-baren.
+    @State private var priceFieldFocused = false
+
+    init(listing: Listing) {
+        self.listing = listing
+        _currentListing = State(initialValue: listing)
+    }
 
     enum SaveStatus: Equatable {
         case idle, saving, saved, error(String)
@@ -96,6 +108,9 @@ struct ProfileCalendarView: View {
                 if form.spotMarkers.count > 1 {
                     spotPickerBar
                 }
+                if currentListing.category == .parking {
+                    parkingPriceRow
+                }
             }
             .padding(.horizontal, 16)
             .padding(.top, 8)
@@ -103,6 +118,11 @@ struct ProfileCalendarView: View {
             .background(Color.white)
 
             calendarBody
+        }
+        .safeAreaInset(edge: .bottom) {
+            if priceFieldFocused {
+                priceKeyboardBar
+            }
         }
         .confirmationDialog(
             "Annonsen",
@@ -115,11 +135,23 @@ struct ProfileCalendarView: View {
         }
         .fullScreenCover(isPresented: $showEditListing) {
             // Parkering → ny enkel editor; camping → hub (se EditListingRootView).
-            EditListingRootView(listing: listing)
+            // onSaved holder kalenderen i synk: kanseller ventende auto-lagring
+            // FØR baseline-reset, ellers kan en kølagt debounce skrive de gamle
+            // pris-pakkene tilbake over redigeringen.
+            EditListingRootView(
+                listing: currentListing,
+                onSaved: { fresh in
+                    saveTask?.cancel()
+                    currentListing = fresh
+                    form.spotMarkers = fresh.spotMarkers ?? []
+                    previousSpotMarkers = form.spotMarkers
+                },
+                onDeleted: { dismiss() }
+            )
         }
         .fullScreenCover(isPresented: $showListingDetail) {
             NavigationStack {
-                ListingDetailView(listingId: listing.id)
+                ListingDetailView(listingId: currentListing.id)
             }
         }
     }
@@ -155,7 +187,7 @@ struct ProfileCalendarView: View {
                 Text("Kalender")
                     .font(.app(size: 18, weight: .bold))
                     .foregroundStyle(.neutral900)
-                Text(listing.internalName?.isEmpty == false ? listing.internalName! : listing.title)
+                Text(currentListing.internalName?.isEmpty == false ? currentListing.internalName! : currentListing.title)
                     .font(.app(size: 12))
                     .foregroundStyle(.neutral500)
                     .lineLimit(1)
@@ -223,6 +255,82 @@ struct ProfileCalendarView: View {
                     .foregroundStyle(.red)
                 Text(msg).font(.system(size: 11)).foregroundStyle(.red).lineLimit(1)
             }
+        }
+    }
+
+    /// Dagspris-rad for parkering: redigerer annonsens dagspris (DAY×1-pakken
+    /// på alle plasser) direkte fra kalenderen. Parkering har felles pris for
+    /// alle plasser og dager — ekte datopriser kommer i 2.1.
+    private var parkingPriceRow: some View {
+        HStack(spacing: 12) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text("Dagsleie")
+                    .font(.app(size: 14, weight: .semibold))
+                    .foregroundStyle(.neutral900)
+                Text("Gjelder alle plasser og dager")
+                    .font(.app(size: 11))
+                    .foregroundStyle(.neutral500)
+            }
+            Spacer()
+            KrStepper(
+                value: parkingDayPriceBinding,
+                step: 5,
+                minValue: 5,
+                unitLabel: "kr",
+                placeholder: "0",
+                onFocusChange: { priceFieldFocused = $0 }
+            )
+            .frame(width: 190)
+        }
+    }
+
+    private var priceKeyboardBar: some View {
+        HStack {
+            Spacer()
+            Button("Ferdig") {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
+            .font(.tuno(.label))
+            .foregroundStyle(.neutral900)
+        }
+        .padding(.horizontal, 20)
+        .padding(.vertical, 12)
+        .background(.ultraThinMaterial)
+    }
+
+    /// Gjeldende dagspris = DAY×1-pakken på første plass (alle plasser deler
+    /// pris for parkering), med listing.price som fallback for gamle annonser.
+    private var parkingDayPriceBinding: Binding<Int?> {
+        Binding(
+            get: {
+                form.spotMarkers.first?.pricePackages?
+                    .first(where: { $0.periodType == .day && $0.periodValue == 1 })?.priceNok
+                    ?? currentListing.price
+            },
+            set: { newValue in
+                // Aldri skriv 0 — serveren fakturerer fra listings.price og
+                // ville gitt gratis bookinger.
+                guard let v = newValue, v > 0 else { return }
+                setParkingDayPrice(v)
+            }
+        )
+    }
+
+    /// Skriver ny dagspris inn i DAY×1-pakken på ALLE plasser. Måneds- og
+    /// legacy-pakker (MONTH×1 / DAY×N) røres ikke. Cellene i kalenderen leser
+    /// samme pakke via basePerHour og re-rendres umiddelbart; persistering
+    /// skjer via scheduleSave-debouncen.
+    private func setParkingDayPrice(_ v: Int) {
+        for i in form.spotMarkers.indices {
+            var pkgs = form.spotMarkers[i].pricePackages ?? []
+            if let j = pkgs.firstIndex(where: { $0.periodType == .day && $0.periodValue == 1 }) {
+                pkgs[j].priceNok = v // behold eksisterende note
+            } else {
+                pkgs.insert(PricePackage(periodType: .day, periodValue: 1, priceNok: v, note: nil), at: 0)
+            }
+            form.spotMarkers[i].pricePackages = pkgs
+            form.spotMarkers[i].price = nil
+            form.spotMarkers[i].pricePerNight = nil
         }
     }
 
@@ -303,10 +411,10 @@ struct ProfileCalendarView: View {
 
     @MainActor
     private func load() async {
-        form.spotMarkers = listing.spotMarkers ?? []
-        form.category = listing.category
-        form.title = listing.title
-        form.priceUnit = listing.priceUnit ?? .natt
+        form.spotMarkers = currentListing.spotMarkers ?? []
+        form.category = currentListing.category
+        form.title = currentListing.title
+        form.priceUnit = currentListing.priceUnit ?? .natt
         focusedSpotId = form.spotMarkers.first?.id
         previousSpotMarkers = form.spotMarkers
         isLoading = false
@@ -314,7 +422,7 @@ struct ProfileCalendarView: View {
         // spans med profilbilde + gjest-navn. Egen task så ikke loading-
         // state blokkeres av netttverk.
         Task {
-            let fetched = await BookingService().fetchBookingsForListing(listingId: listing.id)
+            let fetched = await BookingService().fetchBookingsForListing(listingId: currentListing.id)
             await MainActor.run { self.bookings = fetched }
         }
     }
@@ -330,6 +438,7 @@ struct ProfileCalendarView: View {
             let prev = previous[idx]
             return (spot.blockedDates ?? []) != (prev.blockedDates ?? [])
                 || (spot.datePriceOverrides ?? [:]) != (prev.datePriceOverrides ?? [:])
+                || (spot.pricePackages ?? []) != (prev.pricePackages ?? [])
         }
         guard changed else { return }
 
@@ -379,11 +488,47 @@ struct ProfileCalendarView: View {
             struct SpotMarkersUpdate: Encodable {
                 let spot_markers: [SpotMarker]
             }
-            try await supabase
-                .from("listings")
-                .update(SpotMarkersUpdate(spot_markers: form.spotMarkers))
-                .eq("id", value: listing.id)
-                .execute()
+            /// Parkering: pris-invariantene skrives alltid sammen (samme regel
+            /// som EditParkingView.save) — serveren fakturerer fra
+            /// listings.price, så spot_markers alene ville latt prisene drifte.
+            struct ParkingCalendarUpdate: Encodable {
+                let spot_markers: [SpotMarker]
+                let price: Int
+                let display_price: Int
+                let display_price_suffix: String
+                let rental_period_types: [String]
+            }
+
+            let dayPrice = form.spotMarkers.first?.pricePackages?
+                .first(where: { $0.periodType == .day && $0.periodValue == 1 })?.priceNok
+                ?? currentListing.price
+
+            if currentListing.category == .parking, let day = dayPrice, day > 0 {
+                let packages = form.spotMarkers.first?.pricePackages ?? []
+                var periods = ["DAY"]
+                if packages.contains(where: { $0.periodType == .month && $0.periodValue == 1 }) {
+                    periods.append("MONTH")
+                }
+                try await supabase
+                    .from("listings")
+                    .update(ParkingCalendarUpdate(
+                        spot_markers: form.spotMarkers,
+                        price: day,
+                        display_price: day,
+                        display_price_suffix: "",
+                        rental_period_types: periods.sorted()
+                    ))
+                    .eq("id", value: currentListing.id)
+                    .execute()
+            } else {
+                // Camping (og fallback hvis dagsprisen ikke kan avledes):
+                // kun spot_markers, som før.
+                try await supabase
+                    .from("listings")
+                    .update(SpotMarkersUpdate(spot_markers: form.spotMarkers))
+                    .eq("id", value: currentListing.id)
+                    .execute()
+            }
             previousSpotMarkers = form.spotMarkers
             saveStatus = .saved
             Task {

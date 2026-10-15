@@ -6,18 +6,16 @@ import SwiftUI
 struct ParkingPriceStep: View {
     @ObservedObject var form: ListingFormModel
 
-    @State private var dailyText: String = ""
-    @State private var monthlyText: String = ""
     @State private var dailyNoteText: String = ""
     @State private var monthlyNoteText: String = ""
     /// Belegg-preset for kalkulatoren (andel av dagene som leies ut ved dagsleie).
     @State private var occupancy: Double = 0.6
 
-    /// Fokus-kjede for feltene. numberPad har ingen returtast, så en egen
-    /// «Neste felt»-bar (safeAreaInset, se feedback_swiftui_keyboard_toolbar)
-    /// tar brukeren videre.
-    private enum Field: Hashable { case daily, package }
-    @FocusState private var focusedField: Field?
+    /// numberPad har ingen returtast, så en egen «Ferdig»-bar (safeAreaInset,
+    /// se feedback_swiftui_keyboard_toolbar) lukker tastaturet. KrStepper eier
+    /// sitt eget fokus, så vi speiler det via onFocusChange.
+    @State private var dailyFocused = false
+    @State private var monthlyFocused = false
 
     var body: some View {
         ScrollView {
@@ -71,9 +69,13 @@ struct ParkingPriceStep: View {
                         .font(.tuno(.heading))
                         .foregroundStyle(.neutral900)
                     VStack(alignment: .leading, spacing: 10) {
-                        priceField(title: "Dagsleie (påkrevd)", unit: "kr per dag", text: $dailyText, field: .daily) { value in
-                            form.parkingDailyPrice = value
-                        }
+                        priceStepper(
+                            title: "Dagsleie (påkrevd)",
+                            value: $form.parkingDailyPrice,
+                            step: 5,
+                            unit: "kr per dag",
+                            focused: $dailyFocused
+                        )
                         noteField(
                             title: "Melding ved dagsleie (valgfritt)",
                             placeholder: "F.eks. Parker helt inntil veggen.",
@@ -83,9 +85,13 @@ struct ParkingPriceStep: View {
                     }
                     VStack(alignment: .leading, spacing: 10) {
                         VStack(alignment: .leading, spacing: 6) {
-                            priceField(title: "Tilby månedsleie? (valgfritt)", unit: "kr per måned", text: $monthlyText, field: .package) { value in
-                                form.parkingMonthlyPrice = value
-                            }
+                            priceStepper(
+                                title: "Tilby månedsleie? (valgfritt)",
+                                value: $form.parkingMonthlyPrice,
+                                step: 50,
+                                unit: "kr per måned",
+                                focused: $monthlyFocused
+                            )
                             Text("Leietaker får fast plass i 30 dager til denne prisen.")
                                 .font(.tuno(.caption))
                                 .foregroundStyle(.neutral500)
@@ -156,8 +162,6 @@ struct ParkingPriceStep: View {
             .padding(.bottom, 120)
         }
         .onAppear {
-            if let d = form.parkingDailyPrice, d > 0 { dailyText = "\(d)" }
-            if let m = form.parkingMonthlyPrice, m > 0 { monthlyText = "\(m)" }
             dailyNoteText = form.parkingDailyNote
             monthlyNoteText = form.parkingPackageNote
             if form.parkingType == nil { form.parkingType = .outdoor }
@@ -168,7 +172,7 @@ struct ParkingPriceStep: View {
             form.parkingPackageDays = 30
         }
         .safeAreaInset(edge: .bottom) {
-            if focusedField != nil {
+            if dailyFocused || monthlyFocused {
                 keyboardBar
             }
         }
@@ -176,31 +180,11 @@ struct ParkingPriceStep: View {
 
     // MARK: - Tastatur-navigasjon
 
-    private var nextField: Field? {
-        switch focusedField {
-        case .daily: return .package
-        default: return nil
-        }
-    }
-
     private var keyboardBar: some View {
         HStack {
-            if let next = nextField {
-                Button {
-                    focusedField = next
-                } label: {
-                    HStack(spacing: 5) {
-                        Text("Neste felt")
-                            .font(.tuno(.label))
-                        Image(systemName: "arrow.down")
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    .foregroundStyle(.neutral900)
-                }
-            }
             Spacer()
             Button("Ferdig") {
-                focusedField = nil
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             }
             .font(.tuno(.label))
             .foregroundStyle(.neutral900)
@@ -337,33 +321,19 @@ struct ParkingPriceStep: View {
         }
     }
 
-    private func priceField(title: String, unit: String, text: Binding<String>, field: Field, onChange: @escaping (Int?) -> Void) -> some View {
+    /// Prisfelt med +/- (KrStepper): trykk opp/ned i faste trinn, eller tap
+    /// tallet for å skrive inn manuelt.
+    private func priceStepper(title: String, value: Binding<Int?>, step: Int, unit: String, focused: Binding<Bool>) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.tuno(.label))
                 .foregroundStyle(.neutral600)
-            HStack(spacing: 8) {
-                TextField("0", text: text)
-                    .keyboardType(.numberPad)
-                    .focused($focusedField, equals: field)
-                    .font(.tuno(.title))
-                    .foregroundStyle(.neutral900)
-                    .onChange(of: text.wrappedValue) { _, newValue in
-                        let digits = newValue.filter(\.isNumber)
-                        if digits != newValue { text.wrappedValue = digits }
-                        onChange(Int(digits))
-                    }
-                Text(unit)
-                    .font(.tuno(.body))
-                    .foregroundStyle(.neutral500)
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .background(Color.white)
-            .clipShape(RoundedRectangle(cornerRadius: TunoRadius.control))
-            .overlay(
-                RoundedRectangle(cornerRadius: TunoRadius.control)
-                    .stroke(Color.neutral200, lineWidth: 1)
+            KrStepper(
+                value: value,
+                step: step,
+                unitLabel: unit,
+                placeholder: "0",
+                onFocusChange: { focused.wrappedValue = $0 }
             )
         }
     }

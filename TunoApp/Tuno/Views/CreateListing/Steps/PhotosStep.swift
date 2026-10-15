@@ -3,6 +3,23 @@ import PhotosUI
 
 struct PhotosStep: View {
     @ObservedObject var form: ListingFormModel
+
+    var body: some View {
+        WizardScreen(
+            title: "Vis frem plassene dine",
+            subtitle: "Gode bilder selger plassene dine. Last opp minst 3-5 av plassen, omgivelsene og fasilitetene."
+        ) {
+            PhotoGridEditor(form: form)
+        }
+    }
+}
+
+/// Gjenbrukbar bildegrid med opplasting, moderering, drag-sortering,
+/// forside-badge og spot-tagging. Brukes av PhotosStep (veiviseren) og
+/// EditParkingView (Rediger annonse) — bind den mot en ListingFormModel
+/// som holder imageURLs/uploadingPhotos/spotMarkers.
+struct PhotoGridEditor: View {
+    @ObservedObject var form: ListingFormModel
     @State private var draggedURL: String?
     /// URL'en for bildet som tagges akkurat nå. Når != nil vises action sheet'en.
     /// Vi bruker confirmationDialog framfor SwiftUI Menu fordi Menu er upålitelig
@@ -12,7 +29,7 @@ struct PhotosStep: View {
     private var hasMultipleSpots: Bool { form.spotMarkers.count > 1 }
 
     var body: some View {
-        wizardContent
+        gridContent
             .confirmationDialog(
                 "Tag bilde til plass",
                 isPresented: Binding(
@@ -34,132 +51,127 @@ struct PhotosStep: View {
             }
     }
 
-    private var wizardContent: some View {
-        WizardScreen(
-            title: "Vis frem plassene dine",
-            subtitle: "Gode bilder selger plassene dine. Last opp minst 3-5 av plassen, omgivelsene og fasilitetene."
-        ) {
-            VStack(alignment: .leading, spacing: 16) {
-                PhotosPicker(
-                    selection: $form.selectedPhotos,
-                    maxSelectionCount: 10 - form.imageURLs.count,
-                    matching: .images
-                ) {
-                    let isEmpty = form.imageURLs.isEmpty
-                    if isEmpty {
-                        VStack(spacing: 10) {
-                            Image(systemName: "photo.badge.plus")
-                                .font(.system(size: 32, weight: .light))
-                                .foregroundStyle(.appAccent)
-                            Text("Velg bilder")
-                                .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(.appAccentDeep)
-                            Text("JPG eller PNG · maks 10 bilder")
-                                .font(.system(size: 12))
-                                .foregroundStyle(.neutral500)
-                        }
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 140)
-                        .background(Color.appTintSoft)
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 16)
-                                .strokeBorder(Color.appAccentDisabled, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                        )
-                    } else {
-                        HStack(spacing: 10) {
-                            Image(systemName: "photo.badge.plus")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundStyle(.appAccent)
-                            Text("Legg til flere bilder")
-                                .font(.system(size: 14, weight: .semibold))
-                                .foregroundStyle(.appAccentDeep)
-                            Spacer()
-                            Text("\(form.imageURLs.count)/10")
-                                .font(.system(size: 12, weight: .medium))
-                                .foregroundStyle(.neutral500)
-                        }
-                        .padding(.horizontal, 14)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 48)
-                        .background(Color.appTintSoft)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(Color.appAccentDisabled, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-                        )
+    private var gridContent: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            PhotosPicker(
+                selection: $form.selectedPhotos,
+                maxSelectionCount: 10 - form.imageURLs.count,
+                matching: .images
+            ) {
+                let isEmpty = form.imageURLs.isEmpty
+                if isEmpty {
+                    VStack(spacing: 10) {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.system(size: 32, weight: .light))
+                            .foregroundStyle(.appAccent)
+                        Text("Velg bilder")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(.appAccentDeep)
+                        Text("JPG eller PNG · maks 10 bilder")
+                            .font(.system(size: 12))
+                            .foregroundStyle(.neutral500)
                     }
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 140)
+                    .background(Color.appTintSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 16)
+                            .strokeBorder(Color.appAccentDisabled, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                    )
+                } else {
+                    HStack(spacing: 10) {
+                        Image(systemName: "photo.badge.plus")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(.appAccent)
+                        Text("Legg til flere bilder")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.appAccentDeep)
+                        Spacer()
+                        Text("\(form.imageURLs.count)/10")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.neutral500)
+                    }
+                    .padding(.horizontal, 14)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 48)
+                    .background(Color.appTintSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(Color.appAccentDisabled, style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                    )
                 }
-                .onChange(of: form.selectedPhotos) { _, newItems in
-                    PhotoUploader.upload(items: newItems, into: form)
+            }
+            .onChange(of: form.selectedPhotos) { _, newItems in
+                PhotoUploader.upload(items: newItems, into: form)
+            }
+
+            // Blokkerte bilder: vis årsaken HER, der brukeren ser grid-en
+            // (før lå den kun i form.error uten synlig visning på steget).
+            if let err = form.error, !err.isEmpty {
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.orange)
+                    Text(err)
+                        .font(.system(size: 13))
+                        .foregroundStyle(.neutral800)
+                    Spacer(minLength: 0)
+                    Button {
+                        form.error = nil
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(.neutral500)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(12)
+                .background(Color.orange.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+            }
+
+            if !form.imageURLs.isEmpty || !form.uploadingPhotos.isEmpty {
+                if hasMultipleSpots {
+                    spotTaggingHint
                 }
 
-                // Blokkerte bilder: vis årsaken HER, der brukeren ser grid-en
-                // (før lå den kun i form.error uten synlig visning på steget).
-                if let err = form.error, !err.isEmpty {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.system(size: 14))
-                            .foregroundStyle(.orange)
-                        Text(err)
-                            .font(.system(size: 13))
-                            .foregroundStyle(.neutral800)
-                        Spacer(minLength: 0)
-                        Button {
-                            form.error = nil
-                        } label: {
-                            Image(systemName: "xmark")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.neutral500)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(12)
-                    .background(Color.orange.opacity(0.1))
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                HStack(spacing: 6) {
+                    Image(systemName: "info.circle")
+                        .font(.system(size: 11))
+                    Text("Dra og slipp for å endre rekkefølge. Første bilde er forsidebildet.")
                 }
+                .font(.system(size: 12))
+                .foregroundStyle(.neutral500)
 
-                if !form.imageURLs.isEmpty || !form.uploadingPhotos.isEmpty {
-                    if hasMultipleSpots {
-                        spotTaggingHint
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 12) {
+                    ForEach(Array(form.imageURLs.enumerated()), id: \.offset) { index, url in
+                        imageCellWithTag(index: index, url: url)
                     }
 
-                    HStack(spacing: 6) {
-                        Image(systemName: "info.circle")
-                            .font(.system(size: 11))
-                        Text("Dra og slipp for å endre rekkefølge. Første bilde er forsidebildet.")
-                    }
-                    .font(.system(size: 12))
-                    .foregroundStyle(.neutral500)
-
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 12) {
-                        ForEach(Array(form.imageURLs.enumerated()), id: \.offset) { index, url in
-                            imageCellWithTag(index: index, url: url)
-                        }
-
-                        ForEach(form.uploadingPhotos) { photo in
-                            ZStack {
-                                if let uiImage = UIImage(data: photo.data) {
-                                    Image(uiImage: uiImage)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 130)
-                                        .clipped()
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                } else {
-                                    Rectangle().fill(Color.neutral100)
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 130)
-                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                }
-                                Rectangle()
-                                    .fill(Color.black.opacity(0.35))
+                    ForEach(form.uploadingPhotos) { photo in
+                        ZStack {
+                            if let uiImage = UIImage(data: photo.data) {
+                                Image(uiImage: uiImage)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fill)
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 130)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                            } else {
+                                Rectangle().fill(Color.neutral100)
                                     .frame(maxWidth: .infinity)
                                     .frame(height: 130)
                                     .clipShape(RoundedRectangle(cornerRadius: 12))
-                                ProgressView().tint(.white)
                             }
+                            Rectangle()
+                                .fill(Color.black.opacity(0.35))
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 130)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            ProgressView().tint(.white)
                         }
                     }
                 }
