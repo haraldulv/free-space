@@ -3,7 +3,6 @@ import Image from "next/image";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { APP_STORE_URL } from "@/lib/config";
 import EarnCalculator from "@/components/features/earn/EarnCalculator";
-import EarnLeadForm from "@/components/features/earn/EarnLeadForm";
 
 interface PageProps {
   params: Promise<{ locale: string }>;
@@ -18,20 +17,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   };
 }
 
-/** Kims flyer-illustrasjon (hvit strek, transparent bakgrunn): mann på vei
-    hjem til hus med ledig oppkjørsel. Hentet fra plakaten så QR-landingen
-    gjenkjennes umiddelbart. */
-function DrivewayIllustration() {
+/** Telefonmockup med ekte app-skjermbilde: iPhone-ramme med Dynamic Island,
+    samme uttrykk som App Store-bildene. Kuttes av seksjonskanten i bunn så
+    appen «stiger opp» av heroen. */
+function PhoneMockup() {
   return (
-    <Image
-      src="/tjen-illustration.png"
-      alt=""
-      aria-hidden="true"
-      width={1101}
-      height={442}
-      className="mx-auto w-full max-w-2xl"
-      priority
-    />
+    <div className="mx-auto w-[290px] sm:w-[330px]">
+      <div className="rounded-t-[48px] bg-[#0a0b0a] p-[11px] pb-0 shadow-[0_30px_70px_rgba(10,12,10,0.35)] ring-[3px] ring-white/15">
+        <div className="relative overflow-hidden rounded-t-[38px] bg-white">
+          <Image
+            src="/tjen-app-skjerm.jpg"
+            alt="Tuno-appen med kart over ledige parkeringsplasser"
+            width={720}
+            height={1564}
+            className="w-full"
+            priority
+          />
+          <div className="absolute left-1/2 top-[10px] h-[24px] w-[84px] -translate-x-1/2 rounded-full bg-black" />
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -51,8 +56,8 @@ export default async function TjenPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-[#f4f1ea]">
-      {/* Mørk hero-flate (palett C «Kontrast») */}
-      <section className="bg-[#3ebf7f] px-5 pb-28 pt-8 text-white sm:pb-32">
+      {/* Hero i Tuno-grønn med telefonmockup som kuttes av bunnkanten */}
+      <section className="bg-[#46C185] px-5 pt-8 text-white">
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-between">
             {/* Logo som på plakaten: hvit pin + tuno */}
@@ -96,15 +101,15 @@ export default async function TjenPage({ params }: PageProps) {
             <p className="text-sm font-medium text-white/75">{t("androidSoon")}</p>
           </div>
 
-          <div className="mt-10">
-            <DrivewayIllustration />
+          <div className="mt-12">
+            <PhoneMockup />
           </div>
         </div>
       </section>
 
-      {/* Kalkulator-kort som overlapper flaten */}
-      <section className="px-5">
-        <div className="mx-auto -mt-20 max-w-xl">
+      {/* Kalkulator */}
+      <section className="px-5 pt-12">
+        <div className="mx-auto max-w-xl">
           <EarnCalculator />
         </div>
       </section>
@@ -128,7 +133,7 @@ export default async function TjenPage({ params }: PageProps) {
           <div className="mt-8 grid gap-4 sm:grid-cols-3">
             {steps.map((step, i) => (
               <div key={step.title} className="rounded-3xl border border-[#e8e5dc] bg-[#fdfcf9] p-6 text-center">
-                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#37caa4]/15 text-lg font-bold text-[#0f7a5f]">
+                <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#46C185]/15 text-lg font-bold text-[#0f7a5f]">
                   {i + 1}
                 </div>
                 <h3 className="mt-4 text-lg font-bold text-neutral-900">{step.title}</h3>
@@ -140,27 +145,18 @@ export default async function TjenPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* Vi ringer deg */}
-      <section className="px-5 pb-14">
-        <div className="mx-auto max-w-xl">
-          <EarnLeadForm />
-        </div>
-      </section>
-
       {/* App-CTA */}
-      <section className="bg-[#3ebf7f] px-5 py-16 text-center text-white">
+      <section className="bg-[#46C185] px-5 py-16 text-center text-white">
         <div className="mx-auto max-w-xl">
-          {/* App-ikon-flis: hvit avrundet firkant med pin, «dette er en app»-signal */}
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-[22px] bg-white shadow-[0_8px_24px_rgba(0,0,0,0.18)]">
-            <Image
-              src="/tuno-pin-ink.png"
-              alt=""
-              aria-hidden="true"
-              width={40}
-              height={40}
-              className="h-10 w-auto"
-            />
-          </div>
+          {/* Ekte app-ikon, samme som på hjemskjermen */}
+          <Image
+            src="/app-icon.png"
+            alt=""
+            aria-hidden="true"
+            width={80}
+            height={80}
+            className="mx-auto h-20 w-20 rounded-[18px] shadow-[0_8px_24px_rgba(0,0,0,0.22)] ring-2 ring-white/40"
+          />
           <h2 className="mt-6 text-3xl font-bold sm:text-4xl">{t("appTitle")}</h2>
           <p className="mx-auto mt-3 max-w-md text-base font-medium text-white/85">
             {t("appBody")}

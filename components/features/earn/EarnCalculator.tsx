@@ -5,8 +5,8 @@ import { useTranslations } from "next-intl";
 
 const nok = new Intl.NumberFormat("nb-NO");
 
-/** Flyer-grønnfargen (samme som /tjen-heroen). */
-const GREEN = "#3ebf7f";
+/** Tuno-grønn (brand, samme som /tjen-heroen og app-ikonet). */
+const GREEN = "#46C185";
 
 /**
  * Pendli-inspirert kalkulator (Kim-feedback): to slidere i stedet for
