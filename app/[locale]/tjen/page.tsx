@@ -56,31 +56,30 @@ export default async function TjenPage({ params }: PageProps) {
 
   return (
     <main className="min-h-screen bg-[#f4f1ea]">
-      {/* Hero i Tuno-grønn med telefonmockup som kuttes av bunnkanten */}
-      <section className="bg-[#46C185] px-5 pt-8 text-white">
+      {/* Hero på papir (palett C): ink-tekst, grønn kun som aksent */}
+      <section className="px-5 pt-8">
         <div className="mx-auto max-w-3xl">
           <div className="flex items-center justify-between">
-            {/* Logo som på plakaten: hvit pin + tuno */}
             <Image
-              src="/tuno-logo-pin-white.png"
+              src="/tuno-logo-pin-ink.png"
               alt="Tuno"
               width={766}
               height={261}
               className="h-8 w-auto"
               priority
             />
-            <span className="rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white">
+            <span className="rounded-full bg-[#46C185]/15 px-4 py-1.5 text-sm font-semibold text-[#0f7a5f]">
               {t("eyebrow")}
             </span>
           </div>
 
-          <h1 className="mt-10 text-center text-4xl font-bold leading-tight sm:text-6xl">
+          <h1 className="mt-12 text-center text-4xl font-bold leading-tight text-neutral-900 sm:text-6xl">
             {t("title")}
           </h1>
-          <p className="mx-auto mt-5 max-w-xl text-center text-lg font-medium leading-relaxed text-white/90 sm:text-xl">
+          <p className="mx-auto mt-5 max-w-xl text-center text-lg font-medium leading-relaxed text-neutral-600 sm:text-xl">
             {t("subtitle")}
           </p>
-          <p className="mt-2 text-center text-sm font-medium text-white/75">
+          <p className="mt-2 text-center text-sm font-medium text-neutral-500">
             {t("youDecide")}
           </p>
 
@@ -98,7 +97,7 @@ export default async function TjenPage({ params }: PageProps) {
                 priority
               />
             </a>
-            <p className="text-sm font-medium text-white/75">{t("androidSoon")}</p>
+            <p className="text-sm font-medium text-neutral-500">{t("androidSoon")}</p>
           </div>
 
           <div className="mt-12">
@@ -145,8 +144,8 @@ export default async function TjenPage({ params }: PageProps) {
         </div>
       </section>
 
-      {/* App-CTA */}
-      <section className="bg-[#46C185] px-5 py-16 text-center text-white">
+      {/* App-CTA på svart markedsflate (som inntektskortet i appen) */}
+      <section className="bg-[#121412] px-5 py-16 text-center text-white">
         <div className="mx-auto max-w-xl">
           {/* Ekte app-ikon, samme som på hjemskjermen */}
           <Image
@@ -155,7 +154,7 @@ export default async function TjenPage({ params }: PageProps) {
             aria-hidden="true"
             width={80}
             height={80}
-            className="mx-auto h-20 w-20 rounded-[18px] shadow-[0_8px_24px_rgba(0,0,0,0.22)] ring-2 ring-white/40"
+            className="mx-auto h-20 w-20 rounded-[18px] shadow-[0_8px_24px_rgba(0,0,0,0.45)] ring-1 ring-white/15"
           />
           <h2 className="mt-6 text-3xl font-bold sm:text-4xl">{t("appTitle")}</h2>
           <p className="mx-auto mt-3 max-w-md text-base font-medium text-white/85">
@@ -165,8 +164,9 @@ export default async function TjenPage({ params }: PageProps) {
             href={APP_STORE_URL}
             className="mt-8 inline-block transition-transform hover:scale-[1.03]"
           >
+            {/* Hvit badge-variant på mørk flate (Apples retningslinjer) */}
             <Image
-              src={badgeSrc}
+              src="/app-store-badge-nb-white.svg"
               alt={t("appStoreBadgeAlt")}
               width={168}
               height={56}
@@ -174,7 +174,7 @@ export default async function TjenPage({ params }: PageProps) {
             />
           </a>
           <div className="mt-4 flex justify-center">
-            <span className="rounded-full border border-white/40 px-4 py-1.5 text-sm font-semibold text-white/90">
+            <span className="rounded-full border border-white/30 px-4 py-1.5 text-sm font-semibold text-white/80">
               {t("androidSoonPill")}
             </span>
           </div>
