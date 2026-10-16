@@ -1,11 +1,11 @@
 {
-  "name": "Tuno — Parkering og camping i Norge",
+  "name": "Tuno: Parkering",
   "short_name": "Tuno",
-  "description": "Finn og book parkeringsplasser og campingplasser over hele Norge.",
+  "description": "Finn og book parkering hos lokale utleiere over hele Norge.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#1a4fd6",
+  "background_color": "#f4f1ea",
+  "theme_color": "#46C185",
   "icons": [
     {
       "src": "/icons/icon-192.png",

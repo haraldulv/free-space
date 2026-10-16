@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Image from "next/image";
 import { Link } from "@/i18n/navigation";
-import { PARKING_ONLY } from "@/lib/config";
+import { APP_STORE_URL, PARKING_ONLY } from "@/lib/config";
 import {
   getPopularListings,
   getRecentRealListings,
@@ -12,8 +12,31 @@ import type { Listing } from "@/types";
 
 export const dynamic = "force-dynamic";
 
+/** Telefonmockup med ekte app-skjermbilde, samme uttrykk som /tjen og
+    App Store-bildene. Åpen i bunn så den «står» på seksjonskanten. */
+function PhoneMockup() {
+  return (
+    <div className="mx-auto w-[290px] sm:w-[330px]">
+      <div className="rounded-t-[48px] bg-[#0a0b0a] p-[11px] pb-0 shadow-[0_30px_70px_rgba(10,12,10,0.35)] ring-[3px] ring-white/15">
+        <div className="relative overflow-hidden rounded-t-[38px] bg-white">
+          <Image
+            src="/tjen-app-skjerm.jpg"
+            alt="Tuno-appen med kart over ledige parkeringsplasser"
+            width={720}
+            height={1564}
+            className="w-full"
+            priority
+          />
+          <div className="absolute left-1/2 top-[10px] h-[24px] w-[84px] -translate-x-1/2 rounded-full bg-black" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default async function HomePage() {
   const t = await getTranslations("home");
+  const tApp = await getTranslations("tjen");
   let [recent, popular, availableToday] = await Promise.all([
     getRecentRealListings(12),
     getPopularListings(12),
@@ -30,57 +53,91 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="pb-8">
+    <div>
       {PARKING_ONLY && (
-        <section className="bg-[#3ebf7f] px-5 pb-10 pt-12 text-white sm:pt-16">
+        <section className="px-5 pt-12 sm:pt-16">
           <div className="mx-auto max-w-5xl text-center">
-            <span className="inline-block rounded-full bg-white/15 px-4 py-1.5 text-sm font-semibold text-white">
+            <span className="inline-block rounded-full bg-[#46C185]/15 px-4 py-1.5 text-sm font-semibold text-[#0f7a5f]">
               {t("heroEyebrow")}
             </span>
-            <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-bold leading-tight sm:text-6xl">
+            <h1 className="mx-auto mt-6 max-w-3xl text-4xl font-bold leading-tight text-neutral-900 sm:text-6xl">
               {t("heroTitle")}
             </h1>
-            <p className="mx-auto mt-4 max-w-xl text-lg font-medium leading-relaxed text-white/90">
+            <p className="mx-auto mt-4 max-w-xl text-lg font-medium leading-relaxed text-neutral-600">
               {t("heroSubtitle")}
             </p>
             <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/search"
-                className="rounded-full bg-white px-8 py-3.5 text-base font-bold text-[#1a7a4f] transition-transform hover:scale-[1.02]"
+                className="rounded-full bg-[#121412] px-8 py-3.5 text-base font-bold text-white transition-transform hover:scale-[1.02]"
               >
                 {t("heroCtaFind")}
               </Link>
               <Link
                 href="/tjen"
-                className="rounded-full border border-white/60 px-8 py-3.5 text-base font-semibold text-white transition-colors hover:bg-white/10"
+                className="rounded-full border border-neutral-300 px-8 py-3.5 text-base font-semibold text-neutral-900 transition-colors hover:bg-neutral-900/5"
               >
                 {t("heroCtaRentOut")}
               </Link>
             </div>
-            <Image
-              src="/tjen-illustration.png"
-              alt=""
-              aria-hidden="true"
-              width={1101}
-              height={442}
-              className="mx-auto mt-10 w-full max-w-2xl"
-              priority
-            />
+            <div className="mt-12">
+              <PhoneMockup />
+            </div>
           </div>
         </section>
       )}
 
-      {recent.length > 0 && (
-        <ListingSection title={PARKING_ONLY ? t("recentParking") : t("recent")} listings={recent} />
-      )}
-      {popular.length > 0 && (
-        <ListingSection title={PARKING_ONLY ? t("popularParking") : t("popular")} listings={popular} />
-      )}
-      {availableToday.length > 0 && (
-        <ListingSection
-          title={PARKING_ONLY ? t("availableTodayParking") : t("availableToday")}
-          listings={availableToday}
-        />
+      <div className="pb-8">
+        {recent.length > 0 && (
+          <ListingSection title={PARKING_ONLY ? t("recentParking") : t("recent")} listings={recent} />
+        )}
+        {popular.length > 0 && (
+          <ListingSection title={PARKING_ONLY ? t("popularParking") : t("popular")} listings={popular} />
+        )}
+        {availableToday.length > 0 && (
+          <ListingSection
+            title={PARKING_ONLY ? t("availableTodayParking") : t("availableToday")}
+            listings={availableToday}
+          />
+        )}
+      </div>
+
+      {/* App-CTA på svart markedsflate, samme som /tjen. Holder forsiden
+          støtt også før de første ekte annonsene er ute. */}
+      {PARKING_ONLY && (
+        <section className="bg-[#121412] px-5 py-16 text-center text-white">
+          <div className="mx-auto max-w-xl">
+            <Image
+              src="/app-icon.png"
+              alt=""
+              aria-hidden="true"
+              width={80}
+              height={80}
+              className="mx-auto h-20 w-20 rounded-[18px] shadow-[0_8px_24px_rgba(0,0,0,0.45)] ring-1 ring-white/15"
+            />
+            <h2 className="mt-6 text-3xl font-bold sm:text-4xl">{tApp("appTitle")}</h2>
+            <p className="mx-auto mt-3 max-w-md text-base font-medium text-white/85">
+              {tApp("appBody")}
+            </p>
+            <a
+              href={APP_STORE_URL}
+              className="mt-8 inline-block transition-transform hover:scale-[1.03]"
+            >
+              <Image
+                src="/app-store-badge-nb-white.svg"
+                alt={tApp("appStoreBadgeAlt")}
+                width={168}
+                height={56}
+                className="h-14 w-auto"
+              />
+            </a>
+            <div className="mt-4 flex justify-center">
+              <span className="rounded-full border border-white/30 px-4 py-1.5 text-sm font-semibold text-white/80">
+                {tApp("androidSoonPill")}
+              </span>
+            </div>
+          </div>
+        </section>
       )}
     </div>
   );

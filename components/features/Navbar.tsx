@@ -126,7 +126,8 @@ export default function Navbar({
         <div className="flex items-center gap-2 shrink-0">
           {!(user && isHost) && (
             <Link
-              href="/bli-utleier"
+              /* Utloggede sendes til /tjen-landingen; innloggede rett i veiviseren. */
+              href={user ? "/bli-utleier" : "/tjen"}
               className="hidden lg:block rounded-full px-4 py-2 text-sm font-medium text-neutral-700 transition-colors hover:bg-neutral-100"
             >
               {t("becomeHost")}
@@ -148,13 +149,13 @@ export default function Navbar({
           <div className="relative" ref={menuRef}>
             <button
               onClick={() => { setMenuOpen(!menuOpen); setAvatarMenuOpen(false); }}
-              className="flex items-center justify-center rounded-full border border-neutral-200 bg-white p-2 shadow-sm transition-all hover:shadow-md"
+              className="flex items-center justify-center rounded-full border border-paper-line bg-paper-card p-2 shadow-sm transition-all hover:shadow-md"
             >
               <Menu className="h-4 w-4 text-neutral-600" />
             </button>
 
             {menuOpen && (
-              <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-neutral-100 bg-white py-2 shadow-xl z-50">
+              <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-paper-line bg-paper-card py-2 shadow-xl z-50">
                 {user ? (
                   <>
                     <Link href="/dashboard" className={menuItemClass} onClick={() => setMenuOpen(false)}>
@@ -202,7 +203,7 @@ export default function Navbar({
                       {t("register")}
                     </Link>
                     <div className="my-1 border-t border-neutral-100" />
-                    <Link href="/bli-utleier" className={menuItemClass} onClick={() => setMenuOpen(false)}>
+                    <Link href="/tjen" className={menuItemClass} onClick={() => setMenuOpen(false)}>
                       <PlusCircle className="h-4 w-4 text-neutral-400" />
                       {t("becomeHost")}
                     </Link>
@@ -227,7 +228,7 @@ export default function Navbar({
               </button>
 
               {avatarMenuOpen && (
-                <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-neutral-100 bg-white py-2 shadow-xl z-50">
+                <div className="animate-fade-in absolute right-0 mt-2 w-56 rounded-xl border border-paper-line bg-paper-card py-2 shadow-xl z-50">
                   <div className="px-4 py-2.5 border-b border-neutral-100">
                     <p className="text-sm font-medium text-neutral-900">{user.fullName || t("myAccount")}</p>
                     <p className="text-xs text-neutral-500 truncate">{user.email}</p>

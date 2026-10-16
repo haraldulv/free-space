@@ -24,6 +24,13 @@ const nextConfig: NextConfig = {
         hostname: "mqyeptwrfrhwxtysccnp.supabase.co",
       },
       {
+        // Staging-storage: lokal dev og staging.tuno.no leser staging-DB-en,
+        // der annonsebildene ligger på denne verten. Uten den krasjer
+        // next/image hele sider i dev og gir knuste bilder ellers.
+        protocol: "https",
+        hostname: "qqtgmcxzyuquunsxoqog.supabase.co",
+      },
+      {
         protocol: "https",
         hostname: "lh3.googleusercontent.com",
       },

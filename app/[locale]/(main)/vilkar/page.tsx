@@ -5,7 +5,7 @@ import LegalPageLayout, {
 
 export const metadata: Metadata = {
   title: "Brukervilkår",
-  description: "Brukervilkår for Tuno. Markedsplass for parkering og camping i Norge.",
+  description: "Brukervilkår for Tuno. Markedsplass for parkering i Norge.",
 };
 
 export default function VilkarPage() {
@@ -14,8 +14,8 @@ export default function VilkarPage() {
       <Section title="1. Om Tuno og tjenesten">
         <p>
           Tuno er en norsk digital markedsplass som kobler utleiere av
-          parkeringsplasser og campingplasser med personer som trenger et sted å
-          parkere eller campe. Tjenesten drives av Tuno (org.nr. under
+          parkeringsplasser med personer som trenger et sted å
+          parkere. Tjenesten drives av Tuno (org.nr. under
           registrering), heretter kalt &laquo;Tuno&raquo;, &laquo;vi&raquo;
           eller &laquo;oss&raquo;.
         </p>
@@ -64,7 +64,7 @@ export default function VilkarPage() {
       <Section title="4. Bruk av plattformen">
         <p>
           <strong>Som leietaker</strong> kan du søke etter og booke
-          parkeringsplasser og campingplasser. En booking er en bindende avtale
+          parkeringsplasser. En booking er en bindende avtale
           mellom deg og utleieren. Du forplikter deg til å bruke plassen i henhold
           til annonsebeskrivelsen og utleierens instruksjoner.
         </p>

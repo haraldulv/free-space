@@ -462,7 +462,7 @@ export default function BookPage() {
                       theme: "stripe",
                       variables: {
                         colorPrimary: "#46C185",
-                        fontFamily: "DM Sans, system-ui, sans-serif",
+                        fontFamily: "system-ui, sans-serif",
                         borderRadius: "8px",
                       },
                     },

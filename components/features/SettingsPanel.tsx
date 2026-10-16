@@ -141,7 +141,7 @@ export default function SettingsPanel() {
                 Bli utleier på Tuno
               </h3>
               <p className="mt-1 text-sm text-neutral-600">
-                Lei ut parkeringsplassen, hytta eller campingplassen din og tjen ekstra inntekt. Det tar bare noen minutter å sette opp.
+                Lei ut parkeringsplassen din og tjen ekstra inntekt. Det tar bare noen minutter å sette opp.
               </p>
               <Link
                 href="/bli-utleier"

@@ -32,11 +32,12 @@ interface PlaceSuggestion {
   secondaryText: string;
 }
 
+// I parkering-modus finnes kun personbil; bobil/campingbil skal ikke vises.
 const vehicleOptions: { value: VehicleType; icon: React.ElementType }[] = [
   { value: "motorhome", icon: Bus },
   { value: "campervan", icon: Caravan },
   { value: "car", icon: Car },
-];
+].filter((opt) => !PARKING_ONLY || opt.value === "car");
 
 function formatLocalDate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

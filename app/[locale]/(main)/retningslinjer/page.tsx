@@ -28,15 +28,10 @@ export default function RetningslinjerPage() {
             gårdsplasser, næringsparkeringsplasser og andre egnede flater for
             personbiler.
           </li>
-          <li>
-            <strong>Campingplasser:</strong> Plasser egnet for bobiler,
-            campingbiler eller telt, med eller uten fasiliteter som strøm, vann
-            og tømming.
-          </li>
         </ul>
         <p>
           Plasser som ikke faller inn under disse kategoriene, eller som ikke kan
-          brukes trygt til parkering eller camping, vil bli fjernet.
+          brukes trygt til parkering, vil bli fjernet.
         </p>
       </Section>
 
@@ -108,7 +103,7 @@ export default function RetningslinjerPage() {
           <li>Falsk eller villedende informasjon</li>
           <li>Diskriminerende innhold eller praksis</li>
           <li>Støtende, truende eller upassende bilder eller tekst</li>
-          <li>Annonser for andre tjenester enn parkering/camping</li>
+          <li>Annonser for andre tjenester enn parkering</li>
           <li>Duplikatannonser for samme plass</li>
           <li>Kontaktinformasjon i annonseteksten (for å omgå plattformen)</li>
         </ul>

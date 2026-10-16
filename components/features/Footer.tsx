@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import Image from "next/image";
 import { Link } from "@/i18n/navigation";
 import Container from "@/components/ui/Container";
 
@@ -10,10 +11,14 @@ export default function Footer() {
       <Container className="py-12">
         <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div>
-            <Link href="/">
-              <span className="text-xl text-neutral-900 lowercase">
-                tuno
-              </span>
+            <Link href="/" className="inline-block">
+              <Image
+                src="/tuno-logo-pin-ink.png"
+                alt="Tuno"
+                width={766}
+                height={261}
+                className="h-7 w-auto"
+              />
             </Link>
             <p className="mt-3 text-sm text-neutral-500">
               {t("tagline")}
@@ -25,7 +30,7 @@ export default function Footer() {
             <ul className="mt-3 space-y-2">
               <li>
                 <Link
-                  href={{ pathname: "/", query: { category: "parking" } }}
+                  href="/search"
                   className="text-sm text-neutral-500 hover:text-neutral-700"
                 >
                   {t("parking")}
@@ -33,15 +38,7 @@ export default function Footer() {
               </li>
               <li>
                 <Link
-                  href={{ pathname: "/", query: { category: "camping" } }}
-                  className="text-sm text-neutral-500 hover:text-neutral-700"
-                >
-                  {t("camping")}
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/utleier"
+                  href="/tjen"
                   className="text-sm text-neutral-500 hover:text-neutral-700"
                 >
                   {t("forHosts")}
@@ -54,10 +51,12 @@ export default function Footer() {
             <h3 className="text-sm font-semibold text-neutral-900">{t("company")}</h3>
             <ul className="mt-3 space-y-2">
               <li>
-                <span className="text-sm text-neutral-500">{t("about")}</span>
-              </li>
-              <li>
-                <span className="text-sm text-neutral-500">{t("contact")}</span>
+                <Link
+                  href="/kontakt"
+                  className="text-sm text-neutral-500 hover:text-neutral-700"
+                >
+                  {t("contact")}
+                </Link>
               </li>
             </ul>
           </div>
@@ -93,7 +92,7 @@ export default function Footer() {
           </div>
         </div>
 
-        <div className="mt-8 border-t border-neutral-200 pt-8 text-center text-sm text-neutral-400">
+        <div className="mt-8 border-t border-paper-line pt-8 text-center text-sm text-neutral-400">
           {t("copyright", { year })}
         </div>
       </Container>
