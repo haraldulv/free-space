@@ -18,7 +18,7 @@ export default function AdminHeader() {
         <div className="flex items-center gap-3">
           <Link href="/">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/tuno-logo.png" alt="Tuno" className="h-6" />
+            <img src="/tuno-logo-pin-ink.png" alt="Tuno" className="h-6" />
           </Link>
           <span className="rounded-md bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
             Admin

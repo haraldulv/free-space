@@ -20,7 +20,6 @@ import {
   UserPlus,
   LifeBuoy,
   Send,
-  Target,
   ShieldCheck,
 } from "lucide-react";
 import { SERVICE_FEE_RATE } from "@/lib/config";
@@ -128,12 +127,31 @@ interface SupportUserInfo {
 
 const tabs: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: "overview", label: "Oversikt", icon: BarChart3 },
-  { key: "bookings", label: "Bookings", icon: CalendarCheck },
+  { key: "bookings", label: "Bookinger", icon: CalendarCheck },
   { key: "users", label: "Brukere", icon: Users },
   { key: "listings", label: "Annonser", icon: Megaphone },
   { key: "messages", label: "Meldinger", icon: MessageCircle },
   { key: "support", label: "Support", icon: LifeBuoy },
 ];
+
+/** Felles statusvisning for bookinger, inkl. forespørsel-flyten for
+    parkering (requested/declined) som før ble vist som «Kansellert». */
+const bookingStatusInfo = (status: string): { label: string; badge: string; text: string } => {
+  switch (status) {
+    case "confirmed":
+      return { label: "Bekreftet", badge: "bg-green-100 text-green-700", text: "text-green-600" };
+    case "pending":
+      return { label: "Venter betaling", badge: "bg-amber-100 text-amber-700", text: "text-amber-600" };
+    case "requested":
+      return { label: "Forespørsel", badge: "bg-sky-100 text-sky-700", text: "text-sky-600" };
+    case "declined":
+      return { label: "Avslått", badge: "bg-neutral-100 text-neutral-600", text: "text-neutral-500" };
+    case "completed":
+      return { label: "Fullført", badge: "bg-green-50 text-green-600", text: "text-green-600" };
+    default:
+      return { label: "Kansellert", badge: "bg-red-100 text-red-700", text: "text-red-500" };
+  }
+};
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("overview");
@@ -266,7 +284,8 @@ export default function AdminPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-neutral-900">Admin</h1>
         <div className="flex gap-4 text-sm text-neutral-500">
-          <span>{bookings.length} bookings</span>
+          <span>{bookings.length} bookinger</span>
+          <span>{bookings.filter((b) => b.status === "requested").length} forespørsler</span>
           <span>{users.length} brukere</span>
           <span>{listings.length} annonser</span>
         </div>
@@ -298,13 +317,8 @@ export default function AdminPage() {
             </button>
           );
         })}
-        <Link
-          href="/admin/outreach"
-          className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-700"
-        >
-          <Target className="h-4 w-4" />
-          Utleier-outreach
-        </Link>
+        {/* Outreach-lenken er gjemt (kampanjen var bobil/Lofoten-rettet);
+            siden lever fortsatt på /admin/outreach ved behov. */}
         <Link
           href="/admin/moderering"
           className="flex items-center gap-2 px-4 py-3 text-sm font-medium text-neutral-500 transition-colors hover:text-neutral-700"
@@ -357,19 +371,15 @@ export default function AdminPage() {
                     <td className="px-4 py-3 text-neutral-500">{b.check_in} → {b.check_out}</td>
                     <td className="px-4 py-3">{b.total_price} kr</td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                        b.status === "confirmed" ? "bg-green-100 text-green-700"
-                        : b.status === "pending" ? "bg-amber-100 text-amber-700"
-                        : "bg-red-100 text-red-700"
-                      }`}>
-                        {b.status === "confirmed" ? "Bekreftet" : b.status === "pending" ? "Venter" : "Kansellert"}
+                      <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${bookingStatusInfo(b.status).badge}`}>
+                        {bookingStatusInfo(b.status).label}
                       </span>
                       {b.refund_amount != null && b.status === "cancelled" && (
                         <span className="ml-1 text-xs text-neutral-400">({b.refund_amount} kr refundert)</span>
                       )}
                     </td>
                     <td className="px-4 py-3">
-                      {(b.status === "confirmed" || b.status === "pending") && (
+                      {(b.status === "confirmed" || b.status === "pending" || b.status === "requested") && (
                         <button
                           onClick={() => handleCancelBooking(b.id)}
                           className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700"
@@ -814,7 +824,7 @@ function OverviewTab({ bookings, users, listings }: { bookings: AdminBooking[]; 
           </h3>
           <div className="mt-4 space-y-3">
             {topListings.length === 0 ? (
-              <p className="text-sm text-neutral-400">Ingen bookings ennå</p>
+              <p className="text-sm text-neutral-400">Ingen bookinger ennå</p>
             ) : (
               topListings.map(([title, count], i) => (
                 <div key={i} className="flex items-center gap-3">
@@ -850,14 +860,14 @@ function OverviewTab({ bookings, users, listings }: { bookings: AdminBooking[]; 
               </div>
               <div className="text-right">
                 <p className="text-sm font-semibold">{b.total_price} kr</p>
-                <span className={`text-xs ${b.status === "confirmed" ? "text-green-600" : b.status === "pending" ? "text-amber-600" : "text-red-500"}`}>
-                  {b.status === "confirmed" ? "Bekreftet" : b.status === "pending" ? "Venter" : "Kansellert"}
+                <span className={`text-xs ${bookingStatusInfo(b.status).text}`}>
+                  {bookingStatusInfo(b.status).label}
                 </span>
               </div>
             </div>
           ))}
           {recentBookings.length === 0 && (
-            <p className="py-4 text-sm text-neutral-400">Ingen bookings ennå</p>
+            <p className="py-4 text-sm text-neutral-400">Ingen bookinger ennå</p>
           )}
         </div>
       </div>
