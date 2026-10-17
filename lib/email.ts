@@ -689,6 +689,31 @@ export async function sendAdminAlertEmail(subject: string, bodyHtml: string, url
   });
 }
 
+/** Admin-varsel når noen oppretter bruker. Trigges av Postgres-webhooken
+    på profiles-insert, så den dekker både web- og app-registreringer. */
+export async function sendNewUserAdminEmail(data: {
+  fullName: string | null;
+  email: string | null;
+  totalUsers: number | null;
+}) {
+  const { ADMIN_EMAILS } = await import("@/lib/config");
+  const esc = (s: string) => s.replace(/[&<>"']/g, "");
+  const navn = data.fullName ? esc(data.fullName) : "Uten navn";
+  const epost = data.email ? esc(data.email) : "ukjent e-post";
+  await resend.emails.send({
+    from: FROM,
+    to: ADMIN_EMAILS,
+    subject: `Ny bruker på Tuno: ${navn}`,
+    html: wrap("Ny bruker på Tuno", `
+      <p style="margin:12px 0;padding:12px 16px;background:#fafafa;border:1px solid #e5e5e5;border-radius:8px;font-size:16px;color:#171717;">
+        <b>${navn}</b><br/>
+        <a href="mailto:${epost}" style="color:#171717;">${epost}</a>
+      </p>
+      ${data.totalUsers ? `<p style="color:#737373;font-size:13px;">Bruker nr. ${data.totalUsers} 🎉</p>` : ""}
+    `),
+  });
+}
+
 /** Lead fra kalkulatorsiden /tjen: navn + telefon som vil bli ringt. */
 export async function sendCalculatorLeadEmail(data: { name: string; phone: string }) {
   const { ADMIN_EMAILS, SITE_URL } = await import("@/lib/config");
