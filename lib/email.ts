@@ -697,12 +697,14 @@ export async function sendNewUserAdminEmail(data: {
   totalUsers: number | null;
 }) {
   const { ADMIN_EMAILS } = await import("@/lib/config");
+  // Kim skal ha nye bruker-varsler, men ikke de øvrige admin-varslene.
+  const recipients = [...ADMIN_EMAILS, "kim@toast.no"];
   const esc = (s: string) => s.replace(/[&<>"']/g, "");
   const navn = data.fullName ? esc(data.fullName) : "Uten navn";
   const epost = data.email ? esc(data.email) : "ukjent e-post";
   await resend.emails.send({
     from: FROM,
-    to: ADMIN_EMAILS,
+    to: recipients,
     subject: `Ny bruker på Tuno: ${navn}`,
     html: wrap("Ny bruker på Tuno", `
       <p style="margin:12px 0;padding:12px 16px;background:#fafafa;border:1px solid #e5e5e5;border-radius:8px;font-size:16px;color:#171717;">
