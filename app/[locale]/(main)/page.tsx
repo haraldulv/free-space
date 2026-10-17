@@ -12,28 +12,6 @@ import type { Listing } from "@/types";
 
 export const dynamic = "force-dynamic";
 
-/** Telefonmockup med ekte app-skjermbilde, samme uttrykk som /tjen og
-    App Store-bildene. Åpen i bunn så den «står» på seksjonskanten. */
-function PhoneMockup() {
-  return (
-    <div className="mx-auto w-[290px] sm:w-[330px]">
-      <div className="rounded-t-[48px] bg-[#0a0b0a] p-[11px] pb-0 shadow-[0_30px_70px_rgba(10,12,10,0.35)] ring-[3px] ring-white/15">
-        <div className="relative overflow-hidden rounded-t-[38px] bg-white">
-          <Image
-            src="/tjen-app-skjerm.jpg"
-            alt="Tuno-appen med kart over ledige parkeringsplasser"
-            width={720}
-            height={1564}
-            className="w-full"
-            priority
-          />
-          <div className="absolute left-1/2 top-[10px] h-[24px] w-[84px] -translate-x-1/2 rounded-full bg-black" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default async function HomePage() {
   const t = await getTranslations("home");
   const tApp = await getTranslations("tjen");
@@ -55,7 +33,7 @@ export default async function HomePage() {
   return (
     <div>
       {PARKING_ONLY && (
-        <section className="px-5 pt-12 sm:pt-16">
+        <section className="px-5 pb-10 pt-12 sm:pt-16">
           <div className="mx-auto max-w-5xl text-center">
             <span className="inline-block rounded-full bg-[#46C185]/15 px-4 py-1.5 text-sm font-semibold text-[#0f7a5f]">
               {t("heroEyebrow")}
@@ -79,9 +57,6 @@ export default async function HomePage() {
               >
                 {t("heroCtaRentOut")}
               </Link>
-            </div>
-            <div className="mt-12">
-              <PhoneMockup />
             </div>
           </div>
         </section>
